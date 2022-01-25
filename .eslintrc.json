@@ -4,16 +4,72 @@
         "es2021": true
     },
     "extends": [
-        "airbnb-base"
+        "airbnb-base",
+        "plugin:import/typescript"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
-        "ecmaVersion": 13,
+        "ecmaVersion": 2020,
         "sourceType": "module"
     },
     "plugins": [
-        "@typescript-eslint"
+        "@typescript-eslint",
+        "unused-imports"
     ],
     "rules": {
+      "@typescript-eslint/explicit-module-boundary-types": "off",
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { "vars": "all", "args": "after-used", "ignoreRestSiblings": false, "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+      ],
+      "arrow-parens": ["off", "always"],
+      "class-methods-use-this": ["off", "always"],
+      "comma-dangle": ["error", {
+        "arrays": "always-multiline",
+        "objects": "always-multiline",
+        "imports": "always-multiline",
+        "exports": "always-multiline",
+        "functions": "always-multiline"
+      }],
+      "consistent-return": ["off", "always"],
+      "import/extensions": ["off", "always"],
+      "import/no-extraneous-dependencies": "off",
+      "import/prefer-default-export": "off",
+      "indent": ["error", 4],
+      "@typescript-eslint/indent": ["error", 4],
+      "jsx-quotes": ["error", "prefer-single"],
+      "lines-between-class-members": ["off", "always"],
+      "max-len": "off",
+      "no-await-in-loop": ["off", "always"],
+      "no-console": "off",
+      "no-extra-boolean-cast": "off",
+      "no-restricted-globals": "off",
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "CallExpression[callee.object.name='console'][callee.property.name!=/^(log|warn|error|info|trace)$/]",
+          "message": "Unexpected property on console object was called"
+        }
+      ],
+      "no-continue": ["off", "always"],
+      "no-lonely-if": ["off", "always"],
+      "no-nested-ternary": ["off", "always"],
+      "no-param-reassign": ["off", "always"],
+      "no-plusplus": ["off", "always"],
+      "no-sequences": ["off", "always"],
+      "no-underscore-dangle": ["off", "always"],
+      "no-unused-vars": [
+        "error",
+        { "vars": "all", "args": "after-used", "ignoreRestSiblings": false, "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
+      ],
+      "semi": "error",
+      "eqeqeq": "error",
+      "unused-imports/no-unused-imports": "error",
+      "unused-imports/no-unused-vars": [
+          "warn",
+          { "vars": "all", "varsIgnorePattern": "^_", "args": "after-used", "argsIgnorePattern": "^_" }
+      ]
     }
 }

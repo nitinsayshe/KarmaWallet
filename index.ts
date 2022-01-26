@@ -11,6 +11,7 @@ import cors from './src/middleware/cors';
 import checkToken from './src/middleware/checkToken';
 import identify from './src/middleware/identify';
 import rateLimiter from './src/middleware/rateLimiter';
+import { SocketClient } from './src/clients/socket';
 
 const port = process.env.PORT || 8012;
 
@@ -32,7 +33,7 @@ const port = process.env.PORT || 8012;
     console.log('\n --------------------------\n', `| Listening on port ${port} |`, '\n --------------------------');
     console.log(' --------------------------\n', `|   Process id ${process.pid}     |`, '\n --------------------------\n');
   });
-  // socketServer(httpServer);
+  SocketClient.init(httpServer);
   // routers(app);
   // app.use(errorHandler);
 })();

@@ -20,6 +20,7 @@
       "@typescript-eslint/explicit-module-boundary-types": "off",
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/no-non-null-assertion": "off",
+      "@typescript-eslint/no-shadow": ["error"],
       "@typescript-eslint/no-unused-vars": [
         "error",
         { "vars": "all", "args": "after-used", "ignoreRestSiblings": false, "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
@@ -37,8 +38,8 @@
       "import/extensions": ["off", "always"],
       "import/no-extraneous-dependencies": "off",
       "import/prefer-default-export": "off",
-      "indent": ["error", 4],
-      "@typescript-eslint/indent": ["error", 4],
+      "indent": ["error", 2, { "SwitchCase": 1 }],
+      "@typescript-eslint/indent": ["error", 2, { "SwitchCase": 1 } ],
       "jsx-quotes": ["error", "prefer-single"],
       "lines-between-class-members": ["off", "always"],
       "max-len": "off",
@@ -59,17 +60,12 @@
       "no-param-reassign": ["off", "always"],
       "no-plusplus": ["off", "always"],
       "no-sequences": ["off", "always"],
+      "no-shadow": "off",
       "no-underscore-dangle": ["off", "always"],
-      "no-unused-vars": [
-        "error",
-        { "vars": "all", "args": "after-used", "ignoreRestSiblings": false, "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }
-      ],
+      "no-unused-vars": "off",
       "semi": "error",
       "eqeqeq": "error",
       "unused-imports/no-unused-imports": "error",
-      "unused-imports/no-unused-vars": [
-          "warn",
-          { "vars": "all", "varsIgnorePattern": "^_", "args": "after-used", "argsIgnorePattern": "^_" }
-      ]
+      "unused-imports/no-unused-vars": "off"
     }
 }

@@ -90,7 +90,7 @@ export const checkPasswordResetToken: IRequestHandler = async (req, res) => {
     error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
     return;
   }
-  const data = await Token.findOne(user._id, token, TokenTypes.Password);
+  const data = await Token.getToken(user._id, token, TokenTypes.Password);
   if (!data) {
     error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
     return;

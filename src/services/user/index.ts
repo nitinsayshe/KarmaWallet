@@ -135,7 +135,7 @@ export const createPasswordResetToken = async (_: IRequest, email: string) => {
   const minutes = passwordResetTokenMinutes;
   const user = await UserModel.findOne({ email }, '_id');
   if (user) {
-    await Token.create({ user: user._id, minutes, type: TokenTypes.Password });
+    await Token.createToken({ user: user._id, minutes, type: TokenTypes.Password });
   }
   // TODO: Send Email
   const message = `An email has been sent to the email address you provided with further instructions. Your reset request will expire in ${passwordResetTokenMinutes} minutes.`;
@@ -148,7 +148,7 @@ export const resetPasswordFromToken = async (_: IRequest, email: string, value: 
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const token = await Token.findOneAndConsume(user._id, value, TokenTypes.Password);
+  const token = await Token.getTokenAndConsume(user._id, value, TokenTypes.Password);
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
@@ -159,7 +159,7 @@ export const resetPasswordFromToken = async (_: IRequest, email: string, value: 
 export const sendEmailVerification = async (_: IRequest, uid: string) => {
   const days = emailVerificationDays;
   const msg = `Verfication instructions sent to your provided email address. Validation will expire in ${days} days.`;
-  await Token.create({ user: uid, days, type: TokenTypes.Email });
+  await Token.createToken({ user: uid, days, type: TokenTypes.Email });
   // TODO: Send Email'
   return msg;
 };
@@ -170,7 +170,7 @@ export const verifyEmail = async (req: IRequest, email: string, token: string) =
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const tokenData = await Token.findOneAndConsume(user._id, token, TokenTypes.Email);
+  const tokenData = await Token.getTokenAndConsume(user._id, token, TokenTypes.Email);
   if (!tokenData) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }

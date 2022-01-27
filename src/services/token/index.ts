@@ -10,26 +10,26 @@ export interface ICreateTokenData {
   type: TokenTypes;
 }
 
-export const findOneById = async (id: string) => {
+export const getTokenById = async (id: string) => {
   const data = await TokenModel.findById(id).lean();
   return data;
 };
 
-export const findOne = async (user: string, value: string, type: TokenTypes) => {
+export const getToken = async (user: string, value: string, type: TokenTypes) => {
   const data = await TokenModel.findOne({
     user, value, type, consumed: false, expires: { $gte: new Date() },
   }).select('-__v').lean();
   return data;
 };
 
-export const findOneAndConsume = async (user: string, value: string, type: TokenTypes) => {
+export const getTokenAndConsume = async (user: string, value: string, type: TokenTypes) => {
   const data = await TokenModel.findOneAndUpdate({
     user, value, type, consumed: false, expires: { $gte: new Date() },
   }, { consumed: true }, { new: true }).select('-__v').lean();
   return data;
 };
 
-export const create = async ({
+export const createToken = async ({
   user,
   minutes,
   days,

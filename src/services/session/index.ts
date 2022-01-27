@@ -2,7 +2,7 @@ import { nanoid } from 'nanoid';
 import { authTokenDays } from '../../lib/constants';
 import { RedisClient } from '../../clients/redis';
 
-export const create = async (uid: string) => {
+export const createSession = async (uid: string) => {
   await RedisClient.init();
   const authKey = nanoid(16);
   // https://redis.io/commands/set
@@ -10,13 +10,13 @@ export const create = async (uid: string) => {
   return authKey;
 };
 
-export const verify = async (authKey: string) => {
+export const verifySession = async (authKey: string) => {
   await RedisClient.init();
   const uid = await RedisClient.pub.get(authKey);
   return uid || '';
 };
 
-export const revoke = async (authKey: string) => {
+export const revokeSession = async (authKey: string) => {
   await RedisClient.init();
   await RedisClient.pub.del(authKey);
 };

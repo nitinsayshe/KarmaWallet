@@ -8,7 +8,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
   const authKey = req.header('authKey');
   if (!authKey) return next();
   try {
-    const uid = await Session.verify(authKey);
+    const uid = await Session.verifySession(authKey);
     if (uid) {
       const user = await UserModel.getUserById(req, uid, true);
       (req as IRequest).requestor = (user as IUser);

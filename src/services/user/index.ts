@@ -24,7 +24,7 @@ export const register = async (req: IRequest, {
     zipcode,
     subscribedUpdates,
   });
-  const authKey = await Session.create(user._id);
+  const authKey = await Session.createSession(user._id);
   return { user, authKey };
 };
 
@@ -37,7 +37,7 @@ export const login = async (_: IRequest, { email, password }: UserDb.ILoginData)
   if (!passwordMatch) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
-  const authKey = await Session.create(user._id);
+  const authKey = await Session.createSession(user._id);
   return { user, authKey };
 };
 
@@ -94,7 +94,7 @@ export const getSharableUser = (user: IUser) => ({
  * @param {string} authKey
  */
 export const logout = async (_: IRequest, authKey: string) => {
-  await Session.revoke(authKey);
+  await Session.revokeSession(authKey);
 };
 
 /**

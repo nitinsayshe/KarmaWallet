@@ -9,7 +9,7 @@ interface ISocketRequestData {
 
 export const login = (socket: ISocket) => async ({ authKey }: ISocketRequestData) => {
   if (!authKey) return;
-  const uid = await Session.verify(authKey);
+  const uid = await Session.verifySession(authKey);
   if (uid) {
     const user = await User.getUser(({} as IRequest), { _id: uid });
     socket.data.requestor = user;

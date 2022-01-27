@@ -38,7 +38,6 @@
       "import/extensions": ["off", "always"],
       "import/no-extraneous-dependencies": "off",
       "import/prefer-default-export": "off",
-      "indent": ["error", 2, { "SwitchCase": 1 }],
       "@typescript-eslint/indent": ["error", 2, { "SwitchCase": 1 } ],
       "jsx-quotes": ["error", "prefer-single"],
       "lines-between-class-members": ["off", "always"],

@@ -7,8 +7,8 @@ import {
   TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes,
 } from '../../lib/constants';
 import * as Token from '../token';
-import { checkEmail } from './utils/validate';
 import { IRequest } from '../../types/request';
+import { isValidEmailFormat } from '../../lib/string';
 
 export const register = async (req: IRequest, {
   password,
@@ -106,7 +106,7 @@ export const logout = async (_: IRequest, authKey: string) => {
  */
 export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
   if (updates?.email) {
-    if (!checkEmail(updates.email)) {
+    if (!isValidEmailFormat(updates.email)) {
       throw new CustomError('Invalid email', ErrorTypes.INVALID_ARG);
     }
     updates.emailVerified = false;

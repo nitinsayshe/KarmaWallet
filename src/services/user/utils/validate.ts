@@ -1,14 +1,4 @@
-export const checkEmail = (email: string) => {
-  const regex = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
-  return regex.test(email);
-};
-
-export const checkPassword = (password: string) => {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
-  return regex.test(password);
-};
-
-export const passwordChecks = (password: string) => {
+export const validatePassword = (password: string) => {
   if (password.length < 8) {
     return { valid: false, errorType: 'length', message: 'Please provide a password at least 8 characters long.' };
   } if (!/[A-Z]+/.test(password)) {
@@ -23,4 +13,4 @@ export const passwordChecks = (password: string) => {
   return { valid: true, errorType: null, message: 'Password Valid' };
 };
 
-export default { checkEmail, checkPassword, passwordChecks };
+export const isValidPassword = (password: string) => validatePassword(password).valid;

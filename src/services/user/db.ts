@@ -2,8 +2,8 @@ import { FilterQuery } from 'mongoose';
 import argon2 from 'argon2';
 import CustomError from '../../lib/customError';
 import { IUser, IUserGroup, UserModel } from '../../mongo/model/user';
-import { checkPassword, passwordChecks } from './utils/validate';
 import { ErrorTypes, UserRoles, ZIPCODE_REGEX } from '../../lib/constants';
+import { validatePassword } from './utils/validate';
 
 export interface ILoginData {
   email: string;
@@ -29,10 +29,9 @@ export const findOneAndUpdate = async (query: FilterQuery<any>, updates: Partial
 };
 
 export const changePassword = async (uid: string, newPassword: string) => {
-  const isPasswordValid = checkPassword(newPassword);
-  if (!isPasswordValid) {
-    const errorMsg = passwordChecks(newPassword);
-    throw new CustomError(`Invalid new password. ${errorMsg.message}`, ErrorTypes.INVALID_ARG);
+  const passwordValidation = validatePassword(newPassword);
+  if (!passwordValidation.valid) {
+    throw new CustomError(`Invalid new password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   }
   const hash = await argon2.hash(newPassword);
   const user = await findByIdAndUpdate(uid, { password: hash });
@@ -52,10 +51,9 @@ export const create = async ({
   if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
   if (!email) throw new CustomError('A email is required.', ErrorTypes.INVALID_ARG);
 
-  const passwordValid = checkPassword(password);
-  if (!passwordValid) {
-    const { message } = passwordChecks(password);
-    throw new CustomError(`Invalid password. ${message}`, ErrorTypes.INVALID_ARG);
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) {
+    throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   }
   const hash = await argon2.hash(password);
   const emailExists = await UserModel.findOne({ email });

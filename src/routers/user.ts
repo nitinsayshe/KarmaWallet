@@ -20,6 +20,4 @@ router.get('/session', authenticate, UserController.getProfile);
 router.put('/password', authenticate, UserController.updatePassword);
 router.post('/email/token/create', authenticate, UserController.sendEmailVerification);
 
-const user = (app: Express) => app.use('/user', router);
-
-export default user;
+export default (app: Express) => app.use('/user', router);

@@ -1,6 +1,6 @@
 import { Express } from 'express';
 import user from './user';
-// import jobs from './jobs';
+import jobs from './jobs';
 // import unsdgs from './unsdgs';
 // import meta from './meta';
 // import admin from './admin';
@@ -14,8 +14,7 @@ import user from './user';
 
 const routers = (app: Express) => {
   user(app);
-  // user(app);
-  // jobs(app);
+  jobs(app);
   // unsdgs(app);
   // admin(app);
   // meta(app);

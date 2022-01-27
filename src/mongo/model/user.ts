@@ -1,8 +1,11 @@
 import {
-  Schema, model, Document,
+  Schema,
+  model,
+  Document,
+  Model,
 } from 'mongoose';
 import schemaDefinition from '../schema/user';
-import { IGroupModel } from './group';
+import { IGroupDocument } from './group';
 
 export enum UserGroupRole {
   Admin = 'admin',
@@ -14,7 +17,7 @@ export interface IRareUserIntegration {
 }
 
 export interface IUserGroup {
-  group: IGroupModel['id'];
+  group: IGroupDocument['_id'];
   role: UserGroupRole;
 }
 
@@ -38,8 +41,9 @@ export interface IUser {
   integration: IUserIntegrations;
 }
 
-export interface IUserModel extends IUser, Document {
-  _id: string; // this is needed because our user _id and Document._id do not match (type string !== type ObjectId)
+export interface IUserDocument extends IUser, Document {
+  _id: string;
 }
+export interface IUserModel extends Model<IUser> {}
 
-export const UserModel = model<IUserModel>('user', new Schema(schemaDefinition));
+export const UserModel = model<IUserDocument, IUserModel>('user', new Schema(schemaDefinition));

@@ -2,6 +2,7 @@ import {
   Schema,
   model,
   Document,
+  Model,
 } from 'mongoose';
 import schemaDefinition from '../schema/group';
 
@@ -10,6 +11,7 @@ export interface IGroup {
   code: string;
 }
 
-export interface IGroupModel extends IGroup, Document {}
+export interface IGroupDocument extends IGroup, Document {}
+export interface IGroupModel extends Model<IGroup> {}
 
-export const GroupModel = model<IGroupModel>('group', new Schema(schemaDefinition));
+export const GroupModel = model<IGroupDocument, IGroupModel>('group', new Schema(schemaDefinition));

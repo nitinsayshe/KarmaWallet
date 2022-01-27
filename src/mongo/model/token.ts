@@ -1,19 +1,22 @@
 import {
-  Schema, model, Document,
+  Schema,
+  model,
+  Document,
+  Model,
 } from 'mongoose';
 import { TokenTypes } from '../../lib/constants';
 import schemaDefinition from '../schema/token';
-import { IUserModel } from './user';
 
 export interface IToken {
   type: TokenTypes;
   value: string;
   createdOn: Date;
   expires: Date;
-  user: IUserModel['id'];
+  user: string;
   consumed: boolean;
 }
 
-export interface ITokenModel extends IToken, Document {}
+export interface ITokenDocument extends IToken, Document {}
+export interface ITokenModel extends Model<IToken> {}
 
-export const TokenModel = model<ITokenModel>('token', new Schema(schemaDefinition));
+export const TokenModel = model<ITokenDocument, ITokenModel>('token', new Schema(schemaDefinition));

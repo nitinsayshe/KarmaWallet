@@ -13,6 +13,7 @@ import identify from './src/middleware/identify';
 import rateLimiter from './src/middleware/rateLimiter';
 import errorHandler from './src/middleware/errorHandler';
 import { SocketClient } from './src/clients/socket';
+import routers from './src/routers';
 
 const port = process.env.PORT || 8012;
 
@@ -35,6 +36,6 @@ const port = process.env.PORT || 8012;
     console.log(' --------------------------\n', `|   Process id ${process.pid}     |`, '\n --------------------------\n');
   });
   SocketClient.init(httpServer);
-  // routers(app);
+  routers(app);
   app.use(errorHandler);
 })();

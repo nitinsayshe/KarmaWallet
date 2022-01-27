@@ -1,4 +1,3 @@
-import { Schema } from 'mongoose';
 import { TokenTypes } from '../../lib/constants';
 
 export default {
@@ -6,6 +5,6 @@ export default {
   value: { type: String, required: true },
   createdOn: { type: Date, default: new Date() },
   expires: { type: Date, required: true },
-  user: { type: Schema.Types.ObjectId, ref: 'user' },
+  user: { type: String, ref: 'user' },
   consumed: { type: Boolean, default: false },
 };

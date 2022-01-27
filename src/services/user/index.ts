@@ -41,7 +41,7 @@ export const login = async (_: IRequest, { email, password }: UserDb.ILoginData)
   return { user, authKey };
 };
 
-export const find = async (_: IRequest, query = {}, lean = false) => {
+export const getUsers = async (_: IRequest, query = {}, lean = false) => {
   try {
     return !!lean
       ? await UserModel.find(query).lean()
@@ -51,7 +51,7 @@ export const find = async (_: IRequest, query = {}, lean = false) => {
   }
 };
 
-export const findOne = async (_: IRequest, query = {}, lean = false) => {
+export const getUser = async (_: IRequest, query = {}, lean = false) => {
   try {
     const user = !!lean
       ? await UserModel.findOne(query).lean()
@@ -65,7 +65,7 @@ export const findOne = async (_: IRequest, query = {}, lean = false) => {
   }
 };
 
-export const findById = async (_: IRequest, uid: string, lean: boolean) => {
+export const getUserById = async (_: IRequest, uid: string, lean: boolean) => {
   try {
     const user = !!lean
       ? await UserModel.findById({ _id: uid }).lean()
@@ -166,7 +166,7 @@ export const sendEmailVerification = async (_: IRequest, uid: string) => {
 
 export const verifyEmail = async (req: IRequest, email: string, token: string) => {
   const errMsg = 'Token not found. Please request email verification again.';
-  const user = await findOne(req, { email });
+  const user = await getUser(req, { email });
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }

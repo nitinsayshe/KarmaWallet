@@ -10,7 +10,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
   try {
     const uid = await Session.verify(authKey);
     if (uid) {
-      const user = await UserModel.findById(req, uid, true);
+      const user = await UserModel.getUserById(req, uid, true);
       (req as IRequest).requestor = (user as IUser);
       (req as IRequest).authKey = authKey;
     }

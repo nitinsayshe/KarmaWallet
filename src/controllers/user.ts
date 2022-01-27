@@ -85,7 +85,7 @@ export const checkPasswordResetToken: IRequestHandler = async (req, res) => {
     error(req, res, new CustomError('Invalid email.', ErrorTypes.AUTHENTICATION));
     return;
   }
-  const user = await User.findOne(req, { email }, true);
+  const user = await User.getUser(req, { email }, true);
   if (!user) {
     error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
     return;

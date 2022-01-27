@@ -11,7 +11,7 @@ export const login = (socket: ISocket) => async ({ authKey }: ISocketRequestData
   if (!authKey) return;
   const uid = await Session.verify(authKey);
   if (uid) {
-    const user = await User.findOne(({} as IRequest), { _id: uid });
+    const user = await User.getUser(({} as IRequest), { _id: uid });
     socket.data.requestor = user;
     socket.data.authKey = authKey;
   }

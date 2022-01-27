@@ -2,7 +2,7 @@ import { FilterQuery, Document, Types } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import {
-  IJob, JobModel,
+  IJob, IJobModel, JobModel,
 } from '../../mongo/model/job';
 import { IRequest } from '../../types/request';
 import * as JobsDb from './db';
@@ -49,7 +49,7 @@ export const update = (_: IRequest, id: string, title: string, instructions: str
   });
 };
 
-export const getSharableJobRef = (job: Document<unknown, any, IJob> & IJob & { _id: Types.ObjectId; }) => ({
+export const getSharableJobRef = (job: IJobModel) => ({
   _id: job._id,
   title: job.title,
   department: job.department,

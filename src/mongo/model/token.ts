@@ -5,6 +5,7 @@ import {
   Model,
 } from 'mongoose';
 import { TokenTypes } from '../../lib/constants';
+import { IModel } from '../../types/model';
 import schemaDefinition from '../schema/token';
 
 export interface IToken {
@@ -17,6 +18,6 @@ export interface IToken {
 }
 
 export interface ITokenDocument extends IToken, Document {}
-export interface ITokenModel extends Model<IToken> {}
+export type ITokenModel = IModel<IToken>;
 
-export const TokenModel = model<ITokenDocument, ITokenModel>('token', new Schema(schemaDefinition));
+export const TokenModel = model<ITokenDocument, Model<IToken>>('token', new Schema(schemaDefinition));

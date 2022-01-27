@@ -4,6 +4,7 @@ import {
   Document,
   Model,
 } from 'mongoose';
+import { IModel } from '../../types/model';
 import schemaDefinition from '../schema/user';
 import { IGroupDocument } from './group';
 
@@ -44,6 +45,6 @@ export interface IUser {
 export interface IUserDocument extends IUser, Document {
   _id: string;
 }
-export interface IUserModel extends Model<IUser> {}
+export type IUserModel = IModel<IUser>;
 
-export const UserModel = model<IUserDocument, IUserModel>('user', new Schema(schemaDefinition));
+export const UserModel = model<IUserDocument, Model<IUser>>('user', new Schema(schemaDefinition));

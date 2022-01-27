@@ -1,7 +1,7 @@
 import { Express } from 'express';
 import user from './user';
 import jobs from './jobs';
-// import unsdgs from './unsdgs';
+import unsdgs from './unsdgs';
 // import meta from './meta';
 // import admin from './admin';
 // import transaction from './transaction';
@@ -15,7 +15,7 @@ import jobs from './jobs';
 const routers = (app: Express) => {
   user(app);
   jobs(app);
-  // unsdgs(app);
+  unsdgs(app);
   // admin(app);
   // meta(app);
   // company(app);

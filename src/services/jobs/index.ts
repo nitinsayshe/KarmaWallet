@@ -1,19 +1,11 @@
-import { FilterQuery, Document, Types } from 'mongoose';
+import { FilterQuery } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
-import CustomError from '../../lib/customError';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { toUTC } from '../../lib/date';
 import {
   IJob, IJobModel, JobModel,
 } from '../../mongo/model/job';
 import { IRequest } from '../../types/request';
-import * as JobsDb from './db';
-
-/**
- * @typedef {Object} JobPosting
- * @property {string} JobPosting.title
- * @property {string} JobPosting.description
- * @property {string} JobPosting.department
- * @property {string} JobPosting.location
- */
 
 export const createJob = (_: IRequest, title: string, instructions: string, description: string, department: string, location: string) => {
   if (!title) throw new CustomError('A job title is required.', ErrorTypes.INVALID_ARG);
@@ -21,7 +13,23 @@ export const createJob = (_: IRequest, title: string, instructions: string, desc
   if (!department) throw new CustomError('A job department is required.', ErrorTypes.INVALID_ARG);
   if (!location) throw new CustomError('A job location is required.', ErrorTypes.INVALID_ARG);
 
-  return JobsDb.create(title, instructions, description, department, location);
+  try {
+    const timestamp = toUTC(new Date());
+
+    const job = new JobModel({
+      title,
+      instructions,
+      description,
+      department,
+      jobLocation: location,
+      createdAt: timestamp,
+      lastModified: timestamp,
+    });
+
+    return job.save();
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const getJobs = (_: IRequest, query: FilterQuery<IJob> = {}) => {
@@ -38,15 +46,20 @@ export const getJobs = (_: IRequest, query: FilterQuery<IJob> = {}) => {
 
 export const getJobById = async (_: IRequest, id: string) => JobModel.findById(id);
 
-export const update = (_: IRequest, id: string, title: string, instructions: string, description: string, department: string, location: string) => {
-  if (!title && !description && !department && location) throw new CustomError('No updatable data found for job posting.', ErrorTypes.INVALID_ARG);
-  return JobsDb.findByIdAndUpdate(id, {
-    title,
-    instructions,
-    description,
-    department,
-    jobLocation: location,
-  });
+export const update = (_: IRequest, id: string, title: string, instructions: string, description: string, department: string, jobLocation: string) => {
+  if (!title && !description && !department && !jobLocation) throw new CustomError('No updatable data found for job posting.', ErrorTypes.INVALID_ARG);
+
+  const updates: Partial<IJob> = {
+    lastModified: toUTC(new Date()),
+  };
+
+  if (title) updates.title = title;
+  if (instructions) updates.instructions = instructions;
+  if (description) updates.description = description;
+  if (department) updates.department = department;
+  if (jobLocation) updates.jobLocation = jobLocation;
+
+  return JobModel.findByIdAndUpdate(id, updates, { new: true });
 };
 
 export const getSharableJobRef = (job: IJobModel) => ({
@@ -58,7 +71,7 @@ export const getSharableJobRef = (job: IJobModel) => ({
   lastModified: job.lastModified,
 });
 
-export const getSharableJob = (job: Document<unknown, any, IJob> & IJob & { _id: Types.ObjectId; }) => {
+export const getSharableJob = (job: IJobModel) => {
   const ref = getSharableJobRef(job);
 
   return {

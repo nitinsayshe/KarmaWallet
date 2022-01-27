@@ -1,14 +1,27 @@
 import argon2 from 'argon2';
-import { IUser, UserModel } from '../../mongo/model/user';
+import { IUser, IUserGroup, UserModel } from '../../mongo/model/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
-import * as UserDb from './db';
 import {
-  TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes,
+  TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes, UserRoles, ZIPCODE_REGEX,
 } from '../../lib/constants';
 import * as Token from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
+import { validatePassword } from './utils/validate';
+
+export interface ILoginData {
+  email: string;
+  password: string;
+}
+
+export interface ICreateUserData extends ILoginData {
+  name: string;
+  zipcode: string;
+  subscribedUpdates: boolean;
+  role?: UserRoles;
+  groups?: IUserGroup[];
+}
 
 export const register = async (req: IRequest, {
   password,
@@ -16,19 +29,43 @@ export const register = async (req: IRequest, {
   name,
   zipcode,
   subscribedUpdates,
-}: UserDb.ICreateUserData) => {
-  const user = await UserDb.create({
-    password,
-    email,
-    name,
-    zipcode,
-    subscribedUpdates,
-  });
-  const authKey = await Session.createSession(user._id);
-  return { user, authKey };
+}: ICreateUserData) => {
+  try {
+    if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
+    if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
+    if (!email) throw new CustomError('A email is required.', ErrorTypes.INVALID_ARG);
+
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+    }
+    const hash = await argon2.hash(password);
+    const emailExists = await UserModel.findOne({ email });
+    if (emailExists) {
+      throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+    }
+
+    if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
+
+    const userInstance = new UserModel({
+      name,
+      email,
+      password: hash,
+      subscribedUpdates,
+      zipcode,
+      role: UserRoles.None,
+      groups: [],
+    });
+
+    const user = await userInstance.save();
+    const authKey = await Session.createSession(user._id);
+    return { user, authKey };
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
-export const login = async (_: IRequest, { email, password }: UserDb.ILoginData) => {
+export const login = async (_: IRequest, { email, password }: ILoginData) => {
   const user = await UserModel.findOne({ email }).lean();
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
@@ -90,20 +127,28 @@ export const getSharableUser = (user: IUser) => ({
   groups: user.groups,
 });
 
-/**
- * @param {string} authKey
- */
 export const logout = async (_: IRequest, authKey: string) => {
   await Session.revokeSession(authKey);
 };
 
-/**
- *
- * @param {Express.Request} req
- * @param {string} uid
- * @param {Object} updates
- * @returns {UserProfile}
- */
+export const updateUser = async (_: IRequest, uid: string, updates: Partial<IUser>) => {
+  try {
+    return await UserModel.findByIdAndUpdate(uid, { ...updates, lastModified: new Date() }, { new: true });
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+const changePassword = async (req: IRequest, uid: string, newPassword: string) => {
+  const passwordValidation = validatePassword(newPassword);
+  if (!passwordValidation.valid) {
+    throw new CustomError(`Invalid new password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+  }
+  const hash = await argon2.hash(newPassword);
+  const user = await updateUser(req, uid, { password: hash });
+  return user;
+};
+
 export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
   if (updates?.email) {
     if (!isValidEmailFormat(updates.email)) {
@@ -111,23 +156,15 @@ export const updateProfile = async (req: IRequest, uid: string, updates: Partial
     }
     updates.emailVerified = false;
   }
-  const user = await UserDb.findByIdAndUpdate(uid, updates);
-  return user;
+  return updateUser(req, uid, updates);
 };
 
-/**
- *
- * @param {Express.Request} req
- * @param {string} newPassword
- * @param {string} currentPassword
- * @returns {UserProfile}
- */
 export const updatePassword = async (req: IRequest, newPassword: string, currentPassword: string) => {
   const passwordMatch = await argon2.verify(req.requestor.password, currentPassword);
   if (!passwordMatch) {
     throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
   }
-  const user = await UserDb.changePassword(req.requestor._id, newPassword);
+  const user = await changePassword(req, req.requestor._id, newPassword);
   return user;
 };
 
@@ -142,7 +179,7 @@ export const createPasswordResetToken = async (_: IRequest, email: string) => {
   return { message };
 };
 
-export const resetPasswordFromToken = async (_: IRequest, email: string, value: string, password: string) => {
+export const resetPasswordFromToken = async (req: IRequest, email: string, value: string, password: string) => {
   const errMsg = 'Token not found. Please request password reset again.';
   const user = await UserModel.findOne({ email }, '_id');
   if (!user) {
@@ -152,7 +189,7 @@ export const resetPasswordFromToken = async (_: IRequest, email: string, value: 
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const _user = await UserDb.changePassword(user._id, password);
+  const _user = await changePassword(req, user._id, password);
   return _user;
 };
 
@@ -174,6 +211,5 @@ export const verifyEmail = async (req: IRequest, email: string, token: string) =
   if (!tokenData) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const _user = await UserDb.findByIdAndUpdate(user._id, { emailVerified: true });
-  return _user;
+  return updateUser(req, user._id, { emailVerified: true });
 };

@@ -4,7 +4,7 @@ import jobs from './jobs';
 import unsdgs from './unsdgs';
 import meta from './meta';
 // import admin from './admin';
-// import transaction from './transaction';
+import transaction from './transaction';
 // import impact from './impact';
 // import company from './company';
 // import sector from './sector';
@@ -19,7 +19,7 @@ const routers = (app: Express) => {
   // admin(app);
   meta(app);
   // company(app);
-  // transaction(app);
+  transaction(app);
   // impact(app);
   // sector(app);
   // subsector(app);

@@ -12,10 +12,11 @@ import { validatePassword } from './utils/validate';
 
 export interface ILoginData {
   email: string;
-  password: string;
+  password?: string;
+  token?: string;
 }
 
-export interface ICreateUserData extends ILoginData {
+export interface IUserData extends ILoginData {
   name: string;
   zipcode: string;
   subscribedUpdates: boolean;
@@ -29,7 +30,7 @@ export const register = async (req: IRequest, {
   name,
   zipcode,
   subscribedUpdates,
-}: ICreateUserData) => {
+}: IUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);

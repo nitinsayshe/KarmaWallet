@@ -7,7 +7,12 @@ import { isValidEmailFormat } from '../lib/string';
 import CustomError from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 
-export const register: IRequestHandler = async (req, res) => {
+interface IUpdatePasswordBody {
+  newPassword: string;
+  password: string;
+}
+
+export const register: IRequestHandler<{}, {}, User.IUserData> = async (req, res) => {
   const { body } = req;
   const requiredFields = ['password', 'email', 'name', 'subscribedUpdates'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
@@ -24,7 +29,7 @@ export const register: IRequestHandler = async (req, res) => {
   api(req, res, User.getSharableUser(user), authKey);
 };
 
-export const login: IRequestHandler = async (req, res) => {
+export const login: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
   // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
   const { password, email } = req.body;
   const { user, authKey } = await User.login(req, {
@@ -55,7 +60,7 @@ export const updateProfile: IRequestHandler = async (req, res) => {
   api(req, res, User.getSharableUser(user));
 };
 
-export const updatePassword: IRequestHandler = async (req, res) => {
+export const updatePassword: IRequestHandler<{}, {}, IUpdatePasswordBody> = async (req, res) => {
   const { newPassword, password } = req.body;
   if (!newPassword || !password) {
     error(req, res, new CustomError('New and current passwords required.', ErrorTypes.INVALID_ARG));
@@ -65,7 +70,7 @@ export const updatePassword: IRequestHandler = async (req, res) => {
   api(req, res, User.getSharableUser(user));
 };
 
-export const createPasswordResetToken: IRequestHandler = async (req, res) => {
+export const createPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
   const { email } = req.body;
   if (!email || !isValidEmailFormat(email)) {
     error(req, res, new CustomError('Invalid email.', ErrorTypes.INVALID_ARG));
@@ -75,7 +80,7 @@ export const createPasswordResetToken: IRequestHandler = async (req, res) => {
   api(req, res, data);
 };
 
-export const checkPasswordResetToken: IRequestHandler = async (req, res) => {
+export const checkPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
   const { email, token } = req.body;
   if (!token) {
     error(req, res, new CustomError('Invalid token.', ErrorTypes.AUTHENTICATION));
@@ -98,7 +103,7 @@ export const checkPasswordResetToken: IRequestHandler = async (req, res) => {
   api(req, res, { created: data.createdOn, expires: data.expires, valid: true });
 };
 
-export const resetPasswordFromToken: IRequestHandler = async (req, res) => {
+export const resetPasswordFromToken: IRequestHandler<{}, {}, (User.ILoginData & IUpdatePasswordBody)> = async (req, res) => {
   const { newPassword, token, email } = req.body;
   const requiredFields = ['newPassword', 'token', 'email'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
@@ -119,7 +124,7 @@ export const sendEmailVerification: IRequestHandler = async (req, res) => {
   api(req, res, data);
 };
 
-export const verifyEmail: IRequestHandler = async (req, res) => {
+export const verifyEmail: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
   const requiredFields = ['token', 'email'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
   if (!isValid) {

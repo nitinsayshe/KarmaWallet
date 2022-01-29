@@ -45,6 +45,7 @@
     "date-fns": "^2.28.0",
     "dotenv": "14.3.2",
     "express": "4.17.2",
+    "express-serve-static-core": "^0.1.1",
     "helmet": "^5.0.2",
     "ioredis": "^4.28.3",
     "mongoose": "6.1.8",

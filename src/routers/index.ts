@@ -11,6 +11,7 @@ import transaction from './transaction';
 // import subsector from './subsector';
 // import webhook from './webhook';
 // import notFound from './notFound';
+import comparisonGame from './comparisonGame';
 
 const routers = (app: Express) => {
   user(app);
@@ -24,6 +25,7 @@ const routers = (app: Express) => {
   // sector(app);
   // subsector(app);
   // webhook(app);
+  comparisonGame(app);
   // // notFound is a catch all and should be last
   // notFound(app);
   return app;

@@ -18,6 +18,7 @@ export interface IPlaidCardIntegration {
 }
 
 export interface IRareCardIntegration {
+  userId: string;
   card_id: string;
   card_type: string;
   last_four: string;

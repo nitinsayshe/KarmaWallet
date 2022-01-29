@@ -29,6 +29,7 @@ export default {
     },
     rare: {
       type: {
+        userId: { type: String },
         card_id: { type: String },
         card_type: { type: String },
         last_four: { type: String },

@@ -3,17 +3,22 @@ import * as JobsService from '../services/jobs';
 import { api, error } from '../services/output';
 import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
+import { IJob } from '../mongo/model/job';
 
-export const createJob: IRequestHandler = async (req, res) => {
+interface IWithId {
+  id: string;
+}
+
+export const createJob: IRequestHandler<{}, {}, Partial<IJob>> = async (req, res) => {
   try {
     const {
       title,
       instructions,
       description,
       department,
-      location,
+      jobLocation,
     } = req.body;
-    const job = await JobsService.createJob(req, title, instructions, description, department, location);
+    const job = await JobsService.createJob(req, title, instructions, description, department, jobLocation);
     api(req, res, JobsService.getSharableJob(job));
   } catch (err) {
     error(req, res, asCustomError(err));
@@ -31,7 +36,7 @@ export const getJobs: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getJobById: IRequestHandler = async (req, res) => {
+export const getJobById: IRequestHandler<IWithId> = async (req, res) => {
   try {
     const { id } = req.params;
     const job = await JobsService.getJobById(req, id);
@@ -41,7 +46,7 @@ export const getJobById: IRequestHandler = async (req, res) => {
   }
 };
 
-export const updateJob: IRequestHandler = async (req, res) => {
+export const updateJob: IRequestHandler<IWithId, {}, Partial<IJob>> = async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -49,10 +54,10 @@ export const updateJob: IRequestHandler = async (req, res) => {
       instructions,
       description,
       department,
-      location,
+      jobLocation,
     } = req.body;
 
-    const job = await JobsService.update(req, id, title, instructions, description, department, location);
+    const job = await JobsService.update(req, id, title, instructions, description, department, jobLocation);
     api(req, res, JobsService.getSharableJob(job));
   } catch (err) {
     error(req, res, asCustomError(err));

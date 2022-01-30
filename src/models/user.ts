@@ -3,9 +3,10 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
-import { IGroupDocument } from './group';
+import { IModel, IRef } from '../types/model';
+import { IGroup } from './group';
 import { UserRoles } from '../lib/constants';
 
 export enum UserGroupRole {
@@ -18,7 +19,7 @@ export interface IRareUserIntegration {
 }
 
 export interface IUserGroup {
-  group: IGroupDocument['_id'];
+  group: IRef<ObjectId, IGroup>;
   role: UserGroupRole;
 }
 

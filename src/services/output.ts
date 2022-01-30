@@ -31,5 +31,3 @@ export const error = (req: IRequest, res: Response, customError: CustomError, au
     message: customError.message,
   });
 };
-
-export default { api, error };

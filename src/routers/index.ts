@@ -3,7 +3,7 @@ import user from './user';
 import jobs from './jobs';
 import unsdgs from './unsdgs';
 import meta from './meta';
-// import admin from './admin';
+import admin from './admin';
 import transaction from './transaction';
 // import impact from './impact';
 import company from './company';
@@ -17,7 +17,7 @@ const routers = (app: Express) => {
   user(app);
   jobs(app);
   unsdgs(app);
-  // admin(app);
+  admin(app);
   meta(app);
   company(app);
   transaction(app);

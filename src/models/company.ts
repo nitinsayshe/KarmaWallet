@@ -10,22 +10,11 @@ import { IModel, IRef } from '../types/model';
 import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 
-export enum CompanySource {
-  JustCapital = 'justCapital',
-  OneForThePlanet = '1ForThePlanet',
-  BCorp = 'bCorp',
-  CdpClimageChange = 'cdpClimateChange',
-  CdpForests = 'cdpForests',
-  CdpWaterSecurity = 'cdpWaterSecurity',
-  GreenSeal = 'greenSeal',
-  SaferChoice = 'saferChoice'
-}
-
 export interface ISharableCompany {
   _id: number;
   combinedScore: number;
   companyName: string;
-  dataSource: IRef<ObjectId, IDataSource>[];
+  dataSources: IRef<ObjectId, IDataSource>[];
   dataYear: number;
   grade: string;
   isBrand: boolean;
@@ -38,7 +27,7 @@ export interface ISharableCompany {
 
 export interface ICompany extends ISharableCompany {
   companyId: number; // ??? will this be the legacy karma id? do we need this?
-  dataSource: IRef<ObjectId, IDataSourceDocument>[];
+  dataSources: IRef<ObjectId, IDataSourceDocument>[];
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<number, ICompanyDocument>;
   sectors: IRef<ObjectId, ISectorDocument>[];
@@ -53,7 +42,7 @@ const companySchema = new Schema({
   _id: { type: Number, required: true }, // TODO: update this to ObjectId?
   companyId: { type: Number, required: true }, // ??? will this be the legacy karma id? do we need this?
   companyName: { type: String, required: true },
-  dataSource: [{
+  dataSources: [{
     type: Schema.Types.ObjectId,
     ref: 'data_source',
   }],

@@ -4,6 +4,7 @@ import { IRequestHandler } from '../types/request';
 import * as CompanyService from '../services/company';
 import * as output from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
+import { ErrorTypes } from '../lib/constants';
 
 /**
  * required because aqp doesnt export this type.
@@ -27,18 +28,23 @@ interface IGetPartnersQuery extends ICompareQuery {}
 export const getCompanies: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
-    const data = await CompanyService.getCompanies(req, query);
-    output.api(req, res, data);
+    const companies = await CompanyService.getCompanies(req, query);
+    const sharableCompanies = {
+      ...companies,
+      docs: companies.docs.map(c => CompanyService.getShareableCompany(c)),
+    };
+
+    output.api(req, res, sharableCompanies);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const getCompanyById: IRequestHandler<{ _id: string }> = async (req, res) => {
+export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req, res) => {
   try {
-    const { _id } = req.params;
-    const data = await CompanyService.getCompanyById(req, _id);
-    output.api(req, res, data);
+    const { companyId } = req.params;
+    const company = await CompanyService.getCompanyById(req, companyId);
+    output.api(req, res, CompanyService.getShareableCompany(company));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -55,8 +61,8 @@ export const getSample: IRequestHandler<{}, IGetSampleQuery> = async (req, res) 
       },
     };
 
-    const data = await CompanyService.getSample(req, query);
-    output.api(req, res, data);
+    const sample = await CompanyService.getSample(req, query);
+    output.api(req, res, sample);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -68,11 +74,11 @@ export const compare: IRequestHandler<{}, ICompareQuery> = async (req, res) => {
       companies: req.query?.companies ? req.query?.companies.split(',').map(val => parseInt(val)).filter(val => !isNaN(val)) : [],
     };
     if (query.companies.length < 2) {
-      return output.error(req, res, new CustomError('Insufficient companies found for comparison'));
+      return output.error(req, res, new CustomError('Insufficient companies found for comparison', ErrorTypes.UNPROCESSABLE));
     }
     const data = await CompanyService.compare(req, query);
     if (data.companies.length < 2) {
-      return output.error(req, res, new CustomError('Insufficient companies found for comparison'));
+      return output.error(req, res, new CustomError('Insufficient companies found for comparison', ErrorTypes.UNPROCESSABLE));
     }
     output.api(req, res, data);
   } catch (err) {

@@ -1,7 +1,8 @@
-import { Response } from 'express';
+import { Response } from 'express-serve-static-core';
 import { AUTHKEY_HEADER, TOKEN_REMOVE } from '../lib/constants';
 import CustomError from '../lib/customError';
 import { IRequest } from '../types/request';
+import { Logger } from './logger';
 
 const setAuthHeader = (req: IRequest, res: Response, tkn?: string) => {
   const token = tkn || req.get(AUTHKEY_HEADER);
@@ -22,6 +23,7 @@ export const api = (req: IRequest, res: Response, data: any, authToken = '', cod
 };
 
 export const error = (req: IRequest, res: Response, customError: CustomError, authToken = '') => {
+  Logger.error(customError, req);
   setAuthHeader(req, res, authToken);
   res.set('Content-Type', 'application/json');
   res.statusCode = customError?.data?.code || 400;

@@ -2,7 +2,7 @@ import {
   Request,
   Response,
   NextFunction,
-} from 'express';
+} from 'express-serve-static-core';
 import { IUser } from '../mongo/model/user';
 
 export interface IRequest<P = {}, Q = {}, B = {}> extends Request {

@@ -5,10 +5,6 @@ import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import { IJob } from '../mongo/model/job';
 
-interface IWithId {
-  id: string;
-}
-
 export const createJob: IRequestHandler<{}, {}, Partial<IJob>> = async (req, res) => {
   try {
     const {
@@ -36,7 +32,7 @@ export const getJobs: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getJobById: IRequestHandler<IWithId> = async (req, res) => {
+export const getJobById: IRequestHandler<{ id: string }> = async (req, res) => {
   try {
     const { id } = req.params;
     const job = await JobsService.getJobById(req, id);
@@ -46,7 +42,7 @@ export const getJobById: IRequestHandler<IWithId> = async (req, res) => {
   }
 };
 
-export const updateJob: IRequestHandler<IWithId, {}, Partial<IJob>> = async (req, res) => {
+export const updateJob: IRequestHandler<{ id: string }, {}, Partial<IJob>> = async (req, res) => {
   try {
     const { id } = req.params;
     const {

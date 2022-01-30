@@ -4,7 +4,7 @@ import * as MockController from '../controllers/mock';
 
 const router = Router();
 
-router.get('/', CompanyController.listCompanies);
+router.get('/', CompanyController.getCompanies);
 router.get('/:companyId', MockController.test);
 router.get('/:companyId/unsdgs', MockController.test);
 router.get('/partners', MockController.test);

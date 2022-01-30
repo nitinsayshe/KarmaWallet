@@ -63,6 +63,7 @@
       "no-shadow": "off",
       "no-underscore-dangle": ["off", "always"],
       "no-unused-vars": "off",
+      "radix": "off",
       "semi": "error",
       "eqeqeq": "error",
       "unused-imports/no-unused-imports": "error",

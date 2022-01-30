@@ -6,8 +6,6 @@ class _Logger {
   private _logger: pino.Logger = null;
 
   constructor() {
-    console.log('creating new Logger');
-
     this._logger = pino();
     // TODO: add logging service config
   }

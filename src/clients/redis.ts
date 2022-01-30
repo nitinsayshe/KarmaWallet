@@ -1,4 +1,6 @@
 import Redis from 'ioredis';
+import { ErrorTypes } from '../lib/constants';
+import CustomError from '../lib/customError';
 import { Client } from './client';
 
 const {
@@ -17,11 +19,11 @@ class _RedisClient extends Client {
   }
 
   _connect = async () => {
-    // if (![REDIS_USER, REDIS_PASS, REDIS_URL, REDIS_PORT].every(s => !!s)) {
-    //   throw new CustomError('Redis client unavailable. Necessary configurations not found.', ErrorTypes.SERVER);
-    // }
+    if (![REDIS_USER, REDIS_PASS, REDIS_URL, REDIS_PORT].every(s => !!s)) {
+      throw new CustomError('Redis client unavailable. Necessary configurations not found.', ErrorTypes.SERVER);
+    }
 
-    // this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}?allowUsernameInURI=true`);
+    this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}?allowUsernameInURI=true`);
     this.pub = new Redis();
     this.sub = this.pub.duplicate();
   };

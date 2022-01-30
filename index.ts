@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import express from 'express';
-import bodyParser from 'body-parser';
 import pino from 'pino-http';
 import helmet from 'helmet';
 import process from 'process';
@@ -14,6 +13,7 @@ import rateLimiter from './src/middleware/rateLimiter';
 import errorHandler from './src/middleware/errorHandler';
 import { SocketClient } from './src/clients/socket';
 import routers from './src/routers';
+import { RequestHandler } from 'express-serve-static-core';
 
 const port = process.env.PORT || 8012;
 
@@ -22,13 +22,13 @@ const port = process.env.PORT || 8012;
   await MongoClient.init();
   await RedisClient.init();
   app.use(compression());
-  app.use(helmet());
+  app.use(helmet() as any); // temp workaround for broken types with express typings
   app.use(cors());
-  app.use(pino());
+  app.use(pino() as any); // temp workaround for broken types with express typings
   app.use(checkToken);
   app.use(identify);
-  app.use(bodyParser.urlencoded({ extended: true }));
-  app.use(bodyParser.json());
+  app.use(express.urlencoded() as any); // temp workaround for broken types with express typings
+  app.use(express.json() as any); // temp workaround for broken types with express typings
   app.use(await rateLimiter({ keyPrefix: 'main-middleware' }));
 
   const httpServer = app.listen(port, () => {

@@ -2,6 +2,9 @@ import pino from 'pino';
 import CustomError from '../../lib/customError';
 import { IRequest } from '../../types/request';
 
+/**
+ * a single location to manage logging throughout the app
+ */
 class _Logger {
   private _logger: pino.Logger = null;
 
@@ -12,14 +15,21 @@ class _Logger {
 
   info = (msg: string, req?: IRequest) => {
     // TODO: add logging to log service
-    this._logger.info(`\n${!!req?.requestor ? ` - uid: ${req.requestor}` : ''}\n${msg}\n`);
+    const mergingObject = {
+      uid: req?.requestor?._id,
+    };
+
+    this._logger.info(mergingObject, msg);
   };
 
   error = (err: CustomError, req?: IRequest) => {
     // TODO: add logging to log service
-    const userId = !!req?.requestor ? ` - uid: ${req.requestor}` : '';
-    const errorMessage = `${err.name} Error${userId}`;
-    this._logger.error(err, errorMessage);
+    const mergingObject = {
+      uid: req?.requestor?._id,
+      errorType: `${err.data.name} Error`,
+    };
+
+    this._logger.error(mergingObject, err.message);
   };
 }
 

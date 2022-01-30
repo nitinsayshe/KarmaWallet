@@ -13,7 +13,6 @@ import rateLimiter from './src/middleware/rateLimiter';
 import errorHandler from './src/middleware/errorHandler';
 import { SocketClient } from './src/clients/socket';
 import routers from './src/routers';
-import { RequestHandler } from 'express-serve-static-core';
 
 const port = process.env.PORT || 8012;
 
@@ -27,7 +26,7 @@ const port = process.env.PORT || 8012;
   app.use(pino() as any); // temp workaround for broken types with express typings
   app.use(checkToken);
   app.use(identify);
-  app.use(express.urlencoded() as any); // temp workaround for broken types with express typings
+  app.use(express.urlencoded({ extended: true }) as any); // temp workaround for broken types with express typings
   app.use(express.json() as any); // temp workaround for broken types with express typings
   app.use(await rateLimiter({ keyPrefix: 'main-middleware' }));
 

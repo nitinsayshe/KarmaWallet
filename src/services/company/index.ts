@@ -1,12 +1,16 @@
 import _ from 'lodash';
 import { FilterQuery } from 'mongoose';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { CompanyModel, ICompany } from '../../models/company';
+import {
+  CompanyModel, ICompany, ICompanyModel, ISharableCompany,
+} from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg } from '../../models/companyUnsdg';
+import { ISectorModel } from '../../models/sector';
 import { UnsdgModel } from '../../models/unsdg';
 import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
+import { getSharableSector } from '../sectors';
 
 // const { RequiredError } = require('plaid/dist/base');
 // const badgeModel = require('../../mongo/model/badge');
@@ -76,21 +80,23 @@ export const getCompanies = async (__: IRequest, query: FilterQuery<ICompany>) =
       {
         path: 'parentCompany',
         model: 'company',
-        populate: [{
-          path: 'categories',
-          model: 'category',
-          select: 'name',
-        },
-        // {
-        //   path: 'badges',
-        //   model: 'badge',
-        //   select: 'badgeId badgeName image badgeDescription badgeCategory',
-        // },
-        {
-          path: 'subcategories',
-          model: 'subcategory',
-          select: 'name parentCategory',
-        }],
+        populate: [
+          // {
+          //   path: 'categories',
+          //   model: 'category',
+          //   select: 'name',
+          // },
+          // {
+          //   path: 'badges',
+          //   model: 'badge',
+          //   select: 'badgeId badgeName image badgeDescription badgeCategory',
+          // },
+          // {
+          //   path: 'subcategories',
+          //   model: 'subcategory',
+          //   select: 'name parentCategory',
+          // }
+        ],
         select: 'companyName logos categories subcategories badges grade',
       },
       // {
@@ -98,38 +104,39 @@ export const getCompanies = async (__: IRequest, query: FilterQuery<ICompany>) =
       //   model: 'badge',
       //   select: 'badgeId badgeName image badgeDescription badgeCategory',
       // },
-      {
-        path: 'subcategories',
-        model: 'subcategory',
-        select: 'name parentCategory',
-      },
-      {
-        path: 'categories',
-        model: 'category',
-        select: 'name',
-      },
-      {
-        path: 'brands',
-        populate: [
-          {
-            path: 'categories',
-            model: 'category',
-            select: 'name',
-          },
-          {
-            path: 'subcategories',
-            model: 'subcategory',
-            select: 'name parentCategory',
-          },
-          // {
-          //   path: 'badges',
-          //   model: 'badge',
-          //   select: 'badgeId badgeName image badgeDescription badgeCategory',
-          // }
-        ],
-        model: 'company',
-        select: 'companyName categories subcategories logos grade badges',
-      }],
+      // {
+      //   path: 'subcategories',
+      //   model: 'subcategory',
+      //   select: 'name parentCategory',
+      // },
+      // {
+      //   path: 'categories',
+      //   model: 'category',
+      //   select: 'name',
+      // },
+      // {
+      //   path: 'brands',
+      //   populate: [
+      //     {
+      //       path: 'categories',
+      //       model: 'category',
+      //       select: 'name',
+      //     },
+      //     {
+      //       path: 'subcategories',
+      //       model: 'subcategory',
+      //       select: 'name parentCategory',
+      //     },
+      //     // {
+      //     //   path: 'badges',
+      //     //   model: 'badge',
+      //     //   select: 'badgeId badgeName image badgeDescription badgeCategory',
+      //     // }
+      //   ],
+      //   model: 'company',
+      //   select: 'companyName categories subcategories logos grade badges',
+      // }
+    ],
     lean: true,
     page: query?.skip || 1,
     sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
@@ -252,4 +259,40 @@ export const getCompanyUNSDGs = async (__: IRequest, companyId: string, year: nu
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getShareableCompanyRef = ({
+  _id,
+  combinedScore,
+  companyName,
+  dataSource,
+  dataYear,
+  grade,
+  isBrand,
+  parentCompany,
+  sectors,
+  slug,
+  url,
+}: ICompanyModel): ISharableCompany => {
+  // since these are refs, they could be id's or a populated
+  // value. have to check if they are populated, and if so
+  // need to get the sharable version of each of them.
+  const _parentCompany = (!!parentCompany && Object.keys(parentCompany).length) ? getShareableCompanyRef(parentCompany as ICompanyModel) : null;
+  const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)
+    ? sectors.map(s => getSharableSector(s as ISectorModel))
+    : sectors;
+
+  return {
+    _id,
+    combinedScore,
+    companyName,
+    dataSource,
+    dataYear,
+    grade,
+    isBrand,
+    parentCompany: _parentCompany,
+    sectors: _sectors,
+    slug,
+    url,
+  };
 };

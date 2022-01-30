@@ -3,10 +3,12 @@ import {
   model,
   Document,
   PaginateModel,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
-import { IDataSourceDocument } from './dataSource';
-import { ISectorDocument } from './sector';
+import mongoosePaginate from 'mongoose-paginate-v2';
+import { IModel, IRef } from '../types/model';
+import { IDataSource, IDataSourceDocument } from './dataSource';
+import { ISector, ISectorDocument } from './sector';
 
 export enum CompanySource {
   JustCapital = 'justCapital',
@@ -19,21 +21,27 @@ export enum CompanySource {
   SaferChoice = 'saferChoice'
 }
 
-// data source should be ref
-export interface ICompany {
+export interface ISharableCompany {
   _id: number;
-  companyId: number;
-  companyName: string;
-  dataSource: IDataSourceDocument['_id'];
   combinedScore: number;
+  companyName: string;
+  dataSource: IRef<ObjectId, IDataSource>[];
   dataYear: number;
-  sectors: ISectorDocument['_id'];
-  slug: string;
-  isBrand: boolean;
-  url: string;
   grade: string;
+  isBrand: boolean;
   // eslint-disable-next-line no-use-before-define
-  parentCompany: ICompanyDocument['_id'];
+  parentCompany: IRef<number, ISharableCompany>;
+  sectors: IRef<ObjectId, ISector>[];
+  slug: string;
+  url: string;
+}
+
+export interface ICompany extends ISharableCompany {
+  companyId: number; // ??? will this be the legacy karma id? do we need this?
+  dataSource: IRef<ObjectId, IDataSourceDocument>[];
+  // eslint-disable-next-line no-use-before-define
+  parentCompany: IRef<number, ICompanyDocument>;
+  sectors: IRef<ObjectId, ISectorDocument>[];
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -43,12 +51,12 @@ export type ICompanyModel = IModel<ICompany>;
 
 const companySchema = new Schema({
   _id: { type: Number, required: true }, // TODO: update this to ObjectId?
-  companyId: { type: Number, required: true }, // ??? will this be the legacy karma id?
+  companyId: { type: Number, required: true }, // ??? will this be the legacy karma id? do we need this?
   companyName: { type: String, required: true },
-  dataSource: {
+  dataSource: [{
     type: Schema.Types.ObjectId,
     ref: 'data_source',
-  }, // ??? update this to ISource[]?
+  }],
   combinedScore: { type: Number },
   dataYear: { type: Number }, // ??? do want to track this on the company?
   sectors: [{
@@ -66,5 +74,6 @@ const companySchema = new Schema({
   logo: { type: String },
   relevanceScore: { type: Number, default: null },
 });
+companySchema.plugin(mongoosePaginate);
 
 export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);

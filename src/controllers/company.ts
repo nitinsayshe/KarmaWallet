@@ -101,7 +101,7 @@ export const getUNSDGs: IRequestHandler<{ _id: string }> = async (req, res) => {
     const { _id } = req.params;
     const now = toUTC(new Date());
 
-    const result = await CompanyService.getUNSDGs(req, _id, now.getFullYear());
+    const result = await CompanyService.getCompanyUNSDGs(req, _id, now.getFullYear());
     output.api(req, res, result);
   } catch (err) {
     output.error(req, res, asCustomError(err));

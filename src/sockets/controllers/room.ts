@@ -1,4 +1,4 @@
-import { IUserGroup } from '../../mongo/model/user';
+import { IUserGroup } from '../../models/user';
 import { ISocket } from '../types/request';
 
 interface ISocketRequestData {

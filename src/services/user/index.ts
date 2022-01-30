@@ -1,5 +1,5 @@
 import argon2 from 'argon2';
-import { IUser, IUserGroup, UserModel } from '../../mongo/model/user';
+import { IUser, IUserGroup, UserModel } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
 import {

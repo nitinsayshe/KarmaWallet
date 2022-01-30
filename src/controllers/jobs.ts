@@ -3,7 +3,7 @@ import * as JobsService from '../services/jobs';
 import { api, error } from '../services/output';
 import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
-import { IJob } from '../mongo/model/job';
+import { IJob } from '../models/job';
 
 export const createJob: IRequestHandler<{}, {}, Partial<IJob>> = async (req, res) => {
   try {

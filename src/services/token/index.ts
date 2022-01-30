@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import { TokenTypes } from '../../lib/constants';
 import { getDateFrom } from '../../lib/date';
-import { TokenModel } from '../../mongo/model/token';
+import { TokenModel } from '../../models/token';
 
 export interface ICreateTokenData {
   user: string;

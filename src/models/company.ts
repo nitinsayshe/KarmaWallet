@@ -51,7 +51,7 @@ const companySchema = new Schema({
   }, // ??? update this to ISource[]?
   combinedScore: { type: Number },
   dataYear: { type: Number }, // ??? do want to track this on the company?
-  sectors: [{ // TODO: updating to sectors?
+  sectors: [{
     type: Schema.Types.ObjectId,
     ref: 'sector',
   }],

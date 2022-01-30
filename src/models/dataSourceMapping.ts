@@ -9,6 +9,11 @@ import { IDataSourceDocument } from './dataSource';
 import { IUnsdgDocument } from './unsdg';
 import { IUnsdgTargetDocument } from './unsdgTarget';
 
+interface IDateRange {
+  start: Date;
+  end: Date;
+}
+
 export interface IUnsdgMapItem {
   unsdg: IUnsdgDocument['_id'],
   value: boolean;
@@ -33,10 +38,7 @@ export interface IDataSourceMapping {
    * the date range that we (KW) used
    * this mapping
    */
-  dateRange: {
-    start: Date;
-    end?: Date;
-  }
+  dateRange: IDateRange;
 }
 
 export interface IDataSourceMappingDocument extends IDataSourceMapping, Document {}

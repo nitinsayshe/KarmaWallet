@@ -4,7 +4,7 @@ import {
   Document,
   Model,
 } from 'mongoose';
-import { IModel } from '../../types/model';
+import { IModel } from '../types/model';
 
 export interface ISector {
   name: string;

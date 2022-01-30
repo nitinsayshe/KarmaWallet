@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { IUser } from '../mongo/model/user';
+import { Request, Response, NextFunction } from 'express-serve-static-core';
+import { IUser } from '../models/user';
 import * as Session from '../services/session';
 import * as UserModel from '../services/user';
 import { IRequest } from '../types/request';

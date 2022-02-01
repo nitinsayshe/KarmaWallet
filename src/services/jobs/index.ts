@@ -4,7 +4,7 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { toUTC } from '../../lib/date';
 import {
   IJob, IJobModel, JobModel,
-} from '../../mongo/model/job';
+} from '../../models/job';
 import { IRequest } from '../../types/request';
 
 export const createJob = (_: IRequest, title: string, instructions: string, description: string, department: string, location: string) => {

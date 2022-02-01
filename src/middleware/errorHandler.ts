@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express-serve-static-core';
 import { asCustomError } from '../lib/customError';
 import { error } from '../services/output';
 

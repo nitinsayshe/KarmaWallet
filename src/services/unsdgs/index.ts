@@ -1,9 +1,6 @@
-import pino from 'pino';
-import { UnsdgModel } from '../../mongo/model/unsdg';
-import { UnsdgCategoryModel } from '../../mongo/model/unsdgCategory';
-import { UnsdgSubcategoryModel } from '../../mongo/model/unsdgSubcategory';
-
-const logger = pino();
+import { UnsdgModel } from '../../models/unsdg';
+import { UnsdgCategoryModel } from '../../models/unsdgCategory';
+import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 
 export const getUnsdgs = async () => {
   try {
@@ -27,7 +24,6 @@ export const getUnsdgs = async () => {
 
     return unsdgs;
   } catch (err) {
-    logger.error(err);
     return {
       error: 'An error occurred while trying to retrieve the UNSDGs.',
       code: 400,

@@ -1,7 +1,7 @@
 import { AnyObject } from 'mongoose';
 import {
   ITransactionIntegrations, ITransactionModel, TransactionModel,
-} from '../../mongo/model/transaction';
+} from '../../models/transaction';
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 

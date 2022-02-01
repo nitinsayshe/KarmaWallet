@@ -1,12 +1,12 @@
-import { CompanyModel } from '../../mongo/model/company';
+import { CompanyModel, ICompany } from '../../models/company';
 import { getRandom } from '../../lib/number';
 
 const threshold = 60; // the threshold between "high" and "low" grade companies
 
 // split the companies into low and high graded companies
-const splitCompanies = (companies: CompanyModel[]) => {
-  const highGradeCompanies: CompanyModel[] = [];
-  const lowGradeCompanies: CompanyModel[] = [];
+const splitCompanies = (companies: ICompany[]) => {
+  const highGradeCompanies: ICompany[] = [];
+  const lowGradeCompanies: ICompany[] = [];
   companies.forEach(company => {
     (company.combinedScore >= threshold ? highGradeCompanies : lowGradeCompanies).push(company);
   });

@@ -1,6 +1,6 @@
 import { JobStatus } from '../../lib/constants';
 import { toUTC } from '../../lib/date';
-import { JobStatusModel } from '../../mongo/model/jobStatus';
+import { JobStatusModel } from '../../models/jobStatus';
 
 const getJob = async (jobName: string) => {
   let job = await JobStatusModel.findOne({ name: jobName });

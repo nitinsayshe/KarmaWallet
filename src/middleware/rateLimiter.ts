@@ -1,5 +1,5 @@
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { NextFunction, Response } from 'express';
+import { NextFunction, Response } from 'express-serve-static-core';
 import { error } from '../services/output';
 import { RedisClient } from '../clients/redis';
 import CustomError from '../lib/customError';

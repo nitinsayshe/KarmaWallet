@@ -46,6 +46,8 @@ const companySchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'data_source',
   }],
+  // TODO: update this field whenver unsdgs are updated.
+  // too expensive to make virtual
   combinedScore: { type: Number },
   dataYear: { type: Number }, // ??? do want to track this on the company?
   sectors: [{
@@ -53,9 +55,10 @@ const companySchema = new Schema({
     ref: 'sector',
   }],
   slug: { type: String }, // TODO: update to virtual
-  isBrand: { type: Boolean }, // ??? do we need this still?
   url: { type: String, default: null },
-  grade: { type: String, default: null }, // ??? can this be computed
+  // TODO: update this field whenever usdgs are updated
+  // too expensive to make virtual
+  grade: { type: String, default: null },
   parentCompany: {
     type: Schema.Types.ObjectId,
     ref: 'company',

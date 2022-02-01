@@ -9,6 +9,9 @@ import * as Token from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
+import { getShareableGroup } from '../groups';
+import { IGroupModel } from '../../models/group';
+import { UserGroupModel } from '../../models/userGroup';
 
 export interface ILoginData {
   email: string;
@@ -82,8 +85,19 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
 export const getUsers = async (_: IRequest, query = {}, lean = false) => {
   try {
     return !!lean
-      ? await UserModel.find(query).lean()
-      : await UserModel.find(query);
+      ? await UserModel
+        .find(query)
+        .populate({
+          path: 'groups',
+          model: UserGroupModel,
+        })
+        .lean()
+      : await UserModel
+        .find(query)
+        .populate({
+          path: 'groups',
+          model: UserGroupModel,
+        });
   } catch (err) {
     throw asCustomError(err);
   }
@@ -92,8 +106,19 @@ export const getUsers = async (_: IRequest, query = {}, lean = false) => {
 export const getUser = async (_: IRequest, query = {}, lean = false) => {
   try {
     const user = !!lean
-      ? await UserModel.findOne(query).lean()
-      : await UserModel.findOne(query);
+      ? await UserModel
+        .findOne(query)
+        .populate({
+          path: 'groups',
+          model: UserGroupModel,
+        })
+        .lean()
+      : await UserModel
+        .findOne(query)
+        .populate({
+          path: 'groups',
+          model: UserGroupModel,
+        });
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -103,11 +128,22 @@ export const getUser = async (_: IRequest, query = {}, lean = false) => {
   }
 };
 
-export const getUserById = async (_: IRequest, uid: string, lean: boolean) => {
+export const getUserById = async (_: IRequest, uid: string, lean?: boolean) => {
   try {
     const user = !!lean
-      ? await UserModel.findById({ _id: uid }).lean()
-      : await UserModel.findById({ _id: uid });
+      ? await UserModel
+        .findById({ _id: uid })
+        .populate({
+          path: 'groups',
+          model: UserGroupModel,
+        })
+        .lean()
+      : await UserModel
+        .findById({ _id: uid })
+        .populate({
+          path: 'groups',
+          model: UserGroupModel,
+        });
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -117,16 +153,34 @@ export const getUserById = async (_: IRequest, uid: string, lean: boolean) => {
   }
 };
 
-export const getSharableUser = (user: IUser) => ({
-  _id: user._id,
-  email: user.email,
-  name: user.name,
-  dateJoined: user.dateJoined,
-  zipcode: user?.zipcode || null,
-  subscribedUpdates: user.subscribedUpdates,
-  role: user.role,
-  groups: user.groups,
-});
+export const getSharableUser = ({
+  _id,
+  email,
+  name,
+  dateJoined,
+  zipcode,
+  subscribedUpdates,
+  role,
+  groups,
+}: IUser) => {
+  const _groups = (!!groups && !!groups.filter(g => !!g.group).length)
+    ? groups.map(g => {
+      g.group = getShareableGroup(g.group as IGroupModel);
+      return g;
+    })
+    : groups;
+
+  return {
+    _id,
+    email,
+    name,
+    dateJoined,
+    zipcode,
+    subscribedUpdates,
+    role,
+    groups: _groups,
+  };
+};
 
 export const logout = async (_: IRequest, authKey: string) => {
   await Session.revokeSession(authKey);

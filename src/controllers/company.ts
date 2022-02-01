@@ -6,19 +6,6 @@ import * as output from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
 
-/**
- * required because aqp doesnt export this type.
- */
-interface IAqpQuery {
-  [key: string]: undefined | string | string[] | IAqpQuery | IAqpQuery[]
-}
-
-interface IGetSampleQuery extends IAqpQuery {
-  badges: string;
-  categories: string;
-  subcategories: string;
-}
-
 interface ICompareQuery {
   companies: string;
 }
@@ -45,24 +32,6 @@ export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req
     const { companyId } = req.params;
     const company = await CompanyService.getCompanyById(req, companyId);
     output.api(req, res, CompanyService.getShareableCompany(company));
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
-export const getSample: IRequestHandler<{}, IGetSampleQuery> = async (req, res) => {
-  try {
-    const query = {
-      ...aqp(req.query),
-      aggregates: {
-        badges: req.query?.badges ? req.query?.badges.split(',').map(val => parseInt(val, 10)) : [],
-        categories: req.query?.categories ? req.query?.categories.split(',').map(val => parseInt(val)) : [],
-        subcategories: req.query?.subcategories ? req.query?.subcategories.split(',').map(val => parseInt(val)) : [],
-      },
-    };
-
-    const sample = await CompanyService.getSample(req, query);
-    output.api(req, res, sample);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

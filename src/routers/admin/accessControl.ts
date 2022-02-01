@@ -13,9 +13,9 @@ router.route('/summary')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AccessControlController.getSummary);
 
 router.route('/assignable-roles')
-  .get(protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AccessControlController.getAssignableRoles);
+  .get(authenticate, protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AccessControlController.getAssignableRoles);
 
 router.route('/update-role')
-  .post(protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AccessControlController.updateUserRole);
+  .post(authenticate, protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AccessControlController.updateUserRole);
 
 export default router;

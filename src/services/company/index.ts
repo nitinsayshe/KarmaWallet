@@ -1,4 +1,3 @@
-import _ from 'lodash';
 import { FilterQuery } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -15,10 +14,7 @@ import { IRequest } from '../../types/request';
 import { getShareableDataSource } from '../dataSources';
 import { getSharableSector } from '../sectors';
 
-const _getSampleCompanies = async (filter: FilterQuery<ICompany>, size: number, projection: { [key: string]: any }) => {
-  const companies = await CompanyModel.aggregate([{ $match: filter }]).sample(size).project(projection);
-  return companies;
-};
+const _getSampleCompanies = (filter: FilterQuery<ICompany>, size: number, projection: { [key: string]: any }) => CompanyModel.aggregate<ICompanyDocument>([{ $match: filter }]).sample(size).project(projection);
 
 const _checkSort = <T>(data: T[], sort: boolean, field: keyof T) => {
   if (!sort) return data;
@@ -111,69 +107,18 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>) => {
   return CompanyModel.paginate(query.filter, options);
 };
 
-export const getSample = async (__: IRequest, query: FilterQuery<ICompany>) => {
-  const data = {};
-  const { aggregates, projection, sort } = query;
-  const { categories, subcategories } = aggregates;
-  // Set Defaults or Query Values
-  const size = query?.filter?.size || 6;
-  const minScore = query?.filter?.minScore || 0;
-  delete query.filter.size;
-  delete query.filter.minScore;
-  delete query.filter.subcategories;
-  delete query.filter.categories;
-  delete query.filter.badges;
-  const _projection = _.isEmpty(projection) ? {
-    badgeCounts: 1, grade: 1, badges: 1, combinedScore: 1, companyName: 1, categories: 1, subcategories: 1, logo: 1, logos: 1,
-  } : projection;
-  const defaultFilter = { combinedScore: { $gte: minScore } };
-  // if (badges.length) {
-  //   data.badges = [];
-  //   for (let i = 0; i < badges.length; i += 1) {
-  //     const badgeId = badges[i];
-  //     const primaryFilter = { badges: badgeId };
-  //     const companies = await _getSampleCompanies({ ...primaryFilter, ...defaultFilter, ...query.filter }, size, _projection);
-  //     const info = await badgeModel.findOne({ _id: badgeId }).select('badgeId badgeName image badgeCategory').lean();
-  //     data.badges.push({ companies, ...info });
-  //   }
-  //   data.badges = _checkSort(data.badges, !!sort?.badges, 'badgeName');
-  // }
-  // if (categories.length) {
-  //   data.categories = [];
-  //   for (let i = 0; i < categories.length; i += 1) {
-  //     const categoryId = categories[i];
-  //     const primaryFilter = { categories: categoryId };
-  //     const companies = await _getSampleCompanies({ ...primaryFilter, ...defaultFilter, ...query.filter }, size, _projection);
-  //     const info = await categoryModel.findOne({ _id: categoryId }).select('name subcategories').lean();
-  //     data.categories.push({ companies, ...info });
-  //   }
-  //   data.categories = _checkSort(data.categories, !!sort?.categories, 'name');
-  // }
-  // if (subcategories.length) {
-  //   data.subcategories = [];
-  //   for (let i = 0; i < subcategories.length; i += 1) {
-  //     const subcategoryId = subcategories[i];
-  //     const primaryFilter = { subcategories: subcategoryId };
-  //     const companies = await _getSampleCompanies({ ...primaryFilter, ...defaultFilter, ...query.filter }, size, _projection);
-  //     const info = await subcategoryModel.findOne({ _id: subcategoryId }).select('name parentCategory').populate('parentCategory', 'name').lean();
-  //     data.subcategories.push({ companies, ...info });
-  //   }
-  //   data.subcategories = _checkSort(data.subcategories, !!sort?.subcategories, 'name');
-  // }
-  return data;
-};
-
-// TODO: clean this function up...should not return string | Company
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>) => {
-  let topPick = 'Avoid All';
+  let topPick: ICompanyDocument = null;
   let noClearPick = false;
   let topPickScore = 30;
-  const companies = await CompanyModel.find({ _id: { $in: query.companies } })
+
+  const companies: ICompanyDocument[] = await CompanyModel.find({ _id: { $in: query.companies } })
     .populate({
       path: 'sectors',
       model: SectorModel,
     })
     .lean();
+
   companies.forEach(company => {
     if (company.combinedScore > topPickScore) {
       topPick = company;
@@ -183,9 +128,13 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>) => {
       noClearPick = true;
     }
   });
-  topPick = noClearPick ? 'No Clear Pick' : topPick;
 
-  return { companies, topPick };
+  return {
+    companies,
+    topPick,
+    noClearPick,
+    avoidAll: !noClearPick && !topPick,
+  };
 };
 
 // TODO: update to use new partner collection

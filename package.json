@@ -4,10 +4,14 @@
   "description": "the karma wallet backend",
   "main": "index.ts",
   "scripts": {
+    "clean": "rm -rf dist",
+    "copy": "ts-node ./bin/postbuild.ts",
+    "prebuild": "npm run clean",
     "build": "tsc",
+    "postbuild": "npm run copy",
     "postinstall": "npm run build",
-    "start": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/index.js'",
-    "start:prod": "cross-env-shell NODE_ENV=production 'node dist/index.js'"
+    "start": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/index.js && npm run copy'",
+    "start:prod": "cross-env-shell NODE_ENV=production 'npm run build & node dist/index.js'"
   },
   "repository": {
     "type": "git",
@@ -28,6 +32,7 @@
     "@types/json2csv": "5.0.3",
     "@types/lodash": "4.14.178",
     "@types/mongoose-paginate-v2": "1.4.3",
+    "@types/node": "^17.0.13",
     "@typescript-eslint/eslint-plugin": "5.10.1",
     "@typescript-eslint/parser": "5.10.1",
     "dayjs": "1.10.7",
@@ -35,7 +40,8 @@
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.25.4",
     "eslint-plugin-unused-imports": "2.0.0",
-    "nodemon": "2.0.15"
+    "nodemon": "2.0.15",
+    "ts-node": "^10.4.0"
   },
   "dependencies": {
     "@socket.io/redis-adapter": "7.1.0",

@@ -40,7 +40,7 @@ export interface ICard {
   institution: string;
   integrations: ICardIntegrations;
   createOn: Date;
-  lastModeifed: Date;
+  lastModified: Date;
 }
 
 export interface ICardDocument extends ICard, Document {}

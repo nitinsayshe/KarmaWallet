@@ -3,6 +3,7 @@ import { ErrorTypes } from '../lib/constants';
 import CustomError from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import { Logger } from '../services/logger';
+import { IGroup } from '../models/group';
 
 export interface IProtectRouteRequirements {
   roles?: string[];
@@ -24,7 +25,7 @@ const protectedRequirements = (requirements: IProtectRouteRequirements): IReques
     return;
   }
 
-  if (!!requirements.groups?.length && !requirements.groups.find(g => requestor.groups.find(rg => rg.group.name === g))) {
+  if (!!requirements.groups?.length && !requirements.groups.find(g => requestor.groups.find(rg => (rg.group as IGroup).name === g))) {
     Logger.error(new CustomError('groups do not match', ErrorTypes.AUTHENTICATION));
     error(req, res, new CustomError('Access denied.', ErrorTypes.AUTHENTICATION));
     return;

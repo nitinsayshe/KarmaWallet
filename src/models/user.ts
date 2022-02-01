@@ -58,11 +58,8 @@ const userSchema = new Schema({
   zipcode: { type: String },
   subscribedUpdates: { type: Boolean, default: true },
   groups: [{
-    group: {
-      type: Schema.Types.ObjectId,
-      ref: 'user_group',
-    },
-    role: { type: String },
+    type: Schema.Types.ObjectId,
+    ref: 'user_group',
   }],
   role: {
     type: String,

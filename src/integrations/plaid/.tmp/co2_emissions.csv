@@ -1,0 +1,606 @@
+category.0,category.1,category.2,CO2
+Bank Fees,,,0.223227192
+Bank Fees,ATM,,0.223227192
+Bank Fees,Cash Advance,,0.223227192
+Bank Fees,Excess Activity,,0.223227192
+Bank Fees,Foreign Transaction,,0.223227192
+Bank Fees,Fraud Dispute,,0.223227192
+Bank Fees,Insufficient Funds,,0.223227192
+Bank Fees,Late Payment,,0.223227192
+Bank Fees,Overdraft,,0.223227192
+Bank Fees,Wire Transfer,,0.223227192
+Cash Advance,,,0.223227192
+Community,,,0.213911412
+Community,Animal Shelter,,0.118008761
+Community,Assisted Living Services,,0.230616398
+Community,Assisted Living Services,Caretakers,0.230616398
+Community,Assisted Living Services,Facilities and Nursing Homes,0.230616398
+Community,Cemetery,,0.0708894
+Community,Courts,,0.090866332
+Community,Day Care and Preschools,,0.27528151
+Community,Disabled Persons Services,,0.213911412
+Community,Drug and Alcohol Services,,0.338590167
+Community,Education,,0.182008704
+Community,Education,Adult Education,0.182008704
+Community,Education,Art School,0.182008704
+Community,Education,Colleges and Universities,0.250773566
+Community,Education,Computer Training,0.182008704
+Community,Education,Culinary Lessons and Schools,0.182008704
+Community,Education,Dance Schools,0.182008704
+Community,Education,Driving Schools,0.182008704
+Community,Education,Fraternities and Sororities,0.182008704
+Community,Education,Primary and Secondary Schools,0.192282302
+Community,Education,Tutoring and Educational Services,0.182008704
+Community,Education,Vocational Schools,0.182008704
+Community,Government Departments and Agencies,,0.370490328
+Community,Government Lobbyists,,0.370490328
+Community,Housing Assistance and Shelters,,0.338590167
+Community,Law Enforcement,,0.370490328
+Community,Law Enforcement,Correctional Institutions,0.370490328
+Community,Law Enforcement,Fire Stations,0.370490328
+Community,Law Enforcement,Police Stations,0.370490328
+Community,Libraries,,0.19344165
+Community,Military,,0.229327582
+Community,Organizations and Associations,,0.118008761
+Community,Organizations and Associations,Charities and Non-Profits,0.118008761
+Community,Organizations and Associations,Environmental,0.118008761
+Community,Organizations and Associations,Youth Organizations,0.118008761
+Community,Post Offices,,0.240242572
+Community,Public and Social Services,,0.192135304
+Community,Religious,,0.305207809
+Community,Religious,Churches,0.305207809
+Community,Religious,Mosques,0.305207809
+Community,Religious,Synagogues,0.305207809
+Community,Religious,Temple,0.305207809
+Community,Senior Citizen Services,,0.213911412
+Community,Senior Citizen Services,Retirement,0.213911412
+Food and Drink,,,0.234246093
+Food and Drink,Bar,,0.234246093
+Food and Drink,Bar,Hotel Lounge,0.234246093
+Food and Drink,Bar,Sports Bar,0.234246093
+Food and Drink,Bar,Wine Bar,0.234246093
+Food and Drink,Breweries,,0.234246093
+Food and Drink,Internet Cafes,,0.234246093
+Food and Drink,Nightlife,,0.429231765
+Food and Drink,Nightlife,Adult Entertainment,0.429231765
+Food and Drink,Nightlife,Hookah Lounges,0.429231765
+Food and Drink,Nightlife,Jazz and Blues Cafe,0.429231765
+Food and Drink,Nightlife,Karaoke,0.429231765
+Food and Drink,Nightlife,Night Clubs,0.429231765
+Food and Drink,Nightlife,Strip Club,0.429231765
+Food and Drink,Restaurants,,0.234246093
+Food and Drink,Restaurants,Afghan,0.329311316
+Food and Drink,Restaurants,African,0.329311316
+Food and Drink,Restaurants,American,0.329311316
+Food and Drink,Restaurants,Asian,0.329311316
+Food and Drink,Restaurants,Australian,0.329311316
+Food and Drink,Restaurants,Bagel Shop,0.234246093
+Food and Drink,Restaurants,Bakery,0.234246093
+Food and Drink,Restaurants,Barbecue,0.234246093
+Food and Drink,Restaurants,Brazilian,0.329311316
+Food and Drink,Restaurants,Breakfast Spot,0.234246093
+Food and Drink,Restaurants,Burgers,0.234246093
+Food and Drink,Restaurants,Burrito,0.234246093
+Food and Drink,Restaurants,Cafe,0.234246093
+Food and Drink,Restaurants,Cajun,0.329311316
+Food and Drink,Restaurants,Caribbean,0.329311316
+Food and Drink,Restaurants,Chinese,0.329311316
+Food and Drink,Restaurants,Coffee Shop,0.234246093
+Food and Drink,Restaurants,Cuban,0.234246093
+Food and Drink,Restaurants,Cupcake Shop,0.234246093
+Food and Drink,Restaurants,Delis,0.234246093
+Food and Drink,Restaurants,Dessert,0.234246093
+Food and Drink,Restaurants,Diners,0.234246093
+Food and Drink,Restaurants,Distillery,0.234246093
+Food and Drink,Restaurants,Donuts,0.234246093
+Food and Drink,Restaurants,Eastern European,0.234246093
+Food and Drink,Restaurants,Ethiopian,0.329311316
+Food and Drink,Restaurants,Falafel,0.234246093
+Food and Drink,Restaurants,Fast Food,0.442181174
+Food and Drink,Restaurants,Filipino,0.329311316
+Food and Drink,Restaurants,Fish and Chips,0.234246093
+Food and Drink,Restaurants,Food Truck,0.234246093
+Food and Drink,Restaurants,French,0.329311316
+Food and Drink,Restaurants,Gastropub,0.329311316
+Food and Drink,Restaurants,German,0.329311316
+Food and Drink,Restaurants,Greek,0.329311316
+Food and Drink,Restaurants,Ice Cream,0.89
+Food and Drink,Restaurants,Indian,0.329311316
+Food and Drink,Restaurants,Indonesian,0.329311316
+Food and Drink,Restaurants,Italian,0.329311316
+Food and Drink,Restaurants,Japanese,0.329311316
+Food and Drink,Restaurants,Juice Bar,0.234246093
+Food and Drink,Restaurants,Korean,0.329311316
+Food and Drink,Restaurants,Latin American,0.329311316
+Food and Drink,Restaurants,Mediterranean,0.329311316
+Food and Drink,Restaurants,Mexican,0.329311316
+Food and Drink,Restaurants,Middle Eastern,0.329311316
+Food and Drink,Restaurants,Moroccan,0.329311316
+Food and Drink,Restaurants,Pizza,0.234246093
+Food and Drink,Restaurants,Portuguese,0.329311316
+Food and Drink,Restaurants,Scandinavian,0.329311316
+Food and Drink,Restaurants,Seafood,0.329311316
+Food and Drink,Restaurants,Spanish,0.329311316
+Food and Drink,Restaurants,Steakhouses,0.329311316
+Food and Drink,Restaurants,Sushi,0.329311316
+Food and Drink,Restaurants,Swiss,0.329311316
+Food and Drink,Restaurants,Thai,0.329311316
+Food and Drink,Restaurants,Turkish,0.329311316
+Food and Drink,Restaurants,Vegan and Vegetarian,0.329311316
+Food and Drink,Restaurants,Winery,0.234246093
+Healthcare,,,0.23154784
+Healthcare,Healthcare Services,,0.23154784
+Healthcare,Healthcare Services,Acupuncture,0.23154784
+Healthcare,Healthcare Services,Alternative Medicine,0.23154784
+Healthcare,Healthcare Services,Blood Banks and Centers,0.23154784
+Healthcare,Healthcare Services,Chiropractors,0.23154784
+Healthcare,Healthcare Services,Counseling and Therapy,0.23154784
+Healthcare,Healthcare Services,Dentists,0.140069502
+Healthcare,Healthcare Services,Emergency Services,0.23154784
+Healthcare,Healthcare Services,Hospitals,0.239937475
+Healthcare,Healthcare Services,"Hospitals, Clinics and Medical Centers",0.239937
+Healthcare,Healthcare Services,Medical Supplies and Labs,0.170449396
+Healthcare,Healthcare Services,Mental Health,0.172708874
+Healthcare,Healthcare Services,Nurses,0.172708874
+Healthcare,Healthcare Services,Nutritionists,0.172708874
+Healthcare,Healthcare Services,Optometrists,0.172708874
+Healthcare,Healthcare Services,Physical Therapy,0.172708874
+Healthcare,Healthcare Services,Podiatrists,0.172708874
+Healthcare,Healthcare Services,Pregnancy and Sexual Health,0.172708874
+Healthcare,Healthcare Services,Psychologists,0.172708874
+Healthcare,Physicians,,0.124267815
+Healthcare,Physicians,Anesthesiologists,0.124267815
+Healthcare,Physicians,Cardiologists,0.124267815
+Healthcare,Physicians,Dermatologists,0.124267815
+Healthcare,Physicians,Ear,0.124267815
+Healthcare,Physicians,Family Medicine,0.124267815
+Healthcare,Physicians,Gastroenterologists,0.124267815
+Healthcare,Physicians,General Surgery,0.124267815
+Healthcare,Physicians,Internal Medicine,0.124267815
+Healthcare,Physicians,Neurologists,0.124267815
+Healthcare,Physicians,Obstetricians and Gynecologists,0.124267815
+Healthcare,Physicians,Oncologists,0.124267815
+Healthcare,Physicians,Ophthalmologists,0.124267815
+Healthcare,Physicians,Orthopedic Surgeons,0.124267815
+Healthcare,Physicians,Pathologists,0.124267815
+Healthcare,Physicians,Pediatricians,0.124267815
+Healthcare,Physicians,Plastic Surgeons,0.124267815
+Healthcare,Physicians,Psychiatrists,0.124267815
+Healthcare,Physicians,Radiologists,0.124267815
+Healthcare,Physicians,Respiratory,0.124267815
+Healthcare,Physicians,Urologists,0.124267815
+Interest,,,0.115436325
+Interest,Interest Charged,,0.115436325
+Interest,Interest Earned,,0.115436325
+Payment,,,0.115436325
+Payment,Credit Card,,0.115436325
+Payment,Loan,,0.115436325
+Payment,Rent,,0.115436325
+Recreation,,,0.429231765
+Recreation,Arts and Entertainment,,0.429231765
+Recreation,Arts and Entertainment,Aquarium,0.26060767
+Recreation,Arts and Entertainment,Arcades and Amusement Parks,0.231391149
+Recreation,Arts and Entertainment,Art Dealers and Galleries,0.429231765
+Recreation,Arts and Entertainment,Billiards and Pool,0.429231765
+Recreation,Arts and Entertainment,Bowling,0.429231765
+Recreation,Arts and Entertainment,Casinos and Gaming,0.325114189
+Recreation,Arts and Entertainment,Circuses and Carnivals,0.429231765
+Recreation,Arts and Entertainment,Dance Halls and Saloons,0.429231765
+Recreation,Arts and Entertainment,Entertainment,0.429231765
+Recreation,Arts and Entertainment,Fairgrounds and Rodeos,0.429231765
+Recreation,Arts and Entertainment,Movie Theatres,0.429231765
+Recreation,Arts and Entertainment,Museums,0.26060767
+Recreation,Arts and Entertainment,Music and Show Venues,0.429231765
+Recreation,Arts and Entertainment,Party Centers,0.429231765
+Recreation,Arts and Entertainment,Psychics and Astrologers,0.429231765
+Recreation,Arts and Entertainment,Social Clubs,0.429231765
+Recreation,Arts and Entertainment,Sports Venues,0.429231765
+Recreation,Arts and Entertainment,Symphony and Opera,0.146812014
+Recreation,Arts and Entertainment,Theatrical Productions,0.146812014
+Recreation,Athletic Fields,,0.429231765
+Recreation,Baseball,,0.429231765
+Recreation,Basketball,,0.429231765
+Recreation,Batting Cages,,0.429231765
+Recreation,Boating,,0.429231765
+Recreation,Campgrounds and RV Parks,,0.429231765
+Recreation,Canoes and Kayaks,,0.429231765
+Recreation,Combat Sports,,0.429231765
+Recreation,Cycling,,0.429231765
+Recreation,Dance,,0.429231765
+Recreation,Equestrian,,0.429231765
+Recreation,Football,,0.429231765
+Recreation,Go Carts,,0.429231765
+Recreation,Golf,,0.429231765
+Recreation,Gun Ranges,,0.429231765
+Recreation,Gymnastics,,0.429231765
+Recreation,Gyms and Fitness Centers,,0.429231765
+Recreation,Hiking,,0.429231765
+Recreation,Hockey,,0.429231765
+Recreation,Hot Air Balloons,,0.429231765
+Recreation,Hunting and Fishing,,0.510838852
+Recreation,Landmarks,,0.429231765
+Recreation,Landmarks,Buildings and Structures,0.26060767
+Recreation,Landmarks,Gardens,0.26060767
+Recreation,Landmarks,Historic Sites,0.26060767
+Recreation,Landmarks,Monuments and Memorials,0.26060767
+Recreation,Miniature Golf,,0.429231765
+Recreation,Outdoors,,0.26060767
+Recreation,Outdoors,Beaches,0.26060767
+Recreation,Outdoors,Forests,0.26060767
+Recreation,Outdoors,Lakes,0.26060767
+Recreation,Outdoors,Mountains,0.26060767
+Recreation,Outdoors,Rivers,0.26060767
+Recreation,Paintball,,0.429231765
+Recreation,Parks,,0.26060767
+Recreation,Parks,Natural Parks,0.26060767
+Recreation,Parks,Picnic Areas,0.26060767
+Recreation,Parks,Playgrounds,0.26060767
+Recreation,Personal Trainers,,0.429231765
+Recreation,Race Tracks,,0.429231765
+Recreation,Racquet Sports,,0.429231765
+Recreation,Racquetball,,0.429231765
+Recreation,Rafting,,0.429231765
+Recreation,Recreation Centers,,0.429231765
+Recreation,Rock Climbing,,0.429231765
+Recreation,Running,,0.429231765
+Recreation,Scuba Diving,,0.429231765
+Recreation,Skating,,0.429231765
+Recreation,Skydiving,,0.429231765
+Recreation,Snow Sports,,0.429231765
+Recreation,Soccer,,0.429231765
+Recreation,Sports Clubs,,0.429231765
+Recreation,Sports and Recreation Camps,,0.429231765
+Recreation,Stadiums and Arenas,,0.11637542
+Recreation,Swimming,,0.429231765
+Recreation,Tennis,,0.429231765
+Recreation,Water Sports,,0.429231765
+Recreation,Yoga and Pilates,,0.429231765
+Recreation,Zoo,,0.26060767
+Service,,,0.144714695
+Service,Advertising and Marketing,,0.201990967
+Service,Advertising and Marketing,Advertising Agencies and Media Buyers,0.201990967
+Service,Advertising and Marketing,Creative Services,0.201990967
+Service,Advertising and Marketing,Direct Mail and Email Marketing Services,0.201990967
+Service,Advertising and Marketing,Market Research and Consulting,0.201990967
+Service,Advertising and Marketing,Online Advertising,0.201990967
+Service,Advertising and Marketing,Print,0.201990967
+Service,Advertising and Marketing,Promotional Items,0.201990967
+Service,Advertising and Marketing,Public Relations,0.201990967
+Service,Advertising and Marketing,Search Engine Marketing and Optimization,0.201990967
+Service,Advertising and Marketing,Writing,0.201990967
+Service,Agriculture and Forestry,,0.611188644
+Service,Agriculture and Forestry,Crop Production,2.067164029
+Service,Agriculture and Forestry,Forestry,0.559401735
+Service,Agriculture and Forestry,Livestock and Animals,4.664219379
+Service,Agriculture and Forestry,Services,0.611188644
+Service,Art Restoration,,0.144714695
+Service,Art and Graphic Design,,0.144870802
+Service,Audiovisual,,0.144714695
+Service,Automation and Control Systems,,0.144714695
+Service,Automotive,,0.213855635
+Service,Automotive,Auto Oil and Lube,0.213855635
+Service,Automotive,Auto Smog Check,0.213855635
+Service,Automotive,Auto Tires,0.213855635
+Service,Automotive,Auto Transmission,0.213855635
+Service,Automotive,Car Appraisers,0.213855635
+Service,Automotive,Car Wash and Detail,0.213855635
+Service,Automotive,Maintenance and Repair,0.213855635
+Service,Automotive,Motorcycle,0.213855635
+Service,Automotive,Towing,0.213855635
+Service,Business Services,,0.171354552
+Service,Business Services,Printing and Publishing,0.171354552
+Service,Business and Strategy Consulting,,0.171354552
+Service,Cable,,0.199236773
+Service,Chemicals and Gasses,,0.144714695
+Service,Cleaning,,0.144714695
+Service,Computers,,0.134971071
+Service,Computers,Maintenance and Repair,0.134971071
+Service,Computers,Software Development,0.134971071
+Service,Construction,,0.424248424
+Service,Construction,Carpenters,0.424248424
+Service,Construction,Carpet and Flooring,0.424248424
+Service,Construction,Contractors,0.424248424
+Service,Construction,Electricians,0.424248424
+Service,Construction,Heating,0.424248424
+Service,Construction,Infrastructure,0.424248424
+Service,Construction,Masonry,0.424248424
+Service,Construction,Painting,0.424248424
+Service,Construction,Roofers,0.424248424
+Service,Construction,Specialty,0.424248424
+Service,Credit Counseling and Bankruptcy Services,,0.144714695
+Service,Dating and Escort,,0.144714695
+Service,Employment Agencies,,0.063074299
+Service,Engineering,,0.170719656
+Service,Entertainment,,0.429231765
+Service,Entertainment,Media,0.218492941
+Service,Events and Event Planning,,0.144714695
+Service,Financial,,0.115436325
+Service,Financial,ATMs,0.223227192
+Service,Financial,Accounting and Bookkeeping,0.091366558
+Service,Financial,Banking and Finance,0.223227192
+Service,Financial,Business Brokers and Franchises,0.064583385
+Service,Financial,Check Cashing,0.223227192
+Service,Financial,Collections,0.223227192
+Service,Financial,Credit Reporting,0.223227192
+Service,Financial,Financial Planning and Investments,0.115436325
+Service,Financial,Fund Raising,0.115436325
+Service,Financial,Holding and Investment Offices,0.115436325
+Service,Financial,Loans and Mortgages,0.115436325
+Service,Financial,Stock Brokers,0.064583385
+Service,Financial,Student Aid and Grants,0.223227192
+Service,Financial,Taxes,0.091366558
+Service,Food and Beverage,,0.234246093
+Service,Food and Beverage,Catering,0.234246093
+Service,Food and Beverage,Distribution,0.234246093
+Service,Funeral Services,,0.0708894
+Service,Geological,,0.144714695
+Service,Home Improvement,,0.144714695
+Service,Home Improvement,Architects,0.170719656
+Service,Home Improvement,Carpenters,0.144714695
+Service,Home Improvement,Carpet and Flooring,0.144714695
+Service,Home Improvement,Contractors,0.144714695
+Service,Home Improvement,Doors and Windows,0.144714695
+Service,Home Improvement,Electricians,0.144714695
+Service,Home Improvement,Fences,0.144714695
+Service,Home Improvement,Hardware and Services,0.144714695
+Service,Home Improvement,Heating,0.144714695
+Service,Home Improvement,Home Appliances,0.144714695
+Service,Home Improvement,Home Inspection Services,0.144714695
+Service,Home Improvement,Housewares,0.144714695
+Service,Home Improvement,Interior Design,0.144714695
+Service,Home Improvement,Kitchens,0.144714695
+Service,Home Improvement,Landscaping and Gardeners,0.144714695
+Service,Home Improvement,Lighting Fixtures,0.144714695
+Service,Home Improvement,Mobile Homes,0.144714695
+Service,Home Improvement,Movers,0.144714695
+Service,Home Improvement,Painting,0.144714695
+Service,Home Improvement,Pest Control,0.144714695
+Service,Home Improvement,Plumbing,0.144714695
+Service,Home Improvement,Pools and Spas,0.144714695
+Service,Home Improvement,Roofers,0.144714695
+Service,Home Improvement,Storage,0.144714695
+Service,Home Improvement,Swimming Pool Maintenance and Services,0.144714695
+Service,Home Improvement,Tree Service,0.144714695
+Service,Home Improvement,Upholstery,0.144714695
+Service,Household,,0.144714695
+Service,Human Resources,,0.137818035
+Service,Immigration,,0.137818035
+Service,Import and Export,,0
+Service,Industrial Machinery and Vehicles,,0.281257451
+Service,Insurance,,0.064583385
+Service,Internet Services,,0.144714695
+Service,Leather,,0.446586758
+Service,Legal,,0.090866332
+Service,Logging and Sawmills,,0.460726842
+Service,Machine Shops,,0.213855635
+Service,Management,,0.126957016
+Service,Manufacturing,,0.358848169
+Service,Manufacturing,Apparel and Fabric Products,0.275102354
+Service,Manufacturing,Chemicals and Gasses,0.51248904
+Service,Manufacturing,Computers and Office Machines,0.179404377
+Service,Manufacturing,Electrical Equipment and Components,0.277491827
+Service,Manufacturing,Food and Beverage,0.760319908
+Service,Manufacturing,Furniture and Fixtures,0.387877939
+Service,Manufacturing,Glass Products,0.581689441
+Service,Manufacturing,Industrial Machinery and Equipment,0.281257451
+Service,Manufacturing,Leather Goods,0.446586758
+Service,Manufacturing,Metal Products,0.422385677
+Service,Manufacturing,Nonmetallic Mineral Products,1.064662248
+Service,Manufacturing,Paper Products,0.547599417
+Service,Manufacturing,Petroleum,1.043760798
+Service,Manufacturing,Plastic Products,1.306445866
+Service,Manufacturing,Rubber Products,0.434682741
+Service,Manufacturing,Service Instruments,0.358848169
+Service,Manufacturing,Textiles,0.366150111
+Service,Manufacturing,Tobacco,0.248711352
+Service,Manufacturing,Transportation Equipment,0.405163036
+Service,Manufacturing,Wood Products,0.363715677
+Service,Media Production,,0.153435581
+Service,Metals,,0.422385677
+Service,Mining,,0.739327047
+Service,Mining,Coal,1.802438446
+Service,Mining,Metal,0.739327047
+Service,Mining,Non-Metallic Minerals,0.968475571
+Service,News Reporting,,0.19344165
+Service,Oil and Gas,,1.71810886
+Service,Packaging,,0.604838287
+Service,Paper,,0.547599417
+Service,Personal Care,,0.196067972
+Service,Personal Care,Hair Removal,0.196067972
+Service,Personal Care,Hair Salons and Barbers,0.196067972
+Service,Personal Care,Laundry and Garment Services,0.230547318
+Service,Personal Care,Manicures and Pedicures,0.196067972
+Service,Personal Care,Massage Clinics and Therapists,0.196067972
+Service,Personal Care,Piercing,0.196067972
+Service,Personal Care,Skin Care,0.196067972
+Service,Personal Care,Spas,0.196067972
+Service,Personal Care,Tanning Salons,0.196067972
+Service,Personal Care,Tattooing,0.196067972
+Service,Petroleum,,1.043760798
+Service,Photography,,0.19079755
+Service,Plastics,,0.512068486
+Service,Rail,,0.78920575
+Service,Real Estate,,0.530335603
+Service,Real Estate,Apartments,0.074350952
+Service,Real Estate,Boarding Houses,0.530335603
+Service,Real Estate,Building and Land Surveyors,0.530335603
+Service,Real Estate,Commercial Real Estate,0.530335603
+Service,Real Estate,Corporate Housing,0.530335603
+Service,Real Estate,Property Management,0.530335603
+Service,Real Estate,Real Estate Agents,0.530335603
+Service,Real Estate,Real Estate Appraiser,0.530335603
+Service,Real Estate,Real Estate Development and Title Companies,0.530335603
+Service,Real Estate,Rent,0.074350952
+Service,Refrigeration and Ice,,0.434773061
+Service,Renewable Energy,,0.115304426
+Service,Repair Services,,0.174815539
+Service,Research,,0.250888476
+Service,Rubber,,0.434682741
+Service,Scientific,,0.250888476
+Service,Security and Safety,,0.132371301
+Service,Shipping and Freight,,0.544643864
+Service,Software Development,,0.152241024
+Service,Storage,,0.815682409
+Service,Subscription,,0.199236773
+Service,Tailors,,0.144714695
+Service,Telecommunication Services,,0.208738806
+Service,Textiles,,0.366150111
+Service,Tourist Information and Services,,0.356310662
+Service,Transportation,,0.356310662
+Service,Travel Agents and Tour Operators,,0.158772539
+Service,Utilities,,0.736911281
+Service,Utilities,Electric,4.811914087
+Service,Utilities,Gas,0.736911281
+Service,Utilities,Heating,0.736911281
+Service,Utilities,Sanitary and Waste Management,0.736911281
+Service,Utilities,Water,0.736911281
+Service,Veterinarians,,0.19748747
+Service,Water and Waste Management,,0.736911281
+Service,Web Design and Development,,0.144714695
+Service,Welding,,0.144714695
+Shops,,,0.2506722
+Shops,Adult,,0.2506722
+Shops,Antiques,,0.2506722
+Shops,Arts and Crafts,,0.2506722
+Shops,Auctions,,0.2506722
+Shops,Automotive,,0.220034113
+Shops,Automotive,Car Dealers and Leasing,0.220034113
+Shops,Automotive,Car Parts and Accessories,0.220034113
+Shops,Automotive,Classic and Antique Car,0.220034113
+Shops,Automotive,Motorcycles,0.220034113
+Shops,Automotive,RVs and Motor Homes,0.220034113
+Shops,Automotive,Salvage Yards,0.220034113
+Shops,Automotive,Used Car Dealers,0.220034113
+Shops,Beauty Products,,0.222115002
+Shops,Bicycles,,0.2506722
+Shops,Boat Dealers,,0.2506722
+Shops,Bookstores,,0.2506722
+Shops,Cards and Stationery,,0.2506722
+Shops,Children,,0.2506722
+Shops,Clothing and Accessories,,0.296379085
+Shops,Clothing and Accessories,Accessories Store,0.296379085
+Shops,Clothing and Accessories,Boutique,0.296379085
+Shops,Clothing and Accessories,Kids' Store,0.296379085
+Shops,Clothing and Accessories,Lingerie Store,0.296379085
+Shops,Clothing and Accessories,Men's Store,0.296379085
+Shops,Clothing and Accessories,Shoe Store,0.296379085
+Shops,Clothing and Accessories,Swimwear,0.296379085
+Shops,Clothing and Accessories,Women's Store,0.296379085
+Shops,Computers and Electronics,,0.2506722
+Shops,Computers and Electronics,Cameras,0.2506722
+Shops,Computers and Electronics,Mobile Phones,0.2506722
+Shops,Computers and Electronics,Video Games,0.2506722
+Shops,Construction Supplies,,0.20720946
+Shops,Convenience Stores,,0.2506722
+Shops,Costumes,,0.2506722
+Shops,Dance and Music,,0.2506722
+Shops,Department Stores,,0.2861819
+Shops,Digital Purchase,,0.2506722
+Shops,Discount Stores,,0.2506722
+Shops,Electrical Equipment,,0.2506722
+Shops,Equipment Rental,,0.2506722
+Shops,Flea Markets,,0.2506722
+Shops,Florists,,0.2506722
+Shops,Food and Beverage Store,,0.358899211
+Shops,Food and Beverage Store,Beer,0.358899211
+Shops,Food and Beverage Store,"Beer, Wine and Spirits",0.358899211
+Shops,Food and Beverage Store,Farmers Markets,0.358899211
+Shops,Food and Beverage Store,Health Food,0.358899211
+Shops,Food and Beverage Store,Specialty,0.358899211
+Shops,Fuel Dealer,,0.335214039
+Shops,Furniture and Home Decor,,0.2506722
+Shops,Gift and Novelty,,0.2506722
+Shops,Glasses and Optometrist,,0.2506722
+Shops,Hardware Store,,0.20720946
+Shops,Hobby and Collectibles,,0.2506722
+Shops,Industrial Supplies,,0.20720946
+Shops,Jewelry and Watches,,0.296379085
+Shops,Lawn and Garden,,0.20720946
+Shops,Luggage,,0.2506722
+Shops,Marine Supplies,,0.2506722
+Shops,Music,,0.2506722
+Shops,"Music, Video and DVD",,0.2506722
+Shops,Musical Instruments,,0.2506722
+Shops,Newsstands,,0.2506722
+Shops,Office Supplies,,0.2506722
+Shops,Outlet,,0.2506722
+Shops,Outlet,Accessories Store,0.296379085
+Shops,Outlet,Boutique,0.296379085
+Shops,Outlet,Kids' Store,0.296379085
+Shops,Outlet,Lingerie Store,0.296379085
+Shops,Outlet,Men's Store,0.296379085
+Shops,Outlet,Shoe Store,0.296379085
+Shops,Outlet,Swimwear,0.296379085
+Shops,Outlet,Women's Store,0.296379085
+Shops,Pawn Shops,,0.2506722
+Shops,Pets,,0.2506722
+Shops,Pharmacies,,0.222115002
+Shops,Photos and Frames,,0.2506722
+Shops,Shopping Centers and Malls,,0.2506722
+Shops,Sporting Goods,,0.2506722
+Shops,Supermarkets and Groceries,,1.03
+Shops,Tobacco,,0.2506722
+Shops,Toys,,0.2506722
+Shops,Vintage and Thrift,,0.2506722
+Shops,Warehouses and Wholesale Stores,,0.2506722
+Shops,Wedding and Bridal,,0.2506722
+Shops,Wholesale,,0.2506722
+Tax,,,0.091366558
+Tax,Payment,,0.091366558
+Tax,Refund,,0.091366558
+Transfer,,,0.223227192
+Transfer,ACH,,0.223227192
+Transfer,Billpay,,0.223227192
+Transfer,Check,,0.223227192
+Transfer,Credit,,0.223227192
+Transfer,Debit,,0.223227192
+Transfer,Deposit,,0.223227192
+Transfer,Deposit,ATM,0.223227192
+Transfer,Deposit,Check,0.223227192
+Transfer,Internal Account Transfer,,0.223227192
+Transfer,Keep the Change Savings Program,,0.223227192
+Transfer,Payroll,,0.223227192
+Transfer,Payroll,Benefits,0.223227192
+Transfer,Save As You Go,,0.223227192
+Transfer,Third Party,,0.223227192
+Transfer,Third Party,Acorns,0.223227192
+Transfer,Third Party,Betterment,0.223227192
+Transfer,Third Party,Chase QuickPay,0.223227192
+Transfer,Third Party,Coinbase,0.223227192
+Transfer,Third Party,Digit,0.223227192
+Transfer,Third Party,Dwolla,0.223227192
+Transfer,Third Party,PayPal,0.223227192
+Transfer,Third Party,Plaid,0.223227192
+Transfer,Third Party,Square,0.223227192
+Transfer,Third Party,Square Cash,0.223227192
+Transfer,Third Party,Venmo,0.223227192
+Transfer,Wire,,0.223227192
+Transfer,Withdrawal,,0.223227192
+Transfer,Withdrawal,ATM,0.223227192
+Transfer,Withdrawal,Check,0.223227192
+Travel,,,0.356310662
+Travel,Airlines and Aviation Services,,1.069712225
+Travel,Airports,,1.069712225
+Travel,Boat,,0.823605788
+Travel,Bus Stations,,0.720677234
+Travel,Car Service,,0.720677234
+Travel,Car Service,Ride Share,0.720677234
+Travel,Car and Truck Rentals,,0.242404159
+Travel,Charter Buses,,0.720677234
+Travel,Cruises,,0.823605788
+Travel,Gas Stations,,4.795
+Travel,Heliports,,1.069712225
+Travel,Limos and Chauffeurs,,0.720677234
+Travel,Lodging,,0.278364192
+Travel,Lodging,Bed and Breakfasts,0.278364192
+Travel,Lodging,Cottages and Cabins,0.278364192
+Travel,Lodging,Hostels,0.278364192
+Travel,Lodging,Hotels and Motels,0.278364192
+Travel,Lodging,Lodges and Vacation Rentals,0.278364192
+Travel,Lodging,Resorts,0.278364192
+Travel,Parking,,0.356310662
+Travel,Public Transportation Services,,0.720677234
+Travel,Rail,,0.78920575
+Travel,Taxi,,0.720677234
+Travel,Tolls and Fees,,0.356310662
+Travel,Transportation Centers,,0.356310662

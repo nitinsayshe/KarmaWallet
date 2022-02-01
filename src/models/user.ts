@@ -38,7 +38,7 @@ export interface IUser {
   role: string; // cannot mark as UserRoles due to how mongoose treats enums
   emailVerified: boolean;
   lastModified: Date;
-  v2Id: string;
+  legacyId: string;
   integration: IUserIntegrations;
 }
 
@@ -48,6 +48,7 @@ export interface IUserDocument extends IUser, Document {
 export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
+  // TODO: update this to ObjectId
   _id: { type: String },
   email: { type: String, required: true, unique: true },
   name: { type: String, required: true },
@@ -70,7 +71,7 @@ const userSchema = new Schema({
   },
   emailVerified: { type: Boolean, default: false },
   lastModified: { type: Date, default: new Date() },
-  v2Id: { type: String },
+  legacyId: { type: String },
   integrations: {
     rare: {
       type: {

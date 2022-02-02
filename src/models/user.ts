@@ -28,7 +28,6 @@ export interface IUserIntegrations {
 }
 
 export interface IUser {
-  _id: string;
   email: string;
   name: string;
   password: string;
@@ -43,18 +42,13 @@ export interface IUser {
   integration: IUserIntegrations;
 }
 
-export interface IUserDocument extends IUser, Document {
-  _id: string;
-}
+export interface IUserDocument extends IUser, Document {}
 export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
-  // TODO: update this to ObjectId
-  _id: { type: String },
   email: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   password: { type: String, required: true },
-  plaidItems: { type: [String], ref: 'plaidItem', default: [] },
   dateJoined: { type: Date, default: new Date() },
   zipcode: { type: String },
   subscribedUpdates: { type: Boolean, default: true },

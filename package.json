@@ -4,6 +4,7 @@
   "description": "the karma wallet backend",
   "main": "index.ts",
   "scripts": {
+    "migrate": "ts-node ./bin/v3_migration.ts",
     "clean": "rm -rf dist",
     "copy": "ts-node ./bin/postbuild.ts",
     "prebuild": "npm run clean",

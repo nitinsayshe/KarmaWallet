@@ -3,7 +3,7 @@ import {
   Response,
   NextFunction,
 } from 'express-serve-static-core';
-import { IUser } from '../models/user';
+import { IUserDocument } from '../models/user';
 
 /**
  * adds requestor and authKey to the request
@@ -15,7 +15,7 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
   params: P,
   query: Q;
   body: B;
-  requestor?: IUser;
+  requestor?: IUserDocument;
   authKey?: string;
 }
 

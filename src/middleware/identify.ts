@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express-serve-static-core';
-import { IUser } from '../models/user';
+import { IUserDocument } from '../models/user';
 import * as Session from '../services/session';
 import * as UserModel from '../services/user';
 import { IRequest } from '../types/request';
@@ -11,7 +11,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
     const uid = await Session.verifySession(authKey);
     if (uid) {
       const user = await UserModel.getUserById(req, uid, true);
-      (req as IRequest).requestor = (user as IUser);
+      (req as IRequest).requestor = (user as IUserDocument);
       (req as IRequest).authKey = authKey;
     }
   } catch (e) {

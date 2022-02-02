@@ -9,6 +9,8 @@ const {
 } = process.env;
 
 class _MongoClient extends Client {
+  private _db: typeof mongoose = null;
+
   constructor() {
     super('Mongo');
   }
@@ -22,11 +24,20 @@ class _MongoClient extends Client {
       console.log(err);
     });
 
+    mongoose.connection.on('disconnected', () => {
+      console.log(`Disconnected from${!!DB_URL ? '' : ' local'} MongoDB`);
+    });
+
     mongoose.connection.on('connected', () => {
       console.log(`\nConnected successfully to${!!DB_URL ? '' : ' local'} MongoDB`);
     });
 
-    await mongoose.connect(mongoUri);
+    this._db = await mongoose.connect(mongoUri);
+  };
+
+  disconnect = () => {
+    console.log('disconnecting from MongoDB...');
+    this._db?.disconnect();
   };
 }
 

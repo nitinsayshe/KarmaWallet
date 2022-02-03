@@ -77,7 +77,7 @@ export interface ITransactionIntegrations {
 }
 
 export interface ITransaction {
-  userId: string;
+  userId: Schema.Types.ObjectId;
   companyId: number;
   cardId: ICardDocument['_id'];
   category: number;
@@ -95,7 +95,7 @@ export type ITransactionModel = IModel<ITransaction>;
 
 const transactionSchema = new Schema({
   userId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,
   },

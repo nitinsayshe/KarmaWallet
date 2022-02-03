@@ -224,7 +224,6 @@ export class PlaidMapper {
 
   mapItems = async () => {
     console.log('\nmapping cards and transactions...');
-
     for (const item of this._plaidItems) {
       // if new user, need to create
       if (!this._users[`${item.userId}`]) {

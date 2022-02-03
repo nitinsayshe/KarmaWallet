@@ -15,7 +15,7 @@ export const mapExistingItems = async (_: IRequest) => {
     console.log(`timestamp: ${new Date().toString()}\n`);
 
     console.log('\nretrieving all plaid items...');
-    const plaidItems = await PlaidItemModel.find().lean();
+    const plaidItems = await PlaidItemModel.find({}).lean();
     console.log('[+] plaid items retrieved\n');
 
     const mapper = new PlaidMapper(plaidItems);

@@ -3,17 +3,18 @@ import utc from 'dayjs/plugin/utc';
 import {
   AccountBase, Institution, Transaction as PlaidTransaction, TransactionsGetResponse,
 } from 'plaid';
+import { Schema } from 'mongoose';
 import Transaction from './transaction';
-import { CardModel, ICardModel } from '../../models/card';
+import { CardModel, ICardDocument } from '../../models/card';
 import { CardStatus } from '../../lib/constants';
 
 dayjs.extend(utc);
 
 class Card {
   // owner of the card
-  _userId: string = null;
+  _userId: Schema.Types.ObjectId = null;
   // the card object stored in the db. not available until after save
-  _card: ICardModel = null;
+  _card: ICardDocument = null;
   // all plaid items this plaid account was found in (in case we ever need to reference them later)
   _plaid_items: Set<string> = null;
   // the plaid account object
@@ -27,7 +28,7 @@ class Card {
   _transactions: Transaction[] = [];
   _duplicateTransactions: Transaction[] = [];
   _isNew = false;
-  constructor(userId: string, account: AccountBase, plaidItem: TransactionsGetResponse) {
+  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: TransactionsGetResponse) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
@@ -82,7 +83,7 @@ class Card {
         this._transactionsIndex.add(`${transaction.transaction_id}`);
         const existingTransaction = this._transactions.find(t => `${t.transactionId}` === `${transaction.transaction_id}`);
 
-        const _transaction = new Transaction(this._userId, this._id.toString(), transaction);
+        const _transaction = new Transaction(this._userId, this._id, transaction);
 
         if (!!existingTransaction) {
           // TODO: this transacton id already exists in allTransactions, need to get status from NEWEST instance

@@ -31,7 +31,7 @@ export interface ICardIntegrations {
 }
 
 export interface ICard {
-  userId: string;
+  userId: Schema.Types.ObjectId;
   name: string;
   mask: string;
   type: string;
@@ -48,7 +48,7 @@ export type ICardModel = IModel<ICard>;
 
 const cardSchema = new Schema({
   userId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,
   },

@@ -5,6 +5,7 @@
   "main": "index.ts",
   "scripts": {
     "migrate": "ts-node ./bin/v3_migration.ts",
+    "reset_migration": "ts-node ./bin/reset_v3_migration.ts && ts-node ./bin/pull_remote_db.ts",
     "clean": "rm -rf dist",
     "copy": "ts-node ./bin/postbuild.ts",
     "prebuild": "npm run clean",

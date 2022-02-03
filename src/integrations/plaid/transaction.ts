@@ -1,5 +1,6 @@
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Schema } from 'mongoose';
 import { Transaction as IPlaidTransaction } from 'plaid';
 import { IPlaidCategoryMappingDocument } from '../../models/plaidCategoryMapping';
 import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
@@ -9,9 +10,9 @@ dayjs.extend(utc);
 // TODO: add new sectors property
 
 class Transaction {
-  _userId: string = null;
+  _userId: Schema.Types.ObjectId = null;
   _companyId: number = null;
-  _cardId: string = null;
+  _cardId: Schema.Types.ObjectId = null;
   _transaction: ITransactionModel = null;
   _plaidTransaction: IPlaidTransaction;
   _category: number = null;
@@ -19,7 +20,7 @@ class Transaction {
   _carbonMultiplier: IPlaidCategoryMappingDocument = null;
   _date: Dayjs = null;
 
-  constructor(userId: string, cardId: string, plaidTransaction: IPlaidTransaction) {
+  constructor(userId: Schema.Types.ObjectId, cardId: Schema.Types.ObjectId, plaidTransaction: IPlaidTransaction) {
     this._userId = userId;
     this._cardId = cardId;
     this._plaidTransaction = plaidTransaction;
@@ -73,7 +74,7 @@ class Transaction {
     userId: this._userId,
     cardId: this._cardId,
     companyId: this.companyId,
-    amount: this._transaction?.amount,
+    amount: this.amount,
     date: this.date.toDate(),
     integrations: this._transaction?.integrations || {
       plaid: this._plaidTransaction,

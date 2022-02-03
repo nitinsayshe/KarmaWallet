@@ -1,5 +1,7 @@
 import argon2 from 'argon2';
-import { IUser, IUserGroup, UserModel } from '../../models/user';
+import {
+  IUser, IUserDocument, IUserGroup, UserModel,
+} from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
 import {
@@ -62,7 +64,7 @@ export const register = async (req: IRequest, {
     });
 
     const user = await userInstance.save();
-    const authKey = await Session.createSession(user._id);
+    const authKey = await Session.createSession(user._id.toString());
     return { user, authKey };
   } catch (err) {
     throw asCustomError(err);
@@ -70,7 +72,7 @@ export const register = async (req: IRequest, {
 };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
-  const user = await UserModel.findOne({ email }).lean();
+  const user = await UserModel.findOne({ email });
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
@@ -78,47 +80,25 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
   if (!passwordMatch) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
-  const authKey = await Session.createSession(user._id);
+  const authKey = await Session.createSession(user._id.toString());
   return { user, authKey };
 };
 
-export const getUsers = async (_: IRequest, query = {}, lean = false) => {
-  try {
-    return !!lean
-      ? await UserModel
-        .find(query)
-        .populate({
-          path: 'groups',
-          model: UserGroupModel,
-        })
-        .lean()
-      : await UserModel
-        .find(query)
-        .populate({
-          path: 'groups',
-          model: UserGroupModel,
-        });
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
+export const getUsers = (_: IRequest, query = {}) => UserModel
+  .find(query)
+  .populate({
+    path: 'groups',
+    model: UserGroupModel,
+  });
 
-export const getUser = async (_: IRequest, query = {}, lean = false) => {
+export const getUser = async (_: IRequest, query = {}) => {
   try {
-    const user = !!lean
-      ? await UserModel
-        .findOne(query)
-        .populate({
-          path: 'groups',
-          model: UserGroupModel,
-        })
-        .lean()
-      : await UserModel
-        .findOne(query)
-        .populate({
-          path: 'groups',
-          model: UserGroupModel,
-        });
+    const user = await UserModel
+      .findOne(query)
+      .populate({
+        path: 'groups',
+        model: UserGroupModel,
+      });
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -128,22 +108,14 @@ export const getUser = async (_: IRequest, query = {}, lean = false) => {
   }
 };
 
-export const getUserById = async (_: IRequest, uid: string, lean?: boolean) => {
+export const getUserById = async (_: IRequest, uid: string) => {
   try {
-    const user = !!lean
-      ? await UserModel
-        .findById({ _id: uid })
-        .populate({
-          path: 'groups',
-          model: UserGroupModel,
-        })
-        .lean()
-      : await UserModel
-        .findById({ _id: uid })
-        .populate({
-          path: 'groups',
-          model: UserGroupModel,
-        });
+    const user = await UserModel
+      .findById({ _id: uid })
+      .populate({
+        path: 'groups',
+        model: UserGroupModel,
+      });
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -162,7 +134,7 @@ export const getSharableUser = ({
   subscribedUpdates,
   role,
   groups,
-}: IUser) => {
+}: IUserDocument) => {
   const _groups = (!!groups && !!groups.filter(g => !!g.group).length)
     ? groups.map(g => {
       g.group = getShareableGroup(g.group as IGroupModel);
@@ -186,22 +158,21 @@ export const logout = async (_: IRequest, authKey: string) => {
   await Session.revokeSession(authKey);
 };
 
-export const updateUser = async (_: IRequest, uid: string, updates: Partial<IUser>) => {
+export const updateUser = async (_: IRequest, user: IUserDocument, updates: Partial<IUser>) => {
   try {
-    return await UserModel.findByIdAndUpdate(uid, { ...updates, lastModified: new Date() }, { new: true });
+    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: new Date() }, { new: true });
   } catch (err) {
     throw asCustomError(err);
   }
 };
 
-const changePassword = async (req: IRequest, uid: string, newPassword: string) => {
+const changePassword = async (req: IRequest, user: IUserDocument, newPassword: string) => {
   const passwordValidation = validatePassword(newPassword);
   if (!passwordValidation.valid) {
     throw new CustomError(`Invalid new password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   }
   const hash = await argon2.hash(newPassword);
-  const user = await updateUser(req, uid, { password: hash });
-  return user;
+  return updateUser(req, user, { password: hash });
 };
 
 export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
@@ -211,7 +182,10 @@ export const updateProfile = async (req: IRequest, uid: string, updates: Partial
     }
     updates.emailVerified = false;
   }
-  return updateUser(req, uid, updates);
+  const user = await UserModel.findById(uid);
+  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+
+  return updateUser(req, user, updates);
 };
 
 export const updatePassword = async (req: IRequest, newPassword: string, currentPassword: string) => {
@@ -225,9 +199,9 @@ export const updatePassword = async (req: IRequest, newPassword: string, current
 
 export const createPasswordResetToken = async (_: IRequest, email: string) => {
   const minutes = passwordResetTokenMinutes;
-  const user = await UserModel.findOne({ email }, '_id');
+  const user = await UserModel.findOne({ email });
   if (user) {
-    await Token.createToken({ user: user._id, minutes, type: TokenTypes.Password });
+    await Token.createToken({ user, minutes, type: TokenTypes.Password });
   }
   // TODO: Send Email
   const message = `An email has been sent to the email address you provided with further instructions. Your reset request will expire in ${passwordResetTokenMinutes} minutes.`;
@@ -240,31 +214,33 @@ export const resetPasswordFromToken = async (req: IRequest, email: string, value
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const token = await Token.getTokenAndConsume(user._id, value, TokenTypes.Password);
+  const token = await Token.getTokenAndConsume(user, value, TokenTypes.Password);
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const _user = await changePassword(req, user._id, password);
+  const _user = await changePassword(req, user, password);
   return _user;
 };
 
 export const sendEmailVerification = async (_: IRequest, uid: string) => {
   const days = emailVerificationDays;
   const msg = `Verfication instructions sent to your provided email address. Validation will expire in ${days} days.`;
-  await Token.createToken({ user: uid, days, type: TokenTypes.Email });
+  const user = await UserModel.findById(uid);
+  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+  await Token.createToken({ user, days, type: TokenTypes.Email });
   // TODO: Send Email'
   return msg;
 };
 
 export const verifyEmail = async (req: IRequest, email: string, token: string) => {
   const errMsg = 'Token not found. Please request email verification again.';
-  const user = await getUser(req, { email });
+  const user: IUserDocument = await getUser(req, { email });
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const tokenData = await Token.getTokenAndConsume(user._id, token, TokenTypes.Email);
+  const tokenData = await Token.getTokenAndConsume(user, token, TokenTypes.Email);
   if (!tokenData) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  return updateUser(req, user._id, { emailVerified: true });
+  return updateUser(req, user, { emailVerified: true });
 };

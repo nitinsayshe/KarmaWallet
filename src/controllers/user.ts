@@ -90,12 +90,12 @@ export const checkPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> =
     error(req, res, new CustomError('Invalid email.', ErrorTypes.AUTHENTICATION));
     return;
   }
-  const user = await User.getUser(req, { email }, true);
+  const user = await User.getUser(req, { email });
   if (!user) {
     error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
     return;
   }
-  const data = await Token.getToken(user._id, token, TokenTypes.Password);
+  const data = await Token.getToken(user, token, TokenTypes.Password);
   if (!data) {
     error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
     return;

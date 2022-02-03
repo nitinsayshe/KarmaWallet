@@ -50,7 +50,7 @@ export const updateUserRole = async (req: IRequest, userId: string, newRole: Use
   try {
     if (req.requestor._id === userId) return { error: 'You cannot change your own role.', code: 403 };
 
-    let user = await UserService.getUserById(req, userId, true);
+    let user = await UserService.getUserById(req, userId);
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
     const role = Object.values(UserRoles).find(r => r === newRole);
     if (!role) throw new CustomError(`Invalid role: ${newRole}`, ErrorTypes.INVALID_ARG);
@@ -65,7 +65,7 @@ export const updateUserRole = async (req: IRequest, userId: string, newRole: Use
       }
     }
 
-    user = await UserService.updateUser(req, userId, { role });
+    user = await UserService.updateUser(req, user, { role });
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
     return user;
   } catch (err) {

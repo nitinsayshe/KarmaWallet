@@ -50,8 +50,8 @@ import fuzzymatcher
 import re, cleanco
 import pandas as pd
 import numpy as np
-# from cleanco import cleanco
-from cleanco import basename
+from cleanco import cleanco
+# from cleanco import basename
 import numpy as np
 import cython
 import string_grouper

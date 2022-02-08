@@ -35,7 +35,7 @@ const jobSchema = new Schema({
   department: {
     type: String,
   },
-  location: {
+  jobLocation: { // could not use `location` as it is a reserved keyword
     type: String,
   },
   createdAt: {

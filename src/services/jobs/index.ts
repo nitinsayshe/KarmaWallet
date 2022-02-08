@@ -66,7 +66,7 @@ export const getSharableJobRef = (job: IJobModel) => ({
   _id: job._id,
   title: job.title,
   department: job.department,
-  location: job.jobLocation,
+  jobLocation: job.jobLocation,
   createdAt: job.createdAt,
   lastModified: job.lastModified,
 });

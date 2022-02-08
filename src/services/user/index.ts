@@ -137,7 +137,7 @@ export const getUserById = async (_: IRequest, uid: string) => {
   }
 };
 
-export const getSharableUser = ({
+export const getShareableUser = ({
   _id,
   email,
   name,

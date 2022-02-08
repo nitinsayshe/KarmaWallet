@@ -62,7 +62,7 @@ export const update = (_: IRequest, id: string, title: string, instructions: str
   return JobModel.findByIdAndUpdate(id, updates, { new: true });
 };
 
-export const getSharableJobRef = (job: IJobModel) => ({
+export const getShareableJobRef = (job: IJobModel) => ({
   _id: job._id,
   title: job.title,
   department: job.department,
@@ -71,8 +71,8 @@ export const getSharableJobRef = (job: IJobModel) => ({
   lastModified: job.lastModified,
 });
 
-export const getSharableJob = (job: IJobModel) => {
-  const ref = getSharableJobRef(job);
+export const getShareableJob = (job: IJobModel) => {
+  const ref = getShareableJobRef(job);
 
   return {
     ...ref,

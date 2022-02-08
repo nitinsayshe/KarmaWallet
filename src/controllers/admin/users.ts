@@ -23,7 +23,7 @@ export const getUsers: IRequestHandler = async (req, res) => {
 
     output.api(req, res, {
       ...results,
-      docs: results.docs.map(d => UserService.getSharableUser(d)),
+      docs: results.docs.map(d => UserService.getShareableUser(d)),
     });
   } catch (err) {
     output.error(req, res, asCustomError(err));

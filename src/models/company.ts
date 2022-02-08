@@ -11,13 +11,14 @@ import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 
 export interface ISharableCompany {
-  _id: number;
+  _id: ObjectId;
   combinedScore: number;
   companyName: string;
   dataSources: IRef<ObjectId, IDataSource>[];
   dataYear: number;
   grade: string;
   isBrand: boolean;
+  logo: string;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<number, ISharableCompany>;
   sectors: IRef<ObjectId, ISector>[];
@@ -26,21 +27,19 @@ export interface ISharableCompany {
 }
 
 export interface ICompany extends ISharableCompany {
-  companyId: number; // ??? will this be the legacy karma id? do we need this?
   dataSources: IRef<ObjectId, IDataSourceDocument>[];
+  legacyId: number;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<number, ICompanyDocument>;
   sectors: IRef<ObjectId, ISectorDocument>[];
 }
 
 export interface ICompanyDocument extends ICompany, Document {
-  _id: number;
+  _id: ObjectId;
 }
 export type ICompanyModel = IModel<ICompany>;
 
 const companySchema = new Schema({
-  _id: { type: Number, required: true }, // TODO: update this to ObjectId?
-  companyId: { type: Number, required: true }, // ??? will this be the legacy karma id? do we need this?
   companyName: { type: String, required: true },
   dataSources: [{
     type: Schema.Types.ObjectId,
@@ -65,6 +64,11 @@ const companySchema = new Schema({
   },
   logo: { type: String },
   relevanceScore: { type: Number, default: null },
+  legacyId: {
+    type: Number,
+    required: true,
+    unique: true,
+  },
 });
 companySchema.plugin(mongoosePaginate);
 

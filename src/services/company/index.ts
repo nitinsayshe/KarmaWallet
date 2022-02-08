@@ -66,7 +66,7 @@ export const getCompanyById = async (__: IRequest, _id: string) => {
 
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
 
-    return company;
+    return (company as ICompanyModel);
   } catch (err) {
     throw asCustomError(err);
   }
@@ -172,18 +172,19 @@ export const getShareableCompany = ({
   dataYear,
   grade,
   isBrand,
+  logo,
   parentCompany,
   sectors,
   slug,
   url,
-}: ICompanyDocument): ISharableCompany => {
+}: ICompanyDocument) => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
   // need to get the sharable version of each resource.
   const _dataSources = (!!dataSources && !!(dataSources as IDataSourceModel[]).filter(d => !!Object.keys(d).length).length)
     ? dataSources.map(d => getShareableDataSource(d as IDataSourceModel))
     : dataSources;
-  const _parentCompany = (!!parentCompany && Object.keys(parentCompany).length) ? getShareableCompany(parentCompany as ICompanyModel) : null;
+  const _parentCompany: ISharableCompany = (!!parentCompany && Object.keys(parentCompany).length) ? getShareableCompany(parentCompany as ICompanyDocument) : null;
   const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)
     ? sectors.map(s => getSharableSector(s as ISectorModel))
     : sectors;
@@ -196,6 +197,7 @@ export const getShareableCompany = ({
     dataYear,
     grade,
     isBrand,
+    logo,
     parentCompany: _parentCompany,
     sectors: _sectors,
     slug,

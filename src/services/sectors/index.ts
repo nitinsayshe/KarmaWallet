@@ -1,6 +1,6 @@
 import { ISectorModel } from '../../models/sector';
 
-export const getSharableSector = ({
+export const getShareableSector = ({
   _id,
   name,
   tier,

@@ -15,7 +15,7 @@ export const createJob: IRequestHandler<{}, {}, Partial<IJob>> = async (req, res
       jobLocation,
     } = req.body;
     const job = await JobsService.createJob(req, title, instructions, description, department, jobLocation);
-    api(req, res, JobsService.getSharableJob(job));
+    api(req, res, JobsService.getShareableJob(job));
   } catch (err) {
     error(req, res, asCustomError(err));
   }
@@ -25,7 +25,7 @@ export const getJobs: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const jobs = await JobsService.getJobs(req, query);
-    const docs = jobs.docs.map(job => JobsService.getSharableJobRef(job));
+    const docs = jobs.docs.map(job => JobsService.getShareableJobRef(job));
     api(req, res, { ...jobs, docs });
   } catch (err) {
     error(req, res, asCustomError(err));
@@ -36,7 +36,7 @@ export const getJobById: IRequestHandler<{ id: string }> = async (req, res) => {
   try {
     const { id } = req.params;
     const job = await JobsService.getJobById(req, id);
-    api(req, res, JobsService.getSharableJob(job));
+    api(req, res, JobsService.getShareableJob(job));
   } catch (err) {
     error(req, res, asCustomError(err));
   }
@@ -54,7 +54,7 @@ export const updateJob: IRequestHandler<{ id: string }, {}, Partial<IJob>> = asy
     } = req.body;
 
     const job = await JobsService.update(req, id, title, instructions, description, department, jobLocation);
-    api(req, res, JobsService.getSharableJob(job));
+    api(req, res, JobsService.getShareableJob(job));
   } catch (err) {
     error(req, res, asCustomError(err));
   }

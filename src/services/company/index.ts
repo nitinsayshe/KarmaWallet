@@ -12,7 +12,7 @@ import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
 import { getShareableDataSource } from '../dataSources';
-import { getSharableSector } from '../sectors';
+import { getShareableSector } from '../sectors';
 
 const _getSampleCompanies = (filter: FilterQuery<ICompany>, size: number, projection: { [key: string]: any }) => CompanyModel.aggregate<ICompanyDocument>([{ $match: filter }]).sample(size).project(projection);
 
@@ -186,7 +186,7 @@ export const getShareableCompany = ({
     : dataSources;
   const _parentCompany: ISharableCompany = (!!parentCompany && Object.keys(parentCompany).length) ? getShareableCompany(parentCompany as ICompanyDocument) : null;
   const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)
-    ? sectors.map(s => getSharableSector(s as ISectorModel))
+    ? sectors.map(s => getShareableSector(s as ISectorModel))
     : sectors;
 
   return {

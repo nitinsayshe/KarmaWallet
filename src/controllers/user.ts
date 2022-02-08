@@ -26,7 +26,7 @@ export const register: IRequestHandler<{}, {}, User.IUserData> = async (req, res
   const { user, authKey } = await User.register(req, {
     password, email, name, zipcode, subscribedUpdates,
   });
-  api(req, res, User.getSharableUser(user), authKey);
+  api(req, res, User.getShareableUser(user), authKey);
 };
 
 export const login: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
@@ -35,11 +35,11 @@ export const login: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) 
   const { user, authKey } = await User.login(req, {
     password, email,
   });
-  api(req, res, User.getSharableUser(user), authKey);
+  api(req, res, User.getShareableUser(user), authKey);
 };
 
 export const getProfile: IRequestHandler = async (req, res) => {
-  api(req, res, User.getSharableUser(req.requestor));
+  api(req, res, User.getShareableUser(req.requestor));
 };
 
 export const logout: IRequestHandler = async (req, res) => {
@@ -57,7 +57,7 @@ export const updateProfile: IRequestHandler = async (req, res) => {
     return;
   }
   const user = await User.updateProfile(req, _id, updates);
-  api(req, res, User.getSharableUser(user));
+  api(req, res, User.getShareableUser(user));
 };
 
 export const updatePassword: IRequestHandler<{}, {}, IUpdatePasswordBody> = async (req, res) => {
@@ -67,7 +67,7 @@ export const updatePassword: IRequestHandler<{}, {}, IUpdatePasswordBody> = asyn
     return;
   }
   const user = await User.updatePassword(req, newPassword, password);
-  api(req, res, User.getSharableUser(user));
+  api(req, res, User.getShareableUser(user));
 };
 
 export const createPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
@@ -116,7 +116,7 @@ export const resetPasswordFromToken: IRequestHandler<{}, {}, (User.ILoginData & 
     return;
   }
   const user = await User.resetPasswordFromToken(req, email, token, newPassword);
-  api(req, res, User.getSharableUser(user));
+  api(req, res, User.getShareableUser(user));
 };
 
 export const sendEmailVerification: IRequestHandler = async (req, res) => {
@@ -137,5 +137,5 @@ export const verifyEmail: IRequestHandler<{}, {}, User.ILoginData> = async (req,
     return;
   }
   const user = await User.verifyEmail(req, email, token);
-  api(req, res, User.getSharableUser(user));
+  api(req, res, User.getShareableUser(user));
 };

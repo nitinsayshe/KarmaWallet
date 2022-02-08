@@ -1,9 +1,9 @@
 import http from 'http';
 import { Socket } from 'socket.io';
-import { IUser } from '../../models/user';
+import { IUserDocument } from '../../models/user';
 
 export interface ISocketIncomingMessage extends http.IncomingMessage {
-  requestor: IUser;
+  requestor: IUserDocument;
   authKey: string;
 }
 

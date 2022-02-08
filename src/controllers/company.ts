@@ -5,6 +5,7 @@ import * as CompanyService from '../services/company';
 import * as output from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
+import { ICompanyDocument } from '../models/company';
 
 interface ICompareQuery {
   companies: string;
@@ -18,7 +19,7 @@ export const getCompanies: IRequestHandler = async (req, res) => {
     const companies = await CompanyService.getCompanies(req, query);
     const sharableCompanies = {
       ...companies,
-      docs: companies.docs.map(c => CompanyService.getShareableCompany(c)),
+      docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),
     };
 
     output.api(req, res, sharableCompanies);

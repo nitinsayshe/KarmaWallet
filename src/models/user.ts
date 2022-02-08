@@ -2,9 +2,10 @@ import {
   Schema,
   model,
   Document,
-  Model,
+  PaginateModel,
   ObjectId,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { IGroup } from './group';
 import { UserRoles } from '../lib/constants';
@@ -72,5 +73,6 @@ const userSchema = new Schema({
     },
   },
 });
+userSchema.plugin(mongoosePaginate);
 
-export const UserModel = model<IUserDocument, Model<IUser>>('user', userSchema);
+export const UserModel = model<IUserDocument, PaginateModel<IUser>>('user', userSchema);

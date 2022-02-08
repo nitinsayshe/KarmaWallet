@@ -20,7 +20,7 @@ export const getUsers = (req: IRequest, query: FilterQuery<IUser>) => {
 };
 
 export const getSummary = async (req: IRequest) => {
-  const allMembers = await UserService.getUsers(req, { $and: [{ role: { $exists: true } }, { role: { $ne: UserRoles.None } }] });
+  const allMembers = await UserService.getUsers(req, { filter: { $and: [{ role: { $exists: true } }, { role: { $ne: UserRoles.None } }] } });
 
   const summary = {
     totalMembers: 0,
@@ -28,7 +28,7 @@ export const getSummary = async (req: IRequest) => {
     totalSuperAdmin: 0,
   };
 
-  for (const member of allMembers) {
+  for (const member of allMembers.docs) {
     summary[member.role === UserRoles.Member ? 'totalMembers' : member.role === UserRoles.Admin ? 'totalAdmin' : 'totalSuperAdmin'] += 1;
   }
 

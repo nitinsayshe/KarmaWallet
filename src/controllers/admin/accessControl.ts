@@ -32,6 +32,7 @@ export const getUsers: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const users = await AccessControlService.getUsers(req, query);
+
     output.api(req, res, users);
   } catch (err) {
     output.error(req, res, asCustomError(err));

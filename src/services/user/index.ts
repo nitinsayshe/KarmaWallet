@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import { FilterQuery } from 'mongoose';
 import {
   IUser, IUserDocument, IUserGroup, UserModel,
 } from '../../models/user';
@@ -84,12 +85,23 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
   return { user, authKey };
 };
 
-export const getUsers = (_: IRequest, query = {}) => UserModel
-  .find(query)
-  .populate({
-    path: 'groups',
-    model: UserGroupModel,
-  });
+export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
+  const options = {
+    projection: query?.projection || '',
+    populate: query.population || [
+      {
+        path: 'groups',
+        model: UserGroupModel,
+      },
+    ],
+    lean: true,
+    page: query?.skip || 1,
+    sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
+    limit: query?.limit || 10,
+  };
+
+  return UserModel.paginate(query.filter, options);
+};
 
 export const getUser = async (_: IRequest, query = {}) => {
   try {

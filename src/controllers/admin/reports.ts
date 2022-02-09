@@ -3,6 +3,15 @@ import * as output from '../../services/output';
 import * as ReportService from '../../services/reports';
 import { asCustomError } from '../../lib/customError';
 
+export const getAllReports: IRequestHandler = async (req, res) => {
+  try {
+    const reports = await ReportService.getAllReports(req);
+    output.api(req, res, reports);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getSummary: IRequestHandler = async (req, res) => {
   try {
     const summary = await ReportService.getSummary(req);

@@ -50,8 +50,8 @@ import fuzzymatcher
 import re, cleanco
 import pandas as pd
 import numpy as np
-from cleanco import cleanco
-# from cleanco import basename
+# from cleanco import cleanco
+from cleanco import basename
 import numpy as np
 import cython
 import string_grouper
@@ -144,10 +144,16 @@ brand_df = brand_df.fillna("NULL") #Fill NAN with null string. Some normalized v
 #fuzzy left join
 left_on = ["brand_normalized"] #join on the brand_normalized column
 right_on = ["brand_normalized"]
-matches_fuzzy = fuzzymatcher.fuzzy_left_join(brand_transactions_unique, brand_df, left_on, right_on)
+matches_fuzzy = None;
+try:
+  matches_fuzzy = fuzzymatcher.fuzzy_left_join(brand_transactions_unique, brand_df, left_on, right_on)
+except Exception as e:
+  print(e)
+
 #matches_fuzzy.to_csv("./Output/Matches_algo_1.csv")#Outputs a csv file with the matches just for this algo
 
-
+if (matches_fuzzy is None):
+  exit()
 
 #ALGO 2
 #match_strings

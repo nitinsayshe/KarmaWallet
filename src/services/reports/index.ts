@@ -11,14 +11,15 @@ import { IRequest } from '../../types/request';
 dayjs.extend(utc);
 
 export enum ReportType {
-  UserSignup = 'user-signup',
+  UserSignup = 'user-signups',
+  CarbonOffsets = 'carbon-offsets',
 }
 
 export interface IReportParams {
   reportId: ReportType;
 }
 
-export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData> => {
+export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData<'estimate' | 'actual'>> => {
   const MAX_ALLOWED_DAYS_IN_PAST = 365;
   try {
     const { daysInPast = '30' } = req.query;
@@ -79,7 +80,7 @@ export const getAllReports = async (_: IRequest) => {
       _id: 'abc123',
       // a unique key for FE and BE to identify this report by.
       // this shuld not change once set
-      reportId: 'user-signups',
+      reportId: ReportType.UserSignup,
       name: 'User Signups',
       description: 'A breakdown of user signups per day.',
       // TODO: figure out if this is needed. if we want to store
@@ -98,7 +99,7 @@ export const getAllReports = async (_: IRequest) => {
       _id: 'def456',
       // a unique key for FE and BE to identify this report by.
       // this shuld not change once set
-      reportId: 'carbon-offsets',
+      reportId: ReportType.CarbonOffsets,
       name: 'Carbon Offsets',
       description: 'A breakdown of user carbon offset purchases per day.',
       // TODO: figure out if this is needed. if we want to store

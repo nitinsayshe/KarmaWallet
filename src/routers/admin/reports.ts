@@ -9,10 +9,10 @@ const router = Router();
 router.route('/')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminReportsController.getAllReports);
 
-router.route('/:reportId')
-  .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminReportsController.getReport);
-
 router.route('/summary')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminReportsController.getSummary);
+
+router.route('/:reportId')
+  .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminReportsController.getReport);
 
 export default router;

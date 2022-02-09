@@ -11,7 +11,7 @@ dayjs.extend(utc);
 
 class Transaction {
   _userId: Schema.Types.ObjectId = null;
-  _companyId: number = null;
+  _companyId: Schema.Types.ObjectId = null;
   _cardId: Schema.Types.ObjectId = null;
   _transaction: ITransactionModel = null;
   _plaidTransaction: IPlaidTransaction;
@@ -103,7 +103,7 @@ class Transaction {
     this._category = category;
   };
 
-  setCompanyId = (id: number) => {
+  setCompanyId = (id: Schema.Types.ObjectId) => {
     this._companyId = id;
   };
 

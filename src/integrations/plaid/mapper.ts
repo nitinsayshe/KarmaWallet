@@ -462,7 +462,7 @@ export class PlaidMapper {
 
       if (!!match) {
         if (!match.manualMatch || !transaction.companyId) {
-          transaction.setCompanyId(!!match.companyId ? parseInt(match.companyId) : null);
+          transaction.setCompanyId(match.companyId || null);
         }
 
         existingMatchedTransactions.push(transaction);
@@ -771,13 +771,14 @@ export class PlaidMapper {
 
       const matchFound = existingMatches.find(e => e.original === data.original
           && e.companyName === data.companyName
-          && e.companyId === data.companyId);
+          && e.companyId.toString() === data.companyId);
 
       if (!matchFound) {
+        const company = await CompanyModel.findOne({ legacyId: data.companyId });
         const m = new MatchedCompanyNameModel({
           original: match.original,
           companyName: match.companyName,
-          companyId: `${match._id}`,
+          companyId: company,
           manualMatch: true,
           createdOn: dayjs.utc().format(),
         });

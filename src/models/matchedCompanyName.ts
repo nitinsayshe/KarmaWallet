@@ -9,7 +9,7 @@ import { IModel } from '../types/model';
 export interface IMatchedCompanyNames {
   original: string;
   companyName: string;
-  companyId: string;
+  companyId: Schema.Types.ObjectId;
   verified: boolean;
   falsePositive: boolean;
   manualMatch: boolean;
@@ -24,7 +24,7 @@ const matchedCompanyNameSchema = new Schema({
   original: { type: String },
   companyName: { type: String },
   companyId: {
-    type: String,
+    type: Schema.Types.ObjectId,
     ref: 'company',
   },
   verified: {

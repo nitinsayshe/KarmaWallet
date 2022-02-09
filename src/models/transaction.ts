@@ -4,8 +4,9 @@ import {
   Document,
   Model,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { ICardDocument } from './card';
+import { ICompanyDocument } from './company';
 import { IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
 
 export interface IPlaidTransactionLocation {
@@ -78,7 +79,7 @@ export interface ITransactionIntegrations {
 
 export interface ITransaction {
   userId: Schema.Types.ObjectId;
-  companyId: number;
+  companyId: IRef<Schema.Types.ObjectId, ICompanyDocument>;
   cardId: ICardDocument['_id'];
   category: number;
   subCategory: number;
@@ -100,7 +101,7 @@ const transactionSchema = new Schema({
     required: true,
   },
   companyId: {
-    type: Number,
+    type: Schema.Types.ObjectId,
     ref: 'company',
   },
   cardId: {

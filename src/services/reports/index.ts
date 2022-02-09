@@ -44,10 +44,14 @@ export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysIn
       .group({ _id: '$day', count: { $sum: 1 } })
       .sort({ _id: 1 });
 
-    const data = aggData.map(d => ({
-      label: d._id,
-      values: [{ value: d.count }],
-    }));
+    const data = aggData.map(d => {
+      const [_, month, date] = d._id.split('-');
+      const day = dayjs(`${month} ${date}`);
+      return {
+        label: day.format('MMM DD'),
+        values: [{ value: d.count }],
+      };
+    });
 
     // TODO: iterate through all data and add in any
     // dates within this range that were skipped

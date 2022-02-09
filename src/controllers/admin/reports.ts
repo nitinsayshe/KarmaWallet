@@ -12,6 +12,15 @@ export const getAllReports: IRequestHandler = async (req, res) => {
   }
 };
 
+export const getReport: IRequestHandler<ReportService.IReportParams> = async (req, res) => {
+  try {
+    const reportData = await ReportService.getReport(req);
+    output.api(req, res, reportData);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getSummary: IRequestHandler = async (req, res) => {
   try {
     const summary = await ReportService.getSummary(req);

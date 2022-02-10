@@ -1,19 +1,17 @@
-import { api, error } from '../services/output';
-import { ErrorTypes } from '../lib/constants';
-import CustomError from '../lib/customError';
+import * as output from '../services/output';
+import { asCustomError } from '../lib/customError';
 import * as Transaction from '../services/transaction';
 import { IRequestHandler } from '../types/request';
 
-export const getDonationTransactions: IRequestHandler = async (req, res) => {
-  const isValid = true;
-  if (!isValid) {
-    error(req, res, new CustomError('Invalid input', ErrorTypes.INVALID_ARG));
-    return;
+export const getCarbonOffsetTransactions: IRequestHandler = async (req, res) => {
+  try {
+    const transactions = await Transaction.getCarbonOffsetTransactions(req);
+    const carbonOffsetTransactions = {
+      company: { companyName: 'Rare.org' },
+      transactions: transactions.map(t => Transaction.getShareableTransaction(t)),
+    };
+    output.api(req, res, carbonOffsetTransactions);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
   }
-  const transactions = await Transaction.getDonationTransactions(req);
-  const data = {
-    company: { companyName: 'Rare.org' },
-    transactions: transactions.map(t => Transaction.getShareableTransaction(t)),
-  };
-  api(req, res, data);
 };

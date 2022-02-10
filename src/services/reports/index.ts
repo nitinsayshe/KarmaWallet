@@ -19,7 +19,54 @@ export interface IReportParams {
   reportId: ReportType;
 }
 
-export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData<'estimate' | 'actual'>> => {
+export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData> => {
+  const MAX_ALLOWED_DAYS_IN_PAST = 365;
+
+  try {
+    const { daysInPast = '30' } = req.query;
+    let _daysInPast = parseInt(daysInPast);
+
+    // if is an invalid number of days, do not throw
+    // error, just default back to 30 days.
+    if (Number.isNaN(_daysInPast)) _daysInPast = 30;
+
+    // if the number of days is greater than
+    // MAX_ALLOWED_DAYS_IN_PAST, limit days in past
+    // to MAX_ALLOWED_DAYS_IN_PAST instead.
+    if (_daysInPast > MAX_ALLOWED_DAYS_IN_PAST) _daysInPast = MAX_ALLOWED_DAYS_IN_PAST;
+
+    const thresholdDate = dayjs(dayjs().utc().format('MMM DD, YYYY'))
+      .utc()
+      .subtract(_daysInPast, 'days');
+
+    const aggData = await TransactionModel.aggregate()
+      .match({
+        date: { $gte: thresholdDate.toDate() },
+        'integrations.rare': { $exists: true },
+      })
+      .project({ day: { $substr: ['$dateJoined', 0, 10] } })
+      .group({ _id: '$day', count: { $sum: 1 } })
+      .sort({ _id: 1 });
+
+    const data = aggData.map(d => {
+      const [_, month, date] = d._id.split('-');
+      const day = dayjs(`${month} ${date}`);
+      return {
+        label: day.format('MMM DD'),
+        values: [{ value: d.count }],
+      };
+    });
+
+    // TODO: iterate through all data and add in any
+    // dates within this range that were skipped
+
+    return { data };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData> => {
   const MAX_ALLOWED_DAYS_IN_PAST = 365;
   try {
     const { daysInPast = '30' } = req.query;
@@ -65,6 +112,7 @@ export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysIn
 export const getReport = async (req:IRequest<IReportParams, any>): Promise<IChartData> => {
   switch (req.params.reportId) {
     case ReportType.UserSignup: return getUserSignUpsReport(req);
+    case ReportType.CarbonOffsets: return getCarbonOffsetsReport(req);
     default: throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
   }
 };

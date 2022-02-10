@@ -5,7 +5,7 @@ import unsdgs from './unsdgs';
 import meta from './meta';
 import admin from './admin';
 import transaction from './transaction';
-// import impact from './impact';
+import impact from './impact';
 import company from './company';
 // import sector from './sector';
 // import subsector from './subsector';
@@ -21,7 +21,7 @@ const routers = (app: Express) => {
   meta(app);
   company(app);
   transaction(app);
-  // impact(app);
+  impact(app);
   // sector(app);
   // subsector(app);
   // webhook(app);

@@ -23,7 +23,7 @@ export const getTransactionCount = async (query = {}) => {
   return count;
 };
 
-export const getDonationTransactions = async (req: IRequest) => TransactionModel.find({ userId: req?.requestor?._id, ...RareTransactionQuery });
+export const getCarbonOffsetTransactions = async (req: IRequest) => TransactionModel.find({ userId: req?.requestor?._id, ...RareTransactionQuery });
 
 export const getShareableTransaction = (transaction: ITransactionModel) => {
   const {

@@ -3,6 +3,7 @@ import { MongoClient } from '../src/clients/mongo';
 import { mapExistingItems as mapExistingPlaidItems, mapTransactionsFromPlaid, mapPlaidCategoriesToKarmaCategoriesAndCarbonMultiplier } from '../src/integrations/plaid';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { cleanCompanies } from '../src/services/mappers/clean_companies';
 import { createSectors } from '../src/services/mappers/new_sectors';
 import { mapCompaniesToV3 } from '../src/services/mappers/new_companies';
 import { mapUsersToV3 } from '../src/services/mappers/new_user';
@@ -18,6 +19,7 @@ import { IRequest } from '../src/types/request';
 
     await mapUsersToV3();
 
+    await cleanCompanies(mockRequest);
     await mapCompaniesToV3(mockRequest);
 
     await createSectors();

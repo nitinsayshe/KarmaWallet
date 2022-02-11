@@ -7,6 +7,7 @@ const { execSync } = require('child_process');
 // copy non-ts directories from src to dist/src
 const dirs = [
   'src/integrations/plaid/.tmp',
+  'src/services/mappers/.tmp',
 ];
 
 const files = [

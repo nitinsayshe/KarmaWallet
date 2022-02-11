@@ -17,7 +17,7 @@ class _MongoClient extends Client {
 
   _connect = async () => {
     const mongoUri = DB_URL
-      ? `mongodb://${DB_USER}:${encodeURIComponent(DB_PASS)}@${DB_URL}:27017/${DB_NAME}?authSource=admin`
+      ? `mongodb://${DB_USER}:${encodeURIComponent(DB_PASS)}@${DB_URL}/${DB_NAME}?authSource=admin`
       : `mongodb://127.0.0.1:27017/${DB_NAME}`;
 
     mongoose.connection.on('error', (err) => {

@@ -28,7 +28,7 @@ jobs:
     - run: echo 'PORT=8012' >> .env
     - run: echo 'DB_USER=${{secrets.PRODUCTION_DB_USER}}' >> .env
     - run: echo 'DB_NAME=${{secrets.PRODUCTION_DB_NAME}}' >> .env
-    - run: echo 'DB_URL=localhost' >> .env
+    - run: echo 'DB_URL={{secrets.PRODUCTION_DB_URL}}' >> .env
     - run: echo 'DB_PASS=${{secrets.PRODUCTION_DB_PASS}}' >> .env
     - run: echo 'REDIS_USER=' >> .env
     - run: echo 'REDIS_PASS=' >> .env

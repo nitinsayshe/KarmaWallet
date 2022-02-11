@@ -24,7 +24,6 @@ class _RedisClient extends Client {
     }
 
     this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}?allowUsernameInURI=true`);
-    this.pub = new Redis();
     this.sub = this.pub.duplicate();
   };
 }

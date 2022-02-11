@@ -24,12 +24,12 @@ class _RedisClient extends Client {
     }
 
     this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}/4?allowUsernameInURI=true`, { lazyConnect: true });
-    this.pub.connect()
-      .then(() => console.log('connected successfully to redis'))
-      .catch(err => {
-        console.log('error connecting to redis');
-        console.log(err);
-      });
+    try {
+      await this.pub.connect();
+    } catch (err) {
+      console.log('rate limiter error');
+      console.log(err);
+    }
     this.sub = this.pub.duplicate();
   };
 }

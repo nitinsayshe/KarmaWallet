@@ -23,7 +23,7 @@ class _RedisClient extends Client {
       throw new CustomError('Redis client unavailable. Necessary configurations not found.', ErrorTypes.SERVER);
     }
 
-    this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}/4?allowUsernameInURI=true`);
+    this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}/4?allowUsernameInURI=true`, { lazyConnect: true });
     this.pub.connect()
       .then(() => console.log('connected successfully to redis'))
       .catch(err => {

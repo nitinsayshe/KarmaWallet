@@ -21,7 +21,11 @@ const rateLimiter = async ({
   return async (req: IRequest, res: Response, next: NextFunction) => {
     const ip = req.headers?.['x-forwarded-for'];
     try {
-      await rateLimiterInstance.consume(ip);
+      await rateLimiterInstance.consume(ip)
+        .catch((rateLimiterRes) => {
+          console.log('rate limiter error');
+          console.log(rateLimiterRes);
+        });
       next();
     } catch (e) {
       error(req, res, new CustomError('Too many requests', ErrorTypes.TOO_MANY_REQUESTS));

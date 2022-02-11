@@ -22,6 +22,7 @@ const rateLimiter = async ({
     const ip = req.headers?.['x-forwarded-for'];
     try {
       await rateLimiterInstance.consume(ip)
+        .then(() => console.log('Connected successfully to Redis'))
         .catch((rateLimiterRes) => {
           console.log('rate limiter error');
           console.log(rateLimiterRes);

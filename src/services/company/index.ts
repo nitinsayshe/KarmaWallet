@@ -184,7 +184,9 @@ export const getShareableCompany = ({
   const _dataSources = (!!dataSources && !!(dataSources as IDataSourceModel[]).filter(d => !!Object.keys(d).length).length)
     ? dataSources.map(d => getShareableDataSource(d as IDataSourceModel))
     : dataSources;
-  const _parentCompany: ISharableCompany = (!!parentCompany && Object.keys(parentCompany).length) ? getShareableCompany(parentCompany as ICompanyDocument) : null;
+  const _parentCompany: ISharableCompany = (!!parentCompany && Object.keys(parentCompany).length)
+    ? getShareableCompany(parentCompany as ICompanyDocument)
+    : null;
   const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)
     ? sectors.map(s => getShareableSector(s as ISectorModel))
     : sectors;

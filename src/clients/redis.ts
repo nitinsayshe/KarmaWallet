@@ -27,6 +27,7 @@ class _RedisClient extends Client {
     return this.pub.connect()
       .then(() => {
         this.sub = this.pub.duplicate();
+        console.log('Connected successfully to Redis');
       })
       .catch(err => {
         console.log('rate limiter error');

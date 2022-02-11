@@ -18,19 +18,20 @@ class _RedisClient extends Client {
     super('Redis');
   }
 
-  _connect = async () => {
+  _connect = () => {
     if (![REDIS_USER, REDIS_PASS, REDIS_URL, REDIS_PORT].every(s => !!s)) {
       throw new CustomError('Redis client unavailable. Necessary configurations not found.', ErrorTypes.SERVER);
     }
 
     this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}/4?allowUsernameInURI=true`, { lazyConnect: true });
-    try {
-      await this.pub.connect();
-    } catch (err) {
-      console.log('rate limiter error');
-      console.log(err);
-    }
-    this.sub = this.pub.duplicate();
+    return this.pub.connect()
+      .then(() => {
+        this.sub = this.pub.duplicate();
+      })
+      .catch(err => {
+        console.log('rate limiter error');
+        console.log(err);
+      });
   };
 }
 

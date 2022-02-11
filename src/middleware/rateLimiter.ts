@@ -19,7 +19,7 @@ const rateLimiter = async ({
     duration, // per  (in seconds)
   });
   return async (req: IRequest, res: Response, next: NextFunction) => {
-    const { ip } = req;
+    const ip = req.headers?.['x-forwarded-for'];
     try {
       await rateLimiterInstance.consume(ip);
       next();

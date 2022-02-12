@@ -26,6 +26,48 @@ const LogoPath = 'logos.karmawallet/';
 const RiteKitBase = 'ritekit';
 const ClearBitBase = 'clearbit';
 
+type DataSource = 'justCapital' | '1ForThePlanet' | 'bCorp' | 'cdpClimateChange' | 'cdpForests' | 'cdpWaterSecurity' | 'greenSeal' | 'saferChoice';
+
+const cleanDataSource = (dataSource: DataSource) => {
+  // verify dataSource is valid
+  // some companies were originally saved with
+  // invalid dataSources that do not match
+  // the enum specified in the company
+  // schema.
+  switch (dataSource.toLowerCase()) {
+    case 'justcapital':
+      dataSource = 'justCapital';
+      break;
+    case '1fortheplanet':
+      dataSource = '1ForThePlanet';
+      break;
+    case 'bcorp':
+      dataSource = 'bCorp';
+      break;
+    case 'cdpclimatechange':
+      dataSource = 'cdpClimateChange';
+      break;
+    case 'cdpforests':
+      dataSource = 'cdpForests';
+      break;
+    case 'cdpwatersecurity':
+      dataSource = 'cdpWaterSecurity';
+      break;
+    case 'greenseal':
+      dataSource = 'greenSeal';
+      break;
+    case 'saferchoice':
+      dataSource = 'saferChoice';
+      break;
+    default:
+      console.log(`unknown data source: ${dataSource}`);
+      dataSource = null;
+      break;
+  }
+
+  return dataSource;
+};
+
 const setLogo = (company: ICompany) => {
   company.logo = null;
 
@@ -82,10 +124,12 @@ export const mapCompaniesToV3 = async (_: IRequest) => {
     if (!company.legacyId) { // preventative measure to ensure this mapping only occurrs on a company once.
       try {
         const legacyCompany = new LegacyCompanyModel({ ...company });
+        legacyCompany.dataSource = cleanDataSource(legacyCompany.dataSource);
 
         const legacyId = (company._id as unknown as number);
         delete company._id;
         delete company.parentCompany;
+        delete company.slug;
 
         setLogo(company);
         newCompany = new CompanyModel({ ...company });

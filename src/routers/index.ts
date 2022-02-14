@@ -10,7 +10,7 @@ import company from './company';
 // import sector from './sector';
 // import subsector from './subsector';
 // import webhook from './webhook';
-// import notFound from './notFound';
+import notFound from './404';
 import comparisonGame from './comparisonGame';
 
 const routers = (app: Express) => {
@@ -26,8 +26,8 @@ const routers = (app: Express) => {
   // subsector(app);
   // webhook(app);
   comparisonGame(app);
-  // // notFound is a catch all and should be last
-  // notFound(app);
+  // notFound is a catch all and should be last
+  notFound(app);
   return app;
 };
 

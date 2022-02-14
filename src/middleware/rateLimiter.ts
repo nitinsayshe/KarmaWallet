@@ -11,7 +11,6 @@ const rateLimiter = async ({
   points = 10,
   duration = 1,
 }) => {
-  await RedisClient.init();
   const rateLimiterInstance = new RateLimiterRedis({
     storeClient: RedisClient.pub,
     keyPrefix,

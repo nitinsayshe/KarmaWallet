@@ -41,7 +41,7 @@ export const getCompanyById = async (__: IRequest, _id: string) => {
             model: SectorModel,
           },
           {
-            path: 'dataSource',
+            path: 'dataSources',
             model: DataSourceModel,
           },
         ],

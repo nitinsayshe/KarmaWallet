@@ -50,4 +50,4 @@ jobs:
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.PRODUCTION_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=api.karmawallet.io' >> .env
     - run: npm i
-    # - run: forever restartall
+    - run: pm2 restart all

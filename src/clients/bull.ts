@@ -1,5 +1,12 @@
 import {
-  Job, Queue, QueueScheduler, Worker,
+  Job,
+  JobsOptions,
+  Queue,
+  QueueOptions,
+  QueueScheduler,
+  QueueSchedulerOptions,
+  Worker,
+  WorkerOptions,
 } from 'bullmq';
 import { QueueNames } from '../lib/constants/jobScheduler';
 import { Client } from './client';
@@ -12,6 +19,16 @@ export class _BullClient extends Client {
   private _scheduler: QueueScheduler = null;
   private _workers: Worker[] = [];
 
+  static defaultSchedulerOpts: QueueSchedulerOptions = {};
+
+  static defaultQueueOpts: QueueOptions = {
+    connection: RedisClient.pub,
+  };
+
+  static defaultWorkerOpts: WorkerOptions = {};
+
+  static defaultJobOpts: JobsOptions = {};
+
   constructor() {
     super('Bull');
   }
@@ -21,16 +38,24 @@ export class _BullClient extends Client {
   get workers() { return this._workers || []; }
 
   _connect = async () => {
-    this._queue = new Queue(QueueNames.Main, { connection: RedisClient.pub });
+    this._queue = new Queue(QueueNames.Main, _BullClient.defaultQueueOpts);
 
     // workers should only exist on the big ol' betsi
     // server and not on the smaller betsi instances.
     // TODO: provide real BETSI_ENV env var value
     if (process.env.BETSI_ENV === 'bigolbetsi') {
-      this._scheduler = new QueueScheduler(QueueNames.Main, { connection: new _RedisClient() });
+      this._scheduler = new QueueScheduler(
+        QueueNames.Main,
+        {
+          ..._BullClient.defaultQueueOpts,
+          // cannot include connection in default opts
+          // since schedulers cant share ioredis instances
+          connection: new _RedisClient(),
+        },
+      );
 
       for (let i = 0; i < MAX_WORKERS; i++) {
-        const worker = new Worker(QueueNames.Main, this._processJob);
+        const worker = new Worker(QueueNames.Main, this._processJob, _BullClient.defaultWorkerOpts);
 
         worker.on('completed', this._onJobComplete);
         worker.on('failed', this._onJobFailed);
@@ -38,6 +63,10 @@ export class _BullClient extends Client {
         this._workers.push(worker);
       }
     }
+  };
+
+  createJob = (name: string, data: any, opts: JobsOptions = {}) => {
+    this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...opts });
   };
 
   private _onJobComplete = (job: Job, result: any) => {

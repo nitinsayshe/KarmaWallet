@@ -14,7 +14,15 @@ export class _MainBullClient extends _BullClient {
     for (let i = 0; i < this._numWorkers; i++) {
       const worker = new Worker(
         this._queueName,
-        path.resolve(__dirname, 'processor.ts'),
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        // !!!              IMPORTANT           !!!
+        // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        //
+        // ALWAYS USE .js HERE!!!!!
+        // THIS IS REFERENCING THE FILE INSIDE /dist
+        // NOT THE .ts FILE YOU ARE WRITING FOR THIS
+        // CLIENT
+        path.resolve(__dirname, 'processor.js'),
         {
           ..._BullClient.defaultWorkerOpts,
           connection: RedisClient.pub,

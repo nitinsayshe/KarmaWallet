@@ -13,9 +13,11 @@ const {
 export class _RedisClient extends Client {
   pub: Redis.Redis;
   sub: Redis.Redis;
+  _consumerName = '';
 
-  constructor() {
+  constructor(consumerName: string = '') {
     super('Redis');
+    this._consumerName = consumerName;
   }
 
   _connect = () => {
@@ -23,11 +25,18 @@ export class _RedisClient extends Client {
       throw new CustomError('Redis client unavailable. Necessary configurations not found.', ErrorTypes.SERVER);
     }
 
-    this.pub = new Redis(`redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}/4?allowUsernameInURI=true`, { lazyConnect: true });
+    this.pub = new Redis(
+      `redis://${REDIS_USER}:${REDIS_PASS}@${REDIS_URL}:${REDIS_PORT}/4?allowUsernameInURI=true`,
+      {
+        lazyConnect: true,
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+      },
+    );
     return this.pub.connect()
       .then(() => {
         this.sub = this.pub.duplicate();
-        console.log('Connected successfully to Redis');
+        console.log(`Connected successfully to Redis${!!this._consumerName ? ` in ${this._consumerName}` : ''}`);
       })
       .catch(err => {
         console.log('rate limiter error');

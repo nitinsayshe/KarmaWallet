@@ -13,6 +13,7 @@ import rateLimiter from './src/middleware/rateLimiter';
 import errorHandler from './src/middleware/errorHandler';
 import { SocketClient } from './src/clients/socket';
 import routers from './src/routers';
+import { MainBullClient } from './src/clients/bull/main';
 
 const port = process.env.PORT || 8012;
 
@@ -20,6 +21,7 @@ const port = process.env.PORT || 8012;
   const app = express();
   await MongoClient.init();
   await RedisClient.init();
+  await MainBullClient.init();
   app.use(compression());
   app.use(helmet() as any); // temp workaround for broken types with express typings
   app.use(cors());

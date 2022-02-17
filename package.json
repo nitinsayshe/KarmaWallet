@@ -13,8 +13,8 @@
     "build": "tsc",
     "postbuild": "npm run copy",
     "postinstall": "npm run build",
-    "start": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/index.js && npm run copy'",
-    "start:prod": "cross-env-shell NODE_ENV=production 'npm run build & node dist/index.js'"
+    "start": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon index.ts && npm run copy'",
+    "start:prod": "cross-env-shell NODE_ENV=production 'npm run build & ts-node index.ts'"
   },
   "repository": {
     "type": "git",

@@ -10,7 +10,7 @@ const {
   REDIS_PORT,
 } = process.env;
 
-class _RedisClient extends Client {
+export class _RedisClient extends Client {
   pub: Redis.Redis;
   sub: Redis.Redis;
 

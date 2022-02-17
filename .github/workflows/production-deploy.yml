@@ -49,4 +49,5 @@ jobs:
     - run: echo 'RARE_ENV=prod' >> .env
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.PRODUCTION_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=api.karmawallet.io' >> .env
+    - run: echo 'BETSI_ENV=bigolbetsi' >> .env
     - run: npm i

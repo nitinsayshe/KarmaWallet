@@ -11,13 +11,22 @@ import {
 import { QueueNames } from '../lib/constants/jobScheduler';
 import { Client } from './client';
 import { _RedisClient, RedisClient } from './redis';
+import * as PlaidIntegration from '../integrations/plaid';
+import * as UserPlaidTransactionMapper from '../jobs/userPlaidTransactionMap';
+import { mockRequest } from '../lib/constants/request';
 
 const MAX_WORKERS = 4;
 
-export class _BullClient extends Client {
-  private _queue: Queue = null;
-  private _scheduler: QueueScheduler = null;
-  private _workers: Worker[] = [];
+abstract class _BullClient extends Client {
+  protected _queueName: string;
+  protected _numWorkers: number;
+  protected _queue: Queue = null;
+  protected _scheduler: QueueScheduler = null;
+  protected _workers: Worker[] = [];
+  protected _schedulerOptions: QueueSchedulerOptions = {};
+  protected _queueOptions: QueueOptions = {};
+  protected _workerOptions: WorkerOptions = {};
+  protected _jobOptions: JobsOptions = {};
 
   static defaultSchedulerOpts: QueueSchedulerOptions = {};
 
@@ -29,8 +38,21 @@ export class _BullClient extends Client {
 
   static defaultJobOpts: JobsOptions = {};
 
-  constructor() {
-    super('Bull');
+  constructor(
+    queueName: string,
+    numWorkers: number = MAX_WORKERS,
+    schedulerOpts: QueueSchedulerOptions = {},
+    queueOpts: QueueOptions = {},
+    workerOpts: WorkerOptions = {},
+    jobOpts: JobsOptions = {},
+  ) {
+    super(queueName);
+    this._queueName = queueName;
+    this._numWorkers = numWorkers;
+    this._schedulerOptions = schedulerOpts;
+    this._queueOptions = queueOpts;
+    this._workerOptions = workerOpts;
+    this._jobOptions = jobOpts;
   }
 
   get queue() { return this._queue || null; }
@@ -38,24 +60,25 @@ export class _BullClient extends Client {
   get workers() { return this._workers || []; }
 
   _connect = async () => {
-    this._queue = new Queue(QueueNames.Main, _BullClient.defaultQueueOpts);
+    this._queue = new Queue(this._queueName, { ..._BullClient.defaultQueueOpts, ...this._queueOptions });
 
     // workers should only exist on the big ol' betsi
     // server and not on the smaller betsi instances.
     // TODO: provide real BETSI_ENV env var value
     if (process.env.BETSI_ENV === 'bigolbetsi') {
       this._scheduler = new QueueScheduler(
-        QueueNames.Main,
+        this._queueName,
         {
           ..._BullClient.defaultQueueOpts,
           // cannot include connection in default opts
           // since schedulers cant share ioredis instances
           connection: new _RedisClient(),
+          ...this._schedulerOptions,
         },
       );
 
-      for (let i = 0; i < MAX_WORKERS; i++) {
-        const worker = new Worker(QueueNames.Main, this._processJob, _BullClient.defaultWorkerOpts);
+      for (let i = 0; i < this._numWorkers; i++) {
+        const worker = new Worker(this._queueName, this._processJob, { ..._BullClient.defaultWorkerOpts, ...this._workerOptions });
 
         worker.on('completed', this._onJobComplete);
         worker.on('failed', this._onJobFailed);
@@ -65,14 +88,27 @@ export class _BullClient extends Client {
     }
   };
 
-  createJob = (name: string, data: any, opts: JobsOptions = {}) => {
-    this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...opts });
-  };
+  abstract _onJobComplete (job: Job, result: any): Promise<void>;
+  abstract _onJobFailed (job: Job, error: Error): Promise<void>;
+  abstract _processJob (job: Job): Promise<void>;
 
-  private _onJobComplete = (job: Job, result: any) => {
+  createJob = (name: string, data: any, opts: JobsOptions = {}) => {
+    this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...opts });
+  };
+}
+
+export class _MainBullClient extends _BullClient {
+  constructor() {
+    super(QueueNames.Main, 2);
+  }
+
+  _onJobComplete = async (job: Job, result: any) => {
     switch (job.name) {
       case 'dummy':
         console.log('>>>>> doing something specific to dummy job completion');
+        break;
+      case 'user-plaid-transaction-mapper':
+        UserPlaidTransactionMapper.onComplete(job, result);
         break;
       default:
         console.log(`job ${job.id} complete`, result);
@@ -80,7 +116,7 @@ export class _BullClient extends Client {
     }
   };
 
-  private _onJobFailed = (job: Job, err: Error) => {
+  _onJobFailed = async (job: Job, err: Error) => {
     switch (job.name) {
       case 'dummy':
         console.log('>>>>> doing something specific to dummy job failure');
@@ -91,10 +127,18 @@ export class _BullClient extends Client {
     }
   };
 
-  private _processJob = async (job: Job) => {
+  _processJob = async (job: Job) => {
+    // global plaid transaction mapping
+    // ind. user linked card plaid transaction mapping
+    // sending email (multiple kinds and types)
+    // user impact score calculation (run this after global plaid transactions)
+    // run reports calc (users report)
     switch (job.name) {
-      case 'dummy':
-        console.log('>>>>> dummy placeholder...');
+      case 'global-plaid-transaction-mapper':
+        await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+        break;
+      case 'user-plaid-transaction-mapper':
+        UserPlaidTransactionMapper.exec(job);
         break;
       default:
         console.log('>>>>> invalid job name found');
@@ -103,4 +147,4 @@ export class _BullClient extends Client {
   };
 }
 
-export const BullClient = new _BullClient();
+export const MainBullClient = new _MainBullClient();

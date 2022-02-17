@@ -42,6 +42,7 @@
       "@typescript-eslint/indent": ["error", 2, { "SwitchCase": 1 } ],
       "jsx-quotes": ["error", "prefer-single"],
       "lines-between-class-members": ["off", "always"],
+      "max-classes-per-file": "off",
       "max-len": "off",
       "no-await-in-loop": ["off", "always"],
       "no-console": "off",

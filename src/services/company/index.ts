@@ -14,13 +14,6 @@ import { IRequest } from '../../types/request';
 import { getShareableDataSource } from '../dataSources';
 import { getShareableSector } from '../sectors';
 
-const _getSampleCompanies = (filter: FilterQuery<ICompany>, size: number, projection: { [key: string]: any }) => CompanyModel.aggregate<ICompanyDocument>([{ $match: filter }]).sample(size).project(projection);
-
-const _checkSort = <T>(data: T[], sort: boolean, field: keyof T) => {
-  if (!sort) return data;
-  return data.sort((a, b) => (b[field] > a[field] ? -1 : b[field] < a[field] ? 1 : 0));
-};
-
 const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
   .find(query)
   .populate({
@@ -37,8 +30,6 @@ const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgMod
   });
 
 export const getCompanyById = async (__: IRequest, _id: string) => {
-  console.log('>>>>> _id: ', _id);
-
   try {
     const company = await CompanyModel.findOne({ _id })
       .populate({
@@ -50,7 +41,7 @@ export const getCompanyById = async (__: IRequest, _id: string) => {
             model: SectorModel,
           },
           {
-            path: 'dataSource',
+            path: 'dataSources',
             model: DataSourceModel,
           },
         ],

@@ -7,7 +7,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 
-export interface IJob {
+export interface IJobPosting {
   title: string;
   instructions: string;
   description: string;
@@ -17,10 +17,10 @@ export interface IJob {
   lastModified: Date;
 }
 
-export interface IJobDocument extends IJob, Document {}
-export type IJobModel = IModel<IJob>;
+export interface IJobPostingDocument extends IJobPosting, Document {}
+export type IJobPostingModel = IModel<IJobPosting>;
 
-const jobSchema = new Schema({
+const jobPostingSchema = new Schema({
   title: {
     type: String,
     required: true,
@@ -45,6 +45,6 @@ const jobSchema = new Schema({
     type: String,
   },
 });
-jobSchema.plugin(mongoosePaginate);
+jobPostingSchema.plugin(mongoosePaginate);
 
-export const JobModel = model<IJobDocument, PaginateModel<IJob>>('job', jobSchema);
+export const JobPostingModel = model<IJobPostingDocument, PaginateModel<IJobPosting>>('job_posting', jobPostingSchema);

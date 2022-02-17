@@ -1,6 +1,6 @@
 import { Express } from 'express';
 import user from './user';
-import jobs from './jobs';
+import jobPostings from './jobPostings';
 import unsdgs from './unsdgs';
 import meta from './meta';
 import admin from './admin';
@@ -15,7 +15,7 @@ import comparisonGame from './comparisonGame';
 
 const routers = (app: Express) => {
   user(app);
-  jobs(app);
+  jobPostings(app);
   unsdgs(app);
   admin(app);
   meta(app);

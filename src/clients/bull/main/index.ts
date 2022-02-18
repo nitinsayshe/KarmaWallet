@@ -1,6 +1,6 @@
 import path from 'path';
 import { Job, SandboxedJob, Worker } from 'bullmq';
-import { QueueNames } from '../../../lib/constants/jobScheduler';
+import { QueueNames, JobNames } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import { RedisClient } from '../../redis';
@@ -37,13 +37,20 @@ export class _MainBullClient extends _BullClient {
     }
   };
 
+  _addCronJobs = () => {
+    this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */3 8-10 * * *' } });
+  };
+
   _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
     switch (job.name) {
       case 'dummy':
         console.log('>>>>> doing something specific to dummy job completion');
         break;
-      case 'user-plaid-transaction-mapper':
+      case JobNames.UserPlaidTransactionMapper:
         UserPlaidTransactionMapper.onComplete(job as SandboxedJob, result);
+        break;
+      case JobNames.GlobalPlaidTransactionMapper:
+        console.log(`${JobNames.GlobalPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
         break;
       default:
         console.log(`job ${job.id} complete`, result);

@@ -1,4 +1,5 @@
 import { SandboxedJob } from 'bullmq';
+import { JobNames } from '../../../lib/constants/jobScheduler';
 import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
@@ -9,15 +10,18 @@ export const mainBullClientProcessor = async (job: SandboxedJob) => {
   // sending email (multiple kinds and types)
   // user impact score calculation (run this after global plaid transactions)
   // run reports calc (users report)
-  switch (job.name) {
-    case 'global-plaid-transaction-mapper':
-      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+  const { name, data } = job;
+  let result: any;
+  switch (name) {
+    case JobNames.GlobalPlaidTransactionMapper:
+      result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
       break;
-    case 'user-plaid-transaction-mapper':
-      UserPlaidTransactionMapper.exec(job);
+    case JobNames.UserPlaidTransactionMapper:
+      UserPlaidTransactionMapper.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found');
       break;
   }
+  return result;
 };

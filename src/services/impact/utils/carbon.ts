@@ -1,6 +1,7 @@
 import { convertKgToMT, formatNumber } from '../../../lib/number';
 import { RareTransactionQuery } from '../../../lib/constants';
 import { TransactionModel } from '../../../models/transaction';
+import { MiscModel } from '../../../models/misc';
 
 export enum EquivalencyKey {
   Airplane = 'airplane',
@@ -238,8 +239,6 @@ export const getOffsetTransactionsTotal = async (uid: string) => {
   return aggResult?.length ? aggResult[0].total : 0;
 };
 
-export const rareAverage = 13.81;
-
 export const getRareOffsetAmount = async (uid: string) => {
   const aggResult = await TransactionModel.aggregate()
     .match({ userId: uid, ...RareTransactionQuery })
@@ -248,8 +247,9 @@ export const getRareOffsetAmount = async (uid: string) => {
   return sumTotal;
 };
 
-export const getRareDonationSuggestion = (mtCarbon: number) => {
-  let offsetAmount = mtCarbon * rareAverage;
+export const getRareDonationSuggestion = async (mtCarbon: number) => {
+  const rareAverage = await MiscModel.findOne({ key: 'rare-project-average' }); // 13.81;
+  let offsetAmount = mtCarbon * parseFloat(rareAverage.value);
   offsetAmount *= 100;
   offsetAmount = Math.ceil(offsetAmount) / 100;
   return offsetAmount;

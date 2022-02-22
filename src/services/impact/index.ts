@@ -2,6 +2,7 @@ import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
+import { MiscModel } from '../../models/misc';
 
 // TODO: values provided by Anushka 2/2/22. these may need to change
 const averageAmericanEmissions = {
@@ -127,8 +128,8 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
 
   const totalUserEmissions = totalEmissions.mt || 0;
 
-  const monthlySuggestion = CarbonService.getRareDonationSuggestion(monthlyEmissions.mt);
-  let totalSuggestion = CarbonService.getRareDonationSuggestion((totalUserEmissions - totalOffset) || totalEmissions.mt);
+  const monthlySuggestion = await CarbonService.getRareDonationSuggestion(monthlyEmissions.mt);
+  let totalSuggestion = await CarbonService.getRareDonationSuggestion((totalUserEmissions - totalOffset) || totalEmissions.mt);
   if (showAverage) {
     totalSuggestion *= 2;
   }
@@ -137,7 +138,8 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
   const c02Sub = 'CO<sub>2</sub>';
 
   const lowestAmount = 10;
-  const lowestDescription = wrapInSpan(`Offsets ${(lowestAmount / CarbonService.rareAverage).toFixed(2)} tonnes of ${c02Sub} emissions`);
+  const rareAverage = await MiscModel.findOne({ key: 'rare-project-average' }); // 13.81;
+  const lowestDescription = wrapInSpan(`Offsets ${(lowestAmount / parseFloat(rareAverage.value)).toFixed(2)} tonnes of ${c02Sub} emissions`);
   const monthlyDescription = showAverage ? wrapInSpan(`The average American's monthly ${c02Sub} emissions`) : wrapInSpan(`Offsets your average monthly ${c02Sub} emissions`);
   const totalDescription = showAverage ? wrapInSpan(`The average American's ${c02Sub} emissions over 2 years`) : wrapInSpan(`Offsets your ${totalOffset > 0 ? 'remaining' : 'total'} ${c02Sub} emissions`);
 

@@ -27,17 +27,33 @@ const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catche
   return transactionCount <= 0 && transactionAmountTotal <= 0;
 };
 
+const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: number, totalOffset: number) => {
+  /**
+     * Logic to Determine Number used for Total Equivalency
+     * Case: Net Emissions > 0: Use Net Emissions
+     * Case: Negative Net Emissions and 0 Gross Emissions: Use American Average over 2 years
+     * Case: Negative Net Emissions and  > 0 Gross Emissions: Use Total Offset
+     * Case: 0 Net Emissions and > 0 Gross Emissions and > 0 Offset: Use Total Offset
+     * Case: 0 Net Emissions and 0 Gross Emissions: Use American Average over 2 years
+     */
+
+  if (netEmissions > 0) return netEmissions;
+  if (netEmissions < 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
+  if (netEmissions < 0 && totalEmissions > 0) return totalOffset;
+  if (netEmissions === 0 && totalEmissions > 0 && totalOffset > 0) return totalOffset;
+  if (netEmissions === 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
+};
+
 export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   const _id = req?.requestor?._id;
   let totalEmissions = 0;
   let monthlyEmissions = 0;
   let netEmissions = 0;
-  let calculateTotalEquivalency = false;
   let calculateMonthlyEquivalency = false;
 
   const donationsCount = await CarbonService.getOffsetTransactionsCount(_id);
   const totalDonated = await CarbonService.getOffsetTransactionsTotal(_id);
-  const totalOffset = totalDonated > 0 ? CarbonService.getRareOffsetAmount(totalDonated) : 0;
+  const totalOffset = await CarbonService.getRareOffsetAmount(_id);
   const useAmericanAverage = await shouldUseAmericanAverage({ userId: _id });
 
   if (!useAmericanAverage) {
@@ -52,19 +68,24 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   if (monthlyEmissions > 0) {
     calculateMonthlyEquivalency = true;
   }
-  if (totalEmissions > 0) {
-    calculateTotalEquivalency = true;
-  }
 
   // Carbon Offsets Sprint - return one total and one monthly negative equivalency from different types (based on icon)
   const monthlyEquivalencies = CarbonService.getEquivalencies(!calculateMonthlyEquivalency ? averageAmericanEmissions.Monthly : monthlyEmissions);
-  const totalEquivalencies = CarbonService.getEquivalencies(!calculateTotalEquivalency ? averageAmericanEmissions.Annually * 2 : netEmissions);
+  const totalEquivalencies = CarbonService.getEquivalencies(getAmountForTotalEquivalency(netEmissions, totalEmissions, totalOffset));
 
   const totalEquivalency = totalEquivalencies.negative[getRandomInt(0, totalEquivalencies.negative.length - 1)];
   totalEquivalency.type = 'total';
   const monthlyEquivalenciesFiltered = monthlyEquivalencies.negative.filter(eq => eq.icon !== totalEquivalency.icon);
   const monthlyEquivalency = monthlyEquivalenciesFiltered[getRandomInt(0, monthlyEquivalenciesFiltered.length - 1)];
   monthlyEquivalency.type = 'monthly';
+
+  const equivalencies = [totalEquivalency, monthlyEquivalency];
+
+  // Add 3rd Equivalency (positive) if User hasx purchased any offsets
+  if (totalOffset > 0) {
+    const equivalency = totalEquivalencies.positive[getRandomInt(0, totalEquivalencies.positive.length - 1)];
+    equivalencies.push({ ...equivalency, type: 'offsets' });
+  }
 
   return {
     offsets: {
@@ -75,21 +96,13 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
     netEmissions, // FE uses this field to determine branching logic on first card
     totalEmissions, // FE uses this field to determine showing personalized data or average
     monthlyEmissions,
-    equivalencies: [totalEquivalency, monthlyEquivalency],
+    equivalencies,
     averageAmericanEmissions: {
       monthly: averageAmericanEmissions.Monthly,
       annually: averageAmericanEmissions.Annually * 2,
     },
   };
 };
-
-// > 0 net emissions: calculate by net emissions
-// -net emissions:
-// // 0 gross emissions: calculate by am avg ovr 2 years
-// // > 0 gross emissions: calculate by total offset
-// 0 net emissions:
-// // > 0 gross emissions and > 0 offset: calculate by total ofset
-// // 0 emissions: calculate by am avg ovr 2 years
 
 export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
   const { _id } = req.requestor;
@@ -102,8 +115,7 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
 
   const showAverage = await shouldUseAmericanAverage({ userId: _id });
 
-  const totalDonated = await CarbonService.getOffsetTransactionsTotal(_id);
-  const totalOffset = totalDonated > 0 ? CarbonService.getRareOffsetAmount(totalDonated) : 0;
+  const totalOffset = await CarbonService.getRareOffsetAmount(_id);
 
   const monthlyEmissions = showAverage
     ? { mt: averageAmericanEmissions.Monthly }
@@ -121,18 +133,16 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
     totalSuggestion *= 2;
   }
 
-  const lowestDescription = 'Even a little makes a difference!';
-  const secondLowestAmount = 25;
-  const secondLowestOffsetAmount = CarbonService.getRareOffsetAmount(secondLowestAmount);
-  let secondLowestDescription = CarbonService.getEquivalencies(secondLowestOffsetAmount, CarbonService.EquivalencyKey.Recycle)?.negative?.[0]?.text;
-  secondLowestDescription = `This amounts to ${secondLowestDescription}`;
+  const wrapInSpan = (str: string) => `<span>${str}</span>`;
+  const c02Sub = 'CO<sub>2</sub>';
 
-  const monthlyDescription = showAverage ? 'This amount offsets the average American\'s monthly emissions.' : 'This amount offsets your average monthly emissions.';
-  const totalDescription = showAverage ? 'This amount offsets the average American\'s emissions over 2 years.' : 'This amount offsets your total net emissions.';
+  const lowestAmount = 10;
+  const lowestDescription = wrapInSpan(`Offsets ${(lowestAmount / CarbonService.rareAverage).toFixed(2)} tonnes of ${c02Sub} emissions`);
+  const monthlyDescription = showAverage ? wrapInSpan(`The average American's monthly ${c02Sub} emissions`) : wrapInSpan(`Offsets your average monthly ${c02Sub} emissions`);
+  const totalDescription = showAverage ? wrapInSpan(`The average American's ${c02Sub} emissions over 2 years`) : wrapInSpan(`Offsets your ${totalOffset > 0 ? 'remaining' : 'total'} ${c02Sub} emissions`);
 
   const suggestions = [
-    buildDonationAmount(10, lowestDescription, 'none'),
-    buildDonationAmount(secondLowestAmount, secondLowestDescription, 'none'),
+    buildDonationAmount(lowestAmount, lowestDescription, 'none'),
     buildDonationAmount(monthlySuggestion, monthlyDescription, 'suggested'),
   ];
 

@@ -2,6 +2,14 @@ import path from 'path';
 import csvtojson from 'csvtojson';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
+import { ErrorTypes } from '../../lib/constants';
+
+/**
+ * INSTRUCTIONS
+ *
+ * - update headers inside .csv files to match the ones
+ *   specified in the interfaces below
+ */
 
 /**
  * creates the sectors collection
@@ -10,18 +18,20 @@ import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
  * TODO: map to companies
  */
 
-interface ISectorData {
-  old_category: string;
-  old_subcategory: string;
+interface IBaseData {
   tier_1: string;
   tier_2: string;
   tier_3: string;
   tier_4: string;
 }
 
+interface ICarbonMultiplierData extends IBaseData {
+  carbonMultiplier: string;
+}
+
 export const createSectors = async () => {
   try {
-    const rawData: ISectorData[] = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'new_sectors.csv'));
+    const rawData: ICarbonMultiplierData[] = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'new_sectors.csv'));
 
     const tier1Models: ISectorDocument[] = [];
     const tier2Models: ISectorDocument[] = [];
@@ -121,6 +131,69 @@ export const createSectors = async () => {
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const mapCarbonMultipliersToSectors = async () => {
+  console.log('\nmapping carbon multipliers to sectors...');
+  const rawData: ICarbonMultiplierData[] = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'new_sectors.csv'));
+  let count = 0;
+
+  for (const row of rawData) {
+    try {
+      let sectorName: string;
+      let tier: number;
+
+      if (!!row.tier_4) {
+        sectorName = row.tier_4;
+        tier = 4;
+      }
+
+      if (!sectorName && !!row.tier_3) {
+        sectorName = row.tier_3;
+        tier = 3;
+      }
+
+      if (!sectorName && !!row.tier_2) {
+        sectorName = row.tier_2;
+        tier = 2;
+      }
+
+      if (!sectorName && !!row.tier_1) {
+        sectorName = row.tier_1;
+        tier = 1;
+      }
+
+      if (!sectorName) throw new CustomError('Invalid row found. Missing all tiers.', ErrorTypes.INVALID_ARG);
+
+      const sectors = await SectorModel
+        .find({ name: sectorName, tier })
+        .populate('parentSectors');
+
+      if (!sectors.length) throw new CustomError(`Tier ${tier} sector ${sectorName} not found.`, ErrorTypes.NOT_FOUND);
+
+      let updated = false;
+      for (const sector of sectors) {
+        if (!!sector.carbonMultiplier) throw new CustomError(`Carbon multiplier has already been assigned to tier ${tier} sector: ${sectorName}`);
+
+        sector.carbonMultiplier = parseFloat(row.carbonMultiplier);
+
+        await sector.save();
+
+        updated = true;
+      }
+
+      if (updated) {
+        count++;
+      } else {
+        throw new CustomError(`Something went wrong while updating tier ${tier} sector ${sectorName}`);
+      }
+    } catch (err) {
+      const error = asCustomError(err);
+      console.log(`\n[-] ${error.message}`);
+    }
+  }
+
+  console.log(`\n[+] ${count}/${rawData.length} sectors updated with carbon multipliers`);
 };
 
 export const resetSectors = async () => {

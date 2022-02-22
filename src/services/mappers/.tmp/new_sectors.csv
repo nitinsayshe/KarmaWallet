@@ -99,10 +99,10 @@ Manufacturing,Aerospace & Defense,,,0.273983568
 Manufacturing,Basic Resources,,,1.346446735
 Manufacturing,Chemicals,,,1.035267225
 Manufacturing,Commercial Machinery,,,0.441244591
-Manufacturing,Construction,,,0.36866297
+Manufacturing,Construction & Related Materials,,,0.36866297
 Manufacturing,Energy,,,4.811914087
 Manufacturing,Environmental Innovation,,,0.250888476
-Manufacturing,Food & Beverage,,,1.035444736
+Manufacturing,Food & Beverage Manufacturers,,,1.035444736
 Manufacturing,Healthcare,,,0.250976805
 Manufacturing,Household Goods & Apparel,,,0.427912335
 Manufacturing,Industrial Cleaning Products,,,0.482442379
@@ -221,6 +221,6 @@ Travel,Travel Services,,,0.158772539
 Travel,,,,0.797529864
 Utilities,"Electric, Gas & Water Utilities",Electricity,,4.811914087
 Utilities,"Electric, Gas & Water Utilities",Gas,,3.739544776
-Utilities,"Electric, Gas & Water Utilities",Water,,0.736911281
+Utilities,"Electric, Gas & Water Utilities",Water Providers,,0.736911281
 Utilities,"Electric, Gas & Water Utilities",,,3.353491939
 Utilities,,,,3.353491939

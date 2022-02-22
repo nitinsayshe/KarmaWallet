@@ -165,9 +165,7 @@ export const mapCarbonMultipliersToSectors = async () => {
 
       if (!sectorName) throw new CustomError('Invalid row found. Missing all tiers.', ErrorTypes.INVALID_ARG);
 
-      const sectors = await SectorModel
-        .find({ name: sectorName, tier })
-        .populate('parentSectors');
+      const sectors = await SectorModel.find({ name: sectorName, tier });
 
       if (!sectors.length) throw new CustomError(`Tier ${tier} sector ${sectorName} not found.`, ErrorTypes.NOT_FOUND);
 

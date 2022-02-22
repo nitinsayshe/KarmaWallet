@@ -16,7 +16,7 @@ export enum UserGroupRole {
 }
 
 export interface IRareUserIntegration {
-  userId: string;
+  userId?: string;
 }
 
 export interface IUserGroup {
@@ -25,7 +25,7 @@ export interface IUserGroup {
 }
 
 export interface IUserIntegrations {
-  rare: IRareUserIntegration;
+  rare?: IRareUserIntegration;
 }
 
 export interface IUser {
@@ -40,7 +40,7 @@ export interface IUser {
   emailVerified: boolean;
   lastModified: Date;
   legacyId: string;
-  integration: IUserIntegrations;
+  integrations?: IUserIntegrations;
 }
 
 export interface IUserDocument extends IUser, Document {}

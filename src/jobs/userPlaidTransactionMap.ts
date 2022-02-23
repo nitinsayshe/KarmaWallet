@@ -14,6 +14,7 @@ interface IUserPlaidTransactionMapParams {
 }
 
 export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
+  // initial card linking for individual user
   await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
   return userId;
 };

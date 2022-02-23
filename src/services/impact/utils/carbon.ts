@@ -1,6 +1,7 @@
 import { convertKgToMT, formatNumber } from '../../../lib/number';
 import { RareTransactionQuery } from '../../../lib/constants';
 import { TransactionModel } from '../../../models/transaction';
+import { MiscModel } from '../../../models/misc';
 
 export enum EquivalencyKey {
   Airplane = 'airplane',
@@ -238,24 +239,18 @@ export const getOffsetTransactionsTotal = async (uid: string) => {
   return aggResult?.length ? aggResult[0].total : 0;
 };
 
-const rareProjectCostPerTonne = [13.18, 12.16, 11.54];
-
-export const getRareOffsetAmount = (dollarAmount: number) => {
-  const rareTotal = rareProjectCostPerTonne.reduce((acc, num) => {
-    acc += num;
-    return acc;
-  }, 0);
-  const rareAverage = rareTotal / rareProjectCostPerTonne.length;
-  return dollarAmount / rareAverage;
+export const getRareOffsetAmount = async (uid: string) => {
+  const aggResult = await TransactionModel.aggregate()
+    .match({ userId: uid, ...RareTransactionQuery })
+    .group({ _id: '$userId', total: { $sum: '$integrations.rare.tonnes_amt' } });
+  const sumTotal = aggResult?.length ? aggResult[0].total : 0;
+  return sumTotal;
 };
 
-export const getRareDonationSuggestion = (mtCarbon: number) => {
-  const rareTotal = rareProjectCostPerTonne.reduce((acc, num) => {
-    acc += num;
-    return acc;
-  }, 0);
-  const rareAverage = rareTotal / rareProjectCostPerTonne.length;
-  let offsetAmount = mtCarbon * rareAverage;
+export const getRareDonationSuggestion = async (mtCarbon: number) => {
+  const rareAverage = await MiscModel.findOne({ key: 'rare-project-average' }); // 13.81;
+  let offsetAmount = mtCarbon * parseFloat(rareAverage.value);
   offsetAmount *= 100;
-  return Math.ceil(offsetAmount) / 100;
+  offsetAmount = Math.ceil(offsetAmount) / 100;
+  return offsetAmount;
 };

@@ -3,11 +3,11 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { toUTC } from '../../lib/date';
 import {
-  IJob, IJobModel, JobModel,
-} from '../../models/job';
+  IJobPosting, IJobPostingModel, JobPostingModel,
+} from '../../models/jobPosting';
 import { IRequest } from '../../types/request';
 
-export const createJob = (_: IRequest, title: string, instructions: string, description: string, department: string, location: string) => {
+export const createJobPosting = (_: IRequest, title: string, instructions: string, description: string, department: string, location: string) => {
   if (!title) throw new CustomError('A job title is required.', ErrorTypes.INVALID_ARG);
   if (!description) throw new CustomError('A job description is required.', ErrorTypes.INVALID_ARG);
   if (!department) throw new CustomError('A job department is required.', ErrorTypes.INVALID_ARG);
@@ -16,7 +16,7 @@ export const createJob = (_: IRequest, title: string, instructions: string, desc
   try {
     const timestamp = toUTC(new Date());
 
-    const job = new JobModel({
+    const jobPosting = new JobPostingModel({
       title,
       instructions,
       description,
@@ -26,13 +26,13 @@ export const createJob = (_: IRequest, title: string, instructions: string, desc
       lastModified: timestamp,
     });
 
-    return job.save();
+    return jobPosting.save();
   } catch (err) {
     throw asCustomError(err);
   }
 };
 
-export const getJobs = (_: IRequest, query: FilterQuery<IJob> = {}) => {
+export const getJobPostings = (_: IRequest, query: FilterQuery<IJobPosting> = {}) => {
   const options = {
     projection: query?.projection || '',
     lean: !!query.lean,
@@ -41,15 +41,15 @@ export const getJobs = (_: IRequest, query: FilterQuery<IJob> = {}) => {
     limit: query?.limit || 10,
   };
 
-  return JobModel.paginate(query.filter, options);
+  return JobPostingModel.paginate(query.filter, options);
 };
 
-export const getJobById = async (_: IRequest, id: string) => JobModel.findById(id);
+export const getJobPostingById = async (_: IRequest, id: string) => JobPostingModel.findById(id);
 
-export const update = (_: IRequest, id: string, title: string, instructions: string, description: string, department: string, jobLocation: string) => {
+export const updateJobPosting = (_: IRequest, id: string, title: string, instructions: string, description: string, department: string, jobLocation: string) => {
   if (!title && !description && !department && !jobLocation) throw new CustomError('No updatable data found for job posting.', ErrorTypes.INVALID_ARG);
 
-  const updates: Partial<IJob> = {
+  const updates: Partial<IJobPosting> = {
     lastModified: toUTC(new Date()),
   };
 
@@ -59,10 +59,10 @@ export const update = (_: IRequest, id: string, title: string, instructions: str
   if (department) updates.department = department;
   if (jobLocation) updates.jobLocation = jobLocation;
 
-  return JobModel.findByIdAndUpdate(id, updates, { new: true });
+  return JobPostingModel.findByIdAndUpdate(id, updates, { new: true });
 };
 
-export const getShareableJobRef = (job: IJobModel) => ({
+export const getShareableJobPostingRef = (job: IJobPostingModel) => ({
   _id: job._id,
   title: job.title,
   department: job.department,
@@ -71,8 +71,8 @@ export const getShareableJobRef = (job: IJobModel) => ({
   lastModified: job.lastModified,
 });
 
-export const getShareableJob = (job: IJobModel) => {
-  const ref = getShareableJobRef(job);
+export const getShareableJobPosting = (job: IJobPostingModel) => {
+  const ref = getShareableJobPostingRef(job);
 
   return {
     ...ref,

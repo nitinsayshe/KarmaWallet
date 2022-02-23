@@ -52,7 +52,7 @@ class Transaction {
       this._date = dayjs('1 Jan, 1970');
       const parsedDate = this._plaidTransaction.date.split('-');
       this._date = this._date.set('year', parseInt(parsedDate[0]));
-      this._date = this._date.set('month', parseInt(parsedDate[1]));
+      this._date = this._date.set('month', parseInt(parsedDate[1]) - 1);
       this._date = this._date.set('date', parseInt(parsedDate[2]));
     }
 

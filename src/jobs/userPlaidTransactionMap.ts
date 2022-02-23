@@ -14,11 +14,11 @@ interface IUserPlaidTransactionMapParams {
 }
 
 export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
-  await mapTransactionsFromPlaid(mockRequest, [accessToken], 90);
+  await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
   return userId;
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
   const client = new KarmaApiClient();
-  await client.sendPlaidTransactionWebhook(result.userId);
+  await client.sendPlaidTransactionsReadyWebhook(result.userId);
 };

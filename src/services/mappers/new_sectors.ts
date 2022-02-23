@@ -31,6 +31,7 @@ interface ICarbonMultiplierData extends IBaseData {
 
 export const createSectors = async () => {
   try {
+    console.log('creating new sectors...');
     const rawData: ICarbonMultiplierData[] = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'new_sectors.csv'));
 
     const tier1Models: ISectorDocument[] = [];
@@ -128,6 +129,9 @@ export const createSectors = async () => {
     console.log(`| 3    | ${tier3Models.length}\t|`);
     console.log(`| 4    | ${tier4Models.length}\t|`);
     console.log('+---------------+\n');
+
+    const total = tier1Models.length + tier2Models.length + tier3Models.length + tier4Models.length;
+    console.log(`[+] ${total} new sectors created successfully`);
   } catch (err) {
     throw asCustomError(err);
   }
@@ -191,7 +195,7 @@ export const mapCarbonMultipliersToSectors = async () => {
     }
   }
 
-  console.log(`\n[+] ${count}/${rawData.length} sectors updated with carbon multipliers`);
+  console.log(`\n[+] ${count}/${rawData.length} sectors updated with carbon multipliers\n`);
 };
 
 export const resetSectors = async () => {

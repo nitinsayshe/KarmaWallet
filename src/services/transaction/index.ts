@@ -1,7 +1,5 @@
 import { AnyObject } from 'mongoose';
-import {
-  ITransactionIntegrations, ITransactionModel, TransactionModel,
-} from '../../models/transaction';
+import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 
@@ -27,10 +25,19 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => TransactionM
 
 export const getShareableTransaction = (transaction: ITransactionModel) => {
   const {
-    userId, companyId, cardId, category, subCategory, amount, date, createdOn, lastModified, integrations,
+    userId,
+    companyId,
+    cardId,
+    category,
+    subCategory,
+    amount,
+    date,
+    createdOn,
+    lastModified,
+    integrations,
   } = transaction;
 
-  const shareableTransaction: Partial<ITransactionModel> = {
+  const shareableTransaction: Partial<ITransaction> = {
     userId,
     companyId,
     cardId,
@@ -43,14 +50,21 @@ export const getShareableTransaction = (transaction: ITransactionModel) => {
   };
 
   if (integrations?.rare) {
-    const { projectName, offsetsPurchased } = integrations.rare;
-    const rareIntegration: ITransactionIntegrations = {
-      rare: {
-        projectName,
-        offsetsPurchased,
-      },
+    const {
+      projectName,
+      tonnes_amt: offsetsPurchased,
+      certificateUrl,
+    } = integrations.rare;
+
+    const rareIntegration = {
+      projectName,
+      offsetsPurchased,
+      certificateUrl,
     };
-    shareableTransaction.integrations = rareIntegration;
+    shareableTransaction.integrations = {
+      ...shareableTransaction.integrations,
+      rare: rareIntegration,
+    };
   }
   return shareableTransaction;
 };

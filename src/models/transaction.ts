@@ -63,13 +63,16 @@ export interface IRareTransactionIntegration {
   transaction_id?: string;
   currency?: string;
   certificate_url?: string;
+  certificateUrl?: string; // added during some rare updates...has to be included now or will break FE
   statement_descriptor?: string;
   processed?: boolean;
   processed_ts?: string;
   refunded?: boolean;
   refunded_ts?: string;
   projectName?: string;
-  offsetsPurchased?: string;
+  fee_amt?: { type: Number },
+  subtotal_amt?: { type: Number },
+  tonnes_amt?: { type: Number },
 }
 
 export interface ITransactionIntegrations {

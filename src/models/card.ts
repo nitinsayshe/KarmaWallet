@@ -39,7 +39,7 @@ export interface ICard {
   status: CardStatus;
   institution: string;
   integrations: ICardIntegrations;
-  createOn: Date;
+  createdOn: Date;
   lastModified: Date;
 }
 

@@ -41,7 +41,7 @@ jobs:
     - run: echo 'REDIS_PORT=6379' >> .env
     - run: echo 'AWS_ACCESS_KEY_ID=${{secrets.STAGING_AWS_ACCESS_KEY_ID}}' >> .env
     - run: echo 'AWS_SECRET_ACCESS_KEY=${{secrets.STAGING_AWS_SECRET_ACCESS_KEY}}' >> .env
-    - run: echo 'S3_BUCKET=assets.karmawallet' >> .env
+    - run: echo 'S3_BUCKET=cdn.karmawallet.io' >> .env
     - run: echo 'PLAID_CLIENT_ID=${{secrets.STAGING_PLAID_CLIENT_ID}}' >> .env
     - run: echo 'PLAID_SECRET=${{secrets.STAGING_PLAID_SECRET}}' >> .env
     - run: echo 'PLAID_ENV=${{secrets.STAGING_PLAID_ENV}}' >> .env

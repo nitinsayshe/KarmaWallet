@@ -6,7 +6,7 @@ const router = Router();
 router.route('/rare')
   .post(WebhooksController.mapRareTransaction);
 
-router.route('/plaid/user-transaction-map')
+router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);
 
 export default (app: Express) => app.use('/webhook', router);

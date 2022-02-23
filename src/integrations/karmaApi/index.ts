@@ -31,6 +31,16 @@ class KarmaApiClient {
       throw new CustomError('Error sending Rare webhook to KarmaWallet API.', ErrorTypes.GEN);
     }
   };
+
+  sendPlaidTransactionWebhook = async (uid: string) => {
+    try {
+      const result = await this._client.post('/webhook/plaid', { uid });
+      return result.data;
+    } catch (err) {
+      console.log(err);
+      throw new CustomError('Error sending Plaid Transactions webhook to KarmaWallet API.', ErrorTypes.GEN);
+    }
+  };
 }
 
 export default KarmaApiClient;

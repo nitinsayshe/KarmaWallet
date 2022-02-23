@@ -1,21 +1,24 @@
 import { SandboxedJob } from 'bullmq';
+import { mockRequest } from '../lib/constants/request';
+
+import { mapTransactionsFromPlaid } from '../integrations/plaid';
+import KarmaApiClient from '../integrations/karmaApi';
 
 interface IPlaidTransactionMapperResult {
-  dummy: any;
+  userId: string,
 }
 
 interface IUserPlaidTransactionMapParams {
   userId: string,
+  accessToken: string,
 }
 
-export const exec = (data: IUserPlaidTransactionMapParams) => {
-  const { userId } = data;
-  // get user access tokens
-  // pass those to plaid integration mapper.
-  console.log(userId);
+export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
+  await mapTransactionsFromPlaid(mockRequest, [accessToken], 90);
+  return userId;
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
-  // do stuff
-  console.log(`${job.name} finished: \n ${JSON.stringify(result)}`);
+  const client = new KarmaApiClient();
+  await client.sendPlaidTransactionWebhook(result.userId);
 };

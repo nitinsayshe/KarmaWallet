@@ -53,6 +53,6 @@ jobs:
     - run: echo 'RARE_API_KEY=${{ secrets.STAGING_RARE_API_KEY }}' >> .env
     - run: echo 'RARE_ENV=prod' >> .env
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
-    - run: echo 'KW_API_URL=api.karmawallet.io' >> .env
+    - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'BETSI_ENV=bigolbetsi' >> .env
     - run: npm i

@@ -3,6 +3,8 @@ import csvtojson from 'csvtojson';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import { ErrorTypes } from '../../lib/constants';
+import { PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
+import { getPlaidCategoriesId } from '../../lib/plaid';
 
 /**
  * INSTRUCTIONS
@@ -27,6 +29,13 @@ interface IBaseData {
 
 interface ICarbonMultiplierData extends IBaseData {
   carbonMultiplier: string;
+}
+
+interface IRawPlaidCategoriesToSectorMapping extends IBaseData {
+  top_category_1: string;
+  top_category_2: string;
+  top_category_3: string;
+  mapped_tier: string;
 }
 
 export const createSectors = async () => {
@@ -198,10 +207,57 @@ export const mapCarbonMultipliersToSectors = async () => {
   console.log(`\n[+] ${count}/${rawData.length} sectors updated with carbon multipliers\n`);
 };
 
+export const mapPlaidCategoriesToKarmaSectors = async () => {
+  console.log('\ncreating plaid category to karma sector mappings...');
+  let count = 0;
+  let sectors: ISectorDocument[];
+  let rawData: IRawPlaidCategoriesToSectorMapping[];
+
+  try {
+    sectors = await SectorModel.find({});
+    rawData = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'plaid_categories_to_karma_sectors.csv'));
+  } catch (err) {
+    console.log('[-] error getting sectors and/or raw mapping data...');
+    console.log(err);
+  }
+
+  if (!!sectors && !!rawData) {
+    for (const row of rawData) {
+      try {
+        const plaidCategories = [row.top_category_1];
+        if (!!row.top_category_2) plaidCategories.push(row.top_category_2);
+        if (!!row.top_category_3) plaidCategories.push(row.top_category_3);
+        const plaidCategoriesId = getPlaidCategoriesId(plaidCategories);
+        const sector = sectors.find(s => s.name === row.mapped_tier);
+
+        if (!sector) throw new CustomError(`invalid sector found: ${row.mapped_tier}`);
+
+        const plaidCategoriesToSectorMapping = new PlaidCategoriesToSectorMappingModel({
+          plaidCategoriesId,
+          plaidCategories,
+          sector,
+        });
+
+        await plaidCategoriesToSectorMapping.save();
+
+        count++;
+      } catch (err) {
+        console.log('[-] error mapping to following data to a karma sector');
+        console.log(row);
+        console.log('');
+        console.log(err);
+      }
+    }
+
+    console.log(`[+] ${count}/${rawData.length} plaid categories to sector mappings created\n`);
+  }
+};
+
 export const resetSectors = async () => {
   try {
     console.log('resetting sectors...');
     await SectorModel.deleteMany({});
+    await PlaidCategoriesToSectorMappingModel.deleteMany({});
     console.log('[+] sectors reset successfully');
   } catch (err) {
     console.log('ERROR RESETTING SECTORS');

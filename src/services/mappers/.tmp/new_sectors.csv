@@ -113,6 +113,7 @@ Manufacturing,Personal Care Products,,,0.440386116
 Manufacturing,Pharma & Biotech,,,0.302167812
 Manufacturing,Sanitary Paper Products,,,0.513010023
 Manufacturing,Semiconductors & Equipment,,,0.372964003
+Manufacturing,,,,0.7689151104
 Media & Entertainment,Entertainment,Publishing,,0.24967326
 Media & Entertainment,Entertainment,Streaming Services,,0.22923276
 Media & Entertainment,Entertainment,Video Games,,0.152241024
@@ -122,6 +123,7 @@ Media & Entertainment,Media,Social Media,,0.214977207
 Media & Entertainment,Media,,,0.212496191
 Media & Entertainment,,,,0.209623078
 Oil & Gas,Gas Stations,,,2.56544912
+Oil & Gas,,,,2.283002367
 Organizations & Associations,Nonprofits,,,0.118008761
 Organizations & Associations,,,,0.205117291
 Personal Care,Cosmetics,,,0.273910474
@@ -142,6 +144,7 @@ Retail,Convenience Stores & Pharmacy,Pharmacy,,0.222115002
 Retail,Convenience Stores & Pharmacy,,,0.305409417
 Retail,Department Stores,Apparel Stores,,0.327339523
 Retail,Department Stores,"Cosmetics, Beauty Supplies & Personal Care",,0.401835062
+Retail,Department Stores,,,0.3757880624
 Retail,"Electronics, Gadgets & Accessories",,,0.24941632
 Retail,Health & Fitness,Vitamins & Supplements,,0.409411237
 Retail,Health & Fitness,,,0.409411237
@@ -175,6 +178,7 @@ Services,Construction,Electrical Contractors,,0.424248424
 Services,Construction,General Contractors,,0.424248424
 Services,Construction,Landscaping & Gardening Services,Gardening,0.221849185
 Services,Construction,Landscaping & Gardening Services,Landscaping,0.221849185
+Services,Construction,Landscaping & Gardening Services,,0.221849185
 Services,Construction,"Plumbing, Heating and Air-Conditioning Contractors",,0.424248424
 Services,Construction,,,0.356162936
 Services,Consulting Services,IT & Business Consulting,,0.132164564

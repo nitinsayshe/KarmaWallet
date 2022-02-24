@@ -7,6 +7,7 @@ import { createSectors, mapCarbonMultipliersToSectors, mapPlaidCategoriesToKarma
 import { mapCompaniesToV3 } from '../src/services/mappers/new_companies';
 import { mapUsersToV3 } from '../src/services/mappers/new_user';
 import { IRequest } from '../src/types/request';
+import { updateAllTransactionsWithUpdatedCarbonMultipliers } from '../src/services/mappers/update_transactions_carbon_multipliers';
 
 (async () => {
   try {
@@ -28,6 +29,7 @@ import { IRequest } from '../src/types/request';
     await mapPlaidCategoriesToKarmaCategoriesAndCarbonMultiplier(mockRequest);
     await mapExistingPlaidItems(mockRequest);
     await mapTransactionsFromPlaid(mockRequest);
+    await updateAllTransactionsWithUpdatedCarbonMultipliers(); // TODO: remove this once sectors are added
 
     await MongoClient.disconnect();
   } catch (err) {

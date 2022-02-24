@@ -221,7 +221,7 @@ export const mapPlaidCategoriesToKarmaSectors = async () => {
     console.log(err);
   }
 
-  if (!!sectors && rawData) {
+  if (!!sectors && !!rawData) {
     for (const row of rawData) {
       try {
         const plaidCategories = [row.top_category_1];

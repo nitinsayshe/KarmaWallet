@@ -4,6 +4,7 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import { ErrorTypes } from '../../lib/constants';
 import { PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
+import { getPlaidCategoriesId } from '../../lib/plaid';
 
 /**
  * INSTRUCTIONS
@@ -226,7 +227,7 @@ export const mapPlaidCategoriesToKarmaSectors = async () => {
         const plaidCategories = [row.top_category_1];
         if (!!row.top_category_2) plaidCategories.push(row.top_category_2);
         if (!!row.top_category_3) plaidCategories.push(row.top_category_3);
-        const plaidCategoriesId = plaidCategories.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
+        const plaidCategoriesId = getPlaidCategoriesId(plaidCategories);
         const sector = sectors.find(s => s.name === row.mapped_tier);
 
         if (!sector) throw new CustomError(`invalid sector found: ${row.mapped_tier}`);

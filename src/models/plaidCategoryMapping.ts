@@ -6,6 +6,8 @@ import {
 } from 'mongoose';
 import { IModel } from '../types/model';
 
+// TODO: delete this model once company sectors are implemented
+
 export interface IPlaidCategoryMapping {
   plaidCategoriesId: string;
   plaid_categories: string[];

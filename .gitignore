@@ -6,4 +6,4 @@ data
 dbExport
 .scratch*
 .build*
-orig.env*
+z_envs

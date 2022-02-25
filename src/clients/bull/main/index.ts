@@ -37,15 +37,13 @@ export class _MainBullClient extends _BullClient {
     }
   };
 
+  // https://crontab.cronhub.io/
   _addCronJobs = () => {
-    this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */3 8-10 * * *' } });
+    this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */2 * * *' } });
   };
 
   _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
     switch (job.name) {
-      case 'dummy':
-        console.log('>>>>> doing something specific to dummy job completion');
-        break;
       case JobNames.UserPlaidTransactionMapper:
         UserPlaidTransactionMapper.onComplete(job as SandboxedJob, result);
         break;

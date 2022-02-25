@@ -44,9 +44,6 @@ export class _MainBullClient extends _BullClient {
 
   _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
     switch (job.name) {
-      case 'dummy':
-        console.log('>>>>> doing something specific to dummy job completion');
-        break;
       case JobNames.UserPlaidTransactionMapper:
         UserPlaidTransactionMapper.onComplete(job as SandboxedJob, result);
         break;

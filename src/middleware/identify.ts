@@ -18,7 +18,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
     try {
       const session = await LegacySessionModel.findOne({ authKey }).lean();
       if (session?.uid) {
-        const user = await UserModel.findById({ legacyId: session?.uid });
+        const user = await UserModel.findOne({ legacyId: session?.uid });
         (req as IRequest).requestor = user;
         (req as IRequest).authKey = authKey;
       }

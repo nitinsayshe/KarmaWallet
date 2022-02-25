@@ -2,6 +2,7 @@ import { AnyObject } from 'mongoose';
 import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
+import { RareClient } from '../../integrations/rare/sdk';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -21,7 +22,19 @@ export const getTransactionCount = async (query = {}) => {
   return count;
 };
 
-export const getCarbonOffsetTransactions = async (req: IRequest) => TransactionModel.find({ userId: req?.requestor?._id, ...RareTransactionQuery });
+export const getCarbonOffsetTransactions = async (req: IRequest) => {
+  const Rare = new RareClient();
+  const transactions = await TransactionModel.find({ userId: req?.requestor?._id, ...RareTransactionQuery });
+  if (transactions.length === 0) return [];
+  const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
+  const transactionsWithCertificates = transactions.map((transaction) => {
+    const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+    const newTransaction = { ...transaction.toObject() };
+    newTransaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
+    return newTransaction;
+  });
+  return transactionsWithCertificates;
+};
 
 export const getShareableTransaction = (transaction: ITransactionModel) => {
   const {

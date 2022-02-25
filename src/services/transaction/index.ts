@@ -29,9 +29,8 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
   const transactionsWithCertificates = transactions.map((transaction) => {
     const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
-    const newTransaction = { ...transaction.toObject() };
-    newTransaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
-    return newTransaction;
+    transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
+    return transaction;
   });
   return transactionsWithCertificates;
 };

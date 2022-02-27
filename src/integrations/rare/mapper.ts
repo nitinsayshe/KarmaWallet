@@ -18,7 +18,7 @@ export class RareTransactionMapper {
   mapTransactions = async () => {
     try {
       // TODO: update to Rare ID when in DB
-      const rare = await CompanyModel.findOne({ companyId: 15302 });
+      const rare = await CompanyModel.findOne({ legacyId: 15302 });
 
       for (const transaction of this._rareTransactions) {
         // TODO: update this to structure returned from rare

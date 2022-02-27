@@ -15,6 +15,7 @@ import { validatePassword } from './utils/validate';
 import { getShareableGroup } from '../groups';
 import { IGroupModel } from '../../models/group';
 import { UserGroupModel } from '../../models/userGroup';
+import { LegacyUserModel } from '../../models/legacyUser';
 
 export interface ILoginData {
   email: string;
@@ -54,7 +55,8 @@ export const register = async (req: IRequest, {
 
     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
 
-    const userInstance = new UserModel({
+    // TODO: delete creating a new legacy user when able.
+    const legacyUser = new LegacyUserModel({
       name,
       email,
       password: hash,
@@ -64,9 +66,20 @@ export const register = async (req: IRequest, {
       groups: [],
     });
 
-    const user = await userInstance.save();
-    const authKey = await Session.createSession(user._id.toString());
-    return { user, authKey };
+    await legacyUser.save();
+
+    // map new legacy user to new user
+    const rawUser = {
+      ...legacyUser,
+      legacyId: legacyUser._id,
+    };
+    delete rawUser._id;
+    const newUser = new UserModel({ ...rawUser });
+    await newUser.save();
+
+    const authKey = await Session.createSession(legacyUser._id.toString());
+
+    return { user: legacyUser, authKey };
   } catch (err) {
     throw asCustomError(err);
   }

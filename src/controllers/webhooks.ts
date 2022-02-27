@@ -23,6 +23,9 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   if (req.headers?.['rare-webhook-key'] !== 'KFVKe5584dBb6y22SSwePMPG8MaskwvSxr86tWYPT4R8WkG6JDbUcMGMBE838jQu') return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
   try {
     const client = new KarmaApiClient();
+    console.log('/////////////// RARE TRANSACTION ///////////////////////\n');
+    console.log({ rareTransaction: req?.body?.transaction });
+
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
     await mapTransactions([rareTransaction]);

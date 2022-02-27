@@ -73,11 +73,11 @@ export class Card {
       // only save if differences are found...
       // TODO: check for differences between this.toKarmaFormat and this._card
     } else {
-      const card = new CardModel(this.toKarmaFormat());
+      this._card = new CardModel(this.toKarmaFormat());
       const now = dayjs().utc().toDate();
-      card.createdOn = now;
-      card.lastModified = now;
-      await card.save();
+      this._card.createdOn = now;
+      this._card.lastModified = now;
+      this._card = await this._card.save();
     }
   };
 }

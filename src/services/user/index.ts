@@ -162,6 +162,7 @@ export const getShareableUser = ({
   subscribedUpdates,
   role,
   groups,
+  legacyId,
 }: IUserDocument) => {
   const _groups = (!!groups && !!groups.filter(g => !!g.group).length)
     ? groups.map(g => {
@@ -179,6 +180,7 @@ export const getShareableUser = ({
     subscribedUpdates,
     role,
     groups: _groups,
+    legacyId,
   };
 };
 

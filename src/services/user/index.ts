@@ -77,7 +77,7 @@ export const register = async (req: IRequest, {
     const newUser = new UserModel({ ...rawUser });
     await newUser.save();
 
-    const authKey = await Session.createSession(legacyUser._id.toString());
+    const authKey = await Session.createSession(newUser._id.toString());
 
     return { user: legacyUser, authKey };
   } catch (err) {

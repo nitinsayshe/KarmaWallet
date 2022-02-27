@@ -72,9 +72,10 @@ export const register = async (req: IRequest, {
 
     // map new legacy user to new user
     const rawUser = {
-      ...legacyUser,
+      ...legacyUser.toObject(),
       legacyId: legacyUser._id,
     };
+
     delete rawUser._id;
     const newUser = new UserModel({ ...rawUser });
     await newUser.save();

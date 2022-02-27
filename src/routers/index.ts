@@ -9,7 +9,7 @@ import impact from './impact';
 import company from './company';
 // import sector from './sector';
 // import subsector from './subsector';
-// import webhook from './webhook';
+import webhook from './webhooks';
 import notFound from './404';
 import comparisonGame from './comparisonGame';
 
@@ -24,7 +24,7 @@ const routers = (app: Express) => {
   impact(app);
   // sector(app);
   // subsector(app);
-  // webhook(app);
+  webhook(app);
   comparisonGame(app);
   // notFound is a catch all and should be last
   notFound(app);

@@ -36,7 +36,7 @@ jobs:
     - run: echo 'REDIS_PORT=5468' >> .env
     - run: echo 'AWS_ACCESS_KEY_ID=${{secrets.PRODUCTION_AWS_ACCESS_KEY_ID}}' >> .env
     - run: echo 'AWS_SECRET_ACCESS_KEY=${{secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY}}' >> .env
-    - run: echo 'S3_BUCKET=assets.karmawallet' >> .env
+    - run: echo 'S3_BUCKET=cdn.karmawallet.io' >> .env
     - run: echo 'PLAID_CLIENT_ID=${{secrets.PRODUCTION_PLAID_CLIENT_ID}}' >> .env
     - run: echo 'PLAID_SECRET=${{secrets.PRODUCTION_PLAID_SECRET}}' >> .env
     - run: echo 'PLAID_ENV=${{secrets.PRODUCTION_PLAID_ENV}}' >> .env
@@ -49,4 +49,5 @@ jobs:
     - run: echo 'RARE_ENV=prod' >> .env
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.PRODUCTION_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=api.karmawallet.io' >> .env
+    - run: echo 'BETSI_ENV=lilbetsi' >> .env
     - run: npm i

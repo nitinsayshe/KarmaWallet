@@ -78,7 +78,7 @@ export const TOKEN_REMOVE = 'remove_me';
 
 // used for V2 api calls
 export const SERVICE_NAME_HEADER = 'serviceName';
-export const SERVICE_NAME_VALUE = 'apiV2';
+export const API_V2_SERVICE_NAME = 'apiV2';
 
 export enum SocketEvents {
   Update = 'update',

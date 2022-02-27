@@ -81,7 +81,9 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
   if (!passwordMatch) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
+  console.log('>>>>> user', user);
   const authKey = await Session.createSession(user._id.toString());
+  console.log('>>>>> authkey created');
   return { user, authKey };
 };
 

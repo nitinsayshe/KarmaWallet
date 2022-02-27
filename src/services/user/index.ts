@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
 import {
   IUser, IUserDocument, IUserGroup, UserModel,
@@ -57,6 +58,7 @@ export const register = async (req: IRequest, {
 
     // TODO: delete creating a new legacy user when able.
     const legacyUser = new LegacyUserModel({
+      _id: nanoid(),
       name,
       email,
       password: hash,
@@ -79,7 +81,7 @@ export const register = async (req: IRequest, {
 
     const authKey = await Session.createSession(newUser._id.toString());
 
-    return { user: legacyUser, authKey };
+    return { user: newUser, authKey };
   } catch (err) {
     throw asCustomError(err);
   }

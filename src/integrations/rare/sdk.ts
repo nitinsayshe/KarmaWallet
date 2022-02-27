@@ -1,5 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
 import { asCustomError } from '../../lib/customError';
+import { IRareTransaction } from './transaction';
+
+interface IRareTransactionsResponse {
+  transactions: IRareTransaction[];
+}
 
 export class RareClient {
   _client: AxiosInstance = null;
@@ -40,9 +45,9 @@ export class RareClient {
     }
   };
 
-  getTransactions = async (rareUserId: string) => {
+  getTransactions = async (rareUserId: string): Promise<IRareTransactionsResponse> => {
     try {
-      const result = await this._client.get(`transactions/users/${rareUserId}/transactions`);
+      const result = await this._client.get<IRareTransactionsResponse>(`transactions/users/${rareUserId}/transactions`);
       return result.data;
     } catch (err) {
       console.log(err);

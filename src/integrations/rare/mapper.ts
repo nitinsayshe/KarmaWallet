@@ -24,7 +24,8 @@ export class RareTransactionMapper {
         // TODO: update this to structure returned from rare
         // api once we have confirmed what that structure will
         // look like
-        const user = await UserModel.findOne({ _id: transaction.user.external_id });
+        // TODO: update to use ObjectId (new users)
+        const user = await UserModel.findOne({ legacyId: transaction.user.external_id });
 
         // TODO: update this to structure returned from rare
         // api once we have confirmed what that structure will

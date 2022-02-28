@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, 'betsi0-prod']
+    runs-on: [self-hosted, lil-betsi-prod]
 
     strategy:
       matrix:

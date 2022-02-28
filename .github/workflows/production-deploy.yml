@@ -51,4 +51,5 @@ jobs:
     - run: echo 'KW_API_URL=${{secrets.PRODUCTION_KW_API_URL}}' >> .env
     - run: echo 'BETSI_ENV=lilbetsi' >> .env
     - run: npm i
+    - run: npm list -g --depth 0
     - run: pm2 restart all

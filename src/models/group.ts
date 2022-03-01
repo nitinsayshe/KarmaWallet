@@ -12,6 +12,16 @@ export enum GroupPrivacyStatus {
   Private = 'private'
 }
 
+export interface IGroupIntegrations {
+  integrations: {
+    rare: {
+      type: {
+        groupId: string,
+      },
+    },
+  },
+}
+
 export interface IGroupMatching {
   enabled: Boolean,
   matchPercentage: Number;
@@ -29,9 +39,17 @@ export interface IGroupSettings {
 }
 
 export interface IGroup {
+  owner: string;
   name: string;
   code: string;
   settings: IGroupSettings;
+  integrations: IGroupIntegrations;
+  createdOn: Date;
+  lastModified: Date;
+  domains: string[];
+  invites: string[];
+  logo: string;
+  company: string,
 }
 
 export interface IGroupDocument extends IGroup, Document {}

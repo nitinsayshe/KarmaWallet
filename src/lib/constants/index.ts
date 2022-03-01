@@ -84,7 +84,28 @@ export enum SocketEvents {
   Update = 'update',
 }
 
-export const AllowedOrigins = ['http://localhost:3000', 'https://localhost:3000', 'http://localhost:5000', 'https://localhost:5000'];
+export const AllowedOrigins = [
+  'http://localhost:3000',
+  'https://localhost:3000',
+  'http://localhost:5000',
+  'https://localhost:5000',
+  'https://www.karmawallet.io',
+  'http://www.karmawallet.io',
+  'http://karmawallet.io',
+  'https://karmawallet.io',
+  'http://ui.sandbox-1.karmawallet.io',
+  'https://ui.sandbox-1.karmawallet.io',
+  'http://ui.sandbox-2.karmawallet.io',
+  'https://ui.sandbox-2.karmawallet.io',
+  'http://ui.sandbox-3.karmawallet.io',
+  'https://ui.sandbox-3.karmawallet.io',
+  'http://ui.staging.karmawallet.io',
+  'https://ui.staging.karmawallet.io',
+  'http://admin.karmawallet.io',
+  'https://admin.karmawallet.io',
+  'http://admin.staging.karmawallet.io',
+  'https://admin.staging.karmawallet.io',
+];
 
 export const emailVerificationDays = 5;
 export const authTokenDays = 30;

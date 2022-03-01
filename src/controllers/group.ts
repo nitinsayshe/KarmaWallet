@@ -3,9 +3,9 @@ import * as output from '../services/output';
 import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 
-export const getGroup: IRequestHandler<{ code: string }> = async (req, res) => {
+export const getGroup: IRequestHandler<{}, { code: string }> = async (req, res) => {
   try {
-    const { code } = req.params;
+    const { code } = req.query;
     const result = await GroupService.getGroup(req, code);
     output.api(req, res, result);
   } catch (err) {

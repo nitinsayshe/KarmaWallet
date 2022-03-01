@@ -7,10 +7,18 @@ export const getShareableGroup = ({
   _id,
   name,
   code,
+  domains,
+  settings,
+  owner,
+  lastModified,
 }: IGroupDocument) => ({
   _id,
   name,
   code,
+  domains,
+  settings,
+  owner,
+  lastModified,
 });
 
 export const getGroup = async (_: IRequest, code: string) => {

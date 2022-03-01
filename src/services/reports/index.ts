@@ -44,7 +44,7 @@ export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { days
         date: { $gte: thresholdDate.toDate() },
         'integrations.rare': { $exists: true },
       })
-      .project({ day: { $substr: ['$dateJoined', 0, 10] } })
+      .project({ day: { $substr: ['$date', 0, 10] } })
       .group({ _id: '$day', count: { $sum: 1 } })
       .sort({ _id: 1 });
 

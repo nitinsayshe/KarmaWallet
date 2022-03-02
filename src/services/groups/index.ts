@@ -129,8 +129,8 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
         if (isNaN(_matchPercentage)) throw new CustomError('Invalid match percent found. Must be a number.', ErrorTypes.INVALID_ARG);
         if (isNaN(_maxDollarAmount)) throw new CustomError('Invalid max dollar amount found. Must be a number.', ErrorTypes.INVALID_ARG);
         if (matchPercentage < 0 && maxDollarAmount < 0) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
-        _settings.matching.matchPercentage = _matchPercentage; // string templating required to satisfy ts requirements
-        _settings.matching.maxDollarAmount = _matchPercentage;
+        _settings.matching.matchPercentage = _matchPercentage;
+        _settings.matching.maxDollarAmount = _maxDollarAmount;
       }
     }
   }

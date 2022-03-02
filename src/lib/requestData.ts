@@ -5,8 +5,8 @@ export const allowFields = (allowedFieldsArray: string[], inputObject: { [key: s
   return acc;
 }, {});
 
-export const verifyRequiredFields = (requiredFieldsArray: string[], inputObject: { [key: string]: any }) => requiredFieldsArray.reduce((acc, requiredField) => {
-  if (!inputObject?.[requiredField]) {
+export const verifyRequiredFields = (requiredFieldsArray: string[] = [], inputObject: { [key: string]: any } = {}) => requiredFieldsArray.reduce((acc, requiredField) => {
+  if (!(requiredField in inputObject)) {
     acc.isValid = false;
     acc.missingFields.push(requiredField);
   }

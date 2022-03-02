@@ -16,6 +16,7 @@ export const register: IRequestHandler<{}, {}, User.IUserData> = async (req, res
   try {
     const { body } = req;
     const requiredFields = ['password', 'email', 'name', 'subscribedUpdates'];
+
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));

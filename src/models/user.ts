@@ -3,11 +3,9 @@ import {
   model,
   Document,
   PaginateModel,
-  ObjectId,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { IModel, IRef } from '../types/model';
-import { IGroup } from './group';
+import { IModel } from '../types/model';
 import { UserRoles } from '../lib/constants';
 
 export enum UserGroupRole {
@@ -19,27 +17,24 @@ export interface IRareUserIntegration {
   userId?: string;
 }
 
-export interface IUserGroup {
-  group: IRef<ObjectId, IGroup>;
-  role: UserGroupRole;
-}
-
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
 }
 
-export interface IUser {
+export interface IShareableUser {
   email: string;
   name: string;
-  password: string;
   dateJoined: Date;
   zipcode: string;
   subscribedUpdates: boolean;
-  groups: IUserGroup[];
   role: string; // cannot mark as UserRoles due to how mongoose treats enums
+  legacyId: string;
+}
+
+export interface IUser extends IShareableUser {
+  password: string;
   emailVerified: boolean;
   lastModified: Date;
-  legacyId: string;
   integrations?: IUserIntegrations;
 }
 
@@ -53,10 +48,6 @@ const userSchema = new Schema({
   dateJoined: { type: Date, default: new Date() },
   zipcode: { type: String },
   subscribedUpdates: { type: Boolean, default: true },
-  groups: [{
-    type: Schema.Types.ObjectId,
-    ref: 'user_group',
-  }],
   role: {
     type: String,
     default: 'none',

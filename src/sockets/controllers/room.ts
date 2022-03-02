@@ -1,5 +1,3 @@
-import { IGroup } from '../../models/group';
-import { IUserGroup } from '../../models/user';
 import { ISocket } from '../types/request';
 
 interface ISocketRequestData {
@@ -32,18 +30,18 @@ export const joinRole = (socket: ISocket) => async ({ room }: ISocketRequestData
   }
 };
 
-export const joinGroup = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
-  const roomPrefix = 'group';
-  const groups = socket?.request?.requestor?.groups || [];
-  const uid = socket?.request?.requestor?._id;
-  if (groups.length && groups.find(({ group }: IUserGroup) => (group as IGroup).name === room)) {
-    const roomName = `${roomPrefix}/${room}`;
-    socket.join(roomName);
-    console.log(`${uid} joined ${roomName}`);
-  } else {
-    console.log(`${uid || 'guest'} failed to join ${roomPrefix}/${room}`);
-  }
-};
+// export const joinGroup = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
+//   const roomPrefix = 'group';
+//   const groups = socket?.request?.requestor?.groups || [];
+//   const uid = socket?.request?.requestor?._id;
+//   if (groups.length && groups.find(({ group }: IUserGroup) => (group as IGroup).name === room)) {
+//     const roomName = `${roomPrefix}/${room}`;
+//     socket.join(roomName);
+//     console.log(`${uid} joined ${roomName}`);
+//   } else {
+//     console.log(`${uid || 'guest'} failed to join ${roomPrefix}/${room}`);
+//   }
+// };
 
 export const leaveUser = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
   const roomPrefix = 'user';

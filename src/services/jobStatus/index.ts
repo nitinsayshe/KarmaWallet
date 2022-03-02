@@ -19,6 +19,7 @@ const getJob = async (jobName: string) => {
 
   return job;
 };
+
 export const jobIsActive = async (jobName: string) => {
   const job = await getJob(jobName);
   return job.status === 'active';

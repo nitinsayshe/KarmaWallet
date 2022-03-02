@@ -103,7 +103,10 @@ const groupSchema = new Schema({
   domains: [{ type: String }],
   invites: [{ type: String }],
   name: { type: String },
-  code: { type: String },
+  code: {
+    type: String,
+    unique: true,
+  },
   logo: { type: String },
   company: {
     type: Schema.Types.ObjectId,

@@ -151,6 +151,10 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
     if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
 
+    const existingGroup = await GroupModel.findOne({ code });
+
+    if (!!existingGroup) throw new CustomError('This group code is already in use.', ErrorTypes.INVALID_ARG);
+
     const group = new GroupModel({
       name,
       code,

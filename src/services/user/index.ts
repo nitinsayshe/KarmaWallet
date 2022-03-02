@@ -7,7 +7,7 @@ import {
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
 import {
-  TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes, UserRoles, ZIPCODE_REGEX,
+  TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes, UserRoles,
 } from '../../lib/constants';
 import * as Token from '../token';
 import { IRequest } from '../../types/request';
@@ -17,6 +17,7 @@ import { getShareableGroup } from '../groups';
 import { IGroupModel } from '../../models/group';
 import { UserGroupModel } from '../../models/userGroup';
 import { LegacyUserModel } from '../../models/legacyUser';
+import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 
 export interface ILoginData {
   email: string;

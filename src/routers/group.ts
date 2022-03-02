@@ -5,6 +5,7 @@ import authenticate from '../middleware/authenticate';
 const router = Router();
 
 router.route('/')
-  .get(authenticate, GroupController.getGroup);
+  .get(GroupController.getGroup)
+  .post(authenticate, GroupController.createGroup);
 
 export default (app: Express) => app.use('/group', router);

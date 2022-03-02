@@ -4,7 +4,8 @@ import {
   Document,
   Model,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
+import { IShareableUser, IUser } from './user';
 
 export enum GroupPrivacyStatus {
   Protected = 'protected',
@@ -38,14 +39,18 @@ export interface IGroupSettings {
   matching: IGroupMatching;
 }
 
-export interface IGroup {
-  owner: string;
+export interface IShareableGroup {
   name: string;
   code: string;
+  domains: string[];
   settings: IGroupSettings;
-  integrations: IGroupIntegrations;
+  owner: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
   createdOn: Date;
   lastModified: Date;
+}
+
+export interface IGroup extends IShareableGroup {
+  integrations: IGroupIntegrations;
   domains: string[];
   invites: string[];
   logo: string;

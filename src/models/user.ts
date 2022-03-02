@@ -7,7 +7,7 @@ import {
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
-import { IGroup } from './group';
+import { IGroup, IShareableGroup } from './group';
 import { UserRoles } from '../lib/constants';
 
 export enum UserGroupRole {
@@ -20,7 +20,7 @@ export interface IRareUserIntegration {
 }
 
 export interface IUserGroup {
-  group: IRef<ObjectId, IGroup>;
+  group: IRef<ObjectId, (IShareableGroup | IGroup)>;
   role: UserGroupRole;
 }
 
@@ -28,18 +28,21 @@ export interface IUserIntegrations {
   rare?: IRareUserIntegration;
 }
 
-export interface IUser {
+export interface IShareableUser {
   email: string;
   name: string;
-  password: string;
   dateJoined: Date;
   zipcode: string;
   subscribedUpdates: boolean;
-  groups: IUserGroup[];
   role: string; // cannot mark as UserRoles due to how mongoose treats enums
+  groups: IUserGroup[];
+  legacyId: string;
+}
+
+export interface IUser extends IShareableUser {
+  password: string;
   emailVerified: boolean;
   lastModified: Date;
-  legacyId: string;
   integrations?: IUserIntegrations;
 }
 

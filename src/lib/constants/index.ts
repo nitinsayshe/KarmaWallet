@@ -112,8 +112,6 @@ export const emailVerificationDays = 5;
 export const authTokenDays = 30;
 export const passwordResetTokenMinutes = 15;
 
-export const ZIPCODE_REGEX = /^\d{5}(?:[-\s]\d{4})?$/;
-
 export const RareTransactionQuery: {
   'integrations.rare': { $ne: any }
 } = {

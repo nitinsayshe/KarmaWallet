@@ -34,11 +34,17 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
     authKey = req.headers.authKey;
   }
 
+  console.log('>>>>> authKey', authKey);
+
   if (!authKey) return next();
   try {
     const uid = await Session.verifySession(authKey);
+
+    console.log('>>>>> uid', uid);
     if (uid) {
+      console.log('>>>>> uid found...');
       const user = await UserService.getUserById(req, uid);
+      console.log('>>>>> user', user);
       (req as IRequest).requestor = (user as IUserDocument);
       (req as IRequest).authKey = authKey;
     }

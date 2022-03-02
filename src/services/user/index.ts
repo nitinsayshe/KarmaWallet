@@ -13,7 +13,6 @@ import * as Token from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
-import { IUserGroup, UserGroupModel } from '../../models/userGroup';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 
@@ -28,7 +27,6 @@ export interface IUserData extends ILoginData {
   zipcode: string;
   subscribedUpdates: boolean;
   role?: UserRoles;
-  groups?: IUserGroup[];
 }
 
 export const register = async (req: IRequest, {
@@ -64,7 +62,6 @@ export const register = async (req: IRequest, {
       subscribedUpdates,
       zipcode,
       role: UserRoles.None,
-      groups: [],
     });
 
     await legacyUser.save();
@@ -103,12 +100,7 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
 export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
   const options = {
     projection: query?.projection || '',
-    populate: query.population || [
-      {
-        path: 'groups',
-        model: UserGroupModel,
-      },
-    ],
+    populate: query.population || [],
     lean: true,
     page: query?.skip || 1,
     sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
@@ -121,11 +113,7 @@ export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
 export const getUser = async (_: IRequest, query = {}) => {
   try {
     const user = await UserModel
-      .findOne(query)
-      .populate({
-        path: 'groups',
-        model: UserGroupModel,
-      });
+      .findOne(query);
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -138,11 +126,7 @@ export const getUser = async (_: IRequest, query = {}) => {
 export const getUserById = async (_: IRequest, uid: string) => {
   try {
     const user = await UserModel
-      .findById({ _id: uid })
-      .populate({
-        path: 'groups',
-        model: UserGroupModel,
-      });
+      .findById({ _id: uid });
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 

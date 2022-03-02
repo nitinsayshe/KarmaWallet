@@ -12,7 +12,6 @@ import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
-import { getShareableUser } from '../user';
 
 export interface IGetGroupRequest {
   code?: string;
@@ -69,14 +68,12 @@ export const getShareableGroup = ({
 
 export const getShareableUserGroup = ({
   _id,
-  user,
   group,
   email,
   role,
   status,
   joinedOn,
 }: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
-  const _user = getShareableUser(user as IUserDocument);
   const _group = getShareableGroup(group as IGroupDocument);
 
   return {
@@ -86,7 +83,6 @@ export const getShareableUserGroup = ({
     status,
     joinedOn,
     group: _group,
-    user: _user,
   };
 };
 

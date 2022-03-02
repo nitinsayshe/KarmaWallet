@@ -24,7 +24,6 @@ export enum UserGroupStatus {
 }
 
 export interface IShareableUserGroup {
-  user: IRef<ObjectId, (IShareableUser | IUser)>;
   group: IRef<ObjectId, (IShareableGroup | IGroup)>;
   email: string;
   role: UserGroupRole;
@@ -34,6 +33,7 @@ export interface IShareableUserGroup {
 }
 
 export interface IUserGroup extends IShareableUserGroup {
+  user: IRef<ObjectId, (IShareableUser | IUser)>;
   lastModified: Date;
 }
 

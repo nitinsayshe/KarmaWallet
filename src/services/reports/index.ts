@@ -44,7 +44,7 @@ export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { days
         date: { $gte: thresholdDate.toDate() },
         'integrations.rare': { $exists: true },
       })
-      .project({ day: { $substr: ['$dateJoined', 0, 10] } })
+      .project({ day: { $substr: ['$date', 0, 10] } })
       .group({ _id: '$day', count: { $sum: 1 } })
       .sort({ _id: 1 });
 
@@ -170,8 +170,13 @@ export const getSummary = async (_: IRequest) => {
     const usersWithCards = new Set();
 
     for (const card of cards) {
-      if (!usersWithCards.has(card.userId.toString())) {
-        usersWithCards.add(card.userId.toString());
+      if (!card.userId) {
+        // TODO: remove this once new linked cards are created with the new user id.
+        console.log(card);
+      } else {
+        if (!usersWithCards.has(card.userId.toString())) {
+          usersWithCards.add(card.userId.toString());
+        }
       }
     }
 

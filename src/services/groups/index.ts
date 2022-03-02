@@ -6,16 +6,21 @@ import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus,
 } from '../../models/group';
 import {
-  IUserDocument, UserEmailStatus, UserGroupRole, UserModel,
+  IUserDocument, UserEmailStatus, UserGroupRole,
 } from '../../models/user';
 import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
+import { getUser } from '../user';
 
 export interface IGetGroupRequest {
   code?: string;
   name?: string;
+}
+
+export interface IGetUserGroupsRequest {
+  userId: string;
 }
 
 export interface ICreateGroupRequest {
@@ -101,6 +106,17 @@ export const getGroup = async (req: IRequest<{}, IGetGroupRequest>) => {
     if (!group) throw new CustomError(`A group with id: ${code} could not be found.`, ErrorTypes.NOT_FOUND);
 
     return group;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getUserGroups = async (req: IRequest<IGetUserGroupsRequest>) => {
+  const { userId } = req.params;
+  try {
+    if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+
+    const user = await getUser(req, { _id: userId });
   } catch (err) {
     throw asCustomError(err);
   }
@@ -200,7 +216,7 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
     if (!!owner) {
       // requestor must have appropriate permissions to assign a group owner.
       if (req.requestor.role === UserRoles.None) throw new CustomError('You do not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
-      const _owner = await UserModel.findOne({ _id: owner });
+      const _owner = await getUser(req, { _id: owner });
       if (!_owner) throw new CustomError(`Owner with id: ${owner} could not be found.`, ErrorTypes.NOT_FOUND);
       group.owner = _owner;
     } else {
@@ -229,7 +245,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     } else {
       // requestor must be a Karma member to add another user to a group
       if (req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
-      user = await UserModel.findOne({ _id: userId });
+      user = await getUser(req, { _id: userId });
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);

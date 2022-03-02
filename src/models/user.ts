@@ -8,6 +8,11 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 import { UserRoles } from '../lib/constants';
 
+export enum UserAltEmailStatus {
+  Unverified = 'unverified',
+  Verified = 'verified',
+}
+
 export enum UserGroupRole {
   Admin = 'admin',
   Member = 'member',
@@ -32,6 +37,7 @@ export interface IShareableUser {
 }
 
 export interface IUser extends IShareableUser {
+  altEmails: string[];
   password: string;
   emailVerified: boolean;
   lastModified: Date;
@@ -43,6 +49,16 @@ export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
   email: { type: String, required: true, unique: true },
+  altEmails: [{
+    type: {
+      email: String,
+      status: {
+        type: String,
+        enum: Object.values(UserAltEmailStatus),
+        default: UserAltEmailStatus.Unverified,
+      },
+    },
+  }],
   name: { type: String, required: true },
   password: { type: String, required: true },
   dateJoined: { type: Date, default: new Date() },

@@ -7,7 +7,7 @@ import * as Session from '../services/session';
 import { IRequest } from '../types/request';
 
 const identify = async (req: Request, _: Response, next: NextFunction) => {
-  if (req.header(SERVICE_NAME_HEADER) === API_V2_SERVICE_NAME) {
+  if (req.header?.(SERVICE_NAME_HEADER) === API_V2_SERVICE_NAME) {
     // THIS IS A REQUEST FROM THE LEGACY API AND
     // SHOULD USE LEGACY IDS, NOT UPDATED IDS
     //

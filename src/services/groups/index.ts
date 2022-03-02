@@ -117,6 +117,9 @@ export const getUserGroups = async (req: IRequest<IGetUserGroupsRequest>) => {
     if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
 
     const user = await getUser(req, { _id: userId });
+
+    return await UserGroupModel.find({ user })
+      .populate('group');
   } catch (err) {
     throw asCustomError(err);
   }

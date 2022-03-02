@@ -11,4 +11,7 @@ router.route('/')
 router.route('/join')
   .post(authenticate, GroupController.joinGroup);
 
+router.route('/user/:userId')
+  .get(authenticate, GroupController.getUserGroups);
+
 export default (app: Express) => app.use('/group', router);

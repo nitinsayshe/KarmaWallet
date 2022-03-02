@@ -170,8 +170,13 @@ export const getSummary = async (_: IRequest) => {
     const usersWithCards = new Set();
 
     for (const card of cards) {
-      if (!usersWithCards.has(card.userId.toString())) {
-        usersWithCards.add(card.userId.toString());
+      if (!card.userId) {
+        // TODO: remove this once new linked cards are created with the new user id.
+        console.log(card);
+      } else {
+        if (!usersWithCards.has(card.userId.toString())) {
+          usersWithCards.add(card.userId.toString());
+        }
       }
     }
 

@@ -6,7 +6,7 @@ import {
   ObjectId,
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
-import { IGroup } from './group';
+import { IGroup, IShareableGroup } from './group';
 
 export enum UserGroupRole {
   Member = 'member',
@@ -22,7 +22,7 @@ export enum UserGroupStatus {
 }
 
 export interface IUserGroup {
-  group: IRef<ObjectId, IGroup>;
+  group: IRef<ObjectId, (IShareableGroup | IGroup)>;
   role: UserGroupRole;
 }
 

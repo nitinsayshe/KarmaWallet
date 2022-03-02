@@ -19,9 +19,9 @@ export const joinRole = (socket: ISocket) => {
   socket.on(`${path}/join/role`, RoomController.joinRole(socket));
 };
 
-export const joinGroup = (socket: ISocket) => {
-  socket.on(`${path}/join/group`, RoomController.joinGroup(socket));
-};
+// export const joinGroup = (socket: ISocket) => {
+//   socket.on(`${path}/join/group`, RoomController.joinGroup(socket));
+// };
 
 export const leaveUser = (socket: ISocket) => {
   socket.on(`${path}/leave/user`, RoomController.leaveUser(socket));
@@ -38,7 +38,7 @@ export const leaveGroup = (socket: ISocket) => {
 export default (socket: ISocket) => {
   joinRole(socket);
   joinUser(socket);
-  joinGroup(socket);
+  // joinGroup(socket);
   leaveUser(socket);
   leaveRole(socket);
   leaveGroup(socket);

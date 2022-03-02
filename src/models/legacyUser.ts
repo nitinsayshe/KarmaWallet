@@ -7,7 +7,7 @@ import {
 import { UserRoles } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IPlaidItemDocument } from './plaidItem';
-import { IUserGroup, IUserIntegrations } from './user';
+import { IUserIntegrations } from './user';
 
 export interface ILegacyUser {
   _id: string;
@@ -19,7 +19,6 @@ export interface ILegacyUser {
   dateJoined: Date;
   zipcode: string;
   subscribedUpdates: boolean;
-  groups: IUserGroup[];
   role: string;
   integration: IUserIntegrations;
 }
@@ -39,13 +38,6 @@ const legacyUserSchema = new Schema({
   dateJoined: { type: Date, default: () => Date.now() },
   zipcode: { type: String },
   subscribedUpdates: { type: Boolean, default: true },
-  groups: [{
-    id: {
-      type: Schema.Types.ObjectId,
-      ref: 'group',
-    },
-    role: { type: String },
-  }],
   role: {
     type: String,
     default: 'none',

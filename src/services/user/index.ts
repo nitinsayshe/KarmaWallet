@@ -2,7 +2,7 @@ import argon2 from 'argon2';
 import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
 import {
-  IUser, IUserDocument, IUserGroup, UserModel,
+  IUser, IUserDocument, UserModel,
 } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
@@ -13,9 +13,7 @@ import * as Token from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
-import { getShareableGroup } from '../groups';
-import { IGroupModel } from '../../models/group';
-import { UserGroupModel } from '../../models/userGroup';
+import { IUserGroup, UserGroupModel } from '../../models/userGroup';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 
@@ -162,28 +160,17 @@ export const getShareableUser = ({
   zipcode,
   subscribedUpdates,
   role,
-  groups,
   legacyId,
-}: IUserDocument) => {
-  const _groups = (!!groups && !!groups.filter(g => !!g.group).length)
-    ? groups.map(g => {
-      g.group = getShareableGroup(g.group as IGroupModel);
-      return g;
-    })
-    : groups;
-
-  return {
-    _id,
-    email,
-    name,
-    dateJoined,
-    zipcode,
-    subscribedUpdates,
-    role,
-    groups: _groups,
-    legacyId,
-  };
-};
+}: IUserDocument) => ({
+  _id,
+  email,
+  name,
+  dateJoined,
+  zipcode,
+  subscribedUpdates,
+  role,
+  legacyId,
+});
 
 export const logout = async (_: IRequest, authKey: string) => {
   await Session.revokeSession(authKey);

@@ -1,3 +1,4 @@
+import isemail from 'isemail';
 import { ErrorTypes, UserRoles } from '../../lib/constants';
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -239,7 +240,9 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {
-      // TODO: validate email format and throw error if not in correct format.
+      if (!isemail.validate(groupEmail, { minDomainAtoms: 2 })) {
+        throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+      }
 
       // ??? should we support falling back to existing user emails if the groupEmail does not
       // meet the groups requirements???

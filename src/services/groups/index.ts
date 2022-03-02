@@ -171,6 +171,8 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
       const _owner = await UserModel.findOne({ _id: owner });
       if (!_owner) throw new CustomError(`Owner with id: ${owner} could not be found.`, ErrorTypes.NOT_FOUND);
       group.owner = _owner;
+    } else {
+      group.owner = req.requestor;
     }
 
     return await group.save();

@@ -1,10 +1,16 @@
+import isemail from 'isemail';
 import { ErrorTypes, UserRoles } from '../../lib/constants';
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus,
 } from '../../models/group';
-import { UserModel } from '../../models/user';
+import {
+  IUserDocument, UserEmailStatus, UserGroupRole, UserModel,
+} from '../../models/user';
+import {
+  IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
+} from '../../models/userGroup';
 import { IRequest } from '../../types/request';
 
 export interface IGetGroupRequest {
@@ -19,6 +25,26 @@ export interface ICreateGroupRequest {
   settings: IGroupSettings;
   domains: string[];
 }
+
+export interface IJoinGroupRequest {
+  groupCode: string;
+  groupEmail: string;
+  userId: string;
+}
+
+const defaultGroupSettings: IGroupSettings = {
+  privacyStatus: GroupPrivacyStatus.Private,
+  allowInvite: false,
+  allowDomainRestriction: false,
+  allowSubgroups: false,
+  approvalRequired: false,
+  matching: {
+    enabled: false,
+    matchPercentage: -1,
+    maxDollarAmount: -1,
+    lastModified: new Date(),
+  },
+};
 
 export const getShareableGroup = ({
   _id,
@@ -40,18 +66,24 @@ export const getShareableGroup = ({
   createdOn,
 });
 
-const defaultGroupSettings: IGroupSettings = {
-  privacyStatus: GroupPrivacyStatus.Private,
-  allowInvite: false,
-  allowDomainRestriction: false,
-  allowSubgroups: false,
-  approvalRequired: false,
-  matching: {
-    enabled: false,
-    matchPercentage: -1,
-    maxDollarAmount: -1,
-    lastModified: new Date(),
-  },
+export const getShareableUserGroup = ({
+  _id,
+  group,
+  email,
+  role,
+  status,
+  joinedOn,
+}: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
+  const _group = getShareableGroup(group as IGroupDocument);
+
+  return {
+    _id,
+    email,
+    role,
+    status,
+    joinedOn,
+    group: _group,
+  };
 };
 
 export const getGroup = async (req: IRequest<{}, IGetGroupRequest>) => {
@@ -176,6 +208,68 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
     }
 
     return await group.save();
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
+  try {
+    const { groupCode, groupEmail, userId } = req.body;
+
+    if (!groupCode) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
+    if (!userId) throw new CustomError('No user specified to join this group.', ErrorTypes.INVALID_ARG);
+
+    const group = await GroupModel.findOne({ code: groupCode });
+    if (!group) throw new CustomError(`A group was not found with code: ${groupCode}`, ErrorTypes.NOT_FOUND);
+
+    let user: IUserDocument;
+    if (userId === req.requestor._id) {
+      user = req.requestor;
+    } else {
+      // requestor must be a Karma member to add another user to a group
+      if (req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
+      user = await UserModel.findOne({ _id: userId });
+    }
+
+    if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+
+    let validEmail: string;
+    if (group.settings.allowDomainRestriction && group.domains.length > 0) {
+      if (!isemail.validate(groupEmail, { minDomainAtoms: 2 })) {
+        throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+      }
+
+      // ??? should we support falling back to existing user emails if the groupEmail does not
+      // meet the groups requirements???
+      // const validEmail = [groupEmail, user.email, ...(user.altEmails || [])].find(email => {
+      const _validEmail = [groupEmail].find(email => !!group.domains.find(domain => email.split('@')[1] === domain));
+
+      if (!_validEmail) throw new CustomError(`A valid email from ${group.domains.length > 1 ? 'one of ' : ''}the following domain${group.domains.length > 1 ? 's' : ''} is required to join this group: ${group.domains.join(', ')}`);
+
+      validEmail = _validEmail;
+    }
+
+    // add groupEmail to user's list of altEmails if doesnt already exist
+    if (!user.altEmails.find(altEmail => altEmail.email === validEmail)) {
+      user.altEmails.push({
+        email: validEmail,
+        status: UserEmailStatus.Unverified,
+      });
+    }
+
+    const userGroup = new UserGroupModel({
+      user,
+      group,
+      email: validEmail,
+      role: UserGroupRole.Member,
+      status: UserGroupStatus.Unverified,
+    });
+
+    await userGroup.save();
+    await user.save();
+
+    return userGroup;
   } catch (err) {
     throw asCustomError(err);
   }

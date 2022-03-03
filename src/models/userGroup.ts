@@ -7,6 +7,8 @@ import {
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
 import { IGroup, IShareableGroup } from './group';
+import { ISubgroup } from './subgroup';
+import { IShareableUser, IUser } from './user';
 
 export enum UserGroupRole {
   Member = 'member',
@@ -21,9 +23,18 @@ export enum UserGroupStatus {
   Banned = 'banned',
 }
 
-export interface IUserGroup {
+export interface IShareableUserGroup {
   group: IRef<ObjectId, (IShareableGroup | IGroup)>;
+  email: string;
   role: UserGroupRole;
+  status: UserGroupStatus;
+  joinedOn: Date;
+  subGroups?: IRef<ObjectId, ISubgroup>[];
+}
+
+export interface IUserGroup extends IShareableUserGroup {
+  user: IRef<ObjectId, (IShareableUser | IUser)>;
+  lastModified: Date;
 }
 
 export interface IUserGroupDocument extends IUserGroup, Document {}
@@ -49,7 +60,7 @@ const userGroupSchema = new Schema({
     enum: Object.values(UserGroupStatus),
     default: UserGroupStatus.Unverified,
   },
-  createdOn: {
+  joinedOn: {
     type: Date,
     default: new Date(),
   },

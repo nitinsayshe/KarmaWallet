@@ -20,3 +20,12 @@ export const createGroup: IRequestHandler<{}, {}, GroupService.ICreateGroupReque
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> = async (req, res) => {
+  try {
+    const userGroup = await GroupService.joinGroup(req);
+    output.api(req, res, GroupService.getShareableUserGroup(userGroup));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

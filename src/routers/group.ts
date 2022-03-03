@@ -2,16 +2,22 @@ import { Express, Router } from 'express';
 import * as GroupController from '../controllers/group';
 import authenticate from '../middleware/authenticate';
 
-const router = Router();
+const groupRouter = Router();
+const groupsRouter = Router();
 
-router.route('/')
+groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)
   .post(authenticate, GroupController.createGroup);
 
-router.route('/join')
+groupRouter.route('/join')
   .post(authenticate, GroupController.joinGroup);
 
-router.route('/user/:userId')
+export const group = (app: Express) => app.use('/group', groupRouter);
+
+groupsRouter.route('/')
+  .get(GroupController.getGroups);
+
+groupsRouter.route('/user/:userId')
   .get(authenticate, GroupController.getUserGroups);
 
-export default (app: Express) => app.use('/group', router);
+export const groups = (app: Express) => app.use('/groups', groupsRouter);

@@ -1,12 +1,29 @@
+import aqp from 'api-query-params';
 import * as GroupService from '../services/groups';
 import * as output from '../services/output';
 import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
+import { IGroupDocument } from '../models/group';
 
 export const getGroup: IRequestHandler = async (req, res) => {
   try {
     const group = await GroupService.getGroup(req);
     output.api(req, res, GroupService.getShareableGroup(group));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getGroups: IRequestHandler = async (req, res) => {
+  try {
+    const query = aqp(req.query, { skipKey: 'page' });
+    const groups = await GroupService.getGroups(req, query);
+    const sharableGroups = {
+      ...groups,
+      docs: groups.docs.map((g: IGroupDocument) => GroupService.getShareableGroup(g)),
+    };
+
+    output.api(req, res, sharableGroups);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

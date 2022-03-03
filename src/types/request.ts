@@ -23,4 +23,4 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
  * a request handler that replaces express.Request
  * as this uses the IRequest object instead.
  */
-export type IRequestHandler<P = {}, Q = {}, B = {}> = (req: IRequest<P, Q, B>, res: Response, next: NextFunction) => void
+export type IRequestHandler<P = {}, Q = {}, B = {}> = (req: IRequest<P, Q, B>, res: Response, next?: NextFunction) => void

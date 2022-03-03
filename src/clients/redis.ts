@@ -21,7 +21,11 @@ export class _RedisClient extends Client {
   }
 
   _connect = () => {
-    if (![REDIS_USER, REDIS_PASS, REDIS_URL, REDIS_PORT].every(s => !!s)) {
+    const requiredConfigs = process.env.NODE_ENV === 'development'
+      ? [REDIS_URL, REDIS_PORT]
+      : [REDIS_USER, REDIS_PASS, REDIS_URL, REDIS_PORT];
+
+    if (!requiredConfigs.every(s => !!s)) {
       throw new CustomError('Redis client unavailable. Necessary configurations not found.', ErrorTypes.SERVER);
     }
 

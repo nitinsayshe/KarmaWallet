@@ -13,12 +13,8 @@
       <img class="brand" src="https://s3.amazonaws.com/assets.karmawallet/karmawallet-logo-129x49.png"
         alt="KarmaWallet Logo" />
       <p class="email-body">Hi {{name}},</p>
-      <p class="email-body">You've requested to join {{groupName}}. To complete your registration, please verify your
-        email address.</p>
+      <p class="email-body">Thanks for your request to join the <span class="bold">{{groupName}}</span> group. To complete your request, please just click the button below to verify your email address.</p>
       <button><a style="color: #323232 !important" href="{{verificationLink}}">Verify Email</a></button>
-      <p>If clicking the button above doesn't work, please copy and paste <a
-          href="{{verificationLink}}">{{verificationLink}}</a> in a new browser
-        window instead.</p>
     </div>
     <div class="link-container">
       <p class="link-first"><a href="https://karmawallet.io">Karma Wallet</a> | <a
@@ -29,3 +25,6 @@
 </body>
 
 </html>
+{{!-- Hi John,
+
+Thanks for your request to join the ImpactKarma group! To complete your request, please just click the button below to verify your email address. --}}

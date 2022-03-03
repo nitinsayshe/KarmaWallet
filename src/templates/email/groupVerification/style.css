@@ -9,6 +9,10 @@ a {
   text-decoration: none !important;
 }
 
+.bold {
+  font-weight: 700;
+}
+
 .email-wrapper {
   margin-left: auto;
   margin-right: auto;

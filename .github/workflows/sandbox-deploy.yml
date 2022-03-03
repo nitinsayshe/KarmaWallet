@@ -1,0 +1,62 @@
+# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Sandbox Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The branch to use'     
+        required: true
+        default: 'staging'
+      env:
+        description: 'The environment to deploy to'
+        required: true
+
+jobs:
+  build:
+    runs-on: [self-hosted, 'betsi-${{ github.event.inputs.env }}']
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: '${{ github.event.inputs.branch }}'
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: echo 'PUBLIC_TOKEN=${{secrets.STAGING_PUBLIC_TOKEN}}' >> .env
+    - run: echo 'NODE_ENV=production' >> .env
+    - run: echo 'PORT=8012' >> .env
+    - run: echo 'DB_USER=${{secrets.STAGING_DB_USER}}' >> .env
+    - run: echo 'DB_NAME=${{secrets.STAGING_DB_NAME}}' >> .env
+    - run: echo 'DB_URL=${{secrets.STAGING_DB_URL}}:27017' >> .env
+    - run: echo 'DB_PASS=${{secrets.STAGING_DB_PASS}}' >> .env
+    - run: echo 'REDIS_USER=${{secrets.STAGING_REDIS_USER}}' >> .env
+    - run: echo 'REDIS_PASS=${{secrets.STAGING_REDIS_PASS}}' >> .env
+    - run: echo 'REDIS_URL=${{secrets.STAGING_DB_URL}}' >> .env
+    - run: echo 'REDIS_PORT=6379' >> .env
+    - run: echo 'AWS_ACCESS_KEY_ID=${{secrets.STAGING_AWS_ACCESS_KEY_ID}}' >> .env
+    - run: echo 'AWS_SECRET_ACCESS_KEY=${{secrets.STAGING_AWS_SECRET_ACCESS_KEY}}' >> .env
+    - run: echo 'S3_BUCKET=cdn.karmawallet.io' >> .env
+    - run: echo 'PLAID_CLIENT_ID=${{secrets.STAGING_PLAID_CLIENT_ID}}' >> .env
+    - run: echo 'PLAID_SECRET=${{secrets.STAGING_PLAID_SECRET}}' >> .env
+    - run: echo 'PLAID_ENV=${{secrets.STAGING_PLAID_ENV}}' >> .env
+    - run: echo 'PLAID_WEBHOOK_URI=https://api.karmawallet.io/plaid/fetchTransactions' >> .env
+    - run: echo 'PLAID_REDIRECT_URI=https://ui.staging.karmawallet.io/account' >> .env
+    - run: echo 'PLAID_PRODUCTS=transactions' >> .env
+    - run: echo 'MAILCHIMP_KEY=' >> .env
+    - run: echo 'MAILCHIMP_SERVER=' >> .env
+    - run: echo 'RARE_API_KEY=${{ secrets.STAGING_RARE_API_KEY }}' >> .env
+    - run: echo 'RARE_ENV=prod' >> .env
+    - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
+    - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
+    - run: echo 'BETSI_ENV=bigolbetsi' >> .env
+    - run: npm i
+    - run: pm2 restart all

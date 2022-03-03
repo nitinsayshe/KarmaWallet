@@ -1,6 +1,9 @@
 import Handlebars from 'handlebars';
 import path from 'path';
 import fs from 'fs';
+import { MainBullClient } from '../../clients/bull/main';
+import { JobNames } from '../../lib/constants/jobScheduler';
+import { EmailAddresses } from '../../lib/constants';
 
 export enum EmailTemplates {
   GroupVerification = 'groupVerification',
@@ -18,18 +21,25 @@ export const buildTemplate = (templateName: string, data: any) => {
 };
 
 interface IGroupVerificationTemplateParams {
-  username: string;
+  name: string;
   domain: string;
   token: string;
   groupName: string;
+  recipientEmail: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
 }
 
 export const sendGroupVerificationEmail = async ({
-  username, domain, token, groupName,
+  name, domain, token, groupName, recipientEmail, senderEmail = EmailAddresses.NoReply, replyToAddresses = [EmailAddresses.ReplyTo],
 }: IGroupVerificationTemplateParams) => {
+  // TODO: update verificationLink with URL implemented in UI
   const verificationLink = `${domain}/account?verifyGroupEmail=${token}`;
   const template = buildTemplate(EmailTemplates.GroupVerification, {
-    verificationLink, username, token, groupName,
+    verificationLink, name, token, groupName,
   });
-  return template;
+  const subject = 'KarmaWallet Email Verification';
+  return MainBullClient.createJob(JobNames.SendEmail, {
+    template, subject, senderEmail, recipientEmail, replyToAddresses,
+  });
 };

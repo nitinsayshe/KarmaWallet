@@ -1,0 +1,69 @@
+p,
+a,
+button {
+  font-family: Arial;
+}
+
+a {
+  color: #22C580 !important;
+  text-decoration: none !important;
+}
+
+.email-wrapper {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 600px;
+  padding: 50px;
+  background-color: #ECEAEE;
+}
+
+.email-container {
+  padding: 50px 30px 20px 30px;
+  background-color: white;
+}
+
+.email-container p {
+  font-size: 16px !important;
+  color: #323232 !important;
+}
+
+img.brand {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+p.email-body {
+  margin-bottom: 20px;
+}
+
+.email-container button {
+  margin-bottom: 40px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 11px 25px;
+  border-radius: 70px;
+  background-color: rgb(0, 222, 132);
+  color: rgb(50, 50, 50);
+  font-family: Arial;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  border: 2px solid rgb(0, 222, 132);
+  cursor: pointer !important;
+}
+
+.link-container {
+  font-size: 14px !important;
+  text-align: center;
+}
+
+.link-container .link-first {
+  margin-top: 20px !important;
+  margin-bottom: 5px !important;
+}
+
+.link-container .link-second {
+  margin-top: 5px !important;
+}

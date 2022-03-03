@@ -2,8 +2,9 @@ import {
   Schema,
   model,
   Document,
-  Model,
+  PaginateModel,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser } from './user';
 
@@ -113,5 +114,6 @@ const groupSchema = new Schema({
     ref: 'company',
   },
 });
+groupSchema.plugin(mongoosePaginate);
 
-export const GroupModel = model<IGroupDocument, Model<IGroup>>('group', groupSchema);
+export const GroupModel = model<IGroupDocument, PaginateModel<IGroup>>('group', groupSchema);

@@ -11,7 +11,7 @@ import company from './company';
 // import subsector from './subsector';
 import webhook from './webhooks';
 import comparisonGame from './comparisonGame';
-import group from './group';
+import { group, groups } from './group';
 import notFound from './404';
 
 const routers = (app: Express) => {
@@ -28,6 +28,7 @@ const routers = (app: Express) => {
   webhook(app);
   comparisonGame(app);
   group(app);
+  groups(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

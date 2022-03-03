@@ -4,7 +4,9 @@ import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 
-export const mainBullClientProcessor = async (job: SandboxedJob) => {
+// Sandboxed processors must be exported as default to run correctly
+// See line 25: node_modules/bullmq/dist/cjs/classes/child-processor.js
+export default async (job: SandboxedJob) => {
   // global plaid transaction mapping
   // ind. user linked card plaid transaction mapping
   // sending email (multiple kinds and types)

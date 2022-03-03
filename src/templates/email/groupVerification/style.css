@@ -6,7 +6,7 @@ button {
 
 a {
   color: #22C580 !important;
-  text-decoration: none !important;
+  text-decoration: none !important; 
 }
 
 .bold {
@@ -22,8 +22,8 @@ a {
 }
 
 .email-container {
-  padding: 50px 30px 20px 30px;
-  background-color: white;
+  padding: 50px 30px 20px;
+  background-color: #FFF;
 }
 
 .email-container p {
@@ -41,6 +41,12 @@ p.email-body {
   margin-bottom: 20px;
 }
 
+.email-container .cta-link {
+  color: #323232 !important;
+  display: flex;
+  cursor: pointer !important;
+}
+
 .email-container button {
   margin-bottom: 40px;
   display: block;
@@ -48,13 +54,13 @@ p.email-body {
   margin-right: auto;
   padding: 11px 25px;
   border-radius: 70px;
-  background-color: rgb(0, 222, 132);
+  background-color: #00DE84;
   color: rgb(50, 50, 50);
   font-family: Arial;
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
-  border: 2px solid rgb(0, 222, 132);
+  border: 2px solid #00DE84;
   cursor: pointer !important;
 }
 

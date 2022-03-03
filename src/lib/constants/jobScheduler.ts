@@ -5,4 +5,5 @@ export enum QueueNames {
 export enum JobNames {
   GlobalPlaidTransactionMapper = 'global-plaid-transaction-mapper',
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
+  SendEmail = 'send-email'
 }

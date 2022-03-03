@@ -38,7 +38,7 @@ export class _MainBullClient extends _BullClient {
   };
 
   // https://crontab.cronhub.io/
-  _initCronJobs = () => {
+  initCronJobs = () => {
     this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */2 * * *' } });
   };
 

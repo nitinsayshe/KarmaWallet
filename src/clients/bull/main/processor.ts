@@ -3,6 +3,7 @@ import { JobNames } from '../../../lib/constants/jobScheduler';
 import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
+import * as SendEmail from '../../../jobs/sendEmail';
 
 // Sandboxed processors must be exported as default to run correctly
 // See line 25: node_modules/bullmq/dist/cjs/classes/child-processor.js
@@ -20,6 +21,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UserPlaidTransactionMapper:
       UserPlaidTransactionMapper.exec(data);
+      break;
+    case JobNames.SendEmail:
+      SendEmail.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found');

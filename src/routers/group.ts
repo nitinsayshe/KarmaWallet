@@ -5,12 +5,12 @@ import authenticate from '../middleware/authenticate';
 const groupRouter = Router();
 const groupsRouter = Router();
 
+groupRouter.route('/join')
+  .post(authenticate, GroupController.joinGroup);
+
 groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)
   .post(authenticate, GroupController.createGroup);
-
-groupRouter.route('/join')
-  .post(authenticate, GroupController.joinGroup);
 
 export const group = (app: Express) => app.use('/group', groupRouter);
 

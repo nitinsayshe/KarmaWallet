@@ -5,6 +5,15 @@ import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import { IGroupDocument } from '../models/group';
 
+export const checkCode: IRequestHandler<{}, GroupService.ICheckCodeRequest> = async (req, res) => {
+  try {
+    const codeStatus = await GroupService.checkCode(req);
+    output.api(req, res, codeStatus);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getGroup: IRequestHandler = async (req, res) => {
   try {
     const group = await GroupService.getGroup(req);

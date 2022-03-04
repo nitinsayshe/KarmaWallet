@@ -16,6 +16,10 @@ import {
 import { IRequest } from '../../types/request';
 import { getShareableUser, getUser } from '../user';
 
+export interface ICheckCodeRequest {
+  code: string;
+}
+
 export interface IGetGroupRequest {
   code?: string;
 }
@@ -54,6 +58,15 @@ const defaultGroupSettings: IGroupSettings = {
     maxDollarAmount: -1,
     lastModified: new Date(),
   },
+};
+
+export const checkCode = async (req: IRequest<{}, ICheckCodeRequest>) => {
+  try {
+    const group = await GroupModel.findOne({ code: req.query.code });
+    return { available: !group };
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const getShareableGroup = ({

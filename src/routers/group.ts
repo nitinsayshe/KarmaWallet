@@ -8,6 +8,9 @@ const groupsRouter = Router();
 groupRouter.route('/join')
   .post(authenticate, GroupController.joinGroup);
 
+groupRouter.route('/check-code')
+  .get(authenticate, GroupController.checkCode);
+
 groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)
   .post(authenticate, GroupController.createGroup);

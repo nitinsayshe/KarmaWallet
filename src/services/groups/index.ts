@@ -5,16 +5,16 @@ import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
 import {
+  IUserDocument, UserEmailStatus, UserGroupRole, UserModel,
+} from '../../models/user';
+import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup,
 } from '../../models/group';
-import {
-  IUserDocument, UserEmailStatus, UserGroupRole,
-} from '../../models/user';
 import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
-import { getUser } from '../user';
+import { getShareableUser, getUser } from '../user';
 
 export interface IGetGroupRequest {
   code?: string;
@@ -65,16 +65,19 @@ export const getShareableGroup = ({
   owner,
   lastModified,
   createdOn,
-}: IGroupDocument): (IShareableGroup & { _id: string }) => ({
-  _id,
-  name,
-  code,
-  domains,
-  settings,
-  owner,
-  lastModified,
-  createdOn,
-});
+}: IGroupDocument): (IShareableGroup & { _id: string }) => {
+  const _owner = getShareableUser(owner as IUserDocument);
+  return {
+    _id,
+    name,
+    code,
+    domains,
+    settings,
+    owner: _owner,
+    lastModified,
+    createdOn,
+  };
+};
 
 export const getShareableUserGroup = ({
   _id,
@@ -107,7 +110,17 @@ export const getGroup = async (req: IRequest<IGetGroupsRequestParams, IGetGroupR
     if (!!groupId) query._id = groupId;
     if (!!code) query.code = code;
 
-    const group = await GroupModel.findOne(query);
+    const group = await GroupModel.findOne(query)
+      .populate([
+        {
+          path: 'company',
+          model: CompanyModel,
+        },
+        {
+          path: 'owner',
+          model: UserModel,
+        },
+      ]);
 
     if (!group) {
       if (!!groupId) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
@@ -130,6 +143,10 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
         path: 'company',
         model: CompanyModel,
       },
+      {
+        path: 'owner',
+        model: UserModel,
+      },
     ],
     lean: true,
     page: query?.skip || 1,
@@ -148,7 +165,22 @@ export const getUserGroups = async (req: IRequest<IGetUserGroupsRequest>) => {
     }
 
     return await UserGroupModel.find({ user: userId })
-      .populate('group');
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+          populate: [
+            {
+              path: 'company',
+              model: CompanyModel,
+            },
+            {
+              path: 'owner',
+              model: UserModel,
+            },
+          ],
+        },
+      ]);
   } catch (err) {
     throw asCustomError(err);
   }

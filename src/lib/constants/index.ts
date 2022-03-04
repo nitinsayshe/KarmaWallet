@@ -26,6 +26,13 @@ export enum UserRoles {
   SuperAdmin = 'superadmin',
 }
 
+export enum UserGroupRole {
+  Member = 'member',
+  Admin = 'admin',
+  SuperAdmin = 'superadmin',
+  Owner = 'owner',
+}
+
 export enum SocketNamespaces {
   Karma = 'karma',
   Main = 'main',

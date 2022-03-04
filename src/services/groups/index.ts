@@ -1,11 +1,11 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import { ErrorTypes, UserRoles } from '../../lib/constants';
+import { ErrorTypes, UserGroupRole, UserRoles } from '../../lib/constants';
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
 import {
-  IUserDocument, UserEmailStatus, UserGroupRole, UserModel,
+  IUserDocument, UserEmailStatus, UserModel,
 } from '../../models/user';
 import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup,
@@ -288,6 +288,15 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
       group.owner = req.requestor;
     }
 
+    const userGroup = new UserGroupModel({
+      group,
+      user: group.owner,
+      email: group.owner.email,
+      role: UserGroupRole.Owner,
+      status: UserGroupStatus.Approved,
+    });
+
+    await userGroup.save();
     return await group.save();
   } catch (err) {
     throw asCustomError(err);

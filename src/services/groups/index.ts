@@ -187,7 +187,8 @@ export const getUserGroups = async (req: IRequest<IGetUserGroupsRequest>) => {
 };
 
 export const verifyDomains = (domains: string[], allowDomainRestriction: boolean) => {
-  if (!allowDomainRestriction) throw new CustomError('In order to support restricting email domains, you must first enable the `allow restricted domains` setting.', ErrorTypes.NOT_ALLOWED);
+  if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
+  if (!allowDomainRestriction) return [];
 
   const invalidDomains = domains.filter(d => !DOMAIN_REGEX.test(d));
   if (!!invalidDomains.length) throw new CustomError(`The following domains are invalid: ${invalidDomains.join(', ')}.`, ErrorTypes.INVALID_ARG);
@@ -273,9 +274,11 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
       settings: defaultGroupSettings,
     });
 
+    console.log('>>>>> group.settings', group.settings);
+
     if (!!settings) group.settings = verifyGroupSettings(settings);
 
-    if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
+    group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
 
     if (!!owner) {
       // requestor must have appropriate permissions to assign a group owner.

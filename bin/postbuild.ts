@@ -8,6 +8,7 @@ const { execSync } = require('child_process');
 const dirs = [
   'src/integrations/plaid/.tmp',
   'src/services/mappers/.tmp',
+  'src/templates',
 ];
 
 const files = [

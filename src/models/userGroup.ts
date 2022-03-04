@@ -5,15 +5,11 @@ import {
   Model,
   ObjectId,
 } from 'mongoose';
+import { UserGroupRole } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IGroup, IShareableGroup } from './group';
 import { ISubgroup } from './subgroup';
 import { IShareableUser, IUser } from './user';
-
-export enum UserGroupRole {
-  Member = 'member',
-  Admin = 'admin',
-}
 
 export enum UserGroupStatus {
   Unverified = 'unverified',

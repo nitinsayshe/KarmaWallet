@@ -1,11 +1,11 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import { ErrorTypes, UserRoles } from '../../lib/constants';
+import { ErrorTypes, UserGroupRole, UserRoles } from '../../lib/constants';
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
 import {
-  IUserDocument, UserEmailStatus, UserGroupRole, UserModel,
+  IUserDocument, UserEmailStatus, UserModel,
 } from '../../models/user';
 import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup,
@@ -15,6 +15,10 @@ import {
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
 import { getShareableUser, getUser } from '../user';
+
+export interface ICheckCodeRequest {
+  code: string;
+}
 
 export interface IGetGroupRequest {
   code?: string;
@@ -54,6 +58,15 @@ const defaultGroupSettings: IGroupSettings = {
     maxDollarAmount: -1,
     lastModified: new Date(),
   },
+};
+
+export const checkCode = async (req: IRequest<{}, ICheckCodeRequest>) => {
+  try {
+    const group = await GroupModel.findOne({ code: req.query.code });
+    return { available: !group };
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const getShareableGroup = ({
@@ -187,7 +200,8 @@ export const getUserGroups = async (req: IRequest<IGetUserGroupsRequest>) => {
 };
 
 export const verifyDomains = (domains: string[], allowDomainRestriction: boolean) => {
-  if (!allowDomainRestriction) throw new CustomError('In order to support restricting email domains, you must first enable the `allow restricted domains` setting.', ErrorTypes.NOT_ALLOWED);
+  if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
+  if (!allowDomainRestriction) return [];
 
   const invalidDomains = domains.filter(d => !DOMAIN_REGEX.test(d));
   if (!!invalidDomains.length) throw new CustomError(`The following domains are invalid: ${invalidDomains.join(', ')}.`, ErrorTypes.INVALID_ARG);
@@ -275,7 +289,7 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
 
     if (!!settings) group.settings = verifyGroupSettings(settings);
 
-    if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
+    group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
 
     if (!!owner) {
       // requestor must have appropriate permissions to assign a group owner.
@@ -287,6 +301,15 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
       group.owner = req.requestor;
     }
 
+    const userGroup = new UserGroupModel({
+      group,
+      user: group.owner,
+      email: group.owner.email,
+      role: UserGroupRole.Owner,
+      status: UserGroupStatus.Approved,
+    });
+
+    await userGroup.save();
     return await group.save();
   } catch (err) {
     throw asCustomError(err);
@@ -313,6 +336,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+
+    // confirm that user has not been banned from group
+    const existingUserGroup = await UserGroupModel.findOne({
+      group,
+      user,
+      email: groupEmail,
+    });
+
+    if (existingUserGroup?.status === UserGroupStatus.Banned) {
+      throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
+    }
 
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {

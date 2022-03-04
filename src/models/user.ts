@@ -13,11 +13,6 @@ export enum UserEmailStatus {
   Verified = 'verified',
 }
 
-export enum UserGroupRole {
-  Admin = 'admin',
-  Member = 'member',
-}
-
 export interface IAltEmail {
   email: string;
   status: UserEmailStatus;

@@ -274,8 +274,6 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
       settings: defaultGroupSettings,
     });
 
-    console.log('>>>>> group.settings', group.settings);
-
     if (!!settings) group.settings = verifyGroupSettings(settings);
 
     group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
@@ -316,6 +314,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+
+    // confirm that user has not been banned from group
+    const existingUserGroup = await UserGroupModel.findOne({
+      group,
+      user,
+      email: groupEmail,
+    });
+
+    if (existingUserGroup?.status === UserGroupStatus.Banned) {
+      throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
+    }
 
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {

@@ -3,15 +3,7 @@ import * as output from '../../services/output';
 import { asCustomError } from '../../lib/customError';
 import * as JobService from '../../services/jobs';
 
-interface ISendGroupVerificationEmail {
-  name: string;
-  domain: string;
-  groupName: string;
-  recipientEmail: string;
-  token: string;
-}
-
-export const sendGroupVerificationEmail: IRequestHandler<{}, {}, ISendGroupVerificationEmail> = async (req, res) => {
+export const sendGroupVerificationEmail: IRequestHandler<{}, {}, JobService.ISendGroupVerificationEmailParams> = async (req, res) => {
   try {
     const message = await JobService.sendGroupVerificationEmail(req);
     output.api(req, res, message);
@@ -20,7 +12,7 @@ export const sendGroupVerificationEmail: IRequestHandler<{}, {}, ISendGroupVerif
   }
 };
 
-export const createJob: IRequestHandler<{}, {}, { name: string, data?: any}> = async (req, res) => {
+export const createJob: IRequestHandler<{}, {}, JobService.ICreateJobParams> = async (req, res) => {
   try {
     const message = await JobService.createJob(req);
     output.api(req, res, message);

@@ -24,7 +24,6 @@ export const exec = async ({
   const emailResponse = await sendMail({
     senderEmail, template, subject, replyToAddresses, recipientEmail,
   });
-  console.log({ emailResponse });
   return emailResponse;
 };
 

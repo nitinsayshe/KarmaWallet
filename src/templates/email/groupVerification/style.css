@@ -41,13 +41,17 @@ p.email-body {
   margin-bottom: 20px;
 }
 
+.email-container .cta-container {
+  display: flex;
+  justify-content: center;
+}
+
 .email-container .cta-link {
   color: #323232 !important;
-  display: flex;
   cursor: pointer !important;
 }
 
-.email-container button {
+.email-container a {
   margin-bottom: 40px;
   display: block;
   margin-left: auto;
@@ -55,7 +59,7 @@ p.email-body {
   padding: 11px 25px;
   border-radius: 70px;
   background-color: #00DE84;
-  color: rgb(50, 50, 50);
+  color: #323232;
   font-family: Arial;
   font-size: 14px;
   font-weight: 600;

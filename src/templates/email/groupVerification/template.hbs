@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <style>
-      {{style}}
-    </style>
-  </head>
-  <body>
-    <div class="email-wrapper">
-      <div class="email-container">
-        <img class="brand" src="https://s3.amazonaws.com/assets.karmawallet/karmawallet-logo-129x49.png"
-          alt="KarmaWallet Logo" />
-        <p class="email-body">Hi {{name}},</p>
-        <p class="email-body">Thanks for your request to join the <span class="bold">{{groupName}}</span> group. To complete your request, please just click the button below to verify your email address.</p>
-        <a class="cta-link" href="{{verificationLink}}"><button>Verify Email</button></a>
-      </div>
-      <div class="link-container">
-        <p class="link-first"><a href="https://karmawallet.io">Karma Wallet</a> | <a
-            href="https://karmawallet.io/privacy">Privacy Policy</a></p>
-        <p class="link-second"><a href="mailto:info@karmawallet.io">info@karmawallet.io</a></p>
-      </div>
+
+<head>
+  <style>
+    {{style}}
+  </style>
+</head>
+
+<body>
+  <div class="email-wrapper">
+    <div class="email-container">
+      <img class="brand" src="https://s3.amazonaws.com/assets.karmawallet/karmawallet-logo-129x49.png" alt="KarmaWallet Logo" />
+      <p class="email-body">Hi {{name}},</p>
+      <p class="email-body">Thanks for your request to join the <span class="bold">{{groupName}}</span> group. To
+        complete your request, please just click the button below to verify your email address.</p>
+      <div class="cta-container">
+        <a class="cta-link" href="{{verificationLink}}">Verify Email</a>
+      </div>  
     </div>
-  </body>
+    <div class="link-container">
+      <p class="link-first"><a href="https://karmawallet.io">Karma Wallet</a> | <a href="https://karmawallet.io/privacy">Privacy Policy</a></p>
+      <p class="link-second"><a href="mailto:info@karmawallet.io">info@karmawallet.io</a></p>
+    </div>
+  </div>
+</body>
+
 </html>

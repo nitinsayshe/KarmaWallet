@@ -89,8 +89,9 @@ export abstract class _BullClient extends Client {
   protected abstract _initWorkers (): void;
   protected abstract _onJobComplete (job: Job | SandboxedJob, result: any): Promise<void>;
   protected abstract _onJobFailed (job: Job | SandboxedJob, error: Error): Promise<void>;
-  protected initCronJobs?(): void;
   protected _processJob?(job: Job | SandboxedJob): Promise<any>;
+
+  initCronJobs?(): void;
 
   createJob = (name: string, data: any, opts: JobsOptions = {}) => {
     this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...opts });

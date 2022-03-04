@@ -2,7 +2,7 @@ import { IRequest } from '../../types/request';
 import * as EmailService from '../email';
 import { MainBullClient } from '../../clients/bull/main';
 
-interface ISendGroupVerificationEmail {
+export interface ISendGroupVerificationEmailParams {
   name: string;
   domain: string;
   groupName: string;
@@ -10,17 +10,22 @@ interface ISendGroupVerificationEmail {
   token: string;
 }
 
-export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmail>) => {
+export interface ICreateJobParams {
+  name: string,
+  data?: any
+}
+
+export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmailParams>) => {
   const {
     name, domain, token, groupName, recipientEmail,
   } = req.body;
-  await EmailService.sendGroupVerificationEmail({
+  const template = await EmailService.sendGroupVerificationEmail({
     name, domain, token, groupName, recipientEmail,
   });
-  return 'Group verification email added to queue';
+  return template;
 };
 
-export const createJob = async (req: IRequest<{}, {}, { name: string, data?: any}>) => {
+export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
   const {
     name,
     data,

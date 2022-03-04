@@ -51,7 +51,7 @@ p.email-body {
   cursor: pointer !important;
 }
 
-.email-container a {
+.email-container a.cta-link {
   margin-bottom: 40px;
   display: block;
   margin-left: auto;

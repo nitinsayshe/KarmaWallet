@@ -19,10 +19,10 @@ export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGrou
   const {
     name, domain, token, groupName, recipientEmail,
   } = req.body;
-  const template = await EmailService.sendGroupVerificationEmail({
+  await EmailService.sendGroupVerificationEmail({
     name, domain, token, groupName, recipientEmail,
   });
-  return template;
+  return 'Job added to queue';
 };
 
 export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {

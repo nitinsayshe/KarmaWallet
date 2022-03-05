@@ -215,7 +215,10 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   const invalidDomains = domains.filter(d => !DOMAIN_REGEX.test(d));
   if (!!invalidDomains.length) throw new CustomError(`The following domains are invalid: ${invalidDomains.join(', ')}.`, ErrorTypes.INVALID_ARG);
 
-  return domains;
+  // remove duplicate domains if they exist.
+  const _domains = new Set(domains);
+
+  return Array.from(_domains);
 };
 
 export const verifyGroupSettings = (settings: IGroupSettings) => {

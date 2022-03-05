@@ -46,6 +46,8 @@ export interface IJoinGroupRequest {
   userId: string;
 }
 
+const MAX_CODE_LENGTH = 16;
+
 const defaultGroupSettings: IGroupSettings = {
   privacyStatus: GroupPrivacyStatus.Private,
   allowInvite: false,
@@ -60,10 +62,17 @@ const defaultGroupSettings: IGroupSettings = {
   },
 };
 
+export const isValidCode = (code: string) => {
+  if (code.length > MAX_CODE_LENGTH) return false;
+
+  // returns false if any invalid characters are found.
+  return !/[^a-zA-Z0-9-]/gm.test(code);
+};
+
 export const checkCode = async (req: IRequest<{}, ICheckCodeRequest>) => {
   try {
     const group = await GroupModel.findOne({ code: req.query.code });
-    return { available: !group };
+    return { available: !group, isValid: isValidCode(req.query.code) };
   } catch (err) {
     throw asCustomError(err);
   }
@@ -276,6 +285,7 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
 
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
     if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
+    if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
 
     const existingGroup = await GroupModel.findOne({ code });
 

@@ -231,10 +231,13 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
   if (!allowDomainRestriction) return [];
 
-  const invalidDomains = domains.filter(d => !DOMAIN_REGEX.test(d));
+  const invalidDomains = domains.filter(d => {
+    DOMAIN_REGEX.lastIndex = 0;
+    return !DOMAIN_REGEX.test(d);
+  });
   if (!!invalidDomains.length) throw new CustomError(`The following domains are invalid: ${invalidDomains.join(', ')}.`, ErrorTypes.INVALID_ARG);
 
-  // remove duplicate domains if they exist.
+  // remove duplicate domains
   const _domains = new Set(domains);
 
   return Array.from(_domains);
@@ -433,7 +436,9 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     domains,
   } = req.body;
   try {
-    if (!owner && !name && !code && !settings && !domains) throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
+    if (!owner && !name && !code && !settings && !domains) {
+      throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
+    }
 
     const group = await GroupModel
       .findOne({ _id: groupId })
@@ -514,7 +519,8 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 
     if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
 
-    group.save();
+    await group.save();
+    return group;
   } catch (err) {
     throw asCustomError(err);
   }
@@ -636,6 +642,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
     userGroup.lastModified = dayjs().utc().toDate();
     await userGroup.save();
+    return userGroup;
   } catch (err) {
     throw asCustomError(err);
   }

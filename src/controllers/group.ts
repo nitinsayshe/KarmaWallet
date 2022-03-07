@@ -64,3 +64,21 @@ export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> 
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const updateGroup: IRequestHandler<GroupService.IGroupRequestParams, {}, GroupService.IGroupRequestBody> = async (req, res) => {
+  try {
+    const group = await GroupService.updateGroup(req);
+    output.api(req, res, GroupService.getShareableGroup(group));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupRequestParams, {}, GroupService.IUpdateUserGroupRequestBody> = async (req, res) => {
+  try {
+    const userGroup = await GroupService.updateUserGroup(req);
+    output.api(req, res, GroupService.getShareableUserGroup(userGroup));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

@@ -10,7 +10,7 @@ import {
   IUserDocument, UserEmailStatus, UserModel,
 } from '../../models/user';
 import {
-  IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup,
+  IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup, GroupStatus,
 } from '../../models/group';
 import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
@@ -51,6 +51,7 @@ export interface IGroupRequestBody {
   owner?: string; // the id of the owner
   name: string;
   code: string;
+  status: GroupStatus;
   settings: IGroupSettings;
   domains: string[];
 }
@@ -100,6 +101,7 @@ export const getShareableGroup = ({
   domains,
   settings,
   owner,
+  status,
   lastModified,
   createdOn,
 }: IGroupDocument): (IShareableGroup & { _id: string }) => {
@@ -110,6 +112,7 @@ export const getShareableGroup = ({
     code,
     domains,
     settings,
+    status,
     owner: _owner,
     lastModified,
     createdOn,
@@ -360,6 +363,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     const group = await GroupModel.findOne({ code: groupCode });
     if (!group) throw new CustomError(`A group was not found with code: ${groupCode}`, ErrorTypes.NOT_FOUND);
+    if (group.status === GroupStatus.Locked) throw new CustomError('This group is not accepting new members.', ErrorTypes.NOT_ALLOWED);
 
     let user: IUserDocument;
     if (userId === req.requestor._id) {
@@ -432,11 +436,12 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     owner,
     name,
     code,
+    status,
     settings,
     domains,
   } = req.body;
   try {
-    if (!owner && !name && !code && !settings && !domains) {
+    if (!owner && !name && !code && !status && !settings && !domains) {
       throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
     }
 
@@ -510,6 +515,19 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     if (!!code) {
       if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
       group.code = code;
+    }
+
+    if (!!status && group.status !== status) {
+      if (!Object.values(GroupStatus).includes(status)) {
+        throw new CustomError('Invalid group status.', ErrorTypes.INVALID_ARG);
+      }
+
+      // only the owner of the group, and karma members, may change the a groups status
+      if (req.requestor.role === UserRoles.None && userGroup.role !== UserGroupRole.Owner) {
+        throw new CustomError('You are not authorized to update this group\'s status.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      group.status = status;
     }
 
     if (!!settings) {

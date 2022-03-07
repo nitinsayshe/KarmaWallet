@@ -171,6 +171,7 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
 
 export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   // TODO: add support getting name by sub string
+  // TODO: add not returning private groups unless requestor is karma member
 
   const options = {
     projection: query?.projection || '',
@@ -200,7 +201,10 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
       throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
     }
 
-    return await UserGroupModel.find({ user: userId })
+    return await UserGroupModel.find({
+      user: userId,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+    })
       .populate([
         {
           path: 'group',
@@ -375,6 +379,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
     }
 
+    // TODO: status === Removed, check if needs approval to join again
+
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {
       if (!isemail.validate(groupEmail, { minDomainAtoms: 2 })) {
@@ -445,8 +451,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     });
 
     // requestor must be an admin (or higher) for the group
-    // OR be an internal karma member with at least Member
-    // permissions to update a group.
+    // OR be an internal karma member to update a group.
     //
     // ??? if they are a karma member AND part of the group, should
     // they still have to have admin permissions for the group to

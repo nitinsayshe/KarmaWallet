@@ -44,6 +44,7 @@ export interface IUpdateUserGroupRequestParams {
 export interface IUpdateUserGroupRequestBody {
   email: string;
   role: UserGroupRole;
+  status: UserGroupStatus;
 }
 
 export interface IGroupRequestBody {
@@ -519,9 +520,9 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   }
 };
 
-export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParams, {}, IUpdateUserGroupRequestBody>) => {
+export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParams, {}, IUpdateUserGroupRequestBody>, internalOverride = false) => {
   const { userId, groupId } = req.params;
-  const { email, role } = req.body;
+  const { email, role, status } = req.body;
 
   try {
     const userGroups = await UserGroupModel.find({
@@ -571,10 +572,10 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
       // TODO: add email verification
     }
 
-    if (!!role && role !== userGroup.role) {
-      const origUserGroupRoleScore = userGroupRoleScores.indexOf(userGroup.role);
-      let requestorGroupRoleScore = -1;
+    const origUserGroupRoleScore = userGroupRoleScores.indexOf(userGroup.role);
+    const requestorGroupRoleScore = !!requestorUserGroup ? userGroupRoleScores.indexOf(requestorUserGroup.role) : -1;
 
+    if (!!role && role !== userGroup.role) {
       if (!userGroupRoleScores.includes(role)) {
         throw new CustomError(`Invalid user group role: ${role}`, ErrorTypes.INVALID_ARG);
       }
@@ -582,8 +583,6 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
       if (req.requestor._id === userId) throw new CustomError('You are not allowed to change your own role within this group.', ErrorTypes.UNAUTHORIZED);
 
       if (!!requestorUserGroup) {
-        requestorGroupRoleScore = userGroupRoleScores.indexOf(requestorUserGroup.role);
-
         // roll is not allowed to be updated if requestor is not a karma member, and they have an equal
         // or lesser role than the user being updated
         //
@@ -595,6 +594,44 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
       }
 
       userGroup.role = role;
+    }
+
+    if (!!status && status !== userGroup.status) {
+      if (!Object.values(UserGroupStatus).includes(status)) {
+        throw new CustomError(`Invalid status found: ${status}`, ErrorTypes.INVALID_ARG);
+      }
+
+      if (status === UserGroupStatus.Left) {
+        // only the user can leave a group...
+        if (req.requestor._id !== userId) {
+          throw new CustomError('You are not authorized to update this user\'s status.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      if (status === UserGroupStatus.Removed || status === UserGroupStatus.Banned) {
+        if (req.requestor._id === userId) {
+          throw new CustomError('You are not allowed to remove or ban yourself from a group. Try Leaving a group instead.', ErrorTypes.NOT_ALLOWED);
+        }
+
+        if (!!requestorUserGroup && req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+          throw new CustomError('You are not authorized to remove or ban this user.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      if (status === UserGroupStatus.Approved) {
+        if (!!requestorUserGroup && req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+          throw new CustomError('You are not authorized to approve this user.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      if (status === UserGroupStatus.Verified) {
+        // only internal processes (like the email verification process) are allowed to mark a user as verified
+        if (!internalOverride) {
+          throw new CustomError('You are not authorized to verify this user.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      userGroup.status = status;
     }
 
     userGroup.lastModified = dayjs().utc().toDate();

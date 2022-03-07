@@ -245,7 +245,9 @@ export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEm
   if (!isemail.validate(email, { minDomainAtoms: 2 })) {
     throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   }
-
+  if (!requestor?.altEmails?.length) {
+    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
+  }
   if (!requestor.altEmails.find(altEmail => altEmail.email === email)) {
     throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
   }

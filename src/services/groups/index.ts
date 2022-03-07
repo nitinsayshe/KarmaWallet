@@ -340,7 +340,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!group) throw new CustomError(`A group was not found with code: ${groupCode}`, ErrorTypes.NOT_FOUND);
 
     let user: IUserDocument;
-    console.log({ userId, reqId: req.requestor._id });
     if (userId === req.requestor._id.toString()) {
       user = req.requestor;
     } else {
@@ -380,11 +379,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     // add groupEmail to user's list of altEmails if doesnt already exist
     if (!user.altEmails.find(altEmail => altEmail.email === validEmail)) {
-      const token = await TokenService.createToken({ user: user._id.toString(), days: emailVerificationDays, type: TokenTypes.AltEmail });
+      const token = await TokenService.createToken({
+        user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
+      });
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
-        token: token._id.toString(),
       });
       await sendGroupVerificationEmail({
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,

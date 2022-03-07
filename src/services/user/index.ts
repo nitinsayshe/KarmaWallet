@@ -2,6 +2,7 @@ import argon2 from 'argon2';
 import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
 import isemail from 'isemail';
+import dayjs from 'dayjs';
 import {
   IUser, IUserDocument, UserModel,
   UserEmailStatus,
@@ -171,7 +172,7 @@ export const logout = async (_: IRequest, authKey: string) => {
 
 export const updateUser = async (_: IRequest, user: IUserDocument, updates: Partial<IUser>) => {
   try {
-    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: new Date() }, { new: true });
+    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: dayjs().utc().toDate() }, { new: true });
   } catch (err) {
     throw asCustomError(err);
   }
@@ -240,21 +241,23 @@ export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEm
   // this request and avoid group name usage here
   const { email, groupName } = req.body;
   const days = emailVerificationDays;
-  const msg = `Verfication instructions sent to your provided email address. Token will expire in ${days} days.`;
+  const msg = `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
   if (!isemail.validate(email, { minDomainAtoms: 2 })) {
     throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   }
   if (!requestor?.altEmails?.length) {
     throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
   }
-  if (!requestor.altEmails.find(altEmail => altEmail.email === email)) {
+  const altEmail = requestor.altEmails.find(alt => alt.email === email);
+  if (!altEmail) {
     throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
   }
-  if (requestor.altEmails.find(altEmail => altEmail.email === email && altEmail.status === UserEmailStatus.Verified)) {
-    throw new CustomError(`Email: ${email} already verified`, ErrorTypes.INVALID_ARG);
+  if (altEmail.status === UserEmailStatus.Verified) {
+    throw new CustomError(`Email: ${email} already verified.`, ErrorTypes.INVALID_ARG);
   }
-  const token = await TokenService.createToken({ user: requestor._id.toString(), days, type: TokenTypes.AltEmail });
-  await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.token': token._id, lastModified: new Date() }, { new: true });
+  const token = await TokenService.createToken({
+    user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
+  });
   await sendGroupVerificationEmail({
     name: requestor.name, domain: 'https://karmawallet.io', groupName, token: token.value, recipientEmail: email,
   });
@@ -276,13 +279,12 @@ export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerific
     throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
   }
   if (altEmail?.status === UserEmailStatus.Verified) {
-    // maybe just return a success state here?
-    throw new CustomError(`Email: ${email} already verified`, ErrorTypes.INVALID_ARG);
+    return `Email: ${email} has been successfuly verified.`;
   }
-  const token = await TokenService.getTokenAndConsume(req.requestor._id.toString(), tokenValue, TokenTypes.AltEmail);
+  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail, { 'resource.altEmail': email });
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.INVALID_ARG);
   }
-  await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: new Date() }, { new: true });
+  await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: dayjs().utc().toDate() }, { new: true });
   return `Email: ${email} has been successfuly verified.`;
 };

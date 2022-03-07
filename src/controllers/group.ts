@@ -38,7 +38,7 @@ export const getGroups: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getUserGroups: IRequestHandler<GroupService.IGetUserGroupsRequest> = async (req, res) => {
+export const getUserGroups: IRequestHandler<GroupService.IUserGroupsRequest> = async (req, res) => {
   try {
     const userGroups = await GroupService.getUserGroups(req);
     output.api(req, res, userGroups.map(userGroup => GroupService.getShareableUserGroup(userGroup)));
@@ -47,7 +47,7 @@ export const getUserGroups: IRequestHandler<GroupService.IGetUserGroupsRequest> 
   }
 };
 
-export const createGroup: IRequestHandler<{}, {}, GroupService.ICreateGroupRequest> = async (req, res) => {
+export const createGroup: IRequestHandler<{}, {}, GroupService.IGroupRequestBody> = async (req, res) => {
   try {
     const group = await GroupService.createGroup(req);
     output.api(req, res, GroupService.getShareableGroup(group));

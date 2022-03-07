@@ -354,6 +354,37 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
   }
 };
 
+export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
+  const { groupId } = req.params;
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    let userGroup: IUserGroupDocument;
+    if (req.requestor.role === UserRoles.None) {
+      userGroup = await UserGroupModel.findOne({ group: groupId });
+    }
+
+    // only a karma member or the owner of the group can delete
+    if (req.requestor.role === UserRoles.None && userGroup?.role !== UserGroupRole.Owner) {
+      throw new CustomError('You are not authorized to delete this group.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    const group = await GroupModel.findOne({ _id: groupId });
+
+    if (!group) throw new CustomError(`Group with id: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
+
+    await UserGroupModel.deleteMany({ group: groupId });
+
+    // TODO: delete all group statements
+
+    await GroupModel.deleteOne({ _id: groupId });
+
+    // ??? send notification to users that group has been deleted???
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   try {
     const { groupCode, groupEmail, userId } = req.body;
@@ -441,6 +472,8 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     domains,
   } = req.body;
   try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
     if (!owner && !name && !code && !status && !settings && !domains) {
       throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
     }
@@ -549,6 +582,9 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   const { email, role, status } = req.body;
 
   try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+    if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+
     const userGroups = await UserGroupModel.find({
       $or: [
         {

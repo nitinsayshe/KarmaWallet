@@ -56,6 +56,15 @@ export const createGroup: IRequestHandler<{}, {}, GroupService.IGroupRequestBody
   }
 };
 
+export const deleteGroup: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+  try {
+    await GroupService.deleteGroup(req);
+    output.api(req, res, null);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> = async (req, res) => {
   try {
     const userGroup = await GroupService.joinGroup(req);

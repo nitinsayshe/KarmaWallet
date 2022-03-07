@@ -17,7 +17,8 @@ groupRouter.route('/group/:groupid/user/:userId')
 groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)
   .post(authenticate, GroupController.createGroup)
-  .put(authenticate, GroupController.updateGroup);
+  .put(authenticate, GroupController.updateGroup)
+  .delete(authenticate, GroupController.deleteGroup);
 
 export const group = (app: Express) => app.use('/group', groupRouter);
 

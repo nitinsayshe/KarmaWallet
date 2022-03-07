@@ -28,14 +28,14 @@ export const getToken = async (user: IUserDocument, value: string, type: TokenTy
 };
 
 export const getTokenAndConsume = async (user: IUserDocument, value: string, type: TokenTypes) => {
-  const data = await TokenModel.findOneAndUpdate({
+  const token = await TokenModel.findOneAndUpdate({
     user,
     value,
     type,
     consumed: false,
     expires: { $gte: new Date() },
   }, { consumed: true }, { new: true }).select('-__v').lean();
-  return data;
+  return token;
 };
 
 export const createToken = async ({

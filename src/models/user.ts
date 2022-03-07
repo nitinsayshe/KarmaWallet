@@ -16,6 +16,7 @@ export enum UserEmailStatus {
 export interface IAltEmail {
   email: string;
   status: UserEmailStatus;
+  token: string;
 }
 
 export interface IRareUserIntegration {
@@ -56,6 +57,10 @@ const userSchema = new Schema({
         type: String,
         enum: Object.values(UserEmailStatus),
         default: UserEmailStatus.Unverified,
+      },
+      token: {
+        type: Schema.Types.ObjectId,
+        ref: 'token',
       },
     },
   }],

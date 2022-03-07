@@ -5,14 +5,15 @@ import {
   Model,
 } from 'mongoose';
 import { TokenTypes } from '../lib/constants';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
+import { IShareableUser, IUser } from './user';
 
 export interface IToken {
   type: TokenTypes;
   value: string;
   createdOn: Date;
   expires: Date;
-  user: string;
+  user: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
   consumed: boolean;
 }
 
@@ -24,7 +25,7 @@ const tokenSchema = new Schema({
   value: { type: String, required: true },
   createdOn: { type: Date, default: new Date() },
   expires: { type: Date, required: true },
-  user: { type: String, ref: 'user' },
+  user: { type: Schema.Types.ObjectId, ref: 'user' },
   consumed: { type: Boolean, default: false },
 });
 

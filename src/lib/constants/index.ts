@@ -41,7 +41,7 @@ export enum SocketNamespaces {
 export enum TokenTypes {
   Email = 'email',
   Password = 'password',
-  GroupEmail = 'groupEmail',
+  AltEmail = 'altEmail'
 }
 
 export enum EmailAddresses {
@@ -115,7 +115,7 @@ export const AllowedOrigins = [
   'https://admin.staging.karmawallet.io',
 ];
 
-export const emailVerificationDays = 5;
+export const emailVerificationDays = 10;
 export const authTokenDays = 30;
 export const passwordResetTokenMinutes = 15;
 

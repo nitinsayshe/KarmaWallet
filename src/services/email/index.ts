@@ -31,7 +31,7 @@ export const buildTemplate = (templateName: string, data: any) => {
 
 interface IGroupVerificationTemplateParams {
   name: string;
-  domain: string;
+  domain?: string;
   token: string;
   groupName: string;
   recipientEmail: string;
@@ -40,7 +40,7 @@ interface IGroupVerificationTemplateParams {
 }
 
 export const sendGroupVerificationEmail = async ({
-  name, domain, token, groupName, recipientEmail, senderEmail = EmailAddresses.NoReply, replyToAddresses = [EmailAddresses.ReplyTo],
+  name, domain = process.env.FRONTEND_DOMAIN, token, groupName, recipientEmail, senderEmail = EmailAddresses.NoReply, replyToAddresses = [EmailAddresses.ReplyTo],
 }: IGroupVerificationTemplateParams) => {
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'groupName', 'recipientEmail'], {
     name, domain, token, groupName, recipientEmail,

@@ -1,6 +1,8 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import { ErrorTypes, UserGroupRole, UserRoles } from '../../lib/constants';
+import {
+  emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
+} from '../../lib/constants';
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -15,6 +17,8 @@ import {
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
 import { getShareableUser, getUser } from '../user';
+import * as TokenService from '../token';
+import { sendGroupVerificationEmail } from '../email';
 
 export interface ICheckCodeRequest {
   code: string;
@@ -285,7 +289,6 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
 
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
     if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
-    if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
 
     const existingGroup = await GroupModel.findOne({ code });
 
@@ -337,7 +340,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!group) throw new CustomError(`A group was not found with code: ${groupCode}`, ErrorTypes.NOT_FOUND);
 
     let user: IUserDocument;
-    if (userId === req.requestor._id) {
+    console.log({ userId, reqId: req.requestor._id });
+    if (userId === req.requestor._id.toString()) {
       user = req.requestor;
     } else {
       // requestor must be a Karma member to add another user to a group
@@ -376,9 +380,14 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     // add groupEmail to user's list of altEmails if doesnt already exist
     if (!user.altEmails.find(altEmail => altEmail.email === validEmail)) {
+      const token = await TokenService.createToken({ user: user._id.toString(), days: emailVerificationDays, type: TokenTypes.AltEmail });
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
+        token: token._id.toString(),
+      });
+      await sendGroupVerificationEmail({
+        name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
       });
     }
 

@@ -269,6 +269,9 @@ export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerific
   if (!tokenValue) {
     throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
   }
+  if (!requestor?.altEmails?.length) {
+    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
+  }
   const altEmail = requestor.altEmails.find(a => a.email === email);
   if (!altEmail) {
     throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);

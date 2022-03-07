@@ -16,7 +16,7 @@ import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
-import { getShareableUser, getUser } from '../user';
+import { getUser } from '../user';
 
 dayjs.extend(utc);
 
@@ -104,20 +104,17 @@ export const getShareableGroup = ({
   status,
   lastModified,
   createdOn,
-}: IGroupDocument): (IShareableGroup & { _id: string }) => {
-  const _owner = getShareableUser(owner as IUserDocument);
-  return {
-    _id,
-    name,
-    code,
-    domains,
-    settings,
-    status,
-    owner: _owner,
-    lastModified,
-    createdOn,
-  };
-};
+}: IGroupDocument): (IShareableGroup & { _id: string }) => ({
+  _id,
+  name,
+  code,
+  domains,
+  settings,
+  status,
+  owner: (owner as IUserDocument)._id,
+  lastModified,
+  createdOn,
+});
 
 export const getShareableUserGroup = ({
   _id,

@@ -201,7 +201,7 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
   const { userId } = req.params;
   try {
     if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    if (req.requestor._id !== userId && req.requestor.role === UserRoles.None) {
+    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
       throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
     }
 
@@ -397,7 +397,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (group.status === GroupStatus.Locked) throw new CustomError('This group is not accepting new members.', ErrorTypes.NOT_ALLOWED);
 
     let user: IUserDocument;
-    if (userId === req.requestor._id) {
+    if (userId === req.requestor._id.toString()) {
       user = req.requestor;
     } else {
       // requestor must be a Karma member to add another user to a group
@@ -504,7 +504,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
       throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
     }
 
-    if (!!owner && owner !== (group.owner as IUserDocument)._id) {
+    if (!!owner && owner !== (group.owner as IUserDocument)._id.toString()) {
       // TODO: only allow updating owner if requestor is karma member or owner of group...
 
       const newOwner = await getUser(req, { _id: owner });
@@ -608,8 +608,8 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
         },
       ]);
 
-    const userGroup = userGroups.find(u => (u.user as IUserDocument)._id === userId);
-    const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id === req.requestor._id);
+    const userGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === userId);
+    const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === req.requestor._id.toString());
 
     if (!userGroup) throw new CustomError(`A group with id: ${groupId} was not found for this user.`, ErrorTypes.NOT_FOUND);
     if (req.requestor.role === UserRoles.None && !requestorUserGroup) {
@@ -621,7 +621,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
     if (!!email) {
       // only the user or a karma member can update the email
-      if (req.requestor._id !== (userGroup.user as IUserDocument)._id && req.requestor.role === UserRoles.None) {
+      if (req.requestor._id.toString() !== (userGroup.user as IUserDocument)._id.toString() && req.requestor.role === UserRoles.None) {
         throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
       }
 
@@ -640,7 +640,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
         throw new CustomError(`Invalid user group role: ${role}`, ErrorTypes.INVALID_ARG);
       }
 
-      if (req.requestor._id === userId) throw new CustomError('You are not allowed to change your own role within this group.', ErrorTypes.UNAUTHORIZED);
+      if (req.requestor._id.toString() === userId) throw new CustomError('You are not allowed to change your own role within this group.', ErrorTypes.UNAUTHORIZED);
 
       if (!!requestorUserGroup) {
         // roll is not allowed to be updated if requestor is not a karma member, and they have an equal
@@ -663,13 +663,13 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
       if (status === UserGroupStatus.Left) {
         // only the user can leave a group...
-        if (req.requestor._id !== userId) {
+        if (req.requestor._id.toString() !== userId) {
           throw new CustomError('You are not authorized to update this user\'s status.', ErrorTypes.UNAUTHORIZED);
         }
       }
 
       if (status === UserGroupStatus.Removed || status === UserGroupStatus.Banned) {
-        if (req.requestor._id === userId) {
+        if (req.requestor._id.toString() === userId) {
           throw new CustomError('You are not allowed to remove or ban yourself from a group. Try Leaving a group instead.', ErrorTypes.NOT_ALLOWED);
         }
 

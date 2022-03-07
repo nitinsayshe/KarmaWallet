@@ -241,7 +241,6 @@ export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEm
   const { email, groupName } = req.body;
   const days = emailVerificationDays;
   const msg = `Verfication instructions sent to your provided email address. Token will expire in ${days} days.`;
-
   if (!isemail.validate(email, { minDomainAtoms: 2 })) {
     throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   }
@@ -251,11 +250,9 @@ export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEm
   if (!requestor.altEmails.find(altEmail => altEmail.email === email)) {
     throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
   }
-
   if (requestor.altEmails.find(altEmail => altEmail.email === email && altEmail.status === UserEmailStatus.Verified)) {
     throw new CustomError(`Email: ${email} already verified`, ErrorTypes.INVALID_ARG);
   }
-
   const token = await TokenService.createToken({ user: requestor._id.toString(), days, type: TokenTypes.AltEmail });
   await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.token': token._id, lastModified: new Date() }, { new: true });
   await sendGroupVerificationEmail({

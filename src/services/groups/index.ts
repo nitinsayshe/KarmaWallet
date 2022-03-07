@@ -25,7 +25,7 @@ export interface ICheckCodeRequest {
 }
 
 export interface IGetGroupRequest {
-  code?: string;
+  groupCode?: string;
 }
 
 export interface IUserGroupsRequest {
@@ -142,13 +142,13 @@ export const getShareableUserGroup = ({
 export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupRequest>) => {
   try {
     const { groupId } = req.params;
-    const { code } = req.query;
-    if (!code && !groupId) throw new CustomError('Group id or code is required.', ErrorTypes.INVALID_ARG);
+    const { groupCode } = req.query;
+    if (!groupCode && !groupId) throw new CustomError('Group id or code is required.', ErrorTypes.INVALID_ARG);
 
     const query: FilterQuery<IGroup> = {};
 
     if (!!groupId) query._id = groupId;
-    if (!!code) query.code = code;
+    if (!!groupCode) query.code = groupCode;
 
     const group = await GroupModel.findOne(query)
       .populate([
@@ -164,7 +164,7 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
 
     if (!group) {
       if (!!groupId) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
-      if (!!code) throw new CustomError(`A group with code: ${code} could not be found.`, ErrorTypes.NOT_FOUND);
+      if (!!groupCode) throw new CustomError(`A group with code: ${groupCode} could not be found.`, ErrorTypes.NOT_FOUND);
     }
 
     return group;

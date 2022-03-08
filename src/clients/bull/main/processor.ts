@@ -3,6 +3,7 @@ import { JobNames } from '../../../lib/constants/jobScheduler';
 import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
+import * as SendEmail from '../../../jobs/sendEmail';
 import { MongoClient } from '../../mongo';
 
 // Sandboxed processors must be exported as default to run correctly
@@ -19,6 +20,9 @@ export default async (job: SandboxedJob) => {
   switch (name) {
     case JobNames.GlobalPlaidTransactionMapper:
       result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+      break;
+    case JobNames.SendEmail:
+      SendEmail.exec(data);
       break;
     case JobNames.UserPlaidTransactionMapper:
       UserPlaidTransactionMapper.exec(data);

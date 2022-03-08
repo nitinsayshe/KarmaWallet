@@ -21,11 +21,11 @@ export default async (job: SandboxedJob) => {
     case JobNames.GlobalPlaidTransactionMapper:
       result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
       break;
-    case JobNames.SendEmail:
-      SendEmail.exec(data);
-      break;
     case JobNames.UserPlaidTransactionMapper:
       UserPlaidTransactionMapper.exec(data);
+      break;
+    case JobNames.SendEmail:
+      SendEmail.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found');

@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
 import isemail from 'isemail';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
   IUser, IUserDocument, UserModel,
   UserEmailStatus,
@@ -19,6 +20,8 @@ import { validatePassword } from './utils/validate';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { sendGroupVerificationEmail } from '../email';
+
+dayjs.extend(utc);
 
 export interface ILoginData {
   email: string;
@@ -234,6 +237,22 @@ export const resetPasswordFromToken = async (req: IRequest, email: string, value
   return _user;
 };
 
+export const altEmailChecks = (user: IUserDocument, email: string) => {
+  if (!isemail.validate(email, { minDomainAtoms: 2 })) {
+    throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+  }
+  if (!user?.altEmails?.length) {
+    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
+  }
+  const altEmail = user.altEmails.find(alt => alt.email === email);
+  if (!altEmail) {
+    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
+  }
+  if (altEmail.status === UserEmailStatus.Verified) {
+    throw new CustomError(`Email: ${email} already verified.`, ErrorTypes.INVALID_ARG);
+  }
+};
+
 export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
   // this request doesn't necessarily need to be coupled to a group.
@@ -242,19 +261,7 @@ export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEm
   const { email, groupName } = req.body;
   const days = emailVerificationDays;
   const msg = `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
-  if (!isemail.validate(email, { minDomainAtoms: 2 })) {
-    throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
-  }
-  if (!requestor?.altEmails?.length) {
-    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
-  }
-  const altEmail = requestor.altEmails.find(alt => alt.email === email);
-  if (!altEmail) {
-    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
-  }
-  if (altEmail.status === UserEmailStatus.Verified) {
-    throw new CustomError(`Email: ${email} already verified.`, ErrorTypes.INVALID_ARG);
-  }
+  altEmailChecks(requestor, email);
   const token = await TokenService.createToken({
     user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
   });
@@ -271,16 +278,7 @@ export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerific
   if (!tokenValue) {
     throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
   }
-  if (!requestor?.altEmails?.length) {
-    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
-  }
-  const altEmail = requestor.altEmails.find(a => a.email === email);
-  if (!altEmail) {
-    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
-  }
-  if (altEmail?.status === UserEmailStatus.Verified) {
-    return `Email: ${email} has been successfuly verified.`;
-  }
+  altEmailChecks(requestor, email);
   const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail, { 'resource.altEmail': email });
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.INVALID_ARG);

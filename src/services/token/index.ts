@@ -1,9 +1,12 @@
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { TokenTypes } from '../../lib/constants';
 import { getDateFrom } from '../../lib/date';
 import { TokenModel } from '../../models/token';
 import { IUserDocument } from '../../models/user';
+
+dayjs.extend(utc);
 
 export interface ICreateTokenData {
   user: IUserDocument;

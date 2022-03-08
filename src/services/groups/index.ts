@@ -50,7 +50,7 @@ export interface IUpdateUserGroupRequestBody {
 export interface IGroupRequestBody {
   owner?: string; // the id of the owner
   name: string;
-  code: string;
+  groupCode: string;
   status: GroupStatus;
   settings: IGroupSettings;
   domains: string[];
@@ -303,22 +303,22 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
     const {
       owner,
       name,
-      code,
+      groupCode,
       settings,
       domains,
     } = req.body;
 
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
-    if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
-    if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
+    if (!groupCode) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
+    if (!isValidCode(groupCode)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
 
-    const existingGroup = await GroupModel.findOne({ code });
+    const existingGroup = await GroupModel.findOne({ code: groupCode });
 
     if (!!existingGroup) throw new CustomError('This group code is already in use.', ErrorTypes.INVALID_ARG);
 
     const group = new GroupModel({
       name,
-      code,
+      code: groupCode,
       settings: defaultGroupSettings,
     });
 
@@ -463,7 +463,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   const {
     owner,
     name,
-    code,
+    groupCode,
     status,
     settings,
     domains,
@@ -471,7 +471,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
-    if (!owner && !name && !code && !status && !settings && !domains) {
+    if (!owner && !name && !groupCode && !status && !settings && !domains) {
       throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
     }
 
@@ -542,9 +542,9 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 
     if (!!name) group.name = name;
 
-    if (!!code) {
-      if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
-      group.code = code;
+    if (!!groupCode) {
+      if (!isValidCode(groupCode)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
+      group.code = groupCode;
     }
 
     if (!!status && group.status !== status) {

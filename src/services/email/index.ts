@@ -6,6 +6,7 @@ import { JobNames } from '../../lib/constants/jobScheduler';
 import { EmailAddresses, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
+import { colors } from '../../lib/colors';
 
 export enum EmailTemplates {
   GroupVerification = 'groupVerification',
@@ -13,13 +14,16 @@ export enum EmailTemplates {
 
 export const buildTemplate = (templateName: string, data: any) => {
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
-  const stylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.css');
+  const stylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
   if (!fs.existsSync(templatePath)) {
     throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
   }
   const templateString = fs.readFileSync(templatePath, 'utf8');
   if (fs.existsSync(stylePath)) {
-    data.style = fs.readFileSync(stylePath, 'utf8');
+    const rawCss = fs.readFileSync(stylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.style = styleTemplate;
   }
   const template = Handlebars.compile(templateString);
   return template(data);

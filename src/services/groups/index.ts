@@ -680,6 +680,10 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
       }
 
       if (status === UserGroupStatus.Removed || status === UserGroupStatus.Banned) {
+        if (userGroup.role === UserGroupRole.Owner) {
+          throw new CustomError('You cannot remove or ban the owner of a group.', ErrorTypes.UNPROCESSABLE);
+        }
+
         if (req.requestor._id.toString() === userId) {
           throw new CustomError('You are not allowed to remove or ban yourself from a group. Try Leaving a group instead.', ErrorTypes.NOT_ALLOWED);
         }

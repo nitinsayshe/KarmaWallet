@@ -10,7 +10,7 @@ import { IModel } from '../types/model';
 export interface IUnsdgCategory {
   name: UnsdgNames;
   index: number;
-  createOn: Date;
+  createdOn: Date;
   lastModified: Date;
 }
 

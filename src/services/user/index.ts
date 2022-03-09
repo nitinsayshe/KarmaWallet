@@ -1,20 +1,27 @@
 import argon2 from 'argon2';
 import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
+import isemail from 'isemail';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
   IUser, IUserDocument, UserModel,
+  UserEmailStatus,
 } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
 import {
   TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes, UserRoles,
 } from '../../lib/constants';
-import * as Token from '../token';
+import * as TokenService from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { sendGroupVerificationEmail } from '../email';
+
+dayjs.extend(utc);
 
 export interface ILoginData {
   email: string;
@@ -27,6 +34,12 @@ export interface IUserData extends ILoginData {
   zipcode: string;
   subscribedUpdates: boolean;
   role?: UserRoles;
+}
+
+export interface IEmailVerificationData {
+  email: string;
+  groupName: string;
+  tokenValue: string;
 }
 
 export const register = async (req: IRequest, {
@@ -162,7 +175,7 @@ export const logout = async (_: IRequest, authKey: string) => {
 
 export const updateUser = async (_: IRequest, user: IUserDocument, updates: Partial<IUser>) => {
   try {
-    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: new Date() }, { new: true });
+    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: dayjs().utc().toDate() }, { new: true });
   } catch (err) {
     throw asCustomError(err);
   }
@@ -203,7 +216,7 @@ export const createPasswordResetToken = async (_: IRequest, email: string) => {
   const minutes = passwordResetTokenMinutes;
   const user = await UserModel.findOne({ email });
   if (user) {
-    await Token.createToken({ user, minutes, type: TokenTypes.Password });
+    await TokenService.createToken({ user, minutes, type: TokenTypes.Password });
   }
   // TODO: Send Email
   const message = `An email has been sent to the email address you provided with further instructions. Your reset request will expire in ${passwordResetTokenMinutes} minutes.`;
@@ -216,7 +229,7 @@ export const resetPasswordFromToken = async (req: IRequest, email: string, value
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
-  const token = await Token.getTokenAndConsume(user, value, TokenTypes.Password);
+  const token = await TokenService.getTokenAndConsume(user, value, TokenTypes.Password);
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }
@@ -224,25 +237,52 @@ export const resetPasswordFromToken = async (req: IRequest, email: string, value
   return _user;
 };
 
-export const sendEmailVerification = async (_: IRequest, uid: string) => {
+export const altEmailChecks = (user: IUserDocument, email: string) => {
+  if (!isemail.validate(email, { minDomainAtoms: 2 })) {
+    throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+  }
+  if (!user?.altEmails?.length) {
+    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
+  }
+  const altEmail = user.altEmails.find(alt => alt.email === email);
+  if (!altEmail) {
+    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
+  }
+  if (altEmail.status === UserEmailStatus.Verified) {
+    throw new CustomError(`Email: ${email} already verified.`, ErrorTypes.INVALID_ARG);
+  }
+};
+
+export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
+  const { requestor } = req;
+  // this request doesn't necessarily need to be coupled to a group.
+  // we may want to add a more generic alt email verification template for
+  // this request and avoid group name usage here
+  const { email, groupName } = req.body;
   const days = emailVerificationDays;
-  const msg = `Verfication instructions sent to your provided email address. Validation will expire in ${days} days.`;
-  const user = await UserModel.findById(uid);
-  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
-  await Token.createToken({ user, days, type: TokenTypes.Email });
-  // TODO: Send Email'
+  const msg = `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
+  altEmailChecks(requestor, email);
+  const token = await TokenService.createToken({
+    user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
+  });
+  await sendGroupVerificationEmail({
+    name: requestor.name, domain: 'https://karmawallet.io', groupName, token: token.value, recipientEmail: email,
+  });
   return msg;
 };
 
-export const verifyEmail = async (req: IRequest, email: string, token: string) => {
+export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const errMsg = 'Token not found. Please request email verification again.';
-  const user: IUserDocument = await getUser(req, { email });
-  if (!user) {
-    throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  const { requestor } = req;
+  const { tokenValue, email } = req.body;
+  if (!tokenValue) {
+    throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
   }
-  const tokenData = await Token.getTokenAndConsume(user, token, TokenTypes.Email);
-  if (!tokenData) {
-    throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  altEmailChecks(requestor, email);
+  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail, { 'resource.altEmail': email });
+  if (!token) {
+    throw new CustomError(errMsg, ErrorTypes.INVALID_ARG);
   }
-  return updateUser(req, user, { emailVerified: true });
+  await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: dayjs().utc().toDate() }, { new: true });
+  return `Email: ${email} has been successfuly verified.`;
 };

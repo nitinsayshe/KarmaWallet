@@ -2,7 +2,11 @@ import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ErrorTypes, UserGroupRole, UserRoles } from '../../lib/constants';
+import {
+  emailVerificationDays, TokenTypes,
+  ErrorTypes, UserGroupRole, UserRoles,
+} from '../../lib/constants';
+
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -16,6 +20,8 @@ import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
+import * as TokenService from '../token';
+import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
 
 dayjs.extend(utc);
@@ -310,7 +316,6 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
 
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
     if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
-    if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
 
     const existingGroup = await GroupModel.findOne({ code });
 
@@ -439,6 +444,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
+      });
+      const token = await TokenService.createToken({
+        user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
+      });
+      await sendGroupVerificationEmail({
+        name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
       });
     }
 

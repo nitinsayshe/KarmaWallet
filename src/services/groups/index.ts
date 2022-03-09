@@ -57,8 +57,8 @@ export interface IGroupRequestBody {
 }
 
 export interface IJoinGroupRequest {
-  groupCode: string;
-  groupEmail: string;
+  code: string;
+  email: string;
   userId: string;
 }
 
@@ -384,13 +384,13 @@ export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
 
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   try {
-    const { groupCode, groupEmail, userId } = req.body;
+    const { code, email, userId } = req.body;
 
-    if (!groupCode) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
+    if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
     if (!userId) throw new CustomError('No user specified to join this group.', ErrorTypes.INVALID_ARG);
 
-    const group = await GroupModel.findOne({ code: groupCode });
-    if (!group) throw new CustomError(`A group was not found with code: ${groupCode}`, ErrorTypes.NOT_FOUND);
+    const group = await GroupModel.findOne({ code });
+    if (!group) throw new CustomError(`A group was not found with code: ${code}`, ErrorTypes.NOT_FOUND);
     if (group.status === GroupStatus.Locked) throw new CustomError('This group is not accepting new members.', ErrorTypes.NOT_ALLOWED);
 
     let user: IUserDocument;
@@ -408,7 +408,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     const existingUserGroup = await UserGroupModel.findOne({
       group,
       user,
-      email: groupEmail,
+      email,
     });
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {
@@ -419,14 +419,14 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {
-      if (!isemail.validate(groupEmail, { minDomainAtoms: 2 })) {
+      if (!isemail.validate(email, { minDomainAtoms: 2 })) {
         throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
       }
 
       // ??? should we support falling back to existing user emails if the groupEmail does not
       // meet the groups requirements???
       // const validEmail = [groupEmail, user.email, ...(user.altEmails || [])].find(email => {
-      const _validEmail = [groupEmail].find(email => !!group.domains.find(domain => email.split('@')[1] === domain));
+      const _validEmail = [email].find(e => !!group.domains.find(domain => e.split('@')[1] === domain));
 
       if (!_validEmail) throw new CustomError(`A valid email from ${group.domains.length > 1 ? 'one of ' : ''}the following domain${group.domains.length > 1 ? 's' : ''} is required to join this group: ${group.domains.join(', ')}`);
 

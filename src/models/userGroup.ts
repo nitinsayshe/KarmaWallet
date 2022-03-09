@@ -2,9 +2,10 @@ import {
   Schema,
   model,
   Document,
-  Model,
+  PaginateModel,
   ObjectId,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { UserGroupRole } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IGroup, IShareableGroup } from './group';
@@ -70,5 +71,6 @@ const userGroupSchema = new Schema({
     ref: 'subgroup',
   }],
 });
+userGroupSchema.plugin(mongoosePaginate);
 
-export const UserGroupModel = model<IUserGroupDocument, Model<IUserGroup>>('user_group', userGroupSchema);
+export const UserGroupModel = model<IUserGroupDocument, PaginateModel<IUserGroup>>('user_group', userGroupSchema);

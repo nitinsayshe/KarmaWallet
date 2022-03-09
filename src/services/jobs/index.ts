@@ -10,6 +10,13 @@ export interface ISendGroupVerificationEmailParams {
   token: string;
 }
 
+export interface ISendAltEmailVerificationParams {
+  name: string;
+  domain: string;
+  recipientEmail: string;
+  token: string;
+}
+
 export interface ICreateJobParams {
   name: string,
   data?: any
@@ -21,6 +28,16 @@ export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGrou
   } = req.body;
   await EmailService.sendGroupVerificationEmail({
     name, domain, token, groupName, recipientEmail,
+  });
+  return 'Job added to queue';
+};
+
+export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendAltEmailVerificationParams>) => {
+  const {
+    name, domain, token, recipientEmail,
+  } = req.body;
+  await EmailService.sendAltEmailVerification({
+    name, domain, token, recipientEmail,
   });
   return 'Job added to queue';
 };

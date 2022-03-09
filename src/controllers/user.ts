@@ -156,9 +156,9 @@ export const resetPasswordFromToken: IRequestHandler<{}, {}, (User.ILoginData & 
   }
 };
 
-export const sendAltEmailVerification: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
+export const resendAltEmailVerification: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
   try {
-    const data = await User.sendAltEmailVerification(req);
+    const data = await User.resendAltEmailVerification(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -19,7 +19,7 @@ import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
-import { sendGroupVerificationEmail } from '../email';
+import { sendAltEmailVerification } from '../email';
 
 dayjs.extend(utc);
 
@@ -38,7 +38,7 @@ export interface IUserData extends ILoginData {
 
 export interface IEmailVerificationData {
   email: string;
-  groupName: string;
+  code: string;
   tokenValue: string;
 }
 
@@ -238,6 +238,7 @@ export const resetPasswordFromToken = async (req: IRequest, email: string, value
 };
 
 export const altEmailChecks = (user: IUserDocument, email: string) => {
+  console.log(user.altEmails);
   if (!isemail.validate(email, { minDomainAtoms: 2 })) {
     throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   }
@@ -253,20 +254,20 @@ export const altEmailChecks = (user: IUserDocument, email: string) => {
   }
 };
 
-export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
+export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
   // this request doesn't necessarily need to be coupled to a group.
   // we may want to add a more generic alt email verification template for
   // this request and avoid group name usage here
-  const { email, groupName } = req.body;
+  const { email } = req.body;
   const days = emailVerificationDays;
   const msg = `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
   altEmailChecks(requestor, email);
   const token = await TokenService.createToken({
     user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
   });
-  await sendGroupVerificationEmail({
-    name: requestor.name, domain: 'https://karmawallet.io', groupName, token: token.value, recipientEmail: email,
+  await sendAltEmailVerification({
+    name: requestor.name, domain: 'https://karmawallet.io', token: token.value, recipientEmail: email,
   });
   return msg;
 };
@@ -274,14 +275,17 @@ export const sendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEm
 export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const errMsg = 'Token not found. Please request email verification again.';
   const { requestor } = req;
-  const { tokenValue, email } = req.body;
+  const { tokenValue } = req.body;
   if (!tokenValue) {
     throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
   }
-  altEmailChecks(requestor, email);
-  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail, { 'resource.altEmail': email });
+  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail);
   if (!token) {
     throw new CustomError(errMsg, ErrorTypes.INVALID_ARG);
+  }
+  const email = token?.resource?.altEmail;
+  if (!email) {
+    throw new CustomError('This token is not associated with an email address.', ErrorTypes.INVALID_ARG);
   }
   await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: dayjs().utc().toDate() }, { new: true });
   return `Email: ${email} has been successfuly verified.`;

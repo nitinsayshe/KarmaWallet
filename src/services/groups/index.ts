@@ -568,6 +568,10 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
     // status should be set to Removed not Left.
     if (!userGroup) throw new CustomError('You are not a member of this group, so you cannot leave it.', ErrorTypes.UNPROCESSABLE);
 
+    if (userGroup.role === UserGroupRole.Owner) {
+      throw new CustomError('You are not allowed to leave this group because you are its owner.', ErrorTypes.UNPROCESSABLE);
+    }
+
     // preserve any more severe statuses so they are not
     // overwritten with left status
     if (userGroup.status !== UserGroupStatus.Removed && userGroup.status !== UserGroupStatus.Banned) {

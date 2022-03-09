@@ -6,6 +6,7 @@ import * as Token from '../services/token';
 import { isValidEmailFormat } from '../lib/string';
 import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
+import * as UserVerificationService from '../services/user/verification';
 
 interface IUpdatePasswordBody {
   newPassword: string;
@@ -158,7 +159,7 @@ export const resetPasswordFromToken: IRequestHandler<{}, {}, (User.ILoginData & 
 
 export const resendAltEmailVerification: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
   try {
-    const data = await User.resendAltEmailVerification(req);
+    const data = await UserVerificationService.resendAltEmailVerification(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -167,7 +168,7 @@ export const resendAltEmailVerification: IRequestHandler<{}, {}, Partial<User.IE
 
 export const verifyAltEmail: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
   try {
-    const data = await User.verifyAltEmail(req);
+    const data = await UserVerificationService.verifyAltEmail(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

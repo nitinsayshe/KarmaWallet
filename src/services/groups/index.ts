@@ -94,28 +94,6 @@ export const checkCode = async (req: IRequest<{}, ICheckCodeRequest>) => {
   }
 };
 
-export const getShareableGroup = ({
-  _id,
-  name,
-  code,
-  domains,
-  settings,
-  owner,
-  status,
-  lastModified,
-  createdOn,
-}: IGroupDocument): (IShareableGroup & { _id: string }) => ({
-  _id,
-  name,
-  code,
-  domains,
-  settings,
-  status,
-  owner: (owner as IUserDocument)._id,
-  lastModified,
-  createdOn,
-});
-
 export const verifyDomains = (domains: string[], allowDomainRestriction: boolean) => {
   if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
   if (!allowDomainRestriction) return [];
@@ -355,6 +333,36 @@ export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getShareableGroup = ({
+  _id,
+  name,
+  code,
+  domains,
+  settings,
+  owner,
+  status,
+  lastModified,
+  createdOn,
+}: IGroupDocument): (IShareableGroup & { _id: string }) => {
+  const fullOwner = (owner as IUserDocument);
+  const _owner = {
+    _id: fullOwner._id,
+    name: fullOwner.name,
+  };
+
+  return {
+    _id,
+    name,
+    code,
+    domains,
+    settings,
+    status,
+    owner: _owner,
+    lastModified,
+    createdOn,
+  };
 };
 
 export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {

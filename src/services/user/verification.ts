@@ -20,7 +20,6 @@ export interface IEmailVerificationData {
 }
 
 export const altEmailChecks = (user: IUserDocument, email: string) => {
-  console.log(user.altEmails);
   if (!isemail.validate(email, { minDomainAtoms: 2 })) {
     throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   }

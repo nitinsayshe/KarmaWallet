@@ -13,7 +13,7 @@ import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup, GroupStatus,
 } from '../../models/group';
 import {
-  IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
+  IShareableUserGroup, IUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
 import { getUser } from '../user';
@@ -115,117 +115,6 @@ export const getShareableGroup = ({
   lastModified,
   createdOn,
 });
-
-export const getShareableUserGroup = ({
-  _id,
-  group,
-  email,
-  role,
-  status,
-  joinedOn,
-}: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
-  const _group = getShareableGroup(group as IGroupDocument);
-
-  return {
-    _id,
-    email,
-    role,
-    status,
-    joinedOn,
-    group: _group,
-  };
-};
-
-export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupRequest>) => {
-  try {
-    const { groupId } = req.params;
-    const { groupCode } = req.query;
-    if (!groupCode && !groupId) throw new CustomError('Group id or code is required.', ErrorTypes.INVALID_ARG);
-
-    const query: FilterQuery<IGroup> = {};
-
-    if (!!groupId) query._id = groupId;
-    if (!!groupCode) query.code = groupCode;
-
-    const group = await GroupModel.findOne(query)
-      .populate([
-        {
-          path: 'company',
-          model: CompanyModel,
-        },
-        {
-          path: 'owner',
-          model: UserModel,
-        },
-      ]);
-
-    if (!group) {
-      if (!!groupId) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
-      if (!!groupCode) throw new CustomError(`A group with code: ${groupCode} could not be found.`, ErrorTypes.NOT_FOUND);
-    }
-
-    return group;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
-  // TODO: add support getting name by sub string
-  // TODO: add not returning private groups unless requestor is karma member
-
-  const options = {
-    projection: query?.projection || '',
-    populate: query.population || [
-      {
-        path: 'company',
-        model: CompanyModel,
-      },
-      {
-        path: 'owner',
-        model: UserModel,
-      },
-    ],
-    lean: true,
-    page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
-    limit: query?.limit || 10,
-  };
-  return GroupModel.paginate(query.filter, options);
-};
-
-export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
-  const { userId } = req.params;
-  try {
-    if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
-      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
-    }
-
-    return await UserGroupModel.find({
-      user: userId,
-      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
-    })
-      .populate([
-        {
-          path: 'group',
-          model: GroupModel,
-          populate: [
-            {
-              path: 'company',
-              model: CompanyModel,
-            },
-            {
-              path: 'owner',
-              model: UserModel,
-            },
-          ],
-        },
-      ]);
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
 
 export const verifyDomains = (domains: string[], allowDomainRestriction: boolean) => {
   if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
@@ -377,6 +266,187 @@ export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
     await GroupModel.deleteOne({ _id: groupId });
 
     // ??? send notification to users that group has been deleted???
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupRequest>) => {
+  try {
+    const { groupId } = req.params;
+    const { groupCode } = req.query;
+    if (!groupCode && !groupId) throw new CustomError('Group id or code is required.', ErrorTypes.INVALID_ARG);
+
+    const query: FilterQuery<IGroup> = {};
+
+    if (!!groupId) query._id = groupId;
+    if (!!groupCode) query.code = groupCode;
+
+    const group = await GroupModel.findOne(query)
+      .populate([
+        {
+          path: 'company',
+          model: CompanyModel,
+        },
+        {
+          path: 'owner',
+          model: UserModel,
+        },
+      ]);
+
+    if (!group) {
+      if (!!groupId) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
+      if (!!groupCode) throw new CustomError(`A group with code: ${groupCode} could not be found.`, ErrorTypes.NOT_FOUND);
+    }
+
+    return group;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
+  try {
+    const { groupId } = req.params;
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    let requestorUserGroup: IUserGroupDocument;
+
+    // user must be a member of this group or a karma member
+    // to view its members
+    if (req.requestor.role === UserRoles.None) {
+      requestorUserGroup = await UserGroupModel.findOne({
+        group: groupId,
+        user: req.requestor._id,
+      });
+
+      if (
+        !requestorUserGroup
+        || requestorUserGroup.status === UserGroupStatus.Left
+        || requestorUserGroup.status === UserGroupStatus.Removed
+        || requestorUserGroup.status === UserGroupStatus.Banned
+      ) {
+        throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
+      }
+    }
+
+    // regular members only need to see verified and approved members
+    // only admins (or higher) and karma members need to be able to
+    // see all the other members.
+    const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
+      ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
+      : [UserGroupStatus.Left];
+
+    const query: FilterQuery<IUserGroup> = {
+      group: groupId,
+      status: { $nin: statusesToExclude },
+    };
+
+    const memberUserGroups = await UserGroupModel
+      .find(query)
+      .populate([
+        {
+          path: 'user',
+          model: UserModel,
+        },
+      ]);
+
+    return memberUserGroups;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
+  // TODO: add support getting name by sub string
+  // TODO: add not returning private groups unless requestor is karma member
+
+  const options = {
+    projection: query?.projection || '',
+    populate: query.population || [
+      {
+        path: 'company',
+        model: CompanyModel,
+      },
+      {
+        path: 'owner',
+        model: UserModel,
+      },
+    ],
+    lean: true,
+    page: query?.skip || 1,
+    sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
+    limit: query?.limit || 10,
+  };
+  return GroupModel.paginate(query.filter, options);
+};
+
+export const getShareableGroupMember = ({
+  user,
+  email,
+  role,
+  status,
+  joinedOn,
+}: IUserGroupDocument) => {
+  const { name, _id } = (user as IUserDocument);
+  return {
+    _id,
+    name,
+    email,
+    role,
+    status,
+    joinedOn,
+  };
+};
+
+export const getShareableUserGroup = ({
+  _id,
+  group,
+  email,
+  role,
+  status,
+  joinedOn,
+}: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
+  const _group = getShareableGroup(group as IGroupDocument);
+
+  return {
+    _id,
+    email,
+    role,
+    status,
+    joinedOn,
+    group: _group,
+  };
+};
+
+export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
+  const { userId } = req.params;
+  try {
+    if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    return await UserGroupModel.find({
+      user: userId,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+    })
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+          populate: [
+            {
+              path: 'company',
+              model: CompanyModel,
+            },
+            {
+              path: 'owner',
+              model: UserModel,
+            },
+          ],
+        },
+      ]);
   } catch (err) {
     throw asCustomError(err);
   }

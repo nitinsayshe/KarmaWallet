@@ -11,6 +11,9 @@ groupRouter.route('/join')
 groupRouter.route('/check-code')
   .get(authenticate, GroupController.checkCode);
 
+groupRouter.route('/members/:groupId')
+  .get(authenticate, GroupController.getGroupMembers);
+
 groupRouter.route('/:groupId/user/:userId')
   .put(authenticate, GroupController.updateUserGroup);
 

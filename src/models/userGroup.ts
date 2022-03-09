@@ -21,6 +21,14 @@ export enum UserGroupStatus {
   Left = 'left',
 }
 
+export interface IShareableGroupMember {
+  name: string;
+  email: string;
+  role: UserGroupRole;
+  status: UserGroupStatus;
+  joinedOn: Date;
+}
+
 export interface IShareableUserGroup {
   group: IRef<ObjectId, (IShareableGroup | IGroup)>;
   email: string;

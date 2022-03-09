@@ -48,7 +48,7 @@ export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<I
     user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
   });
   await sendAltEmailVerification({
-    name: requestor.name, domain: 'https://karmawallet.io', token: token.value, recipientEmail: email,
+    name: requestor.name, token: token.value, recipientEmail: email,
   });
   return msg;
 };

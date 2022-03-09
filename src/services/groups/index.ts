@@ -493,12 +493,14 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 
     // requestor must be an admin (or higher) for the group
     // OR be an internal karma member to update a group.
-    //
-    // ??? if they are a karma member AND part of the group, should
-    // they still have to have admin permissions for the group to
-    // update?
-    if ((!!userGroup && userGroup.role === UserGroupRole.Member) || (!userGroup && req.requestor.role === UserRoles.None)) {
-      throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
+    if (!!userGroup) {
+      if (userGroup.role === UserGroupRole.Member && req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
+      }
+    } else {
+      if (req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
+      }
     }
 
     if (!!owner && owner !== (group.owner as IUserDocument)._id.toString()) {

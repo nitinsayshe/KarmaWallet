@@ -433,8 +433,9 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    // add groupEmail to user's list of altEmails if doesnt already exist
-    if (!user.altEmails.find(altEmail => altEmail.email === validEmail)) {
+    // add groupEmail to user's list of altEmails if doesnt already exist and
+    // is not their primary email
+    if (!user.altEmails.find(altEmail => altEmail.email === validEmail) && user.email !== validEmail) {
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,

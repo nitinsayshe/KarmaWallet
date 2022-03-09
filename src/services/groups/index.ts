@@ -25,7 +25,7 @@ export interface ICheckCodeRequest {
 }
 
 export interface IGetGroupRequest {
-  groupCode?: string;
+  code?: string;
 }
 
 export interface IUserGroupsRequest {
@@ -50,7 +50,7 @@ export interface IUpdateUserGroupRequestBody {
 export interface IGroupRequestBody {
   owner?: string; // the id of the owner
   name: string;
-  groupCode: string;
+  code: string;
   status: GroupStatus;
   settings: IGroupSettings;
   domains: string[];
@@ -192,22 +192,22 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
     const {
       owner,
       name,
-      groupCode,
+      code,
       settings,
       domains,
     } = req.body;
 
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
-    if (!groupCode) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
-    if (!isValidCode(groupCode)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
+    if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
+    if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
 
-    const existingGroup = await GroupModel.findOne({ code: groupCode });
+    const existingGroup = await GroupModel.findOne({ code });
 
     if (!!existingGroup) throw new CustomError('This group code is already in use.', ErrorTypes.INVALID_ARG);
 
     const group = new GroupModel({
       name,
-      code: groupCode,
+      code,
       settings: defaultGroupSettings,
     });
 
@@ -274,13 +274,13 @@ export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
 export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupRequest>) => {
   try {
     const { groupId } = req.params;
-    const { groupCode } = req.query;
-    if (!groupCode && !groupId) throw new CustomError('Group id or code is required.', ErrorTypes.INVALID_ARG);
+    const { code } = req.query;
+    if (!code && !groupId) throw new CustomError('Group id or code is required.', ErrorTypes.INVALID_ARG);
 
     const query: FilterQuery<IGroup> = {};
 
     if (!!groupId) query._id = groupId;
-    if (!!groupCode) query.code = groupCode;
+    if (!!code) query.code = code;
 
     const group = await GroupModel.findOne(query)
       .populate([
@@ -296,7 +296,7 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
 
     if (!group) {
       if (!!groupId) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
-      if (!!groupCode) throw new CustomError(`A group with code: ${groupCode} could not be found.`, ErrorTypes.NOT_FOUND);
+      if (!!code) throw new CustomError(`A group with code: ${code} could not be found.`, ErrorTypes.NOT_FOUND);
     }
 
     return group;
@@ -534,7 +534,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   const {
     owner,
     name,
-    groupCode,
+    code,
     status,
     settings,
     domains,
@@ -542,7 +542,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
-    if (!owner && !name && !groupCode && !status && !settings && !domains) {
+    if (!owner && !name && !code && !status && !settings && !domains) {
       throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
     }
 
@@ -615,9 +615,9 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 
     if (!!name) group.name = name;
 
-    if (!!groupCode) {
-      if (!isValidCode(groupCode)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
-      group.code = groupCode;
+    if (!!code) {
+      if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
+      group.code = code;
     }
 
     if (!!status && group.status !== status) {

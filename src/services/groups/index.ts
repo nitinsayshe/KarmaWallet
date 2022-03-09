@@ -1,8 +1,12 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
-  emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
+  emailVerificationDays, TokenTypes,
+  ErrorTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
+
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -10,15 +14,17 @@ import {
   IUserDocument, UserEmailStatus, UserModel,
 } from '../../models/user';
 import {
-  IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup,
+  IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup, GroupStatus,
 } from '../../models/group';
 import {
   IShareableUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
-import { getShareableUser, getUser } from '../user';
 import * as TokenService from '../token';
 import { sendGroupVerificationEmail } from '../email';
+import { getUser } from '../user';
+
+dayjs.extend(utc);
 
 export interface ICheckCodeRequest {
   code: string;
@@ -28,25 +34,37 @@ export interface IGetGroupRequest {
   code?: string;
 }
 
-export interface IGetUserGroupsRequest {
+export interface IUserGroupsRequest {
   userId: string;
 }
 
-export interface IGetGroupsRequestParams {
+export interface IGroupRequestParams {
   groupId?: string;
 }
 
-export interface ICreateGroupRequest {
+export interface IUpdateUserGroupRequestParams {
+  userId: string;
+  groupId: string;
+}
+
+export interface IUpdateUserGroupRequestBody {
+  email: string;
+  role: UserGroupRole;
+  status: UserGroupStatus;
+}
+
+export interface IGroupRequestBody {
   owner?: string; // the id of the owner
   name: string;
   code: string;
+  status: GroupStatus;
   settings: IGroupSettings;
   domains: string[];
 }
 
 export interface IJoinGroupRequest {
-  groupCode: string;
-  groupEmail: string;
+  code: string;
+  email: string;
   userId: string;
 }
 
@@ -62,7 +80,7 @@ const defaultGroupSettings: IGroupSettings = {
     enabled: false,
     matchPercentage: -1,
     maxDollarAmount: -1,
-    lastModified: new Date(),
+    lastModified: dayjs().utc().toDate(),
   },
 };
 
@@ -89,21 +107,20 @@ export const getShareableGroup = ({
   domains,
   settings,
   owner,
+  status,
   lastModified,
   createdOn,
-}: IGroupDocument): (IShareableGroup & { _id: string }) => {
-  const _owner = getShareableUser(owner as IUserDocument);
-  return {
-    _id,
-    name,
-    code,
-    domains,
-    settings,
-    owner: _owner,
-    lastModified,
-    createdOn,
-  };
-};
+}: IGroupDocument): (IShareableGroup & { _id: string }) => ({
+  _id,
+  name,
+  code,
+  domains,
+  settings,
+  status,
+  owner: (owner as IUserDocument)._id,
+  lastModified,
+  createdOn,
+});
 
 export const getShareableUserGroup = ({
   _id,
@@ -125,7 +142,7 @@ export const getShareableUserGroup = ({
   };
 };
 
-export const getGroup = async (req: IRequest<IGetGroupsRequestParams, IGetGroupRequest>) => {
+export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupRequest>) => {
   try {
     const { groupId } = req.params;
     const { code } = req.query;
@@ -161,6 +178,7 @@ export const getGroup = async (req: IRequest<IGetGroupsRequestParams, IGetGroupR
 
 export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   // TODO: add support getting name by sub string
+  // TODO: add not returning private groups unless requestor is karma member
 
   const options = {
     projection: query?.projection || '',
@@ -182,15 +200,18 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   return GroupModel.paginate(query.filter, options);
 };
 
-export const getUserGroups = async (req: IRequest<IGetUserGroupsRequest>) => {
+export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
   const { userId } = req.params;
   try {
     if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    if (req.requestor._id !== userId && req.requestor.role === UserRoles.None) {
+    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
       throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
     }
 
-    return await UserGroupModel.find({ user: userId })
+    return await UserGroupModel.find({
+      user: userId,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+    })
       .populate([
         {
           path: 'group',
@@ -216,10 +237,16 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
   if (!allowDomainRestriction) return [];
 
-  const invalidDomains = domains.filter(d => !DOMAIN_REGEX.test(d));
+  const invalidDomains = domains.filter(d => {
+    DOMAIN_REGEX.lastIndex = 0;
+    return !DOMAIN_REGEX.test(d);
+  });
   if (!!invalidDomains.length) throw new CustomError(`The following domains are invalid: ${invalidDomains.join(', ')}.`, ErrorTypes.INVALID_ARG);
 
-  return domains;
+  // remove duplicate domains
+  const _domains = new Set(domains);
+
+  return Array.from(_domains);
 };
 
 export const verifyGroupSettings = (settings: IGroupSettings) => {
@@ -277,7 +304,7 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
   return _settings;
 };
 
-export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) => {
+export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
   try {
     const {
       owner,
@@ -329,15 +356,47 @@ export const createGroup = async (req: IRequest<{}, {}, ICreateGroupRequest>) =>
   }
 };
 
+export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
+  const { groupId } = req.params;
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    let userGroup: IUserGroupDocument;
+    if (req.requestor.role === UserRoles.None) {
+      userGroup = await UserGroupModel.findOne({ group: groupId });
+    }
+
+    // only a karma member or the owner of the group can delete
+    if (req.requestor.role === UserRoles.None && userGroup?.role !== UserGroupRole.Owner) {
+      throw new CustomError('You are not authorized to delete this group.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    const group = await GroupModel.findOne({ _id: groupId });
+
+    if (!group) throw new CustomError(`Group with id: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
+
+    await UserGroupModel.deleteMany({ group: groupId });
+
+    // TODO: delete all group statements
+
+    await GroupModel.deleteOne({ _id: groupId });
+
+    // ??? send notification to users that group has been deleted???
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   try {
-    const { groupCode, groupEmail, userId } = req.body;
+    const { code, email, userId } = req.body;
 
-    if (!groupCode) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
+    if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
     if (!userId) throw new CustomError('No user specified to join this group.', ErrorTypes.INVALID_ARG);
 
-    const group = await GroupModel.findOne({ code: groupCode });
-    if (!group) throw new CustomError(`A group was not found with code: ${groupCode}`, ErrorTypes.NOT_FOUND);
+    const group = await GroupModel.findOne({ code });
+    if (!group) throw new CustomError(`A group was not found with code: ${code}`, ErrorTypes.NOT_FOUND);
+    if (group.status === GroupStatus.Locked) throw new CustomError('This group is not accepting new members.', ErrorTypes.NOT_ALLOWED);
 
     let user: IUserDocument;
     if (userId === req.requestor._id.toString()) {
@@ -354,37 +413,40 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     const existingUserGroup = await UserGroupModel.findOne({
       group,
       user,
-      email: groupEmail,
+      email,
     });
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
     }
 
+    // TODO: status === Removed, check if needs approval to join again
+
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {
-      if (!isemail.validate(groupEmail, { minDomainAtoms: 2 })) {
+      if (!isemail.validate(email, { minDomainAtoms: 2 })) {
         throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
       }
 
       // ??? should we support falling back to existing user emails if the groupEmail does not
       // meet the groups requirements???
       // const validEmail = [groupEmail, user.email, ...(user.altEmails || [])].find(email => {
-      const _validEmail = [groupEmail].find(email => !!group.domains.find(domain => email.split('@')[1] === domain));
+      const _validEmail = [email].find(e => !!group.domains.find(domain => e.split('@')[1] === domain));
 
       if (!_validEmail) throw new CustomError(`A valid email from ${group.domains.length > 1 ? 'one of ' : ''}the following domain${group.domains.length > 1 ? 's' : ''} is required to join this group: ${group.domains.join(', ')}`);
 
       validEmail = _validEmail;
     }
 
-    // add groupEmail to user's list of altEmails if doesnt already exist
-    if (!user.altEmails.find(altEmail => altEmail.email === validEmail)) {
-      const token = await TokenService.createToken({
-        user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
-      });
+    // add groupEmail to user's list of altEmails if doesnt already exist and
+    // is not their primary email
+    if (!user.altEmails.find(altEmail => altEmail.email === validEmail) && user.email !== validEmail) {
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
+      });
+      const token = await TokenService.createToken({
+        user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
       });
       await sendGroupVerificationEmail({
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
@@ -402,6 +464,249 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     await userGroup.save();
     await user.save();
 
+    return userGroup;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupRequestBody>) => {
+  const { groupId } = req.params;
+  const {
+    owner,
+    name,
+    code,
+    status,
+    settings,
+    domains,
+  } = req.body;
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    if (!owner && !name && !code && !status && !settings && !domains) {
+      throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
+    }
+
+    const group = await GroupModel
+      .findOne({ _id: groupId })
+      .populate([
+        {
+          path: 'owner',
+          model: UserModel,
+        },
+      ]);
+
+    if (!group) throw new CustomError(`Group with id: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
+
+    const userGroup = await UserGroupModel.findOne({
+      group,
+      user: req.requestor,
+    });
+
+    // requestor must be an admin (or higher) for the group
+    // OR be an internal karma member to update a group.
+    if (!!userGroup) {
+      if (userGroup.role === UserGroupRole.Member && req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
+      }
+    } else {
+      if (req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
+      }
+    }
+
+    if (!!owner && owner !== (group.owner as IUserDocument)._id.toString()) {
+      // TODO: only allow updating owner if requestor is karma member or owner of group...
+
+      const newOwner = await getUser(req, { _id: owner });
+
+      if (!newOwner) throw new CustomError(`Owner with id: ${owner} not found.`, ErrorTypes.NOT_FOUND);
+
+      group.owner = newOwner;
+
+      // create or update userGroup for this new owner.
+      // ??? only if they meet the groups protection requirements???
+      //   - or should the owner be able to override these rules?
+      let ownerUserGroup = await UserGroupModel.findOne({
+        group,
+        user: newOwner,
+      });
+
+      if (!!ownerUserGroup) {
+        // update existing user group
+        ownerUserGroup.role = UserGroupRole.Owner;
+      } else {
+        // create new user group
+        ownerUserGroup = new UserGroupModel({
+          group,
+          user: group.owner,
+          email: group.owner.email,
+          role: UserGroupRole.Owner,
+          status: UserGroupStatus.Approved,
+        });
+
+        // ??? do we want to require email verification? which email to set here?
+
+        await ownerUserGroup.save();
+      }
+
+      // TODO: ??? remove old owner???
+      //   - how do we want to handle this? keep them in group with reduced permissions? or remove them from group?
+    }
+
+    if (!!name) group.name = name;
+
+    if (!!code) {
+      if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
+      group.code = code;
+    }
+
+    if (!!status && group.status !== status) {
+      if (!Object.values(GroupStatus).includes(status)) {
+        throw new CustomError('Invalid group status.', ErrorTypes.INVALID_ARG);
+      }
+
+      // only the owner of the group, and karma members, may change the a groups status
+      if (req.requestor.role === UserRoles.None && userGroup.role !== UserGroupRole.Owner) {
+        throw new CustomError('You are not authorized to update this group\'s status.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      group.status = status;
+    }
+
+    if (!!settings) {
+      const updatedSettings = { ...group.settings, ...settings };
+      group.settings = verifyGroupSettings(updatedSettings);
+    }
+
+    if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
+
+    await group.save();
+    return group;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParams, {}, IUpdateUserGroupRequestBody>, internalOverride = false) => {
+  const { userId, groupId } = req.params;
+  const { email, role, status } = req.body;
+
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+    if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+
+    const userGroups = await UserGroupModel.find({
+      $or: [
+        {
+          user: userId,
+          group: groupId,
+        },
+        {
+          user: req.requestor,
+          group: groupId,
+        },
+      ],
+    })
+      .populate([
+        {
+          path: 'user',
+          model: UserModel,
+        },
+        {
+          path: 'group',
+          model: GroupModel,
+        },
+      ]);
+
+    const userGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === userId);
+    const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === req.requestor._id.toString());
+
+    if (!userGroup) throw new CustomError(`A group with id: ${groupId} was not found for this user.`, ErrorTypes.NOT_FOUND);
+    if (req.requestor.role === UserRoles.None && !requestorUserGroup) {
+      throw new CustomError('You are not allowed to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    // make array of the user group roles so can use the index as a score to be compared to.
+    const userGroupRoleScores = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+
+    if (!!email) {
+      // only the user or a karma member can update the email
+      if (req.requestor._id.toString() !== (userGroup.user as IUserDocument)._id.toString() && req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      // TODO: validate email format
+
+      userGroup.email = email;
+
+      // TODO: add email verification
+    }
+
+    const origUserGroupRoleScore = userGroupRoleScores.indexOf(userGroup.role);
+    const requestorGroupRoleScore = !!requestorUserGroup ? userGroupRoleScores.indexOf(requestorUserGroup.role) : -1;
+
+    if (!!role && role !== userGroup.role) {
+      if (!userGroupRoleScores.includes(role)) {
+        throw new CustomError(`Invalid user group role: ${role}`, ErrorTypes.INVALID_ARG);
+      }
+
+      if (req.requestor._id.toString() === userId) throw new CustomError('You are not allowed to change your own role within this group.', ErrorTypes.UNAUTHORIZED);
+
+      if (!!requestorUserGroup) {
+        // roll is not allowed to be updated if requestor is not a karma member, and they have an equal
+        // or lesser role than the user being updated
+        //
+        // example, if the person making the request is an admin for a group, they cannot change the role
+        // of another admin within that group. only the owner or a superadmin would be able to do that.
+        if (req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+          throw new CustomError('You are not authorized to change this user\'s role within this grouop.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      userGroup.role = role;
+    }
+
+    if (!!status && status !== userGroup.status) {
+      if (!Object.values(UserGroupStatus).includes(status)) {
+        throw new CustomError(`Invalid status found: ${status}`, ErrorTypes.INVALID_ARG);
+      }
+
+      if (status === UserGroupStatus.Left) {
+        // only the user can leave a group...
+        if (req.requestor._id.toString() !== userId) {
+          throw new CustomError('You are not authorized to update this user\'s status.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      if (status === UserGroupStatus.Removed || status === UserGroupStatus.Banned) {
+        if (req.requestor._id.toString() === userId) {
+          throw new CustomError('You are not allowed to remove or ban yourself from a group. Try Leaving a group instead.', ErrorTypes.NOT_ALLOWED);
+        }
+
+        if (!!requestorUserGroup && req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+          throw new CustomError('You are not authorized to remove or ban this user.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      if (status === UserGroupStatus.Approved) {
+        if (!!requestorUserGroup && req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+          throw new CustomError('You are not authorized to approve this user.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      if (status === UserGroupStatus.Verified) {
+        // only internal processes (like the email verification process) are allowed to mark a user as verified
+        if (!internalOverride) {
+          throw new CustomError('You are not authorized to verify this user.', ErrorTypes.UNAUTHORIZED);
+        }
+      }
+
+      userGroup.status = status;
+    }
+
+    userGroup.lastModified = dayjs().utc().toDate();
+    await userGroup.save();
     return userGroup;
   } catch (err) {
     throw asCustomError(err);

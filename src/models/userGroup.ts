@@ -17,6 +17,7 @@ export enum UserGroupStatus {
   Approved = 'approved',
   Removed = 'removed',
   Banned = 'banned',
+  Left = 'left',
 }
 
 export interface IShareableUserGroup {

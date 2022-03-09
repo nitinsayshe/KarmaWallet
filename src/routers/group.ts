@@ -11,9 +11,14 @@ groupRouter.route('/join')
 groupRouter.route('/check-code')
   .get(authenticate, GroupController.checkCode);
 
+groupRouter.route('/:groupId/user/:userId')
+  .put(authenticate, GroupController.updateUserGroup);
+
 groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)
-  .post(authenticate, GroupController.createGroup);
+  .post(authenticate, GroupController.createGroup)
+  .put(authenticate, GroupController.updateGroup)
+  .delete(authenticate, GroupController.deleteGroup);
 
 export const group = (app: Express) => app.use('/group', groupRouter);
 

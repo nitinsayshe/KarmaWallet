@@ -14,6 +14,11 @@ export enum GroupPrivacyStatus {
   Private = 'private'
 }
 
+export enum GroupStatus {
+  Open = 'open',
+  Locked = 'locked',
+}
+
 export interface IGroupIntegrations {
   integrations: {
     rare: {
@@ -46,6 +51,7 @@ export interface IShareableGroup {
   domains: string[];
   settings: IGroupSettings;
   owner: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
+  status: GroupStatus;
   createdOn: Date;
   lastModified: Date;
 }
@@ -112,6 +118,11 @@ const groupSchema = new Schema({
   company: {
     type: Schema.Types.ObjectId,
     ref: 'company',
+  },
+  status: {
+    type: String,
+    enum: Object.values(GroupStatus),
+    default: GroupStatus.Open,
   },
 });
 groupSchema.plugin(mongoosePaginate);

@@ -38,7 +38,7 @@ export const getGroups: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getUserGroups: IRequestHandler<GroupService.IGetUserGroupsRequest> = async (req, res) => {
+export const getUserGroups: IRequestHandler<GroupService.IUserGroupsRequest> = async (req, res) => {
   try {
     const userGroups = await GroupService.getUserGroups(req);
     output.api(req, res, userGroups.map(userGroup => GroupService.getShareableUserGroup(userGroup)));
@@ -47,7 +47,7 @@ export const getUserGroups: IRequestHandler<GroupService.IGetUserGroupsRequest> 
   }
 };
 
-export const createGroup: IRequestHandler<{}, {}, GroupService.ICreateGroupRequest> = async (req, res) => {
+export const createGroup: IRequestHandler<{}, {}, GroupService.IGroupRequestBody> = async (req, res) => {
   try {
     const group = await GroupService.createGroup(req);
     output.api(req, res, GroupService.getShareableGroup(group));
@@ -56,9 +56,36 @@ export const createGroup: IRequestHandler<{}, {}, GroupService.ICreateGroupReque
   }
 };
 
+export const deleteGroup: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+  try {
+    await GroupService.deleteGroup(req);
+    output.api(req, res, null);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> = async (req, res) => {
   try {
     const userGroup = await GroupService.joinGroup(req);
+    output.api(req, res, GroupService.getShareableUserGroup(userGroup));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const updateGroup: IRequestHandler<GroupService.IGroupRequestParams, {}, GroupService.IGroupRequestBody> = async (req, res) => {
+  try {
+    const group = await GroupService.updateGroup(req);
+    output.api(req, res, GroupService.getShareableGroup(group));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupRequestParams, {}, GroupService.IUpdateUserGroupRequestBody> = async (req, res) => {
+  try {
+    const userGroup = await GroupService.updateUserGroup(req);
     output.api(req, res, GroupService.getShareableUserGroup(userGroup));
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -83,6 +83,15 @@ export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> 
   }
 };
 
+export const leaveGroup: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+  try {
+    await GroupService.leaveGroup(req);
+    output.api(req, res, null);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const updateGroup: IRequestHandler<GroupService.IGroupRequestParams, {}, GroupService.IGroupRequestBody> = async (req, res) => {
   try {
     const group = await GroupService.updateGroup(req);

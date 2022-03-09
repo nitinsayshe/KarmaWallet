@@ -265,6 +265,8 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
     if (!!groupId) query._id = groupId;
     if (!!code) query.code = code;
 
+    // TODO: include
+
     const group = await GroupModel.findOne(query)
       .populate([
         {
@@ -340,6 +342,30 @@ export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
   }
 };
 
+export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
+  // TODO: add support getting name by sub string
+  // TODO: add not returning private groups unless requestor is karma member
+
+  const options = {
+    projection: query?.projection || '',
+    populate: query.population || [
+      {
+        path: 'company',
+        model: CompanyModel,
+      },
+      {
+        path: 'owner',
+        model: UserModel,
+      },
+    ],
+    lean: true,
+    page: query?.skip || 1,
+    sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
+    limit: query?.limit || 10,
+  };
+  return GroupModel.paginate(query.filter, options);
+};
+
 export const getShareableGroup = ({
   _id,
   name,
@@ -368,30 +394,6 @@ export const getShareableGroup = ({
     lastModified,
     createdOn,
   };
-};
-
-export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
-  // TODO: add support getting name by sub string
-  // TODO: add not returning private groups unless requestor is karma member
-
-  const options = {
-    projection: query?.projection || '',
-    populate: query.population || [
-      {
-        path: 'company',
-        model: CompanyModel,
-      },
-      {
-        path: 'owner',
-        model: UserModel,
-      },
-    ],
-    lean: true,
-    page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
-    limit: query?.limit || 10,
-  };
-  return GroupModel.paginate(query.filter, options);
 };
 
 export const getShareableGroupMember = ({
@@ -543,6 +545,38 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     await user.save();
 
     return userGroup;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
+  const { groupId } = req.params;
+
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    const userGroup = await UserGroupModel.findOne({
+      group: groupId,
+      user: req.requestor,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+    });
+
+    // only a user that is a member of a group can leave it.
+    // if someone else is removing the user, that should be
+    // done with the updateUserGroup function instead and their
+    // status should be set to Removed not Left.
+    if (!userGroup) throw new CustomError('You are not a member of this group, so you cannot leave it.', ErrorTypes.UNPROCESSABLE);
+
+    // preserve any more severe statuses so they are not
+    // overwritten with left status
+    if (userGroup.status !== UserGroupStatus.Removed && userGroup.status !== UserGroupStatus.Banned) {
+      userGroup.role = UserGroupRole.Member;
+      userGroup.status = UserGroupStatus.Left;
+      userGroup.lastModified = dayjs().utc().toDate();
+    }
+
+    await userGroup.save();
   } catch (err) {
     throw asCustomError(err);
   }

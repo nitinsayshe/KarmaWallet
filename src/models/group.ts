@@ -6,7 +6,7 @@ import {
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUser } from './user';
+import { IShareableUser } from './user';
 
 export enum GroupPrivacyStatus {
   Protected = 'protected',
@@ -45,12 +45,17 @@ export interface IGroupSettings {
   matching: IGroupMatching;
 }
 
+export interface IShareableOwner {
+  _id: string;
+  name: string;
+}
+
 export interface IShareableGroup {
   name: string;
   code: string;
   domains: string[];
   settings: IGroupSettings;
-  owner: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
+  owner: IRef<Schema.Types.ObjectId, (IShareableOwner | IShareableUser)>;
   status: GroupStatus;
   createdOn: Date;
   lastModified: Date;

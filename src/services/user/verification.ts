@@ -37,12 +37,8 @@ export const altEmailChecks = (user: IUserDocument, email: string) => {
 
 export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
-  // this request doesn't necessarily need to be coupled to a group.
-  // we may want to add a more generic alt email verification template for
-  // this request and avoid group name usage here
   const { email } = req.body;
   const days = emailVerificationDays;
-  const msg = `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
   altEmailChecks(requestor, email);
   const token = await TokenService.createToken({
     user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
@@ -50,11 +46,10 @@ export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<I
   await sendAltEmailVerification({
     name: requestor.name, token: token.value, recipientEmail: email,
   });
-  return msg;
+  return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
 };
 
 export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
-  const errMsg = 'Token not found. Please request email verification again.';
   const { requestor } = req;
   const { tokenValue } = req.body;
   if (!tokenValue) {
@@ -62,7 +57,7 @@ export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerific
   }
   const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail);
   if (!token) {
-    throw new CustomError(errMsg, ErrorTypes.INVALID_ARG);
+    throw new CustomError('Token not found. Please request email verification again.', ErrorTypes.INVALID_ARG);
   }
   const email = token?.resource?.altEmail;
   if (!email) {

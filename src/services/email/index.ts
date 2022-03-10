@@ -58,7 +58,6 @@ export const sendGroupVerificationEmail = async ({
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
-  // TODO: update verificationLink with URL implemented in UI
   const verificationLink = `${domain}/account?altEmailVerification=${token}`;
   const template = buildTemplate(EmailTemplates.GroupVerification, {
     verificationLink, name, token, groupName,
@@ -79,7 +78,12 @@ export const sendGroupVerificationEmail = async ({
 };
 
 export const sendAltEmailVerification = async ({
-  name, domain = process.env.FRONTEND_DOMAIN, token, recipientEmail, senderEmail = EmailAddresses.NoReply, replyToAddresses = [EmailAddresses.ReplyTo],
+  name,
+  domain = process.env.FRONTEND_DOMAIN,
+  token,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
 }: IAltEmailVerificationTemplateParams) => {
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
     name, domain, token, recipientEmail,
@@ -87,7 +91,6 @@ export const sendAltEmailVerification = async ({
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
-  // TODO: update verificationLink with URL implemented in UI
   const verificationLink = `${domain}/account?altEmailVerification=${token}`;
   const template = buildTemplate(EmailTemplates.AltEmailVerification, {
     verificationLink, name, token,

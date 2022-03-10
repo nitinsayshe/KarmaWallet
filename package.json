@@ -4,7 +4,7 @@
   "description": "the karma wallet backend",
   "main": "index.ts",
   "scripts": {
-    "migrate": "ts-node ./bin/v3_migration.ts",
+    "mappers": "ts-node ./bin/mappers.ts",
     "db_sync": "ts-node ./bin/pull_remote_db.ts",
     "reset_migration": "ts-node ./bin/reset_v3_migration.ts && npm run db_sync",
     "clean": "rm -rf dist",

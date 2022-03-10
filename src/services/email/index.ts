@@ -10,6 +10,7 @@ import { colors } from '../../lib/colors';
 
 export enum EmailTemplates {
   GroupVerification = 'groupVerification',
+  AltEmailVerification = 'altEmailVerification',
 }
 
 export const buildTemplate = (templateName: string, data: any) => {
@@ -39,6 +40,15 @@ interface IGroupVerificationTemplateParams {
   replyToAddresses?: string[];
 }
 
+interface IAltEmailVerificationTemplateParams {
+  name: string;
+  domain?: string;
+  token: string;
+  recipientEmail: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
+}
+
 export const sendGroupVerificationEmail = async ({
   name, domain = process.env.FRONTEND_DOMAIN, token, groupName, recipientEmail, senderEmail = EmailAddresses.NoReply, replyToAddresses = [EmailAddresses.ReplyTo],
 }: IGroupVerificationTemplateParams) => {
@@ -48,10 +58,42 @@ export const sendGroupVerificationEmail = async ({
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
-  // TODO: update verificationLink with URL implemented in UI
-  const verificationLink = `${domain}/account?verifyGroupEmail=${token}`;
+  const verificationLink = `${domain}/account?altEmailVerification=${token}`;
   const template = buildTemplate(EmailTemplates.GroupVerification, {
     verificationLink, name, token, groupName,
+  });
+  const subject = 'KarmaWallet Email Verification';
+  const jobData = {
+    template, subject, senderEmail, recipientEmail, replyToAddresses,
+  };
+  // tries 3 times, after 4 sec, 16 sec, and 64 sec
+  const jobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 4000,
+    },
+  };
+  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+};
+
+export const sendAltEmailVerification = async ({
+  name,
+  domain = process.env.FRONTEND_DOMAIN,
+  token,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IAltEmailVerificationTemplateParams) => {
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
+    name, domain, token, recipientEmail,
+  });
+  if (!isValid) {
+    throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  }
+  const verificationLink = `${domain}/account?altEmailVerification=${token}`;
+  const template = buildTemplate(EmailTemplates.AltEmailVerification, {
+    verificationLink, name, token,
   });
   const subject = 'KarmaWallet Email Verification';
   const jobData = {

@@ -9,6 +9,9 @@ const router = Router();
 router.route('/group-verification-email')
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendGroupVerificationEmail);
 
+router.route('/alt-email-verification')
+  .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendAltEmailVerificationEmail);
+
 router.route('/')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.logJobs)
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.createJob);

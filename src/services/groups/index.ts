@@ -172,6 +172,7 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
 };
 
 export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   try {
     const {
       owner,
@@ -200,7 +201,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
 
     if (!!owner) {
       // requestor must have appropriate permissions to assign a group owner.
-      if (req.requestor.role === UserRoles.None) throw new CustomError('You do not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
+      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You do not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
       const _owner = await getUser(req, { _id: owner });
       if (!_owner) throw new CustomError(`Owner with id: ${owner} could not be found.`, ErrorTypes.NOT_FOUND);
       group.owner = _owner;
@@ -224,17 +225,19 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
 };
 
 export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+
   const { groupId } = req.params;
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
     let userGroup: IUserGroupDocument;
-    if (req.requestor.role === UserRoles.None) {
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
       userGroup = await UserGroupModel.findOne({ group: groupId });
     }
 
     // only a karma member or the owner of the group can delete
-    if (req.requestor.role === UserRoles.None && userGroup?.role !== UserGroupRole.Owner) {
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles) && userGroup?.role !== UserGroupRole.Owner) {
       throw new CustomError('You are not authorized to delete this group.', ErrorTypes.UNAUTHORIZED);
     }
 
@@ -265,8 +268,6 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
     if (!!groupId) query._id = groupId;
     if (!!code) query.code = code;
 
-    // TODO: include
-
     const group = await GroupModel.findOne(query)
       .populate([
         {
@@ -291,6 +292,8 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
 };
 
 export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+
   try {
     const { groupId } = req.params;
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
@@ -299,7 +302,7 @@ export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
 
     // user must be a member of this group or a karma member
     // to view its members
-    if (req.requestor.role === UserRoles.None) {
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
       requestorUserGroup = await UserGroupModel.findOne({
         group: groupId,
         user: req.requestor._id,
@@ -435,10 +438,11 @@ export const getShareableUserGroup = ({
 };
 
 export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { userId } = req.params;
   try {
     if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+    if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
       throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
     }
 
@@ -468,6 +472,8 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
 };
 
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+
   try {
     const { code, email, userId } = req.body;
 
@@ -483,7 +489,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       user = req.requestor;
     } else {
       // requestor must be a Karma member to add another user to a group
-      if (req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
+      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
       user = await getUser(req, { _id: userId });
     }
 
@@ -587,6 +593,7 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
 };
 
 export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupRequestBody>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { groupId } = req.params;
   const {
     owner,
@@ -622,11 +629,11 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     // requestor must be an admin (or higher) for the group
     // OR be an internal karma member to update a group.
     if (!!userGroup) {
-      if (userGroup.role === UserGroupRole.Member && req.requestor.role === UserRoles.None) {
+      if (userGroup.role === UserGroupRole.Member && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
         throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
       }
     } else {
-      if (req.requestor.role === UserRoles.None) {
+      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
         throw new CustomError('You are not authorized to update this group.', ErrorTypes.UNAUTHORIZED);
       }
     }
@@ -683,7 +690,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
       }
 
       // only the owner of the group, and karma members, may change the a groups status
-      if (req.requestor.role === UserRoles.None && userGroup.role !== UserGroupRole.Owner) {
+      if (!karmaAllowList.includes(req.requestor.role as UserRoles) && userGroup.role !== UserGroupRole.Owner) {
         throw new CustomError('You are not authorized to update this group\'s status.', ErrorTypes.UNAUTHORIZED);
       }
 
@@ -705,6 +712,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 };
 
 export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParams, {}, IUpdateUserGroupRequestBody>, internalOverride = false) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { userId, groupId } = req.params;
   const { email, role, status } = req.body;
 
@@ -739,7 +747,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === req.requestor._id.toString());
 
     if (!userGroup) throw new CustomError(`A group with id: ${groupId} was not found for this user.`, ErrorTypes.NOT_FOUND);
-    if (req.requestor.role === UserRoles.None && !requestorUserGroup) {
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles) && !requestorUserGroup) {
       throw new CustomError('You are not allowed to make this request.', ErrorTypes.UNAUTHORIZED);
     }
 
@@ -748,7 +756,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
     if (!!email) {
       // only the user or a karma member can update the email
-      if (req.requestor._id.toString() !== (userGroup.user as IUserDocument)._id.toString() && req.requestor.role === UserRoles.None) {
+      if (req.requestor._id.toString() !== (userGroup.user as IUserDocument)._id.toString() && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
         throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
       }
 
@@ -775,7 +783,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
         //
         // example, if the person making the request is an admin for a group, they cannot change the role
         // of another admin within that group. only the owner or a superadmin would be able to do that.
-        if (req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+        if (!karmaAllowList.includes(req.requestor.role as UserRoles) && origUserGroupRoleScore >= requestorGroupRoleScore) {
           throw new CustomError('You are not authorized to change this user\'s role within this grouop.', ErrorTypes.UNAUTHORIZED);
         }
       }
@@ -804,13 +812,13 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
           throw new CustomError('You are not allowed to remove or ban yourself from a group. Try Leaving a group instead.', ErrorTypes.NOT_ALLOWED);
         }
 
-        if (!!requestorUserGroup && req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+        if (!!requestorUserGroup && !karmaAllowList.includes(req.requestor.role as UserRoles) && origUserGroupRoleScore >= requestorGroupRoleScore) {
           throw new CustomError('You are not authorized to remove or ban this user.', ErrorTypes.UNAUTHORIZED);
         }
       }
 
       if (status === UserGroupStatus.Approved) {
-        if (!!requestorUserGroup && req.requestor.role === UserRoles.None && origUserGroupRoleScore >= requestorGroupRoleScore) {
+        if (!!requestorUserGroup && !karmaAllowList.includes(req.requestor.role as UserRoles) && origUserGroupRoleScore >= requestorGroupRoleScore) {
           throw new CustomError('You are not authorized to approve this user.', ErrorTypes.UNAUTHORIZED);
         }
       }

@@ -26,6 +26,13 @@ export enum UserRoles {
   SuperAdmin = 'superadmin',
 }
 
+export enum UserGroupRole {
+  Member = 'member',
+  Admin = 'admin',
+  SuperAdmin = 'superadmin',
+  Owner = 'owner',
+}
+
 export enum SocketNamespaces {
   Karma = 'karma',
   Main = 'main',
@@ -34,6 +41,7 @@ export enum SocketNamespaces {
 export enum TokenTypes {
   Email = 'email',
   Password = 'password',
+  AltEmail = 'altEmail'
 }
 
 export enum EmailAddresses {
@@ -107,11 +115,9 @@ export const AllowedOrigins = [
   'https://admin.staging.karmawallet.io',
 ];
 
-export const emailVerificationDays = 5;
+export const emailVerificationDays = 10;
 export const authTokenDays = 30;
 export const passwordResetTokenMinutes = 15;
-
-export const ZIPCODE_REGEX = /^\d{5}(?:[-\s]\d{4})?$/;
 
 export const RareTransactionQuery: {
   'integrations.rare': { $ne: any }

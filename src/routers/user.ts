@@ -10,7 +10,6 @@ router.post('/login', UserController.login);
 router.post('/password/token/create', UserController.createPasswordResetToken);
 router.post('/password/token/verify', UserController.checkPasswordResetToken);
 router.put('/password/token', UserController.resetPasswordFromToken);
-router.post('/email/token/verify', UserController.verifyEmail);
 
 // Authenticated
 router.post('/logout', authenticate, UserController.logout);
@@ -18,6 +17,7 @@ router.get('/profile', authenticate, UserController.getProfile);
 router.put('/profile', authenticate, UserController.updateProfile);
 router.get('/session', authenticate, UserController.getProfile);
 router.put('/password', authenticate, UserController.updatePassword);
-router.post('/email/token/create', authenticate, UserController.sendEmailVerification);
+router.post('/alt-email/token/create', authenticate, UserController.resendAltEmailVerification);
+router.post('/alt-email/token/verify', authenticate, UserController.verifyAltEmail);
 
 export default (app: Express) => app.use('/user', router);

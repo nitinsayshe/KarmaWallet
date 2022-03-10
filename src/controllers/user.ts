@@ -6,6 +6,7 @@ import * as Token from '../services/token';
 import { isValidEmailFormat } from '../lib/string';
 import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
+import * as UserVerificationService from '../services/user/verification';
 
 interface IUpdatePasswordBody {
   newPassword: string;
@@ -156,30 +157,19 @@ export const resetPasswordFromToken: IRequestHandler<{}, {}, (User.ILoginData & 
   }
 };
 
-export const sendEmailVerification: IRequestHandler = async (req, res) => {
+export const resendAltEmailVerification: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
   try {
-    const data = await User.sendEmailVerification(req, req.requestor?._id);
+    const data = await UserVerificationService.resendAltEmailVerification(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const verifyEmail: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
+export const verifyAltEmail: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
   try {
-    const requiredFields = ['token', 'email'];
-    const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
-    if (!isValid) {
-      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
-      return;
-    }
-    const { token, email } = req.body;
-    if (!isValidEmailFormat(email)) {
-      output.error(req, res, new CustomError('Invalid email.', ErrorTypes.INVALID_ARG));
-      return;
-    }
-    const user = await User.verifyEmail(req, email, token);
-    output.api(req, res, User.getShareableUser(user));
+    const data = await UserVerificationService.verifyAltEmail(req);
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

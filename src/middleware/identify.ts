@@ -37,6 +37,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
   if (!authKey) return next();
   try {
     const uid = await Session.verifySession(authKey);
+
     if (uid) {
       const user = await UserService.getUserById(req, uid);
       (req as IRequest).requestor = (user as IUserDocument);

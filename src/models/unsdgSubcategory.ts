@@ -9,7 +9,7 @@ import { IUnsdgCategoryDocument } from './unsdgCategory';
 
 export interface IUnsdgSubcategory {
   name: string;
-  cateogory: IUnsdgCategoryDocument['_id'];
+  category: IUnsdgCategoryDocument['_id'];
   categoryIndex: number;
   createOn: Date;
   lastModified: Date;

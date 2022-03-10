@@ -3,14 +3,15 @@ import { ErrorTypes } from '../lib/constants';
 import CustomError from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import { Logger } from '../services/logger';
+import { UserGroupModel } from '../models/userGroup';
 import { IGroup } from '../models/group';
 
 export interface IProtectRouteRequirements {
-  roles?: string[];
-  groups?: string[];
+  roles?: string[]; // role names
+  groups?: string[]; // group ids
 }
 
-const protectedRequirements = (requirements: IProtectRouteRequirements): IRequestHandler => (req, res, next) => {
+const protectedRequirements = (requirements: IProtectRouteRequirements): IRequestHandler => async (req, res, next) => {
   const { requestor } = req;
 
   if (!requestor) {
@@ -25,10 +26,14 @@ const protectedRequirements = (requirements: IProtectRouteRequirements): IReques
     return;
   }
 
-  if (!!requirements.groups?.length && !requirements.groups.find(g => requestor.groups.find(rg => (rg.group as IGroup).name === g))) {
-    Logger.error(new CustomError('groups do not match', ErrorTypes.AUTHENTICATION));
-    error(req, res, new CustomError('Access denied.', ErrorTypes.AUTHENTICATION));
-    return;
+  if (!!requirements.groups?.length) {
+    const userGroups = await UserGroupModel.find({ user: req.requestor._id });
+
+    if (!requirements.groups.find(g => userGroups.find(userGroup => (userGroup.group as IGroup).name === g))) {
+      Logger.error(new CustomError('groups do not match', ErrorTypes.AUTHENTICATION));
+      error(req, res, new CustomError('Access denied.', ErrorTypes.AUTHENTICATION));
+      return;
+    }
   }
 
   next();

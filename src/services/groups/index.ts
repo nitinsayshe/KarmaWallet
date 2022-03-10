@@ -547,12 +547,19 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       });
     }
 
+    // if the email used is the user's primary email OR
+    // is an alt email that has already been verified, set
+    // the role to Verified.
+    const defualtStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified
+      ? UserEmailStatus.Verified
+      : UserEmailStatus.Unverified;
+
     const userGroup = new UserGroupModel({
       user,
       group,
       email: validEmail,
       role: UserGroupRole.Member,
-      status: UserGroupStatus.Unverified,
+      status: defualtStatus,
     });
 
     await userGroup.save();

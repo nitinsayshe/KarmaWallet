@@ -9,7 +9,7 @@ groupRouter.route('/join')
   .post(authenticate, GroupController.joinGroup);
 
 groupRouter.route('/check-code')
-  .get(authenticate, GroupController.checkCode);
+  .get(GroupController.checkCode);
 
 groupRouter.route('/:groupId/user/:userId')
   .put(authenticate, GroupController.updateUserGroup);

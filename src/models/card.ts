@@ -3,6 +3,7 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
 import { CardStatus } from '../lib/constants';
 import { IModel } from '../types/model';
@@ -31,7 +32,7 @@ export interface ICardIntegrations {
 }
 
 export interface ICard {
-  userId: Schema.Types.ObjectId;
+  userId: ObjectId;
   name: string;
   mask: string;
   type: string;

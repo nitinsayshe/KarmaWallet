@@ -14,7 +14,7 @@ import { IShareableUser, IUser } from './user';
 
 export enum UserGroupStatus {
   Unverified = 'unverified',
-  Verified = 'unverified',
+  Verified = 'verified',
   Approved = 'approved',
   Removed = 'removed',
   Banned = 'banned',

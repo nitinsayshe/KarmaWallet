@@ -508,6 +508,14 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     // TODO: status === Removed, check if needs approval to join again
 
+    if (
+      existingUserGroup?.status === UserGroupStatus.Unverified
+      || existingUserGroup?.status === UserGroupStatus.Verified
+      || existingUserGroup?.status === UserGroupStatus.Approved
+    ) {
+      throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
+    }
+
     let validEmail: string;
     if (group.settings.allowDomainRestriction && group.domains.length > 0) {
       if (!isemail.validate(email, { minDomainAtoms: 2 })) {

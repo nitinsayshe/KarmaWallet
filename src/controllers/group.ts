@@ -23,6 +23,15 @@ export const getGroup: IRequestHandler = async (req, res) => {
   }
 };
 
+export const getGroupMembers: IRequestHandler = async (req, res) => {
+  try {
+    const groupMembers = await GroupService.getGroupMembers(req);
+    output.api(req, res, groupMembers.map(member => GroupService.getShareableGroupMember(member)));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getGroups: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
@@ -69,6 +78,15 @@ export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> 
   try {
     const userGroup = await GroupService.joinGroup(req);
     output.api(req, res, GroupService.getShareableUserGroup(userGroup));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const leaveGroup: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+  try {
+    await GroupService.leaveGroup(req);
+    output.api(req, res, null);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

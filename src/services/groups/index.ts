@@ -501,7 +501,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     const existingUserGroup = await UserGroupModel.findOne({
       group,
       user,
-      email,
     });
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {

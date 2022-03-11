@@ -78,7 +78,7 @@ export const getCardsAddedReport = async (req: IRequest<IReportRequestParams, IR
       .utc()
       .subtract(_daysInPast, 'days');
 
-    const totalCardsCreatedBeforeThreshold = await CardModel.find({ dateJoined: { $lt: thresholdDate.toDate() } }).count();
+    const totalCardsCreatedBeforeThreshold = await CardModel.find({ createdOn: { $lt: thresholdDate.toDate() } }).count();
     let aggData = await CardModel.aggregate()
       .match({ createdOn: { $gte: thresholdDate.toDate() } })
       .project({ day: { $substr: ['$createdOn', 0, 10] } })
@@ -100,8 +100,6 @@ export const getCardsAddedReport = async (req: IRequest<IReportRequestParams, IR
         values: [{ value: d.count }],
       };
     });
-
-    console.log('>>>>> data', data);
 
     // TODO: iterate through all data and add in any
     // dates within this range that were skipped

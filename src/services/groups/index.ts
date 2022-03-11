@@ -101,6 +101,8 @@ export const checkCode = async (req: IRequest<{}, ICheckCodeRequest>) => {
 };
 
 export const verifyDomains = (domains: string[], allowDomainRestriction: boolean) => {
+  console.log('>>>>> allowDomainRestriction', allowDomainRestriction);
+  console.log('>>>>> domains', domains);
   if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
   if (!allowDomainRestriction) return [];
 

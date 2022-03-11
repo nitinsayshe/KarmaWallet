@@ -65,6 +65,6 @@ export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerific
   }
   await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: dayjs().utc().toDate() }, { new: true });
   // TODO: update to verified when support for owner approval is added.
-  await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Approved });
+  await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
   return { email };
 };

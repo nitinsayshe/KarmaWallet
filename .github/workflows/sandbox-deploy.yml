@@ -16,7 +16,7 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, '${{ github.event.inputs.env }}']
+    runs-on: [self-hosted, 'betsi-${{ github.event.inputs.env }}']
 
     strategy:
       matrix:

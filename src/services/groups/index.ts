@@ -101,8 +101,6 @@ export const checkCode = async (req: IRequest<{}, ICheckCodeRequest>) => {
 };
 
 export const verifyDomains = (domains: string[], allowDomainRestriction: boolean) => {
-  console.log('>>>>> allowDomainRestriction', allowDomainRestriction);
-  console.log('>>>>> domains', domains);
   if (allowDomainRestriction && (!domains || !Array.isArray(domains) || domains.length === 0)) throw new CustomError('In order to support restricting email domains, you must provide a list of domains to limit to.', ErrorTypes.INVALID_ARG);
   if (!allowDomainRestriction) return [];
 
@@ -119,7 +117,7 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
 };
 
 export const verifyGroupSettings = (settings: IGroupSettings) => {
-  const _settings = defaultGroupSettings;
+  const _settings = { ...defaultGroupSettings };
   if (!!settings) {
     // settings provided...only add supported settings
     // to group...
@@ -131,8 +129,6 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
       approvalRequired,
       matching,
     } = settings;
-
-    console.log('>>>>> recieved settings.allowDomainRestriction', allowDomainRestriction);
 
     if (
       !privacyStatus
@@ -148,7 +144,6 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
     if (!!privacyStatus) _settings.privacyStatus = privacyStatus;
     if (!!allowInvite) _settings.allowInvite = allowInvite;
     if (!!allowDomainRestriction) {
-      console.log('>>>>> updating allowDomainRestriction from default', allowDomainRestriction);
       _settings.allowDomainRestriction = allowDomainRestriction;
     }
 
@@ -175,8 +170,6 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
       }
     }
   }
-
-  console.log('>>>>> settings returned from verifyGroupSettings', _settings);
 
   return _settings;
 };

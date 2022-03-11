@@ -216,7 +216,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
       user: group.owner,
       email: group.owner.email,
       role: UserGroupRole.Owner,
-      status: UserGroupStatus.Approved,
+      status: UserGroupStatus.Verified,
     });
 
     await userGroup.save();
@@ -473,6 +473,33 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
   }
 };
 
+export const getSummary = async (_: IRequest) => {
+  try {
+    const groups = await GroupModel.find({});
+    let privateGroups = 0;
+    let protectedGroups = 0;
+    let publicGroups = 0;
+    let lockedGroups = 0;
+
+    for (const group of groups) {
+      if (group.status === GroupStatus.Locked) lockedGroups += 1;
+      if (group.settings.privacyStatus === GroupPrivacyStatus.Private) privateGroups += 1;
+      if (group.settings.privacyStatus === GroupPrivacyStatus.Protected) protectedGroups += 1;
+      if (group.settings.privacyStatus === GroupPrivacyStatus.Public) publicGroups += 1;
+    }
+
+    return {
+      total: groups.length,
+      locked: lockedGroups,
+      private: privateGroups,
+      protected: protectedGroups,
+      public: publicGroups,
+    };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
 
@@ -559,7 +586,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // if the email used is the user's primary email OR
     // is an alt email that has already been verified, set
     // the role to Verified.
-    const defualtStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified
+    const defualtStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
       ? UserEmailStatus.Verified
       : UserEmailStatus.Unverified;
 
@@ -689,7 +716,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
           user: group.owner,
           email: group.owner.email,
           role: UserGroupRole.Owner,
-          status: UserGroupStatus.Approved,
+          status: UserGroupStatus.Verified,
         });
 
         // ??? do we want to require email verification? which email to set here?

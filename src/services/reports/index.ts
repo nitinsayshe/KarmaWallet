@@ -40,7 +40,11 @@ export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { days
       .utc()
       .subtract(_daysInPast, 'days');
 
-    const aggData = await TransactionModel.aggregate()
+    const offsetsPurchasedBeforeThreshold = await TransactionModel.find({
+      date: { $lt: thresholdDate.toDate() },
+      'integrations.rare': { $exists: true },
+    }).count();
+    let aggData = await TransactionModel.aggregate()
       .match({
         date: { $gte: thresholdDate.toDate() },
         'integrations.rare': { $exists: true },
@@ -48,6 +52,13 @@ export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { days
       .project({ day: { $substr: ['$date', 0, 10] } })
       .group({ _id: '$day', count: { $sum: 1 } })
       .sort({ _id: 1 });
+
+    let cumulator = offsetsPurchasedBeforeThreshold;
+    aggData = aggData.map(d => {
+      cumulator += d.count;
+      d.count = cumulator;
+      return d;
+    });
 
     const data = aggData.map(d => {
       const [_, month, date] = d._id.split('-');
@@ -86,11 +97,19 @@ export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysIn
       .utc()
       .subtract(_daysInPast, 'days');
 
-    const aggData: { _id: string, count: number}[] = await UserModel.aggregate()
+    const totalUsersBeforeThreshold = await UserModel.find({ dateJoined: { $lt: thresholdDate.toDate() } }).count();
+    let aggData: { _id: string, count: number}[] = await UserModel.aggregate()
       .match({ dateJoined: { $gte: thresholdDate.toDate() } })
       .project({ day: { $substr: ['$dateJoined', 0, 10] } })
       .group({ _id: '$day', count: { $sum: 1 } })
       .sort({ _id: 1 });
+
+    let cumulator = totalUsersBeforeThreshold;
+    aggData = aggData.map(d => {
+      cumulator += d.count;
+      d.count = cumulator;
+      return d;
+    });
 
     const data = aggData.map(d => {
       const [_, month, date] = d._id.split('-');

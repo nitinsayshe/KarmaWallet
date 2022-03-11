@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { ObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CardModel } from '../../models/card';
@@ -191,11 +192,14 @@ export const getSummary = async (_: IRequest) => {
     for (const card of cards) {
       if (!card.userId) {
         // TODO: remove this once new linked cards are created with the new user id.
-        console.log(card);
-      } else {
-        if (!usersWithCards.has(card.userId.toString())) {
-          usersWithCards.add(card.userId.toString());
-        }
+        const leanCard = await CardModel.findOne({ _id: card._id }).lean();
+        const user = await UserModel.findOne({ legacyId: leanCard.userId });
+        card.userId = user._id as unknown as ObjectId;
+        await card.save();
+      }
+
+      if (!usersWithCards.has(card.userId.toString())) {
+        usersWithCards.add(card.userId.toString());
       }
     }
 

@@ -117,7 +117,7 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
 };
 
 export const verifyGroupSettings = (settings: IGroupSettings) => {
-  const _settings = defaultGroupSettings;
+  const _settings = { ...defaultGroupSettings };
   if (!!settings) {
     // settings provided...only add supported settings
     // to group...
@@ -143,7 +143,10 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
 
     if (!!privacyStatus) _settings.privacyStatus = privacyStatus;
     if (!!allowInvite) _settings.allowInvite = allowInvite;
-    if (!!allowDomainRestriction) _settings.allowDomainRestriction = allowDomainRestriction;
+    if (!!allowDomainRestriction) {
+      _settings.allowDomainRestriction = allowDomainRestriction;
+    }
+
     if (!!allowSubgroups) _settings.allowSubgroups = allowSubgroups;
     if (!!approvalRequired) _settings.approvalRequired = approvalRequired;
     if (!!matching) {
@@ -214,7 +217,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
       user: group.owner,
       email: group.owner.email,
       role: UserGroupRole.Owner,
-      status: UserGroupStatus.Approved,
+      status: UserGroupStatus.Verified,
     });
 
     await userGroup.save();
@@ -471,6 +474,33 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
   }
 };
 
+export const getSummary = async (_: IRequest) => {
+  try {
+    const groups = await GroupModel.find({});
+    let privateGroups = 0;
+    let protectedGroups = 0;
+    let publicGroups = 0;
+    let lockedGroups = 0;
+
+    for (const group of groups) {
+      if (group.status === GroupStatus.Locked) lockedGroups += 1;
+      if (group.settings.privacyStatus === GroupPrivacyStatus.Private) privateGroups += 1;
+      if (group.settings.privacyStatus === GroupPrivacyStatus.Protected) protectedGroups += 1;
+      if (group.settings.privacyStatus === GroupPrivacyStatus.Public) publicGroups += 1;
+    }
+
+    return {
+      total: groups.length,
+      locked: lockedGroups,
+      private: privateGroups,
+      protected: protectedGroups,
+      public: publicGroups,
+    };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
 
@@ -496,10 +526,9 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup = await UserGroupModel.findOne({
+    const existingUserGroup: IUserGroupDocument = await UserGroupModel.findOne({
       group,
       user,
-      email,
     });
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {
@@ -532,13 +561,21 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
+    const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
+
     // add groupEmail to user's list of altEmails if doesnt already exist and
     // is not their primary email
-    if (!user.altEmails.find(altEmail => altEmail.email === validEmail) && user.email !== validEmail) {
+    if (!existingAltEmail && user.email !== validEmail) {
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
       });
+    }
+
+    // send verification email if
+    // altEmail exists and is unverified or
+    // doesnt already exist and is not their primary email
+    if ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail)) {
       const token = await TokenService.createToken({
         user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
       });
@@ -550,22 +587,32 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // if the email used is the user's primary email OR
     // is an alt email that has already been verified, set
     // the role to Verified.
-    const defualtStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified
-      ? UserEmailStatus.Verified
-      : UserEmailStatus.Unverified;
+    const defaultStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
+      ? UserGroupStatus.Verified
+      : UserGroupStatus.Unverified;
 
-    const userGroup = new UserGroupModel({
-      user,
-      group,
-      email: validEmail,
-      role: UserGroupRole.Member,
-      status: defualtStatus,
-    });
+    let userGroup: IUserGroupDocument = null;
+    if (!!existingUserGroup) {
+      existingUserGroup.email = validEmail;
+      existingUserGroup.role = UserGroupRole.Member;
+      existingUserGroup.status = defaultStatus;
 
-    await userGroup.save();
+      await existingUserGroup.save();
+    } else {
+      userGroup = new UserGroupModel({
+        user,
+        group,
+        email: validEmail,
+        role: UserGroupRole.Member,
+        status: defaultStatus,
+      });
+
+      await userGroup.save();
+    }
+
     await user.save();
 
-    return userGroup;
+    return userGroup ?? existingUserGroup;
   } catch (err) {
     throw asCustomError(err);
   }
@@ -680,7 +727,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
           user: group.owner,
           email: group.owner.email,
           role: UserGroupRole.Owner,
-          status: UserGroupStatus.Approved,
+          status: UserGroupStatus.Verified,
         });
 
         // ??? do we want to require email verification? which email to set here?

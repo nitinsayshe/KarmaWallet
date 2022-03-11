@@ -12,7 +12,7 @@ export const getAllReports: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getReport: IRequestHandler<ReportService.IReportParams> = async (req, res) => {
+export const getReport: IRequestHandler<ReportService.IReportRequestParams> = async (req, res) => {
   try {
     const reportData = await ReportService.getReport(req);
     output.api(req, res, reportData);

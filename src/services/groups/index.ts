@@ -132,6 +132,8 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
       matching,
     } = settings;
 
+    console.log('>>>>> recieved settings.allowDomainRestriction', allowDomainRestriction);
+
     if (
       !privacyStatus
       && !allowInvite
@@ -145,7 +147,11 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
 
     if (!!privacyStatus) _settings.privacyStatus = privacyStatus;
     if (!!allowInvite) _settings.allowInvite = allowInvite;
-    if (!!allowDomainRestriction) _settings.allowDomainRestriction = allowDomainRestriction;
+    if (!!allowDomainRestriction) {
+      console.log('>>>>> updating allowDomainRestriction from default', allowDomainRestriction);
+      _settings.allowDomainRestriction = allowDomainRestriction;
+    }
+
     if (!!allowSubgroups) _settings.allowSubgroups = allowSubgroups;
     if (!!approvalRequired) _settings.approvalRequired = approvalRequired;
     if (!!matching) {
@@ -169,6 +175,8 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
       }
     }
   }
+
+  console.log('>>>>> settings returned from verifyGroupSettings', _settings);
 
   return _settings;
 };

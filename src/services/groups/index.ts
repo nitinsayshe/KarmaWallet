@@ -534,13 +534,21 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
+    const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
+
     // add groupEmail to user's list of altEmails if doesnt already exist and
     // is not their primary email
-    if (!user.altEmails.find(altEmail => altEmail.email === validEmail) && user.email !== validEmail) {
+    if (!existingAltEmail && user.email !== validEmail) {
       user.altEmails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
       });
+    }
+
+    // send verification email if
+    // altEmail exists and is unverified or
+    // doesnt already exist and is not their primary email
+    if ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail)) {
       const token = await TokenService.createToken({
         user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
       });

@@ -526,7 +526,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup = await UserGroupModel.findOne({
+    const existingUserGroup: IUserGroupDocument = await UserGroupModel.findOne({
       group,
       user,
     });
@@ -587,22 +587,32 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // if the email used is the user's primary email OR
     // is an alt email that has already been verified, set
     // the role to Verified.
-    const defualtStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
-      ? UserEmailStatus.Verified
-      : UserEmailStatus.Unverified;
+    const defaultStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
+      ? UserGroupStatus.Verified
+      : UserGroupStatus.Unverified;
 
-    const userGroup = new UserGroupModel({
-      user,
-      group,
-      email: validEmail,
-      role: UserGroupRole.Member,
-      status: defualtStatus,
-    });
+    let userGroup: IUserGroupDocument = null;
+    if (!!existingUserGroup) {
+      existingUserGroup.email = validEmail;
+      existingUserGroup.role = UserGroupRole.Member;
+      existingUserGroup.status = defaultStatus;
 
-    await userGroup.save();
+      await existingUserGroup.save();
+    } else {
+      userGroup = new UserGroupModel({
+        user,
+        group,
+        email: validEmail,
+        role: UserGroupRole.Member,
+        status: defaultStatus,
+      });
+
+      await userGroup.save();
+    }
+
     await user.save();
 
-    return userGroup;
+    return userGroup ?? existingUserGroup;
   } catch (err) {
     throw asCustomError(err);
   }

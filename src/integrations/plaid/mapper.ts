@@ -390,6 +390,8 @@ export class PlaidMapper {
           start_date: startDate.format('YYYY-MM-DD'),
           end_date: endDate.format('YYYY-MM-DD'),
         });
+
+        console.log('>>>>> plaidTransactions', plaidTransactions);
       } catch (err) {
         // TODO: update card status here...need to look at possible errors from Plaid.
         // ??? send email to user advising that one or more of their cards has become unlinked ???

@@ -7,6 +7,7 @@ import { ErrorTypes, CardStatus } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
+import { SdkClient } from './sdkClient';
 
 const logger = pino();
 
@@ -15,11 +16,11 @@ export interface ICreateLinkTokenParams {
   access_token?: string;
 }
 
-export class PlaidClient {
+export class PlaidClient extends SdkClient {
   _client: PlaidApi;
 
   constructor() {
-    this._init();
+    super('Plaid');
   }
 
   _init = () => {

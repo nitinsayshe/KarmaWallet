@@ -1,16 +1,17 @@
 import axios, { AxiosInstance } from 'axios';
 import { asCustomError } from '../lib/customError';
 import { IRareTransaction } from '../integrations/rare/transaction';
+import { SdkClient } from './sdkClient';
 
 interface IRareTransactionsResponse {
   transactions: IRareTransaction[];
 }
 
-export class RareClient {
+export class RareClient extends SdkClient {
   _client: AxiosInstance = null;
 
   constructor() {
-    this._init();
+    super('Rare');
   }
 
   _init = () => {

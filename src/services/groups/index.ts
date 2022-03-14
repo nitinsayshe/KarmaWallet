@@ -546,7 +546,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     let validEmail: string;
-    if (group.settings.allowDomainRestriction && group.domains.length > 0) {
+    const hasDomainRestrictions = group.settings.allowDomainRestriction && group.domains.length > 0;
+    if (hasDomainRestrictions) {
       if (!isemail.validate(email, { minDomainAtoms: 2 })) {
         throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
       }
@@ -573,9 +574,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     // send verification email if
+    // group has domain restriction AND
     // altEmail exists and is unverified or
     // doesnt already exist and is not their primary email
-    if ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail)) {
+    if (hasDomainRestrictions && ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail))) {
       const token = await TokenService.createToken({
         user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
       });

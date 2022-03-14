@@ -20,5 +20,12 @@ export interface IChartData<T = string> {
       label?: T;
       value: number;
     }[];
-  }[]
+  }[];
+  // additional data to show with the chart, but that
+  // wont be shared in the chart itself, like an average
+  // number or cards added per user for example.
+  metrics?: {
+    label: string;
+    value: number;
+  }[];
 }

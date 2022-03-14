@@ -8,34 +8,27 @@ import { TransactionModel } from '../../models/transaction';
 import { UserModel } from '../../models/user';
 import { IChartData } from '../../types/chart';
 import { IRequest } from '../../types/request';
+import { getDaysInPast } from './utils';
 
 dayjs.extend(utc);
 
 export enum ReportType {
   UserSignup = 'user-signups',
   CarbonOffsets = 'carbon-offsets',
+  CardsAdded = 'cards-added',
 }
 
-export interface IReportParams {
+export interface IReportRequestParams {
   reportId: ReportType;
 }
 
-export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData> => {
-  const MAX_ALLOWED_DAYS_IN_PAST = 365;
+export interface IReportRequestQuery {
+  daysInPast: string;
+}
 
+export const getCarbonOffsetsReport = async (req: IRequest<IReportRequestParams, IReportRequestQuery>): Promise<IChartData> => {
   try {
-    const { daysInPast = '30' } = req.query;
-    let _daysInPast = parseInt(daysInPast);
-
-    // if is an invalid number of days, do not throw
-    // error, just default back to 30 days.
-    if (Number.isNaN(_daysInPast)) _daysInPast = 30;
-
-    // if the number of days is greater than
-    // MAX_ALLOWED_DAYS_IN_PAST, limit days in past
-    // to MAX_ALLOWED_DAYS_IN_PAST instead.
-    if (_daysInPast > MAX_ALLOWED_DAYS_IN_PAST) _daysInPast = MAX_ALLOWED_DAYS_IN_PAST;
-
+    const _daysInPast = getDaysInPast(req.query.daysInPast || '30', 365);
     const thresholdDate = dayjs(dayjs().utc().format('MMM DD, YYYY'))
       .utc()
       .subtract(_daysInPast, 'days');
@@ -78,20 +71,48 @@ export const getCarbonOffsetsReport = async (req: IRequest<IReportParams, { days
   }
 };
 
-export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysInPast: string }>): Promise<IChartData> => {
-  const MAX_ALLOWED_DAYS_IN_PAST = 365;
+export const getCardsAddedReport = async (req: IRequest<IReportRequestParams, IReportRequestQuery>) => {
   try {
-    const { daysInPast = '30' } = req.query;
-    let _daysInPast = parseInt(daysInPast);
+    const _daysInPast = getDaysInPast(req.query.daysInPast || '30', 365);
+    const thresholdDate = dayjs(dayjs().utc().format('MMM DD, YYYY'))
+      .utc()
+      .subtract(_daysInPast, 'days');
 
-    // if is an invalid number of days, do not throw
-    // error, just default back to 30 days.
-    if (Number.isNaN(_daysInPast)) _daysInPast = 30;
+    const totalCardsCreatedBeforeThreshold = await CardModel.find({ createdOn: { $lt: thresholdDate.toDate() } }).count();
+    let aggData = await CardModel.aggregate()
+      .match({ createdOn: { $gte: thresholdDate.toDate() } })
+      .project({ day: { $substr: ['$createdOn', 0, 10] } })
+      .group({ _id: '$day', count: { $sum: 1 } })
+      .sort({ _id: 1 });
 
-    // if the number of days is greater than
-    // MAX_ALLOWED_DAYS_IN_PAST, limit days in past
-    // to MAX_ALLOWED_DAYS_IN_PAST instead.
-    if (_daysInPast > MAX_ALLOWED_DAYS_IN_PAST) _daysInPast = MAX_ALLOWED_DAYS_IN_PAST;
+    let cumulator = totalCardsCreatedBeforeThreshold;
+    aggData = aggData.map(d => {
+      cumulator += d.count;
+      d.count = cumulator;
+      return d;
+    });
+
+    const data = aggData.map(d => {
+      const [_, month, date] = d._id.split('-');
+      const day = dayjs(`${month} ${date}`);
+      return {
+        label: day.format('MMM DD'),
+        values: [{ value: d.count }],
+      };
+    });
+
+    // TODO: iterate through all data and add in any
+    // dates within this range that were skipped
+
+    return { data };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getUserSignUpsReport = async (req: IRequest<IReportRequestParams, IReportRequestQuery>): Promise<IChartData> => {
+  try {
+    const _daysInPast = getDaysInPast(req.query.daysInPast || '30', 365);
 
     const thresholdDate = dayjs(dayjs().utc().format('MMM DD, YYYY'))
       .utc()
@@ -129,10 +150,11 @@ export const getUserSignUpsReport = async (req: IRequest<IReportParams, { daysIn
   }
 };
 
-export const getReport = async (req:IRequest<IReportParams, any>): Promise<IChartData> => {
+export const getReport = async (req:IRequest<IReportRequestParams, any>): Promise<IChartData> => {
   switch (req.params.reportId) {
     case ReportType.UserSignup: return getUserSignUpsReport(req);
     case ReportType.CarbonOffsets: return getCarbonOffsetsReport(req);
+    case ReportType.CardsAdded: return getCardsAddedReport(req);
     default: throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
   }
 };
@@ -174,6 +196,25 @@ export const getAllReports = async (_: IRequest) => {
       reportId: ReportType.CarbonOffsets,
       name: 'Carbon Offsets',
       description: 'A breakdown of user carbon offset purchases per day.',
+      // TODO: figure out if this is needed. if we want to store
+      // these reports in db, then it will need to be...if we are
+      // going to generate them at request time, it will not be
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      // TODO: figure out if this is needed. if not going to be
+      // stored in db, then will not be needed and should be
+      // removed...
+      //
+      // ...if removed, then we need to make sure there are no
+      // duplicate slugs included in any of the reports so
+      // they can be uniquely identified.
+      _id: 'ghi789',
+      // a unique key for FE and BE to identify this report by.
+      // this shuld not change once set
+      reportId: ReportType.CardsAdded,
+      name: 'Cards Added',
+      description: 'A breakdown of the number of cards being added per day.',
       // TODO: figure out if this is needed. if we want to store
       // these reports in db, then it will need to be...if we are
       // going to generate them at request time, it will not be

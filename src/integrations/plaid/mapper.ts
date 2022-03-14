@@ -370,8 +370,8 @@ export class PlaidMapper {
       accessTokens = new Set(acs);
       cards = await CardModel.find({ 'integrations.plaid.accessToken': { $in: acs } });
     } else {
-      accessTokens = new Set(cards.map(card => card.integrations?.plaid?.accessToken).filter(card => !!card));
       cards = await CardModel.find({ status: CardStatus.Linked });
+      accessTokens = new Set(cards.map(card => card.integrations?.plaid?.accessToken).filter(card => !!card));
     }
     this._totalCards = cards.length;
     console.log(`[+] ${cards.length} cards and ${accessTokens.size} access tokens retrieved\n`);

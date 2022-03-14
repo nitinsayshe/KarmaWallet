@@ -364,25 +364,21 @@ export class PlaidMapper {
     let accessTokens;
     let cards: ICardDocument[] = [];
 
+    console.log('\nretrieving cards and accessTokens...');
+    // get access tokens from cards (using Set will remove any dups)
     if (Array.isArray(acs) && acs.length) {
       accessTokens = new Set(acs);
       cards = await CardModel.find({ 'integrations.plaid.accessToken': { $in: acs } });
-      this._totalCards = cards.length;
     } else {
-      console.log('\nretrieving cards and accessTokens...');
-      cards = await CardModel.find({ status: CardStatus.Linked });
-      this._totalCards = cards.length;
-
-      // get access tokens from cards (using Set will remove any dups)
       accessTokens = new Set(cards.map(card => card.integrations?.plaid?.accessToken).filter(card => !!card));
-
-      console.log(`[+] ${cards.length} cards and ${accessTokens.size} access tokens retrieved\n`);
+      cards = await CardModel.find({ status: CardStatus.Linked });
     }
+    this._totalCards = cards.length;
+    console.log(`[+] ${cards.length} cards and ${accessTokens.size} access tokens retrieved\n`);
 
     this._totalAccessTokens = accessTokens.size;
 
     console.log('retrieving transactions from Plaid...');
-    console.log('>>>>> access tokens: ', Array.from(accessTokens));
     for (const accessToken of Array.from(accessTokens)) {
       let plaidTransactions = null;
       try {
@@ -391,8 +387,6 @@ export class PlaidMapper {
           start_date: startDate.format('YYYY-MM-DD'),
           end_date: endDate.format('YYYY-MM-DD'),
         });
-
-        console.log('>>>>> plaidTransactions', plaidTransactions);
       } catch (err) {
         // TODO: update card status here...need to look at possible errors from Plaid.
         // ??? send email to user advising that one or more of their cards has become unlinked ???

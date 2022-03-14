@@ -366,7 +366,8 @@ export class PlaidMapper {
 
     if (Array.isArray(acs) && acs.length) {
       accessTokens = new Set(acs);
-      this._totalCards = 0;
+      cards = await CardModel.find({ 'integrations.plaid.accessToken': { $in: acs } });
+      this._totalCards = cards.length;
     } else {
       console.log('\nretrieving cards and accessTokens...');
       cards = await CardModel.find({ status: CardStatus.Linked });

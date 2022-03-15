@@ -14,7 +14,7 @@ groupRouter.route('/check-code')
 groupRouter.route('/members/:groupId')
   .get(authenticate, GroupController.getGroupMembers);
 
-groupRouter.route('/dashboard/:groupId')
+groupRouter.route('/:groupId/dashboard')
   .get(GroupController.getGroupDashboard);
 
 groupRouter.route('/leave/:groupId')

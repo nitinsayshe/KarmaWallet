@@ -904,3 +904,28 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     throw asCustomError(err);
   }
 };
+
+export const getGroupDashboard = async (_: IRequest) => {
+  const mockData = {
+    group: '62192d39f022c9e3fbfe3bd6',
+    members: 4,
+    membersWithOffset: 6,
+    memberDonationsTonnes: 11.48,
+    memberDonationsDollars: 100.00,
+    groupDonationsTonnes: 7.65,
+    groupDonationsDollars: 100.00,
+    totalDonationsTonnes: 19.13,
+    totalDonationsDollars: 250.00,
+    equivalencies: [
+      {
+        text: '1 garbage truck of waste recycled instead of landfilled',
+        icon: 'garbageTruck',
+      },
+      {
+        text: '91,200 smartphones charged',
+        icon: 'smartPhone',
+      },
+    ],
+  };
+  return mockData;
+};

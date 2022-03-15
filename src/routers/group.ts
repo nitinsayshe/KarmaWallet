@@ -20,6 +20,9 @@ groupRouter.route('/leave/:groupId')
 groupRouter.route('/:groupId/user/:userId')
   .put(authenticate, GroupController.updateUserGroup);
 
+groupRouter.route('/:groupId/dashboard')
+  .get(GroupController.getGroup);
+
 groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)
   .post(authenticate, GroupController.createGroup)

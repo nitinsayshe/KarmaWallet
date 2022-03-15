@@ -905,7 +905,120 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-export const getGroupDashboard = async (_: IRequest) => {
+export const getGroupDashboard = async (req: IRequest<{}, { state: string }, {}>) => {
+  if (req.query.state === 'noGroupDonations') {
+    const mockData = {
+      group: {
+        _id: '622f49ef1562d9af5e4170db',
+        name: 'Impact Karma Test',
+        code: 'IK1',
+        domains: [
+          'theimpactkarma.com',
+        ],
+        settings: {
+          matching: {
+            enabled: false,
+            matchPercentage: -1,
+            maxDollarAmount: -1,
+            lastModified: '2022-03-11T20:35:21.770Z',
+          },
+          privacyStatus: 'private',
+          allowInvite: false,
+          allowDomainRestriction: true,
+          allowSubgroups: false,
+          approvalRequired: false,
+        },
+        status: 'open',
+        owner: {
+          _id: '62192d3bf022c9e3fbfe3cb3',
+          name: 'Sara Morgan',
+        },
+        lastModified: '2022-03-11T20:35:21.767Z',
+        createdOn: '2022-03-11T20:35:21.767Z',
+      },
+      members: 3,
+      membersWithDonations: 2,
+      memberDonations: {
+        tonnes: 11.48,
+        dollars: 100.00,
+      },
+      groupDonations: {
+        tonnes: 0,
+        dollars: 0,
+      },
+      totalDonations: {
+        tonnes: 11.48,
+        dollars: 100.00,
+      },
+      equivalency: {
+        text: '1 garbage truck of waste recycled instead of landfilled',
+        icon: 'garbageTruck',
+      },
+      averageAmericanEmissions: {
+        monthly: 0.75,
+        annually: 18,
+      },
+    };
+    return mockData;
+  }
+  if (req.query.state === 'noMemberDonations') {
+    const mockData = {
+      group: {
+        _id: '622f49ef1562d9af5e4170db',
+        name: 'Impact Karma Test',
+        code: 'IK1',
+        domains: [
+          'theimpactkarma.com',
+        ],
+        settings: {
+          matching: {
+            enabled: false,
+            matchPercentage: -1,
+            maxDollarAmount: -1,
+            lastModified: '2022-03-11T20:35:21.770Z',
+          },
+          privacyStatus: 'private',
+          allowInvite: false,
+          allowDomainRestriction: true,
+          allowSubgroups: false,
+          approvalRequired: false,
+        },
+        status: 'open',
+        owner: {
+          _id: '62192d3bf022c9e3fbfe3cb3',
+          name: 'Sara Morgan',
+        },
+        lastModified: '2022-03-11T20:35:21.767Z',
+        createdOn: '2022-03-11T20:35:21.767Z',
+      },
+      members: 1,
+      membersWithDonations: 0,
+      memberDonations: {
+        tonnes: 0,
+        dollars: 0,
+      },
+      groupDonations: {
+        tonnes: 0,
+        dollars: 0,
+      },
+      totalDonations: {
+        tonnes: 0,
+        dollars: 0,
+      },
+      equivalency: {
+        text: '1 garbage truck of waste recycled instead of landfilled',
+        icon: 'garbageTruck',
+      },
+      averageAmericanEmissions: {
+        monthly: 0.75,
+        annually: 18,
+      },
+    };
+    return mockData;
+  }
+  if (req.query.state === 'error') {
+    throw new CustomError('Group not found.', ErrorTypes.NOT_FOUND);
+  }
   const mockData = {
     group: {
       _id: '622f49ef1562d9af5e4170db',
@@ -937,22 +1050,26 @@ export const getGroupDashboard = async (_: IRequest) => {
     },
     members: 4,
     membersWithDonations: 6,
-    memberDonationsTonnes: 11.48,
-    memberDonationsDollars: 100.00,
-    groupDonationsTonnes: 7.65,
-    groupDonationsDollars: 100.00,
-    totalDonationsTonnes: 19.13,
-    totalDonationsDollars: 250.00,
-    equivalencies: [
-      {
-        text: '1 garbage truck of waste recycled instead of landfilled',
-        icon: 'garbageTruck',
-      },
-      {
-        text: '91,200 smartphones charged',
-        icon: 'smartPhone',
-      },
-    ],
+    memberDonations: {
+      tonnes: 11.48,
+      dollars: 100.00,
+    },
+    groupDonations: {
+      tonnes: 7.65,
+      dollars: 100.00,
+    },
+    totalDonations: {
+      tonnes: 19.13,
+      dollars: 250.00,
+    },
+    equivalency: {
+      text: '1 garbage truck of waste recycled instead of landfilled',
+      icon: 'garbageTruck',
+    },
+    averageAmericanEmissions: {
+      monthly: 0.75,
+      annually: 18,
+    },
   };
   return mockData;
 };

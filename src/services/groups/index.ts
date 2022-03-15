@@ -907,9 +907,36 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
 export const getGroupDashboard = async (_: IRequest) => {
   const mockData = {
-    group: '62192d39f022c9e3fbfe3bd6',
+    group: {
+      _id: '622f49ef1562d9af5e4170db',
+      name: 'Impact Karma Test',
+      code: 'IK1',
+      domains: [
+        'theimpactkarma.com',
+      ],
+      settings: {
+        matching: {
+          enabled: false,
+          matchPercentage: -1,
+          maxDollarAmount: -1,
+          lastModified: '2022-03-11T20:35:21.770Z',
+        },
+        privacyStatus: 'private',
+        allowInvite: false,
+        allowDomainRestriction: true,
+        allowSubgroups: false,
+        approvalRequired: false,
+      },
+      status: 'open',
+      owner: {
+        _id: '62192d3bf022c9e3fbfe3cb3',
+        name: 'Sara Morgan',
+      },
+      lastModified: '2022-03-11T20:35:21.767Z',
+      createdOn: '2022-03-11T20:35:21.767Z',
+    },
     members: 4,
-    membersWithOffset: 6,
+    membersWithDonations: 6,
     memberDonationsTonnes: 11.48,
     memberDonationsDollars: 100.00,
     groupDonationsTonnes: 7.65,

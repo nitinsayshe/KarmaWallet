@@ -4,7 +4,7 @@ import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as SendEmail from '../../../jobs/sendEmail';
-import { MongoClient } from '../../mongo';
+import { _MongoClient } from '../../mongo';
 
 // Sandboxed processors must be exported as default to run correctly
 // See line 25: node_modules/bullmq/dist/cjs/classes/child-processor.js
@@ -16,6 +16,7 @@ export default async (job: SandboxedJob) => {
   // run reports calc (users report)
   const { name, data } = job;
   let result: any;
+  const MongoClient = new _MongoClient();
   await MongoClient.init();
   switch (name) {
     case JobNames.GlobalPlaidTransactionMapper:

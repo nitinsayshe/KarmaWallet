@@ -1,4 +1,4 @@
-export abstract class Client {
+export abstract class ConnectionClient {
   public name: string;
   private _connectionPromise: Promise<any>;
 

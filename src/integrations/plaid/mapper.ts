@@ -8,8 +8,7 @@ import util from 'util';
 import { parse } from 'json2csv';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import pino from 'pino';
-import { Transaction as PlaidTransaction, TransactionsGetRequest, TransactionsGetResponse } from 'plaid';
+import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
 import { printTable } from '../logger';
 import User from './user';
 import { CompanyModel } from '../../models/company';
@@ -25,14 +24,12 @@ import { JobStatusModel } from '../../models/jobStatus';
 import { TransactionModel } from '../../models/transaction';
 import { CategoryModel } from '../../models/category';
 import { SubcategoryModel } from '../../models/subcategory';
-import { sleep } from '../../lib/misc';
 
 const pythonScriptPath = path.join(__dirname, '..', '..', 'lib', 'companyTextMatch.py');
 
 dayjs.extend(utc);
 
 const execAsync = util.promisify(exec);
-const logger = pino();
 
 export class PlaidMapper {
   _plaidItems: TransactionsGetResponse[] = [];
@@ -136,67 +133,6 @@ export class PlaidMapper {
         this._unmappedTransactions.push(um);
       } else {
         this._duplicateUnmappedTransactions.push(um);
-      }
-    }
-  };
-
-  getPlaidTransactions = async ({ access_token, start_date, end_date }: TransactionsGetRequest) => {
-    // the number of transactions to retrieve in
-    // each request/
-    const count = 500;
-
-    const request = {
-      access_token,
-      start_date,
-      end_date,
-      options: { count },
-    };
-    try {
-      const response = await PlaidClient.transactionsGet(request);
-      let { transactions } = response.data;
-      // eslint-disable-next-line camelcase
-      const { total_transactions: totalTransactions } = response.data;
-
-      // plaid rate limits are set to 30 requests per minute
-      // per plaid item. if there are more than (count * 30)
-      // transactions for a given plaid item, then we will
-      // need to throttle our requests for that specicific item
-      //
-      // https://plaid.com/docs/errors/rate-limit-exceeded/#troubleshooting-steps-5
-      const throttle = totalTransactions >= (count * 29);
-
-      while (transactions.length < totalTransactions) {
-        const paginatedRequest = {
-          ...request,
-          options: {
-            count,
-            offset: transactions.length,
-          },
-        };
-        if (throttle) await sleep(Math.ceil((60 / 29) * 1000));
-        const paginatedResponse = await PlaidClient.transactionsGet(paginatedRequest);
-        transactions = transactions.concat(
-          paginatedResponse.data.transactions,
-        );
-      }
-      return transactions;
-    } catch (e: any) {
-      try {
-        const cards = await CardModel.find({ 'integrations.plaid.accessToken': access_token });
-        if (!!cards.length) {
-          for (const card of cards) {
-            card.status = CardStatus.Unlinked;
-            card.integrations.plaid.accessToken = null;
-            await card.save();
-          }
-        }
-      } catch (err) {
-        // TODO: update so we can be notified if this happens and we can manually fix.
-        logger.error(err);
-      }
-
-      if (!!e.response.data.error_message) {
-        logger.error(e.response.data.error_message);
       }
     }
   };
@@ -379,10 +315,11 @@ export class PlaidMapper {
     this._totalAccessTokens = accessTokens.size;
 
     console.log('retrieving transactions from Plaid...');
+    const Plaid = new PlaidClient();
     for (const accessToken of Array.from(accessTokens)) {
       let plaidTransactions = null;
       try {
-        plaidTransactions = await this.getPlaidTransactions({
+        plaidTransactions = await Plaid.getPlaidTransactions({
           access_token: accessToken,
           start_date: startDate.format('YYYY-MM-DD'),
           end_date: endDate.format('YYYY-MM-DD'),

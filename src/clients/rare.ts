@@ -15,7 +15,6 @@ export class RareClient extends SdkClient {
   }
 
   _init = () => {
-    console.log('>>>>> rare_api_key', process.env.RARE_API_KEY);
     this._client = axios.create({
       headers: {
         'x-api-key': process.env.RARE_API_KEY,

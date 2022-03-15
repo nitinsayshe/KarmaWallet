@@ -315,7 +315,6 @@ export class PlaidMapper {
     this._totalAccessTokens = accessTokens.size;
 
     console.log('retrieving transactions from Plaid...');
-    console.log('>>>>> access tokens: ', Array.from(accessTokens));
     const Plaid = new PlaidClient();
     for (const accessToken of Array.from(accessTokens)) {
       let plaidTransactions = null;

@@ -14,14 +14,14 @@ groupRouter.route('/check-code')
 groupRouter.route('/members/:groupId')
   .get(authenticate, GroupController.getGroupMembers);
 
+groupRouter.route('/dashboard/:groupId')
+  .get(GroupController.getGroupDashboard);
+
 groupRouter.route('/leave/:groupId')
   .put(authenticate, GroupController.leaveGroup);
 
 groupRouter.route('/:groupId/user/:userId')
   .put(authenticate, GroupController.updateUserGroup);
-
-groupRouter.route('/:groupId/dashboard')
-  .get(GroupController.getGroup);
 
 groupRouter.route('/:groupId?')
   .get(GroupController.getGroup)

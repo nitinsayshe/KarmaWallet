@@ -8,7 +8,7 @@ const {
   DB_URL,
 } = process.env;
 
-class _MongoClient extends Client {
+export class _MongoClient extends Client {
   private _db: typeof mongoose = null;
 
   constructor() {

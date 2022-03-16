@@ -121,43 +121,42 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
   if (!!settings) {
     // settings provided...only add supported settings
     // to group...
-    const {
-      privacyStatus,
-      allowInvite,
-      allowDomainRestriction,
-      allowSubgroups,
-      approvalRequired,
-      matching,
-    } = settings;
 
     if (
-      !privacyStatus
-      && !allowInvite
-      && !allowDomainRestriction
-      && !allowSubgroups
-      && !approvalRequired
-      && !matching
+      !('privacyStatus' in settings)
+      && !('allowInvite' in settings)
+      && !('allowDomainRestriction' in settings)
+      && !('allowSubgroups' in settings)
+      && !('approvalRequired' in settings)
+      && !('matching' in settings)
     ) {
       throw new CustomError('No valid settings were found. Please try again.', ErrorTypes.INVALID_ARG);
     }
 
-    if (!!privacyStatus) _settings.privacyStatus = privacyStatus;
-    if (!!allowInvite) _settings.allowInvite = allowInvite;
-    if (!!allowDomainRestriction) {
-      _settings.allowDomainRestriction = allowDomainRestriction;
+    if ('privacyStatus' in settings) {
+      if (!Object.values(GroupPrivacyStatus).includes(settings.privacyStatus)) {
+        throw new CustomError('Invalid Privact Status found.', ErrorTypes.INVALID_ARG);
+      }
+
+      _settings.privacyStatus = settings.privacyStatus;
     }
 
-    if (!!allowSubgroups) _settings.allowSubgroups = allowSubgroups;
-    if (!!approvalRequired) _settings.approvalRequired = approvalRequired;
-    if (!!matching) {
+    if ('allowInvite' in settings) _settings.allowInvite = !!settings.allowInvite;
+    if ('allowDomainRestriction' in settings) {
+      _settings.allowDomainRestriction = !!settings.allowDomainRestriction;
+    }
+
+    if ('allowSubgroups' in settings) _settings.allowSubgroups = !!settings.allowSubgroups;
+    if ('approvalRequired' in settings) _settings.approvalRequired = !!settings.approvalRequired;
+    if ('matching' in settings) {
       const {
         enabled,
         matchPercentage = -1,
         maxDollarAmount = -1,
-      } = matching;
+      } = settings.matching;
 
       if (enabled) {
-        _settings.matching.enabled = enabled;
+        _settings.matching.enabled = !!enabled;
 
         if (!matchPercentage && !maxDollarAmount) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
         const _matchPercentage = parseFloat(`${matchPercentage}`);

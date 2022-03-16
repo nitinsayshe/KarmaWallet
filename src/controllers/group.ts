@@ -110,10 +110,10 @@ export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupReque
   }
 };
 
-export const getGroupDashboard: IRequestHandler<{}, { state: string }, {}> = async (req, res) => {
+export const getGroupDashboard: IRequestHandler<GroupService.IGetGroupDashboardRequestParams> = async (req, res) => {
   try {
     const groupDashboard = await GroupService.getGroupDashboard(req);
-    output.api(req, res, groupDashboard);
+    output.api(req, res, { ...groupDashboard, group: GroupService.getShareableUserGroup(groupDashboard.group) });
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

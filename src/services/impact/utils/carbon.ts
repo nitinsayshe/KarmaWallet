@@ -1,6 +1,7 @@
+import { FilterQuery } from 'mongoose';
 import { convertKgToMT, formatNumber } from '../../../lib/number';
 import { RareTransactionQuery } from '../../../lib/constants';
-import { TransactionModel } from '../../../models/transaction';
+import { TransactionModel, ITransaction } from '../../../models/transaction';
 import { MiscModel } from '../../../models/misc';
 
 export enum EquivalencyKey {
@@ -228,20 +229,27 @@ export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKe
   return acc;
 }, { positive: [], negative: [] });
 
-export const getOffsetTransactionsCount = (uid: string) => TransactionModel.find({ userId: uid, ...RareTransactionQuery }).count();
+export const getOffsetTransactionsCount = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...query, ...RareTransactionQuery }).count();
 
-export const getOffsetTransactions = (uid: string) => TransactionModel.find({ userId: uid, ...RareTransactionQuery });
+export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...query, ...RareTransactionQuery });
 
-export const getOffsetTransactionsTotal = async (uid: string) => {
+export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ userId: uid, ...RareTransactionQuery })
+    .match({ ...query, ...RareTransactionQuery })
     .group({ _id: '$userId', total: { $sum: '$amount' } });
   return aggResult?.length ? aggResult[0].total : 0;
 };
 
-export const getRareOffsetAmount = async (uid: string) => {
+export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ userId: uid, ...RareTransactionQuery })
+    .match({ ...query, ...RareTransactionQuery })
+    .group({ _id: '$userId', total: { $sum: 1 } });
+  return aggResult.length;
+};
+
+export const getRareOffsetAmount = async (query: FilterQuery<ITransaction>) => {
+  const aggResult = await TransactionModel.aggregate()
+    .match({ ...query, ...RareTransactionQuery })
     .group({ _id: '$userId', total: { $sum: '$integrations.rare.tonnes_amt' } });
   const sumTotal = aggResult?.length ? aggResult[0].total : 0;
   return sumTotal;

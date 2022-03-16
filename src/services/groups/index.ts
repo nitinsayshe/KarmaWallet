@@ -23,6 +23,11 @@ import { IRequest } from '../../types/request';
 import * as TokenService from '../token';
 import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
+import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
+import {
+  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions,
+} from '../impact/utils/carbon';
+import { getRandomInt } from '../../lib/number';
 
 dayjs.extend(utc);
 
@@ -36,6 +41,11 @@ export interface IGetGroupRequest {
 
 export interface IUserGroupsRequest {
   userId: string;
+}
+
+export interface IUserGroupRequest {
+  userId: string;
+  groupId: string;
 }
 
 export interface IGroupRequestParams {
@@ -66,6 +76,10 @@ export interface IJoinGroupRequest {
   code: string;
   email: string;
   userId: string;
+}
+
+export interface IGetGroupDashboardRequestParams {
+  groupId: string
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -471,6 +485,39 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
       ]);
   } catch (err) {
     throw asCustomError(err);
+  }
+};
+
+export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  const { userId, groupId } = req.params;
+  if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
+    throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+  }
+  if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
+  if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  try {
+    const userGroup = await UserGroupModel.findOne({ group: groupId, user: userId })
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+          populate: [
+            {
+              path: 'company',
+              model: CompanyModel,
+            },
+            {
+              path: 'owner',
+              model: UserModel,
+            },
+          ],
+        },
+      ]);
+    if (!userGroup) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
+    return userGroup;
+  } catch (e) {
+    throw asCustomError(e);
   }
 };
 
@@ -905,171 +952,60 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-export const getGroupDashboard = async (req: IRequest<{}, { state: string }, {}>) => {
-  if (req.query.state === 'noGroupDonations') {
-    const mockData = {
-      group: {
-        _id: '622f49ef1562d9af5e4170db',
-        name: 'Impact Karma Test',
-        code: 'IK1',
-        domains: [
-          'theimpactkarma.com',
-        ],
-        settings: {
-          matching: {
-            enabled: false,
-            matchPercentage: -1,
-            maxDollarAmount: -1,
-            lastModified: '2022-03-11T20:35:21.770Z',
-          },
-          privacyStatus: 'private',
-          allowInvite: false,
-          allowDomainRestriction: true,
-          allowSubgroups: false,
-          approvalRequired: false,
-        },
-        status: 'open',
-        owner: {
-          _id: '62192d3bf022c9e3fbfe3cb3',
-          name: 'Sara Morgan',
-        },
-        lastModified: '2022-03-11T20:35:21.767Z',
-        createdOn: '2022-03-11T20:35:21.767Z',
-      },
-      members: 3,
-      membersWithDonations: 2,
-      memberDonations: {
-        tonnes: 11.48,
-        dollars: 100.00,
-      },
-      groupDonations: {
-        tonnes: 0,
-        dollars: 0,
-      },
-      totalDonations: {
-        tonnes: 11.48,
-        dollars: 100.00,
-      },
-      equivalency: {
-        text: '1 garbage truck of waste recycled instead of landfilled',
-        icon: 'garbageTruck',
-      },
-      averageAmericanEmissions: {
-        monthly: 0.75,
-        annually: 18,
-      },
+export const getGroupDashboard = async (req: IRequest<IGetGroupDashboardRequestParams>) => {
+  const { requestor } = req;
+  const { groupId } = req.params;
+  if (!groupId) {
+    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  }
+  try {
+    const group = await getUserGroup({ ...req, params: { userId: requestor._id, groupId: req.params.groupId } });
+    const members = await getGroupMembers(req);
+    const memberIds = members.map(m => (m.user as IUserDocument)._id);
+    const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
+    const memberDonationsTotalDollars = await getOffsetTransactionsTotal({ userId: { $in: memberIds } });
+    const memberDonationsTotalTonnes = await getRareOffsetAmount({ userId: { $in: memberIds } });
+    const memberDonations = {
+      dollars: memberDonationsTotalDollars,
+      tonnes: memberDonationsTotalTonnes,
     };
-    return mockData;
-  }
-  if (req.query.state === 'noMemberDonations') {
-    const mockData = {
-      group: {
-        _id: '622f49ef1562d9af5e4170db',
-        name: 'Impact Karma Test',
-        code: 'IK1',
-        domains: [
-          'theimpactkarma.com',
-        ],
-        settings: {
-          matching: {
-            enabled: false,
-            matchPercentage: -1,
-            maxDollarAmount: -1,
-            lastModified: '2022-03-11T20:35:21.770Z',
-          },
-          privacyStatus: 'private',
-          allowInvite: false,
-          allowDomainRestriction: true,
-          allowSubgroups: false,
-          approvalRequired: false,
-        },
-        status: 'open',
-        owner: {
-          _id: '62192d3bf022c9e3fbfe3cb3',
-          name: 'Sara Morgan',
-        },
-        lastModified: '2022-03-11T20:35:21.767Z',
-        createdOn: '2022-03-11T20:35:21.767Z',
-      },
-      members: 1,
-      membersWithDonations: 0,
-      memberDonations: {
-        tonnes: 0,
-        dollars: 0,
-      },
-      groupDonations: {
-        tonnes: 0,
-        dollars: 0,
-      },
-      totalDonations: {
-        tonnes: 0,
-        dollars: 0,
-      },
-      equivalency: {
-        text: '1 garbage truck of waste recycled instead of landfilled',
-        icon: 'garbageTruck',
-      },
-      averageAmericanEmissions: {
-        monthly: 0.75,
-        annually: 18,
-      },
+
+    // TODO: update w/ real value once group donation functionality is added
+    const groupDonations = {
+      dollars: 0,
+      tonnes: 0,
     };
-    return mockData;
+
+    const totalDonations = {
+      dollars: memberDonations.dollars + groupDonations.dollars,
+      tonnes: memberDonations.tonnes + groupDonations.tonnes,
+    };
+
+    const averageAmericanEmissions = {
+      monthly: averageAmericanEmissionsData.Monthly,
+      annually: averageAmericanEmissionsData.Annually * 2,
+    };
+
+    const useAverageAmericanEmissions = !totalDonations.tonnes;
+    let equivalency;
+    const equivalencies = getEquivalencies(useAverageAmericanEmissions ? averageAmericanEmissions.annually : totalDonations.tonnes);
+    if (useAverageAmericanEmissions) {
+      equivalency = equivalencies.negative[getRandomInt(0, equivalencies.negative.length - 1)];
+    } else {
+      equivalency = equivalencies.positive[getRandomInt(0, equivalencies.positive.length - 1)];
+    }
+
+    return {
+      group,
+      members: members.length,
+      membersWithDonations,
+      groupDonations,
+      memberDonations,
+      totalDonations,
+      equivalency,
+      averageAmericanEmissions,
+    };
+  } catch (e) {
+    throw asCustomError(e);
   }
-  if (req.query.state === 'error') {
-    throw new CustomError('Group not found.', ErrorTypes.NOT_FOUND);
-  }
-  const mockData = {
-    group: {
-      _id: '622f49ef1562d9af5e4170db',
-      name: 'Impact Karma Test',
-      code: 'IK1',
-      domains: [
-        'theimpactkarma.com',
-      ],
-      settings: {
-        matching: {
-          enabled: false,
-          matchPercentage: -1,
-          maxDollarAmount: -1,
-          lastModified: '2022-03-11T20:35:21.770Z',
-        },
-        privacyStatus: 'private',
-        allowInvite: false,
-        allowDomainRestriction: true,
-        allowSubgroups: false,
-        approvalRequired: false,
-      },
-      status: 'open',
-      owner: {
-        _id: '62192d3bf022c9e3fbfe3cb3',
-        name: 'Sara Morgan',
-      },
-      lastModified: '2022-03-11T20:35:21.767Z',
-      createdOn: '2022-03-11T20:35:21.767Z',
-    },
-    members: 4,
-    membersWithDonations: 6,
-    memberDonations: {
-      tonnes: 11.48,
-      dollars: 100.00,
-    },
-    groupDonations: {
-      tonnes: 7.65,
-      dollars: 100.00,
-    },
-    totalDonations: {
-      tonnes: 19.13,
-      dollars: 250.00,
-    },
-    equivalency: {
-      text: '1 garbage truck of waste recycled instead of landfilled',
-      icon: 'garbageTruck',
-    },
-    averageAmericanEmissions: {
-      monthly: 0.75,
-      annually: 18,
-    },
-  };
-  return mockData;
 };

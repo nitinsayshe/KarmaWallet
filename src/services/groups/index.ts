@@ -204,7 +204,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
 
     if (!!owner) {
       // requestor must have appropriate permissions to assign a group owner.
-      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You do not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
+      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You are not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
       const _owner = await getUser(req, { _id: owner });
       if (!_owner) throw new CustomError(`Owner with id: ${owner} could not be found.`, ErrorTypes.NOT_FOUND);
       group.owner = _owner;

@@ -109,3 +109,12 @@ export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupReque
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getGroupDashboard: IRequestHandler<{}, { state: string }, {}> = async (req, res) => {
+  try {
+    const groupDashboard = await GroupService.getGroupDashboard(req);
+    output.api(req, res, groupDashboard);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

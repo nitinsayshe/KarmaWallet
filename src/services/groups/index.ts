@@ -135,7 +135,7 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
 
     if ('privacyStatus' in settings) {
       if (!Object.values(GroupPrivacyStatus).includes(settings.privacyStatus)) {
-        throw new CustomError('Invalid Privact Status found.', ErrorTypes.INVALID_ARG);
+        throw new CustomError('Invalid Privacy Status found.', ErrorTypes.INVALID_ARG);
       }
 
       _settings.privacyStatus = settings.privacyStatus;

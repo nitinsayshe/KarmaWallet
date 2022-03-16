@@ -6,6 +6,8 @@ import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionM
 import * as SendEmail from '../../../jobs/sendEmail';
 import { _MongoClient } from '../../mongo';
 
+const MongoClient = new _MongoClient();
+
 // Sandboxed processors must be exported as default to run correctly
 // See line 25: node_modules/bullmq/dist/cjs/classes/child-processor.js
 export default async (job: SandboxedJob) => {
@@ -16,7 +18,6 @@ export default async (job: SandboxedJob) => {
   // run reports calc (users report)
   const { name, data } = job;
   let result: any;
-  const MongoClient = new _MongoClient();
   await MongoClient.init();
   switch (name) {
     case JobNames.GlobalPlaidTransactionMapper:
@@ -32,6 +33,5 @@ export default async (job: SandboxedJob) => {
       console.log('>>>>> invalid job name found');
       break;
   }
-  MongoClient.disconnect();
   return result;
 };

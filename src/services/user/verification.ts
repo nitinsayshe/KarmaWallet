@@ -52,6 +52,7 @@ export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<I
 export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
   const { tokenValue } = req.body;
+
   if (!tokenValue) {
     throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
   }

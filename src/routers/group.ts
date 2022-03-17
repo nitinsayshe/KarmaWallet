@@ -14,8 +14,11 @@ groupRouter.route('/check-code')
 groupRouter.route('/members/:groupId')
   .get(authenticate, GroupController.getGroupMembers);
 
-groupRouter.route('/:groupId/dashboard')
-  .get(authenticate, GroupController.getGroupDashboard);
+groupRouter.route('/:groupId/offset-data')
+  .get(authenticate, GroupController.getGroupOffsetData);
+
+groupRouter.route('/:groupId/offset-equivalency')
+  .get(authenticate, GroupController.getGroupOffsetEquivalency);
 
 groupRouter.route('/leave/:groupId')
   .put(authenticate, GroupController.leaveGroup);

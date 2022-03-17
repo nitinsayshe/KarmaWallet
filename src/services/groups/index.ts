@@ -952,7 +952,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-export const getGroupDashboard = async (req: IRequest<IGetGroupDashboardRequestParams>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupDashboardRequestParams>) => {
   const { requestor } = req;
   const { groupId } = req.params;
   if (!groupId) {
@@ -981,20 +981,6 @@ export const getGroupDashboard = async (req: IRequest<IGetGroupDashboardRequestP
       tonnes: memberDonations.tonnes + groupDonations.tonnes,
     };
 
-    const averageAmericanEmissions = {
-      monthly: averageAmericanEmissionsData.Monthly,
-      annually: averageAmericanEmissionsData.Annually * 2,
-    };
-
-    const useAverageAmericanEmissions = !totalDonations.tonnes;
-    let equivalency;
-    const equivalencies = getEquivalencies(useAverageAmericanEmissions ? averageAmericanEmissions.annually : totalDonations.tonnes);
-    if (useAverageAmericanEmissions) {
-      equivalency = equivalencies.negative[getRandomInt(0, equivalencies.negative.length - 1)];
-    } else {
-      equivalency = equivalencies.positive[getRandomInt(0, equivalencies.positive.length - 1)];
-    }
-
     return {
       group,
       members: members.length,
@@ -1002,6 +988,43 @@ export const getGroupDashboard = async (req: IRequest<IGetGroupDashboardRequestP
       groupDonations,
       memberDonations,
       totalDonations,
+    };
+  } catch (e) {
+    throw asCustomError(e);
+  }
+};
+
+export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupDashboardRequestParams>) => {
+  const { groupId } = req.params;
+  if (!groupId) {
+    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  }
+  try {
+    const groupDashboardData = await getGroupOffsetData(req);
+
+    const {
+      totalDonations,
+    } = groupDashboardData;
+
+    const averageAmericanEmissions = {
+      monthly: averageAmericanEmissionsData.Monthly,
+      annually: averageAmericanEmissionsData.Annually * 2,
+    };
+
+    const useAverageAmericanEmissions = !totalDonations.tonnes;
+
+    let equivalency;
+
+    const equivalencies = getEquivalencies(useAverageAmericanEmissions ? averageAmericanEmissions.annually : totalDonations.tonnes);
+
+    if (useAverageAmericanEmissions) {
+      equivalency = equivalencies.negative[getRandomInt(0, equivalencies.negative.length - 1)];
+    } else {
+      equivalency = equivalencies.positive[getRandomInt(0, equivalencies.positive.length - 1)];
+    }
+
+    return {
+      useAverageAmericanEmissions,
       equivalency,
       averageAmericanEmissions,
     };

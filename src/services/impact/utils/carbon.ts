@@ -214,6 +214,11 @@ export const getMonthlyEmissionsAverage = async (uid: string) => {
   return emissions;
 };
 
+export interface IEquivalencyObject {
+  text: string;
+  icon: string;
+}
+
 export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKey) => equivalenciesData.reduce((acc, eq) => {
   const {
     perMt, phrase, type, key,

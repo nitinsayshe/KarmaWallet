@@ -54,6 +54,7 @@ export interface IShareableGroup {
   name: string;
   code: string;
   domains: string[];
+  logo: string;
   settings: IGroupSettings;
   owner: IRef<Schema.Types.ObjectId, (IShareableOwner | IShareableUser)>;
   status: GroupStatus;

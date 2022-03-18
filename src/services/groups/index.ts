@@ -544,6 +544,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
     }
 
+    console.log('>>>>> existingUserGrouo status checks out');
+
     let validEmail: string;
     const hasDomainRestrictions = group.settings.allowDomainRestriction && group.domains.length > 0;
     if (hasDomainRestrictions) {
@@ -561,6 +563,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
+    console.log('>>>>> has domain restrictions checks out');
+
     const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
 
     // add groupEmail to user's list of altEmails if doesnt already exist and
@@ -571,6 +575,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         status: UserEmailStatus.Unverified,
       });
     }
+
+    console.log('>>>>> existing alt email checks out');
 
     // send verification email if
     // group has domain restriction AND

@@ -1,5 +1,5 @@
 import isemail from 'isemail';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Schema } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
@@ -23,6 +23,7 @@ import { IRequest } from '../../types/request';
 import * as TokenService from '../token';
 import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
+import { IRef } from '../../types/model';
 
 dayjs.extend(utc);
 
@@ -428,8 +429,11 @@ export const getShareableUserGroup = ({
   joinedOn,
 }: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
   console.log('>>>>> about to get shareable group');
-  const _group = getShareableGroup(group as IGroupDocument);
-  console.log('>>>>> sharable group retrieved');
+  let _group: IRef<Schema.Types.ObjectId, IShareableGroup | IGroup> = group;
+  if (!!(_group as IGroupDocument)?.name) {
+    _group = getShareableGroup(group as IGroupDocument);
+    console.log('>>>>> sharable group retrieved');
+  }
 
   return {
     _id,

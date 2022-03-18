@@ -427,7 +427,9 @@ export const getShareableUserGroup = ({
   status,
   joinedOn,
 }: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
+  console.log('>>>>> about to get shareable group');
   const _group = getShareableGroup(group as IGroupDocument);
+  console.log('>>>>> sharable group retrieved');
 
   return {
     _id,
@@ -572,8 +574,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       });
     }
 
-    console.log('>>>>> existing email stuff checks out');
-
     // send verification email if
     // group has domain restriction AND
     // altEmail exists and is unverified or
@@ -586,8 +586,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
       });
     }
-
-    console.log('>>>>> email verification stuff checks out');
 
     // if the email used is the user's primary email OR
     // is an alt email that has already been verified, set
@@ -603,8 +601,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       existingUserGroup.status = defaultStatus;
 
       await existingUserGroup.save();
-
-      console.log('>>>>> saving existing user group checks out');
     } else {
       userGroup = new UserGroupModel({
         user,
@@ -615,7 +611,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       });
 
       await userGroup.save();
-      console.log('>>>>> saving new user group checks out');
     }
 
     await user.save();

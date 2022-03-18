@@ -229,27 +229,27 @@ export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKe
   return acc;
 }, { positive: [], negative: [] });
 
-export const getOffsetTransactionsCount = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...query, ...RareTransactionQuery }).count();
+export const getOffsetTransactionsCount = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...RareTransactionQuery, ...query }).count();
 
-export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...query, ...RareTransactionQuery });
+export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...RareTransactionQuery, ...query });
 
 export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...query, ...RareTransactionQuery })
+    .match({ ...RareTransactionQuery, ...query })
     .group({ _id: '$userId', total: { $sum: '$amount' } });
   return aggResult?.length ? aggResult[0].total : 0;
 };
 
 export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...query, ...RareTransactionQuery })
+    .match({ ...RareTransactionQuery, ...query })
     .group({ _id: '$userId', total: { $sum: 1 } });
   return aggResult.length;
 };
 
 export const getRareOffsetAmount = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...query, ...RareTransactionQuery })
+    .match({ ...RareTransactionQuery, ...query })
     .group({ _id: '$userId', total: { $sum: '$integrations.rare.tonnes_amt' } });
   const sumTotal = aggResult?.length ? aggResult[0].total : 0;
   return sumTotal;

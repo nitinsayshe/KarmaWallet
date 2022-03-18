@@ -94,6 +94,10 @@ export interface ITransaction {
   lastModified: Date;
 }
 
+export interface ITransactionAggregate extends ITransaction {
+  total: number
+}
+
 export interface ITransactionDocument extends ITransaction, Document {}
 export type ITransactionModel = IModel<ITransaction>;
 

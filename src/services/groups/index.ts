@@ -25,7 +25,7 @@ import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import {
-  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions,
+  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions, IEquivalencyObject,
 } from '../impact/utils/carbon';
 import { getRandomInt } from '../../lib/number';
 
@@ -78,7 +78,7 @@ export interface IJoinGroupRequest {
   userId: string;
 }
 
-export interface IGetGroupDashboardRequestParams {
+export interface IGetGroupOffsetRequestParams {
   groupId: string
 }
 
@@ -951,14 +951,14 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-export const getGroupOffsetData = async (req: IRequest<IGetGroupDashboardRequestParams>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { requestor } = req;
   const { groupId } = req.params;
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }
   try {
-    const group = await getUserGroup({ ...req, params: { userId: requestor._id, groupId: req.params.groupId } });
+    const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id, groupId: req.params.groupId } });
     const members = await getGroupMembers(req);
     const memberIds = members.map(m => (m.user as IUserDocument)._id);
     const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
@@ -981,7 +981,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupDashboardRequest
     };
 
     return {
-      group,
+      userGroup,
       members: members.length,
       membersWithDonations,
       groupDonations,
@@ -993,17 +993,13 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupDashboardRequest
   }
 };
 
-export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupDashboardRequestParams>) => {
+export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { groupId } = req.params;
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }
   try {
-    const groupDashboardData = await getGroupOffsetData(req);
-
-    const {
-      totalDonations,
-    } = groupDashboardData;
+    const { totalDonations } = await getGroupOffsetData(req);
 
     const averageAmericanEmissions = {
       monthly: averageAmericanEmissionsData.Monthly,
@@ -1012,7 +1008,7 @@ export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupDashboard
 
     const useAverageAmericanEmissions = !totalDonations.tonnes;
 
-    let equivalency;
+    let equivalency: IEquivalencyObject;
 
     const equivalencies = getEquivalencies(useAverageAmericanEmissions ? averageAmericanEmissions.annually : totalDonations.tonnes);
 

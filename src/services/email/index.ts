@@ -8,9 +8,11 @@ import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 
+// values for EmailTemplates should map to the directory names in /src/templates/email/
 export enum EmailTemplates {
   GroupVerification = 'groupVerification',
-  AltEmailVerification = 'altEmailVerification',
+  EmailVerification = 'emailVerification',
+  Welcome = 'welcome'
 }
 
 export const buildTemplate = (templateName: string, data: any) => {
@@ -40,7 +42,22 @@ interface IGroupVerificationTemplateParams {
   replyToAddresses?: string[];
 }
 
-interface IAltEmailVerificationTemplateParams {
+export enum EmailTypes {
+  Alt = 'alt',
+  Primary = 'primary',
+}
+
+interface IEmailVerificationTemplateParams {
+  name: string;
+  domain?: string;
+  token: string;
+  recipientEmail: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
+  emailType: EmailTypes
+}
+
+interface IWelcomeEmailTemplateParams {
   name: string;
   domain?: string;
   token: string;
@@ -77,25 +94,61 @@ export const sendGroupVerificationEmail = async ({
   return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
-export const sendAltEmailVerification = async ({
+export const sendEmailVerification = async ({
   name,
   domain = process.env.FRONTEND_DOMAIN,
   token,
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
-}: IAltEmailVerificationTemplateParams) => {
+  emailType = EmailTypes.Alt,
+}: IEmailVerificationTemplateParams) => {
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
     name, domain, token, recipientEmail,
   });
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
-  const verificationLink = `${domain}/account?altEmailVerification=${token}`;
-  const template = buildTemplate(EmailTemplates.AltEmailVerification, {
+  // TODO: verify param FE/UI will be using to verify
+  const param = emailType === EmailTypes.Alt ? 'altEmailVerification' : 'emailVerification';
+  const verificationLink = `${domain}/account?${param}=${token}`;
+  const template = buildTemplate(EmailTemplates.EmailVerification, {
     verificationLink, name, token,
   });
   const subject = 'KarmaWallet Email Verification';
+  const jobData = {
+    template, subject, senderEmail, recipientEmail, replyToAddresses,
+  };
+  // tries 3 times, after 4 sec, 16 sec, and 64 sec
+  const jobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 4000,
+    },
+  };
+  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+};
+
+export const sendWelcomeEmail = async ({
+  name,
+  domain = process.env.FRONTEND_DOMAIN,
+  token,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IWelcomeEmailTemplateParams) => {
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
+    name, domain, token, recipientEmail,
+  });
+  if (!isValid) {
+    throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  }
+  const verificationLink = `${domain}/account?emailVerification=${token}`;
+  const template = buildTemplate(EmailTemplates.Welcome, {
+    verificationLink, name, token,
+  });
+  const subject = 'Welcome to KarmaWallet!';
   const jobData = {
     template, subject, senderEmail, recipientEmail, replyToAddresses,
   };

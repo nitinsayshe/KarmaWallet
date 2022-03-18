@@ -10,7 +10,7 @@ import {
 } from '../../lib/constants';
 import * as TokenService from '../token';
 import { IRequest } from '../../types/request';
-import { sendAltEmailVerification } from '../email';
+import { EmailTypes, sendEmailVerification } from '../email';
 import { UserGroupModel, UserGroupStatus } from '../../models/userGroup';
 
 export interface IEmailVerificationData {
@@ -43,8 +43,8 @@ export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<I
   const token = await TokenService.createToken({
     user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
   });
-  await sendAltEmailVerification({
-    name: requestor.name, token: token.value, recipientEmail: email,
+  await sendEmailVerification({
+    name: requestor.name, token: token.value, recipientEmail: email, emailType: EmailTypes.Alt,
   });
   return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
 };
@@ -68,4 +68,38 @@ export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerific
   // TODO: update to verified when support for owner approval is added.
   await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
   return { email };
+};
+
+export const verifyPrimaryEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
+  const { requestor } = req;
+  const { tokenValue } = req.body;
+
+  if (!tokenValue) {
+    throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
+  }
+  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.PrimaryEmail);
+  if (!token) {
+    throw new CustomError('Token not found. Please request email verification again.', ErrorTypes.INVALID_ARG);
+  }
+  const email = token?.resource?.altEmail;
+  if (!email) {
+    throw new CustomError('This token is not associated with an email address.', ErrorTypes.INVALID_ARG);
+  }
+  await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: dayjs().utc().toDate() }, { new: true });
+  // TODO: update to verified when support for owner approval is added.
+  await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
+  return { email };
+};
+
+export const resendPrimaryEmailVerification = async (req: IRequest) => {
+  const { requestor } = req;
+  const { email } = requestor;
+  const days = emailVerificationDays;
+  const token = await TokenService.createToken({
+    user: requestor, days, type: TokenTypes.PrimaryEmail, resource: { email },
+  });
+  await sendEmailVerification({
+    name: requestor.name, token: token.value, recipientEmail: email, emailType: EmailTypes.Primary,
+  });
+  return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
 };

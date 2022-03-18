@@ -19,7 +19,7 @@ import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
-import { sendAltEmailVerification } from '../email';
+import { EmailTypes, sendEmailVerification } from '../email';
 
 dayjs.extend(utc);
 
@@ -266,8 +266,8 @@ export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<I
   const token = await TokenService.createToken({
     user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
   });
-  await sendAltEmailVerification({
-    name: requestor.name, domain: 'https://karmawallet.io', token: token.value, recipientEmail: email,
+  await sendEmailVerification({
+    name: requestor.name, domain: 'https://karmawallet.io', token: token.value, recipientEmail: email, emailType: EmailTypes.Alt,
   });
   return msg;
 };

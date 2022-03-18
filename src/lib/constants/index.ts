@@ -39,7 +39,7 @@ export enum SocketNamespaces {
 }
 
 export enum TokenTypes {
-  Email = 'email',
+  PrimaryEmail = 'primaryEmail',
   Password = 'password',
   AltEmail = 'altEmail'
 }

@@ -10,7 +10,14 @@ export interface ISendGroupVerificationEmailParams {
   token: string;
 }
 
-export interface ISendAltEmailVerificationParams {
+export interface ISendEmailVerificationParams {
+  name: string;
+  domain: string;
+  recipientEmail: string;
+  token: string;
+}
+
+export interface ISendWelcomeEmailParams {
   name: string;
   domain: string;
   recipientEmail: string;
@@ -32,11 +39,31 @@ export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGrou
   return 'Job added to queue';
 };
 
-export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendAltEmailVerificationParams>) => {
+export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendEmailVerificationParams>) => {
   const {
     name, domain, token, recipientEmail,
   } = req.body;
-  await EmailService.sendAltEmailVerification({
+  await EmailService.sendEmailVerification({
+    name, domain, token, recipientEmail, emailType: EmailService.EmailTypes.Alt,
+  });
+  return 'Job added to queue';
+};
+
+export const sendPrimaryEmailVerification = async (req: IRequest<{}, {}, ISendEmailVerificationParams>) => {
+  const {
+    name, domain, token, recipientEmail,
+  } = req.body;
+  await EmailService.sendEmailVerification({
+    name, domain, token, recipientEmail, emailType: EmailService.EmailTypes.Primary,
+  });
+  return 'Job added to queue';
+};
+
+export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendWelcomeEmailParams>) => {
+  const {
+    name, domain, token, recipientEmail,
+  } = req.body;
+  await EmailService.sendWelcomeEmail({
     name, domain, token, recipientEmail,
   });
   return 'Job added to queue';

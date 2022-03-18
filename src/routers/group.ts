@@ -11,7 +11,7 @@ groupRouter.route('/join')
 groupRouter.route('/check-code')
   .get(GroupController.checkCode);
 
-groupRouter.route('/members/:groupId')
+groupRouter.route('/:groupId/members')
   .get(authenticate, GroupController.getGroupMembers);
 
 groupRouter.route('/:groupId/offset-data')
@@ -20,7 +20,7 @@ groupRouter.route('/:groupId/offset-data')
 groupRouter.route('/:groupId/offset-equivalency')
   .get(authenticate, GroupController.getGroupOffsetEquivalency);
 
-groupRouter.route('/leave/:groupId')
+groupRouter.route('/:groupId/leave')
   .put(authenticate, GroupController.leaveGroup);
 
 groupRouter.route('/:groupId/user/:userId')

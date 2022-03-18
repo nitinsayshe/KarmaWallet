@@ -529,10 +529,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup: IUserGroupDocument = await UserGroupModel.findOne({
-      group,
-      user,
-    });
+    const existingUserGroup: IUserGroupDocument = await UserGroupModel
+      .findOne({
+        group,
+        user,
+      })
+      .populate([
+        {
+          path: 'group',
+          ref: GroupModel,
+        },
+      ]);
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);

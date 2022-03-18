@@ -544,8 +544,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
     }
 
-    console.log('>>>>> existingUserGrouo status checks out');
-
     let validEmail: string;
     const hasDomainRestrictions = group.settings.allowDomainRestriction && group.domains.length > 0;
     if (hasDomainRestrictions) {
@@ -563,8 +561,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    console.log('>>>>> has domain restrictions checks out');
-
     const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
 
     // add groupEmail to user's list of altEmails if doesnt already exist and
@@ -576,7 +572,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       });
     }
 
-    console.log('>>>>> existing alt email checks out');
+    console.log('>>>>> existing email stuff checks out');
 
     // send verification email if
     // group has domain restriction AND
@@ -590,6 +586,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
       });
     }
+
+    console.log('>>>>> email verification stuff checks out');
 
     // if the email used is the user's primary email OR
     // is an alt email that has already been verified, set
@@ -605,6 +603,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       existingUserGroup.status = defaultStatus;
 
       await existingUserGroup.save();
+
+      console.log('>>>>> saving existing user group checks out');
     } else {
       userGroup = new UserGroupModel({
         user,
@@ -615,6 +615,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       });
 
       await userGroup.save();
+      console.log('>>>>> saving new user group checks out');
     }
 
     await user.save();

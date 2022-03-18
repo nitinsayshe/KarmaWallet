@@ -428,11 +428,9 @@ export const getShareableUserGroup = ({
   status,
   joinedOn,
 }: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
-  console.log('>>>>> about to get shareable group');
   let _group: IRef<Schema.Types.ObjectId, IShareableGroup | IGroup> = group;
   if (!!(_group as IGroupDocument)?.name) {
     _group = getShareableGroup(group as IGroupDocument);
-    console.log('>>>>> sharable group retrieved');
   }
 
   return {

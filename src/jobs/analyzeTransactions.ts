@@ -18,18 +18,18 @@ export const exec = async () => {
   try {
     const transactions = await TransactionModel.find({}).lean();
 
-    let missingCarbonMultipiers = 0;
+    let missingCarbonMultiplier = 0;
     let missingCompany = 0;
 
     for (const transaction of transactions) {
-      if (!transaction.carbonMultiplier) missingCarbonMultipiers += 1;
+      if (!transaction.carbonMultiplier) missingCarbonMultiplier += 1;
       if (!transaction.companyId) missingCompany += 1;
     }
 
     const report = new ReportModel({
       transactionAnalysis: {
         totalTransactions: transactions.length,
-        missingCarbonMultipiers,
+        missingCarbonMultiplier,
         missingCompany,
       },
       createdOn: dayjs().utc().toDate(),

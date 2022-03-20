@@ -6,27 +6,30 @@ import {
 } from 'mongoose';
 import { IModel } from '../types/model';
 
-export interface ITransactionAnalysis {
+export interface ITransactionsMonitor {
   totalTransactions: number;
   missingCarbonMultiplier: number;
   missingCompany: number;
 }
 
 export interface IReport {
-  transactionAnalysis?: ITransactionAnalysis;
+  transactionsMonitor?: ITransactionsMonitor;
+  createdOn: Date;
 }
 
 export interface IReportDocument extends IReport, Document {}
 export type IReportModel = IModel<IReport>;
 
-const transactionAnalysis = {
-  totalTransactions: Number,
-  missingCarbonMultiplier: Number,
-  missingCompany: Number,
+const transactionsMonitor = {
+  type: {
+    totalTransactions: Number,
+    missingCarbonMultiplier: Number,
+    missingCompany: Number,
+  },
 };
 
 const reportSchema = new Schema({
-  transactionAnalysis,
+  transactionsMonitor,
   createdOn: Date,
 });
 

@@ -3,8 +3,8 @@ export enum QueueNames {
 }
 
 export enum JobNames {
-  AnalyzeTransactions = 'analyze-transactions',
   GlobalPlaidTransactionMapper = 'global-plaid-transaction-mapper',
   SendEmail = 'send-email',
+  TransactionsMonitor = 'transactions-monitor',
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
 }

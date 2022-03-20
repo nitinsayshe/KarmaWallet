@@ -27,7 +27,7 @@ export const exec = async () => {
     }
 
     const report = new ReportModel({
-      transactionAnalysis: {
+      transactionsMonitor: {
         totalTransactions: transactions.length,
         missingCarbonMultiplier,
         missingCompany,
@@ -42,10 +42,10 @@ export const exec = async () => {
 };
 
 export const onComplete = () => {
-  console.log(`${JobNames.AnalyzeTransactions} finished`);
+  console.log(`${JobNames.TransactionsMonitor} finished`);
 };
 
 export const onFailed = (_: SandboxedJob, err: Error) => {
-  console.log(`${JobNames.AnalyzeTransactions} failed`);
+  console.log(`${JobNames.TransactionsMonitor} failed`);
   console.log(err);
 };

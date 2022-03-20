@@ -4,7 +4,7 @@ import { QueueNames, JobNames } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import { RedisClient } from '../../redis';
-import * as AnalyzeTransactions from '../../../jobs/analyzeTransactions';
+import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 
 export class _MainBullClient extends _BullClient {
   constructor() {
@@ -40,14 +40,14 @@ export class _MainBullClient extends _BullClient {
 
   // https://crontab.cronhub.io/
   initCronJobs = () => {
-    this.createJob(JobNames.AnalyzeTransactions, null, { jobId: JobNames.AnalyzeTransactions, repeat: { cron: '0 0 3 1/1 * ? *' } });
+    this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 0 3 1/1 * ? *' } });
     this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */2 * * *' } });
   };
 
   _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
     switch (job.name) {
-      case JobNames.AnalyzeTransactions:
-        AnalyzeTransactions.onComplete();
+      case JobNames.TransactionsMonitor:
+        TransactionsMonitor.onComplete();
         break;
       case JobNames.UserPlaidTransactionMapper:
         UserPlaidTransactionMapper.onComplete(job as SandboxedJob, result);
@@ -63,8 +63,8 @@ export class _MainBullClient extends _BullClient {
 
   _onJobFailed = async (job: Job | SandboxedJob, err: Error) => {
     switch (job.name) {
-      case JobNames.AnalyzeTransactions:
-        AnalyzeTransactions.onFailed((job as SandboxedJob), err);
+      case JobNames.TransactionsMonitor:
+        TransactionsMonitor.onFailed((job as SandboxedJob), err);
         break;
       case 'dummy':
         console.log('>>>>> doing something specific to dummy job failure');

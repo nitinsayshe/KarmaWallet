@@ -1,8 +1,10 @@
+import { SandboxedJob } from 'bullmq';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { asCustomError } from '../../lib/customError';
-import { ReportModel } from '../../models/report';
-import { TransactionModel } from '../../models/transaction';
+import { JobNames } from '../lib/constants/jobScheduler';
+import { asCustomError } from '../lib/customError';
+import { ReportModel } from '../models/report';
+import { TransactionModel } from '../models/transaction';
 
 dayjs.extend(utc);
 
@@ -12,9 +14,7 @@ dayjs.extend(utc);
  * implemented incorrectly.
  */
 
-export const analyzeTransactions = async () => {
-  console.log('\nanalyzing transactions...');
-
+export const exec = async () => {
   try {
     const transactions = await TransactionModel.find({}).lean();
 
@@ -39,4 +39,13 @@ export const analyzeTransactions = async () => {
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const onComplete = () => {
+  console.log(`${JobNames.AnalyzeTransactions} finished`);
+};
+
+export const onFailed = (_: SandboxedJob, err: Error) => {
+  console.log(`${JobNames.AnalyzeTransactions} failed`);
+  console.log(err);
 };

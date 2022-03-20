@@ -27,6 +27,6 @@ export const exec = async ({
   return emailResponse;
 };
 
-export const onComplete = async (job: SandboxedJob, result: ISesEmailResult) => {
+export const onComplete = async (_: SandboxedJob, result: ISesEmailResult) => {
   console.log(`${JobNames.SendEmail} finished: \n ${JSON.stringify(result)}`);
 };

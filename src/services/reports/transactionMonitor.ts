@@ -27,11 +27,19 @@ export const getTransactionsMonitorReport = async (req: IRequest<IReportRequestP
     const missingCarbonMultiplierData: IChartData[] = [];
 
     for (const { transactionsMonitor, createdOn } of reportsAfterThreshold) {
+      const missingCarbonMultiplier = transactionsMonitor.missingCarbonMultiplier > 0
+        ? (transactionsMonitor.missingCarbonMultiplier / transactionsMonitor.totalTransactions) * 100
+        : 0;
+
+      const missingCompany = transactionsMonitor.missingCompany > 0
+        ? (transactionsMonitor.missingCompany / transactionsMonitor.totalTransactions) * 100
+        : 0;
+
       missingCarbonMultiplierData.push({
         label: dayjs(createdOn).format('MMM DD, YYYY'),
         values: [
-          { value: transactionsMonitor.missingCarbonMultiplier },
-          { value: transactionsMonitor.missingCompany },
+          { label: 'missing carbon multiplier (%)', value: missingCarbonMultiplier },
+          { label: 'missing company (%)', value: missingCompany },
         ],
       });
     }

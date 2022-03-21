@@ -47,14 +47,25 @@ export const mapSectorsToCompanies = async () => {
       ]);
     const hiddenCompanies = await LegacyHiddenCompanyModel.find({});
 
+    const invalidLegacyId = new Set<string>();
+    const invalidParentLegacyId = new Set<string>();
+    const invalidSectors = new Set<string>();
+
     for (const row of rawData) {
       const company = companies.find(c => c.legacyId.toString() === row.legacyId);
       if (!company) {
-        console.log(`[-] company with legacyId: ${row.legacyId} could not be found.`);
-        continue;
+        const hiddenCompany = hiddenCompanies.find(hc => hc._id.toString() === row.legacyId);
+        if (!hiddenCompany) {
+          invalidLegacyId.add(row.legacyId);
+          console.log(`[-] company with legacyId: ${row.legacyId} could not be found.`);
+          continue;
+        }
       }
 
-      // if (company.companyName !== row.sourceCompanyName && company.companyName !== row.displayName) {
+      // if (
+      //   company.name !== row.sourceCompanyName
+      //   && company.companyName !== row.displayName
+      // ) {
       //   console.log('[-] invalid company name found');
       //   console.log(`\tdb name: ${company.companyName}`);
       //   console.log(`\tsource name: ${row.sourceCompanyName}`);
@@ -65,21 +76,31 @@ export const mapSectorsToCompanies = async () => {
       const parentCompany = companies.find(c => (c.parentCompany as ICompanyDocument)?.legacyId.toString() === row.parentLegacyId);
 
       if (!!row.parentLegacyId && !parentCompany) {
-        console.log(`[-] parent company with id: ${row.parentLegacyId} could not be found`);
-        continue;
+        const hiddenCompany = hiddenCompanies.find(hc => hc._id.toString() === row.parentLegacyId);
+
+        if (!hiddenCompany) {
+          invalidParentLegacyId.add(row.parentLegacyId);
+          console.log(`[-] parent company with id: ${row.parentLegacyId} could not be found`);
+          continue;
+        }
       }
 
       for (const tier of tiers) {
-        if (!!tier) {
+        if (!!row[tier]) {
           const sector = sectors.find(s => s.name === row[tier]);
 
           if (!sector) {
+            invalidSectors.add(row[tier]);
             console.log(`[-] invalid ${tier} specified: ${row[tier]}`);
             continue;
           }
         }
       }
     }
+
+    console.log('>>>>> invalid legacy ids', invalidLegacyId);
+    console.log('>>>>> invalid parent ids', invalidParentLegacyId);
+    console.log('>>>>> invalid sectors', invalidSectors);
   } catch (err) {
     throw asCustomError(err);
   }

@@ -3,6 +3,7 @@ import csvtojson from 'csvtojson';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { SectorModel } from '../../models/sector';
 import { asCustomError } from '../../lib/customError';
+import { LegacyHiddenCompanyModel } from '../../models/legacyCompany';
 
 interface ISectorsToCompanyMapping {
   legacyCategory: string;
@@ -44,6 +45,7 @@ export const mapSectorsToCompanies = async () => {
           ref: CompanyModel,
         },
       ]);
+    const hiddenCompanies = await LegacyHiddenCompanyModel.find({});
 
     for (const row of rawData) {
       const company = companies.find(c => c.legacyId.toString() === row.legacyId);
@@ -52,13 +54,13 @@ export const mapSectorsToCompanies = async () => {
         continue;
       }
 
-      if (company.companyName !== row.sourceCompanyName && company.companyName !== row.displayName) {
-        console.log('[-] invalid company name found');
-        console.log(`\tdb name: ${company.companyName}`);
-        console.log(`\tsource name: ${row.sourceCompanyName}`);
-        console.log(`\tdisplay name: ${row.displayName}`);
-        continue;
-      }
+      // if (company.companyName !== row.sourceCompanyName && company.companyName !== row.displayName) {
+      //   console.log('[-] invalid company name found');
+      //   console.log(`\tdb name: ${company.companyName}`);
+      //   console.log(`\tsource name: ${row.sourceCompanyName}`);
+      //   console.log(`\tdisplay name: ${row.displayName}`);
+      //   continue;
+      // }
 
       const parentCompany = companies.find(c => (c.parentCompany as ICompanyDocument)?.legacyId.toString() === row.parentLegacyId);
 

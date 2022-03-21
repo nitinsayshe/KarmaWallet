@@ -103,3 +103,4 @@ const legacyCompanySchema = new Schema({
 legacyCompanySchema.plugin(mongoosePaginate);
 
 export const LegacyCompanyModel = model<ILegacyCompanyDocument, PaginateModel<ILegacyCompany>>('legacy_company', legacyCompanySchema);
+export const LegacyHiddenCompanyModel = model<ILegacyCompanyDocument, PaginateModel<ILegacyCompany>>('hidden_company', legacyCompanySchema);

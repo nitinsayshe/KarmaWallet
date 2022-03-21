@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import { convertKgToMT, formatNumber } from '../../../lib/number';
 import { RareTransactionQuery } from '../../../lib/constants';
 import { TransactionModel, ITransaction } from '../../../models/transaction';
@@ -140,7 +140,7 @@ export const buildCarbonMultiplierPipeline = (uid: string) => {
     date: 1,
   };
   const pipeline = TransactionModel.aggregate()
-    .match({ userId: uid, carbonMultiplier: { $ne: null } })
+    .match({ userId: new Types.ObjectId(uid), carbonMultiplier: { $ne: null } })
     .lookup({
       from: 'plaid_category_mappings',
       localField: 'carbonMultiplier',

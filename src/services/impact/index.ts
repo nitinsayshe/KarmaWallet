@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
@@ -52,9 +53,10 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   let netEmissions = 0;
   let calculateMonthlyEquivalency = false;
 
-  const donationsCount = await CarbonService.getOffsetTransactionsCount({ userId: _id });
-  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ userId: _id });
-  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: _id });
+  const donationsCount = await CarbonService.getOffsetTransactionsCount({ userId: new Types.ObjectId(_id) });
+  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ userId: new Types.ObjectId(_id) });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: new Types.ObjectId(_id) });
+
   const useAmericanAverage = await shouldUseAmericanAverage({ userId: _id });
 
   if (!useAmericanAverage) {

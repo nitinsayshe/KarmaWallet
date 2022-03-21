@@ -27,7 +27,7 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const transactions = await TransactionModel.find({
     $or: [
       { userId: req?.requestor?._id },
-      { onBehalfOf: req?.requestor?._id },
+      { 'onBehalfOf.user': req?.requestor?._id },
     ],
     ...RareTransactionQuery,
   });

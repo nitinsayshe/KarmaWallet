@@ -1095,13 +1095,16 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
   const { groupId, state } = req.params;
   if (!!state) {
     if (state === 'noGroupDonations') {
-      return groupOffsetDummyData.noGroupDonations;
+      const { userGroup } = groupOffsetDummyData.noGroupDonations;
+      return { ...groupOffsetDummyData.noGroupDonations, userGroup: userGroup as unknown as IUserGroupDocument };
     }
     if (state === 'noMemberDonations') {
-      return groupOffsetDummyData.noMemberDonations;
+      const { userGroup } = groupOffsetDummyData.noMemberDonations;
+      return { ...groupOffsetDummyData.noMemberDonations, userGroup: userGroup as unknown as IUserGroupDocument };
     }
     if (state === 'fullDonations') {
-      return groupOffsetDummyData.fullDonations;
+      const { userGroup } = groupOffsetDummyData.fullDonations;
+      return { ...groupOffsetDummyData.fullDonations, userGroup: userGroup as unknown as IUserGroupDocument };
     }
     if (state === 'error') {
       throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.INVALID_ARG);

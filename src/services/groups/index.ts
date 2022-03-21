@@ -80,7 +80,6 @@ export interface IJoinGroupRequest {
 
 export interface IGetGroupOffsetRequestParams {
   groupId: string,
-  state: string,
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -1090,9 +1089,10 @@ const groupOffsetDummyData = {
   },
 };
 
-export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams, { state: string }, {}>) => {
   const { requestor } = req;
-  const { groupId, state } = req.params;
+  const { groupId } = req.params;
+  const { state } = req.query;
   if (!!state) {
     if (state === 'noGroupDonations') {
       const { userGroup } = groupOffsetDummyData.noGroupDonations;
@@ -1186,8 +1186,9 @@ const groupEquivalencyDummyData = {
   },
 };
 
-export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
-  const { groupId, state } = req.params;
+export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams, { state: string }, {}>) => {
+  const { groupId } = req.params;
+  const { state } = req.query;
   if (!!state) {
     if (state === 'noGroupDonations') {
       return groupEquivalencyDummyData.noGroupDonations;

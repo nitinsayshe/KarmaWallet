@@ -79,7 +79,8 @@ export interface IJoinGroupRequest {
 }
 
 export interface IGetGroupOffsetRequestParams {
-  groupId: string
+  groupId: string,
+  state: string,
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -953,9 +954,159 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
+// TODO: remove when launched
+const groupOffsetDummyData = {
+  noGroupDonations: {
+    userGroup: {
+      _id: '622f49ef1562d9af5e4170db',
+      name: 'Impact Karma Test',
+      code: 'IK1',
+      domains: [
+        'theimpactkarma.com',
+      ],
+      settings: {
+        matching: {
+          enabled: false,
+          matchPercentage: -1,
+          maxDollarAmount: -1,
+          lastModified: '2022-03-11T20:35:21.770Z',
+        },
+        privacyStatus: 'private',
+        allowInvite: false,
+        allowDomainRestriction: true,
+        allowSubgroups: false,
+        approvalRequired: false,
+      },
+      status: 'open',
+      owner: {
+        _id: '62192d3bf022c9e3fbfe3cb3',
+        name: 'Sara Morgan',
+      },
+      lastModified: '2022-03-11T20:35:21.767Z',
+      createdOn: '2022-03-11T20:35:21.767Z',
+    },
+    members: 4,
+    membersWithDonations: 2,
+    groupDonations: {
+      dollars: 0,
+      tonnes: 0,
+    },
+    memberDonations: {
+      dollars: 14.629999999999999,
+      tonnes: 0.996,
+    },
+    totalDonations: {
+      dollars: 14.629999999999999,
+      tonnes: 0.996,
+    },
+  },
+  noMemberDonations: {
+    userGroup: {
+      _id: '622f49ef1562d9af5e4170db',
+      name: 'Impact Karma Test',
+      code: 'IK1',
+      domains: [
+        'theimpactkarma.com',
+      ],
+      settings: {
+        matching: {
+          enabled: false,
+          matchPercentage: -1,
+          maxDollarAmount: -1,
+          lastModified: '2022-03-11T20:35:21.770Z',
+        },
+        privacyStatus: 'private',
+        allowInvite: false,
+        allowDomainRestriction: true,
+        allowSubgroups: false,
+        approvalRequired: false,
+      },
+      status: 'open',
+      owner: {
+        _id: '62192d3bf022c9e3fbfe3cb3',
+        name: 'Sara Morgan',
+      },
+      lastModified: '2022-03-11T20:35:21.767Z',
+      createdOn: '2022-03-11T20:35:21.767Z',
+    },
+    members: 1,
+    membersWithDonations: 0,
+    memberDonations: {
+      tonnes: 0,
+      dollars: 0,
+    },
+    groupDonations: {
+      tonnes: 0,
+      dollars: 0,
+    },
+    totalDonations: {
+      tonnes: 0,
+      dollars: 0,
+    },
+  },
+  fullDonations: {
+    userGroup: {
+      _id: '622f49ef1562d9af5e4170db',
+      name: 'Impact Karma Test',
+      code: 'IK1',
+      domains: [
+        'theimpactkarma.com',
+      ],
+      settings: {
+        matching: {
+          enabled: false,
+          matchPercentage: -1,
+          maxDollarAmount: -1,
+          lastModified: '2022-03-11T20:35:21.770Z',
+        },
+        privacyStatus: 'private',
+        allowInvite: false,
+        allowDomainRestriction: true,
+        allowSubgroups: false,
+        approvalRequired: false,
+      },
+      status: 'open',
+      owner: {
+        _id: '62192d3bf022c9e3fbfe3cb3',
+        name: 'Sara Morgan',
+      },
+      lastModified: '2022-03-11T20:35:21.767Z',
+      createdOn: '2022-03-11T20:35:21.767Z',
+    },
+    members: 6,
+    membersWithDonations: 4,
+    memberDonations: {
+      tonnes: 11.48,
+      dollars: 100,
+    },
+    groupDonations: {
+      tonnes: 7.65,
+      dollars: 100,
+    },
+    totalDonations: {
+      tonnes: 19.13,
+      dollars: 250,
+    },
+  },
+};
+
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { requestor } = req;
-  const { groupId } = req.params;
+  const { groupId, state } = req.params;
+  if (!!state) {
+    if (state === 'noGroupDonations') {
+      return groupOffsetDummyData.noGroupDonations;
+    }
+    if (state === 'noMemberDonations') {
+      return groupOffsetDummyData.noMemberDonations;
+    }
+    if (state === 'fullDonations') {
+      return groupOffsetDummyData.fullDonations;
+    }
+    if (state === 'error') {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.INVALID_ARG);
+    }
+  }
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }
@@ -995,8 +1146,57 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
   }
 };
 
+const groupEquivalencyDummyData = {
+  noGroupDonations: {
+    useAverageAmericanEmissions: true,
+    totalDonations: {
+      dollars: 0,
+      tonnes: 0,
+    },
+    equivalency: {
+      text: '50,900 airline miles',
+      icon: 'airplane',
+      textNoQuantity: 'airline miles',
+      quantity: 50850,
+    },
+    averageAmericanEmissions: {
+      monthly: 0.75,
+      annually: 18,
+    },
+  },
+  fullDonations: {
+    useAverageAmericanEmissions: false,
+    totalDonations: {
+      dollars: 1.34,
+      tonnes: 0.077,
+    },
+    equivalency: {
+      text: '1 tree seedling grown for 10 years',
+      icon: 'sappling',
+      textNoQuantity: 'tree seedling grown for 10 years',
+      quantity: 1,
+    },
+    averageAmericanEmissions: {
+      monthly: 0.75,
+      annually: 18,
+    },
+  },
+};
+
 export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
-  const { groupId } = req.params;
+  const { groupId, state } = req.params;
+  if (!!state) {
+    if (state === 'noGroupDonations') {
+      return groupEquivalencyDummyData.noGroupDonations;
+    }
+    if (state === 'fullDonations') {
+      return groupEquivalencyDummyData.fullDonations;
+    }
+    if (state === 'error') {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.INVALID_ARG);
+    }
+  }
+
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }

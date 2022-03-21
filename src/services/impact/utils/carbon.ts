@@ -217,6 +217,8 @@ export const getMonthlyEmissionsAverage = async (uid: string) => {
 export interface IEquivalencyObject {
   text: string;
   icon: string;
+  textNoQuantity: string;
+  quantity: number;
 }
 
 export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKey) => equivalenciesData.reduce((acc, eq) => {
@@ -224,11 +226,14 @@ export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKe
     perMt, phrase, type, key,
   } = eq;
   if (!keySelector || (keySelector === key)) {
-    const tonnes = Math.round(metricTons * perMt);
-    if (tonnes < 1) return acc;
-    const isPlural = tonnes > 1;
-    const text = `${formatNumber(Math.round(tonnes))} ${phrase(isPlural)}`;
-    const obj = { text, icon: key };
+    const quantity = Math.round(metricTons * perMt);
+    if (quantity < 1) return acc;
+    const isPlural = quantity > 1;
+    const textNoQuantity = phrase(isPlural);
+    const text = `${formatNumber(Math.round(quantity))} ${phrase(isPlural)}`;
+    const obj = {
+      text, icon: key, textNoQuantity, quantity,
+    };
     acc[type].push(obj);
   }
   return acc;

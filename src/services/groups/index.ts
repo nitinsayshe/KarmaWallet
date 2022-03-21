@@ -960,7 +960,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }
   try {
-    const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id, groupId: req.params.groupId } });
+    const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
     const members = await getGroupMembers(req);
     const memberIds = members.map(m => (m.user as IUserDocument)._id);
     const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
@@ -1022,6 +1022,7 @@ export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetReq
 
     return {
       useAverageAmericanEmissions,
+      totalDonations,
       equivalency,
       averageAmericanEmissions,
     };

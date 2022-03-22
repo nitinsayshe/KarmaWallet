@@ -163,6 +163,18 @@ const transactionSchema = new Schema({
   },
   createdOn: { type: Date },
   lastModified: { type: Date },
+  onBehalfOf: {
+    type: {
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'user',
+      },
+      group: {
+        type: Schema.Types.ObjectId,
+        ref: 'group',
+      },
+    },
+  },
 });
 
 export const TransactionModel = model<ITransactionDocument, Model<ITransaction>>('transaction', transactionSchema);

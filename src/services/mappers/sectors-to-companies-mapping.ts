@@ -51,11 +51,15 @@ export const mapSectorsToCompanies = async () => {
     const invalidParentLegacyId = new Set<string>();
     const invalidSectors = new Set<string>();
 
+    console.log('validating mapping data...');
     for (const row of rawData) {
+      if (!row.legacyId && !row.showHide && !row.displayName) continue;
+
       const company = companies.find(c => c.legacyId.toString() === row.legacyId);
       if (!company) {
         const hiddenCompany = hiddenCompanies.find(hc => hc._id.toString() === row.legacyId);
         if (!hiddenCompany) {
+          if (!row.legacyId) console.log(row);
           invalidLegacyId.add(row.legacyId);
           console.log(`[-] company with legacyId: ${row.legacyId} could not be found.`);
           continue;
@@ -96,6 +100,10 @@ export const mapSectorsToCompanies = async () => {
           }
         }
       }
+    }
+
+    if (invalidLegacyId.size === 0 && invalidParentLegacyId.size === 0 && invalidSectors.size === 0) {
+      console.log('validation checks complete...updated companies...');
     }
 
     console.log('>>>>> invalid legacy ids', invalidLegacyId);

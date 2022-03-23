@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { mapSectorsToCompanies } from '../src/services/mappers/sectors-to-companies-mapping';
 
 (async () => {
   try {
@@ -13,8 +12,6 @@ import { mapSectorsToCompanies } from '../src/services/mappers/sectors-to-compan
     await MongoClient.init();
 
     // add mappers here...
-    await mapSectorsToCompanies();
-    // await mapHiddenCompaniesToNew();
 
     await MongoClient.disconnect();
   } catch (err) {

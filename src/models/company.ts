@@ -23,7 +23,6 @@ export interface ISharableCompany {
   dataSources: IRef<ObjectId, IDataSource>[];
   dataYear: number;
   grade: string;
-  hidden: IHiddenCompany;
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define
@@ -35,6 +34,7 @@ export interface ISharableCompany {
 
 export interface ICompany extends ISharableCompany {
   dataSources: IRef<ObjectId, IDataSourceDocument>[];
+  hidden: IHiddenCompany;
   legacyId: number;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<number, ICompanyDocument>;

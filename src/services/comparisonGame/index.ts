@@ -34,7 +34,7 @@ const staticSwaps = [
   [10957, 11041, 11064, 11096, 11443, 11638, 11772, 15803, 16342, 16702, 16792, 11034, 11295, 16347, 16762],
 ];
 
-export const getSwaps = async (previousSwaps: number[][] = [], reset = false) => {
+export const getSwaps = async (previousSwaps: number[][] = [], reset = false, includeHidden = false) => {
   let high;
   let low;
   let randomHighGradeCompany;
@@ -48,7 +48,7 @@ export const getSwaps = async (previousSwaps: number[][] = [], reset = false) =>
     // <<<<<<<<<<
     const randSubGroupIndex = getRandom(0, allAvailableSubGroupsForUser.length - 1);
     const randomSubGroup = allAvailableSubGroupsForUser[randSubGroupIndex];
-    const companies = await CompanyModel.find({ _id: { $in: randomSubGroup } }).lean();
+    const companies = await CompanyModel.find({ _id: { $in: randomSubGroup }, 'hidden.status': includeHidden }).lean();
     [high, low] = splitCompanies(companies);
 
     if (high.length && low.length) {

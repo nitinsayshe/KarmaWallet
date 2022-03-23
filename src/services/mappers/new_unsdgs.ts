@@ -319,10 +319,10 @@ const createUNSDGs = async (subCategories: IUnsdgSubcategoryDocument[]) => {
   return unsdgs;
 };
 
-const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[]) => {
+const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[], includeHidden = false) => {
   console.log('creating companyUnsdgs...');
   let count = 0;
-  const companies = await CompanyModel.find().lean();
+  const companies = await CompanyModel.find({ 'hidden.status': includeHidden }).lean();
 
   for (const company of companies) {
     for (let i = 0; i < 17; i++) {

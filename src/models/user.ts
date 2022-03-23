@@ -13,7 +13,7 @@ export enum UserEmailStatus {
   Verified = 'verified',
 }
 
-export interface IAltEmail {
+export interface IEmail {
   email: string;
   status: UserEmailStatus;
 }
@@ -37,7 +37,7 @@ export interface IShareableUser {
 }
 
 export interface IUser extends IShareableUser {
-  altEmails: IAltEmail[];
+  emails: IEmail[];
   password: string;
   emailVerified: boolean;
   lastModified: Date;
@@ -49,7 +49,7 @@ export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
   email: { type: String, required: true, unique: true },
-  altEmails: [{
+  emails: [{
     type: {
       email: { type: String },
       status: {

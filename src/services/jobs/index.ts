@@ -44,7 +44,7 @@ export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendE
     name, domain, token, recipientEmail,
   } = req.body;
   await EmailService.sendEmailVerification({
-    name, domain, token, recipientEmail, emailType: EmailService.EmailTypes.Alt,
+    name, domain, token, recipientEmail,
   });
   return 'Job added to queue';
 };
@@ -54,7 +54,7 @@ export const sendPrimaryEmailVerification = async (req: IRequest<{}, {}, ISendEm
     name, domain, token, recipientEmail,
   } = req.body;
   await EmailService.sendEmailVerification({
-    name, domain, token, recipientEmail, emailType: EmailService.EmailTypes.Primary,
+    name, domain, token, recipientEmail,
   });
   return 'Job added to queue';
 };

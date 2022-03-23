@@ -42,11 +42,6 @@ interface IGroupVerificationTemplateParams {
   replyToAddresses?: string[];
 }
 
-export enum EmailTypes {
-  Alt = 'alt',
-  Primary = 'primary',
-}
-
 interface IEmailVerificationTemplateParams {
   name: string;
   domain?: string;
@@ -54,7 +49,6 @@ interface IEmailVerificationTemplateParams {
   recipientEmail: string;
   senderEmail?: string;
   replyToAddresses?: string[];
-  emailType: EmailTypes
 }
 
 interface IWelcomeEmailTemplateParams {
@@ -101,7 +95,6 @@ export const sendEmailVerification = async ({
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
-  emailType = EmailTypes.Alt,
 }: IEmailVerificationTemplateParams) => {
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
     name, domain, token, recipientEmail,
@@ -110,8 +103,7 @@ export const sendEmailVerification = async ({
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
   // TODO: verify param FE/UI will be using to verify
-  const param = emailType === EmailTypes.Alt ? 'altEmailVerification' : 'emailVerification';
-  const verificationLink = `${domain}/account?${param}=${token}`;
+  const verificationLink = `${domain}/account?emailVerification=${token}`;
   const template = buildTemplate(EmailTemplates.EmailVerification, {
     verificationLink, name, token,
   });

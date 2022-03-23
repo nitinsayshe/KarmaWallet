@@ -572,12 +572,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
+    const existingAltEmail = user?.emails?.find(e => e.email === validEmail);
 
     // add groupEmail to user's list of altEmails if doesnt already exist and
     // is not their primary email
     if (!existingAltEmail && user.email !== validEmail) {
-      user.altEmails.push({
+      user.emails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
       });
@@ -589,7 +589,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // doesnt already exist and is not their primary email
     if (hasDomainRestrictions && ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail))) {
       const token = await TokenService.createToken({
-        user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
+        user, days: emailVerificationDays, type: TokenTypes.Email, resource: { altEmail: validEmail },
       });
       await sendGroupVerificationEmail({
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
@@ -599,7 +599,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // if the email used is the user's primary email OR
     // is an alt email that has already been verified, set
     // the role to Verified.
-    const defaultStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
+    const defaultStatus = validEmail === user.email || user.emails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
       ? UserGroupStatus.Verified
       : UserGroupStatus.Unverified;
 

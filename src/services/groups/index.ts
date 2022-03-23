@@ -955,7 +955,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
 // TODO: remove when launched
 
-const userGroupData = {
+const userGroupData: any = {
   _id: '623216b0a83db77fbd0ad7b5',
   user: '62192d3af022c9e3fbfe3c23',
   group: {
@@ -978,7 +978,7 @@ const userGroupData = {
     code: 'coffeecoffee',
     status: 'open',
     owner: {
-      _id: '621b99245f87e75f53659c2c', email: 'jake@theimpactkarma.com', name: 'Jake', password: '$argon2i$v=19$m=4096,t=3,p=1$eTOKUclUcEOcJd3/kW00rg$wqcMj/Beo5cWk8hCHsW2WkzAwG+EppTbDx6ILK6u8ks', dateJoined: '2021-12-17T21:34:13.310Z', zipcode: '27604', subscribedUpdates: false, groups: [], role: 'superadmin', emailVerified: false, lastModified: '2022-02-27T15:30:42.310Z', __v: 3, legacyId: 'NyUDLbjYN18PjYQeEQmSs', altEmails: [],
+      _id: '621b99245f87e75f53659c2c', email: 'jake@theimpactkarma.com', name: 'Jake', dateJoined: '2021-12-17T21:34:13.310Z', zipcode: '27604', subscribedUpdates: false, groups: [], role: 'superadmin', emailVerified: false, lastModified: '2022-02-27T15:30:42.310Z', __v: 3, legacyId: 'NyUDLbjYN18PjYQeEQmSs', altEmails: [],
     },
     __v: 0,
   },

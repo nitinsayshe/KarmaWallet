@@ -10,6 +10,12 @@ import { IModel, IRef } from '../types/model';
 import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 
+export interface IHiddenCompany {
+  status: boolean;
+  reason: string;
+  lastModified: Date;
+}
+
 export interface ISharableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -17,6 +23,7 @@ export interface ISharableCompany {
   dataSources: IRef<ObjectId, IDataSource>[];
   dataYear: number;
   grade: string;
+  hidden: IHiddenCompany;
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define
@@ -32,6 +39,7 @@ export interface ICompany extends ISharableCompany {
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<number, ICompanyDocument>;
   sectors: IRef<ObjectId, ISectorDocument>[];
+  notes: string;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -68,6 +76,17 @@ const companySchema = new Schema({
     type: Number,
     required: true,
     unique: true,
+  },
+  notes: {
+    type: String,
+  },
+  hidden: {
+    type: {
+      status: Boolean,
+      reason: String,
+      lastModified: Date,
+    },
+    required: true,
   },
 });
 companySchema.plugin(mongoosePaginate);

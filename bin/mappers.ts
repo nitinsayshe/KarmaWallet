@@ -14,6 +14,7 @@ import { mapSectorsToCompanies } from '../src/services/mappers/sectors-to-compan
 
     // add mappers here...
     await mapSectorsToCompanies();
+    // await mapHiddenCompaniesToNew();
 
     await MongoClient.disconnect();
   } catch (err) {

@@ -17,9 +17,7 @@ router.get('/profile', authenticate, UserController.getProfile);
 router.put('/profile', authenticate, UserController.updateProfile);
 router.get('/session', authenticate, UserController.getProfile);
 router.put('/password', authenticate, UserController.updatePassword);
-router.post('/alt-email/token/create', authenticate, UserController.resendAltEmailVerification);
-router.post('/alt-email/token/verify', authenticate, UserController.verifyAltEmail);
-router.post('/email/token/create', authenticate, UserController.resendPrimaryEmailVerification);
-router.post('/email/token/verify', authenticate, UserController.verifyPrimaryEmail);
+router.post('/email/token/create', authenticate, UserController.resendEmailVerification);
+router.post('/email/token/verify', authenticate, UserController.verifyEmail);
 
 export default (app: Express) => app.use('/user', router);

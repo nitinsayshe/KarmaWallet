@@ -954,36 +954,45 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 };
 
 // TODO: remove when launched
+
+const userGroupData = {
+  _id: '623216b0a83db77fbd0ad7b5',
+  user: '62192d3af022c9e3fbfe3c23',
+  group: {
+    settings: {
+      matching: {
+        enabled: false, matchPercentage: -1, maxDollarAmount: -1, lastModified: '2022-03-16T13:18:59.353Z',
+      },
+      privacyStatus: 'private',
+      allowInvite: false,
+      allowDomainRestriction: false,
+      allowSubgroups: false,
+      approvalRequired: false,
+    },
+    _id: '6231e0f6538bd8c6694c899a',
+    createdOn: '2022-03-16T12:37:55.540Z',
+    lastModified: '2022-03-16T12:37:55.540Z',
+    domains: [],
+    invites: [],
+    name: 'Coffee Fiends',
+    code: 'coffeecoffee',
+    status: 'open',
+    owner: {
+      _id: '621b99245f87e75f53659c2c', email: 'jake@theimpactkarma.com', name: 'Jake', password: '$argon2i$v=19$m=4096,t=3,p=1$eTOKUclUcEOcJd3/kW00rg$wqcMj/Beo5cWk8hCHsW2WkzAwG+EppTbDx6ILK6u8ks', dateJoined: '2021-12-17T21:34:13.310Z', zipcode: '27604', subscribedUpdates: false, groups: [], role: 'superadmin', emailVerified: false, lastModified: '2022-02-27T15:30:42.310Z', __v: 3, legacyId: 'NyUDLbjYN18PjYQeEQmSs', altEmails: [],
+    },
+    __v: 0,
+  },
+  role: 'member',
+  status: 'verified',
+  joinedOn: '2022-03-16T14:58:05.511Z',
+  lastModified: '2022-03-16T14:58:05.511Z',
+  subgroups: [],
+  __v: 0,
+};
+
 const groupOffsetDummyData = {
   noGroupDonations: {
-    userGroup: {
-      _id: '622f49ef1562d9af5e4170db',
-      name: 'Impact Karma Test',
-      code: 'IK1',
-      domains: [
-        'theimpactkarma.com',
-      ],
-      settings: {
-        matching: {
-          enabled: false,
-          matchPercentage: -1,
-          maxDollarAmount: -1,
-          lastModified: '2022-03-11T20:35:21.770Z',
-        },
-        privacyStatus: 'private',
-        allowInvite: false,
-        allowDomainRestriction: true,
-        allowSubgroups: false,
-        approvalRequired: false,
-      },
-      status: 'open',
-      owner: {
-        _id: '62192d3bf022c9e3fbfe3cb3',
-        name: 'Sara Morgan',
-      },
-      lastModified: '2022-03-11T20:35:21.767Z',
-      createdOn: '2022-03-11T20:35:21.767Z',
-    },
+    userGroup: userGroupData,
     members: 4,
     membersWithDonations: 2,
     groupDonations: {
@@ -1000,34 +1009,7 @@ const groupOffsetDummyData = {
     },
   },
   noMemberDonations: {
-    userGroup: {
-      _id: '622f49ef1562d9af5e4170db',
-      name: 'Impact Karma Test',
-      code: 'IK1',
-      domains: [
-        'theimpactkarma.com',
-      ],
-      settings: {
-        matching: {
-          enabled: false,
-          matchPercentage: -1,
-          maxDollarAmount: -1,
-          lastModified: '2022-03-11T20:35:21.770Z',
-        },
-        privacyStatus: 'private',
-        allowInvite: false,
-        allowDomainRestriction: true,
-        allowSubgroups: false,
-        approvalRequired: false,
-      },
-      status: 'open',
-      owner: {
-        _id: '62192d3bf022c9e3fbfe3cb3',
-        name: 'Sara Morgan',
-      },
-      lastModified: '2022-03-11T20:35:21.767Z',
-      createdOn: '2022-03-11T20:35:21.767Z',
-    },
+    userGroup: userGroupData,
     members: 1,
     membersWithDonations: 0,
     memberDonations: {
@@ -1044,34 +1026,7 @@ const groupOffsetDummyData = {
     },
   },
   fullDonations: {
-    userGroup: {
-      _id: '622f49ef1562d9af5e4170db',
-      name: 'Impact Karma Test',
-      code: 'IK1',
-      domains: [
-        'theimpactkarma.com',
-      ],
-      settings: {
-        matching: {
-          enabled: false,
-          matchPercentage: -1,
-          maxDollarAmount: -1,
-          lastModified: '2022-03-11T20:35:21.770Z',
-        },
-        privacyStatus: 'private',
-        allowInvite: false,
-        allowDomainRestriction: true,
-        allowSubgroups: false,
-        approvalRequired: false,
-      },
-      status: 'open',
-      owner: {
-        _id: '62192d3bf022c9e3fbfe3cb3',
-        name: 'Sara Morgan',
-      },
-      lastModified: '2022-03-11T20:35:21.767Z',
-      createdOn: '2022-03-11T20:35:21.767Z',
-    },
+    userGroup: userGroupData,
     members: 6,
     membersWithDonations: 4,
     memberDonations: {

@@ -214,7 +214,7 @@ export class PlaidMapper {
 
     for (const transaction of this.transactions) {
       let plaidCategoriesId: string;
-      if (transaction._transaction?.category) {
+      if (transaction._plaidTransaction?.category) {
         plaidCategoriesId = transaction._plaidTransaction?.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
       }
 

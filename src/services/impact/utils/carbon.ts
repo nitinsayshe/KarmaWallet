@@ -246,21 +246,21 @@ export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => Trans
 export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...RareTransactionQuery, ...query })
-    .group({ _id: '$userId', total: { $sum: '$amount' } });
+    .group({ _id: 'total', total: { $sum: '$amount' } });
   return aggResult?.length ? aggResult[0].total : 0;
 };
 
 export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...RareTransactionQuery, ...query })
-    .group({ _id: '$userId', total: { $sum: 1 } });
+    .group({ _id: 'total', total: { $sum: 1 } });
   return aggResult.length;
 };
 
 export const getRareOffsetAmount = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...RareTransactionQuery, ...query })
-    .group({ _id: '$userId', total: { $sum: '$integrations.rare.tonnes_amt' } });
+    .group({ _id: 'total', total: { $sum: '$integrations.rare.tonnes_amt' } });
   const sumTotal = aggResult?.length ? aggResult[0].total : 0;
   return sumTotal;
 };

@@ -1,5 +1,5 @@
 import isemail from 'isemail';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Schema } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
@@ -28,6 +28,7 @@ import {
   getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions, IEquivalencyObject,
 } from '../impact/utils/carbon';
 import { getRandomInt } from '../../lib/number';
+import { IRef } from '../../types/model';
 
 dayjs.extend(utc);
 
@@ -443,7 +444,10 @@ export const getShareableUserGroup = ({
   status,
   joinedOn,
 }: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
-  const _group = getShareableGroup(group as IGroupDocument);
+  let _group: IRef<Schema.Types.ObjectId, IShareableGroup | IGroup> = group;
+  if (!!(_group as IGroupDocument)?.name) {
+    _group = getShareableGroup(group as IGroupDocument);
+  }
 
   return {
     _id,
@@ -574,10 +578,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup: IUserGroupDocument = await UserGroupModel.findOne({
-      group,
-      user,
-    });
+    const existingUserGroup: IUserGroupDocument = await UserGroupModel
+      .findOne({
+        group,
+        user,
+      })
+      .populate([
+        {
+          path: 'group',
+          ref: GroupModel,
+        },
+      ]);
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);

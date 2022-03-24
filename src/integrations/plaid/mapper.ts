@@ -21,7 +21,6 @@ import { IntegrationMappingSummaryModel } from '../../models/integrationMappingS
 import Transaction from './transaction';
 import { CardStatus } from '../../lib/constants';
 import { PlaidClient } from '../../clients/plaid';
-import { JobStatusModel } from '../../models/jobStatus';
 import { TransactionModel } from '../../models/transaction';
 import { CategoryModel } from '../../models/category';
 import { SubcategoryModel } from '../../models/subcategory';
@@ -817,7 +816,6 @@ export class PlaidMapper {
   reset = async () => {
     await CardModel.deleteMany({});
     await IntegrationMappingSummaryModel.deleteMany({});
-    await JobStatusModel.deleteMany({});
     await MatchedCompanyNameModel.deleteMany({});
     await PlaidCategoryMappingModel.deleteMany({});
     await UnmatchedCompanyNameModel.deleteMany({});

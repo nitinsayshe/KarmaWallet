@@ -5,6 +5,7 @@ import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as SendEmail from '../../../jobs/sendEmail';
 import { _MongoClient } from '../../mongo';
+import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 
 const MongoClient = new _MongoClient();
 
@@ -23,11 +24,14 @@ export default async (job: SandboxedJob) => {
     case JobNames.GlobalPlaidTransactionMapper:
       result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
       break;
-    case JobNames.UserPlaidTransactionMapper:
-      result = await UserPlaidTransactionMapper.exec(data);
-      break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
+      break;
+    case JobNames.TransactionsMonitor:
+      result = TransactionsMonitor.exec();
+      break;
+    case JobNames.UserPlaidTransactionMapper:
+      result = await UserPlaidTransactionMapper.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found');

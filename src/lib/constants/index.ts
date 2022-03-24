@@ -48,11 +48,6 @@ export enum EmailAddresses {
   ReplyTo = 'support@karmawallet.io',
 }
 
-export enum JobStatus {
-  Active = 'active',
-  Inactive = 'inactive',
-}
-
 export enum CardStatus {
   Linked = 'linked',
   Unlinked = 'unlinked',

@@ -953,118 +953,9 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-// TODO: remove when launched
-
-const userGroupData: any = {
-  _id: '623216b0a83db77fbd0ad7b5',
-  user: '62192d3af022c9e3fbfe3c23',
-  group: {
-    settings: {
-      matching: {
-        enabled: false, matchPercentage: -1, maxDollarAmount: -1, lastModified: '2022-03-16T13:18:59.353Z',
-      },
-      privacyStatus: 'private',
-      allowInvite: false,
-      allowDomainRestriction: false,
-      allowSubgroups: false,
-      approvalRequired: false,
-    },
-    _id: '6231e0f6538bd8c6694c899a',
-    createdOn: '2022-03-16T12:37:55.540Z',
-    lastModified: '2022-03-16T12:37:55.540Z',
-    domains: [],
-    invites: [],
-    name: 'Coffee Fiends',
-    code: 'coffeecoffee',
-    status: 'open',
-    owner: {
-      _id: '621b99245f87e75f53659c2c', email: 'jake@theimpactkarma.com', name: 'Jake', dateJoined: '2021-12-17T21:34:13.310Z', zipcode: '27604', subscribedUpdates: false, groups: [], role: 'superadmin', emailVerified: false, lastModified: '2022-02-27T15:30:42.310Z', __v: 3, legacyId: 'NyUDLbjYN18PjYQeEQmSs', altEmails: [],
-    },
-    __v: 0,
-  },
-  role: 'member',
-  status: 'verified',
-  joinedOn: '2022-03-16T14:58:05.511Z',
-  lastModified: '2022-03-16T14:58:05.511Z',
-  subgroups: [],
-  __v: 0,
-};
-
-const groupOffsetDummyData = {
-  noGroupDonations: {
-    userGroup: userGroupData,
-    members: 4,
-    membersWithDonations: 2,
-    groupDonations: {
-      dollars: 0,
-      tonnes: 0,
-    },
-    memberDonations: {
-      dollars: 14.629999999999999,
-      tonnes: 0.996,
-    },
-    totalDonations: {
-      dollars: 14.629999999999999,
-      tonnes: 0.996,
-    },
-  },
-  noMemberDonations: {
-    userGroup: userGroupData,
-    members: 1,
-    membersWithDonations: 0,
-    memberDonations: {
-      tonnes: 0,
-      dollars: 0,
-    },
-    groupDonations: {
-      tonnes: 0,
-      dollars: 0,
-    },
-    totalDonations: {
-      tonnes: 0,
-      dollars: 0,
-    },
-  },
-  fullDonations: {
-    userGroup: userGroupData,
-    members: 6,
-    membersWithDonations: 4,
-    memberDonations: {
-      tonnes: 11.48,
-      dollars: 100,
-    },
-    groupDonations: {
-      tonnes: 7.65,
-      dollars: 100,
-    },
-    totalDonations: {
-      tonnes: 19.13,
-      dollars: 250,
-    },
-  },
-};
-
-export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams, { state: string }, {}>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { requestor } = req;
   const { groupId } = req.params;
-  const { state } = req.query;
-  if (!!state) {
-    if (state === 'noGroupDonations') {
-      const { userGroup } = groupOffsetDummyData.noGroupDonations;
-      return { ...groupOffsetDummyData.noGroupDonations, userGroup: userGroup as unknown as IUserGroupDocument };
-    }
-    if (state === 'noMemberDonations') {
-      const { userGroup } = groupOffsetDummyData.noMemberDonations;
-      return { ...groupOffsetDummyData.noMemberDonations, userGroup: userGroup as unknown as IUserGroupDocument };
-    }
-    if (state === 'fullDonations') {
-      const { userGroup } = groupOffsetDummyData.fullDonations;
-      return { ...groupOffsetDummyData.fullDonations, userGroup: userGroup as unknown as IUserGroupDocument };
-    }
-    if (state === 'error') {
-      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.INVALID_ARG);
-    }
-  }
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }
@@ -1104,57 +995,8 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
   }
 };
 
-const groupEquivalencyDummyData = {
-  noGroupDonations: {
-    useAverageAmericanEmissions: true,
-    totalDonations: {
-      dollars: 0,
-      tonnes: 0,
-    },
-    equivalency: {
-      text: '50,900 airline miles',
-      icon: 'airplane',
-      textNoQuantity: 'airline miles',
-      quantity: 50850,
-    },
-    averageAmericanEmissions: {
-      monthly: 0.75,
-      annually: 18,
-    },
-  },
-  fullDonations: {
-    useAverageAmericanEmissions: false,
-    totalDonations: {
-      dollars: 1.34,
-      tonnes: 0.077,
-    },
-    equivalency: {
-      text: '1 tree seedling grown for 10 years',
-      icon: 'sappling',
-      textNoQuantity: 'tree seedling grown for 10 years',
-      quantity: 1,
-    },
-    averageAmericanEmissions: {
-      monthly: 0.75,
-      annually: 18,
-    },
-  },
-};
-
-export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams, { state: string }, {}>) => {
+export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { groupId } = req.params;
-  const { state } = req.query;
-  if (!!state) {
-    if (state === 'noGroupDonations') {
-      return groupEquivalencyDummyData.noGroupDonations;
-    }
-    if (state === 'fullDonations') {
-      return groupEquivalencyDummyData.fullDonations;
-    }
-    if (state === 'error') {
-      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.INVALID_ARG);
-    }
-  }
 
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);

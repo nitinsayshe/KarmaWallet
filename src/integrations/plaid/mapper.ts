@@ -20,7 +20,6 @@ import { IntegrationMappingSummaryModel } from '../../models/integrationMappingS
 import Transaction from './transaction';
 import { CardStatus } from '../../lib/constants';
 import { PlaidClient } from '../../clients/plaid';
-import { JobStatusModel } from '../../models/jobStatus';
 import { TransactionModel } from '../../models/transaction';
 import { CategoryModel } from '../../models/category';
 import { SubcategoryModel } from '../../models/subcategory';
@@ -151,7 +150,7 @@ export class PlaidMapper {
 
     for (const transaction of this.transactions) {
       let plaidCategoriesId: string;
-      if (transaction._transaction?.category) {
+      if (transaction._plaidTransaction?.category) {
         plaidCategoriesId = transaction._plaidTransaction?.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
       }
 
@@ -754,7 +753,6 @@ export class PlaidMapper {
   reset = async () => {
     await CardModel.deleteMany({});
     await IntegrationMappingSummaryModel.deleteMany({});
-    await JobStatusModel.deleteMany({});
     await MatchedCompanyNameModel.deleteMany({});
     await PlaidCategoryMappingModel.deleteMany({});
     await UnmatchedCompanyNameModel.deleteMany({});

@@ -24,7 +24,13 @@ export const getTransactionCount = async (query = {}) => {
 
 export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const Rare = new RareClient();
-  const transactions = await TransactionModel.find({ userId: req?.requestor?._id, ...RareTransactionQuery });
+  const transactions = await TransactionModel.find({
+    $or: [
+      { userId: req?.requestor?._id },
+      { 'onBehalfOf.user': req?.requestor?._id },
+    ],
+    ...RareTransactionQuery,
+  });
   if (transactions.length === 0) return [];
   const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
   const transactionsWithCertificates = transactions.map((transaction) => {
@@ -73,6 +79,7 @@ export const getShareableTransaction = (transaction: ITransactionModel) => {
       offsetsPurchased,
       certificateUrl,
     };
+
     shareableTransaction.integrations = {
       ...shareableTransaction.integrations,
       rare: rareIntegration,

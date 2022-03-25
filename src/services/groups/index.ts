@@ -363,11 +363,7 @@ export const getGroupMembers = async (req: IRequest, query: FilterQuery<IUserGro
       limit: query?.limit || 20,
     };
 
-    const fullQuery = { ...getMemberQuery, ...query.filter };
-    console.log('>>>>> options', options);
-    console.log('>>>>> fullQuery', fullQuery);
-
-    return UserGroupModel.paginate(fullQuery, options);
+    return UserGroupModel.paginate({ ...getMemberQuery, ...query.filter }, options);
   } catch (err) {
     throw asCustomError(err);
   }

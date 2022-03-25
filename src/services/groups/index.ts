@@ -1069,14 +1069,13 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
       status,
       lastModified: timestamp,
     };
-    const updatedMemberUserGroups = await UserGroupModel.updateMany(query, update, { new: true });
-
-    console.log(updatedMemberUserGroups);
+    await UserGroupModel.updateMany(query, update);
+    const updatedMemberUserGroups = await UserGroupModel.find(query);
 
     // TODO: verify that all user groups were updated?
     // TODO: add to change log for group for record keeping and maintenance
 
-    return [] as IUserGroupDocument[];
+    return updatedMemberUserGroups;
   } catch (err) {
     throw asCustomError(err);
   }

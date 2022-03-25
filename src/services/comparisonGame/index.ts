@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose';
 import { CompanyModel, ICompany } from '../../models/company';
 import { getRandom } from '../../lib/number';
 
@@ -48,7 +49,9 @@ export const getSwaps = async (previousSwaps: number[][] = [], reset = false, in
     // <<<<<<<<<<
     const randSubGroupIndex = getRandom(0, allAvailableSubGroupsForUser.length - 1);
     const randomSubGroup = allAvailableSubGroupsForUser[randSubGroupIndex];
-    const companies = await CompanyModel.find({ _id: { $in: randomSubGroup }, 'hidden.status': includeHidden }).lean();
+    const query: FilterQuery<ICompany> = { _id: { $in: randomSubGroup } };
+    if (!includeHidden) query['hidden.status'] = false;
+    const companies = await CompanyModel.find(query).lean();
     [high, low] = splitCompanies(companies);
 
     if (high.length && low.length) {

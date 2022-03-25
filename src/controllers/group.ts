@@ -25,8 +25,12 @@ export const getGroup: IRequestHandler = async (req, res) => {
 
 export const getGroupMembers: IRequestHandler = async (req, res) => {
   try {
-    const groupMembers = await GroupService.getGroupMembers(req);
-    output.api(req, res, groupMembers.map(member => GroupService.getShareableGroupMember(member)));
+    const query = aqp(req.query, { skipKey: 'page' });
+    const groupMembers = await GroupService.getGroupMembers(req, query);
+    output.api(req, res, {
+      ...groupMembers,
+      docs: groupMembers.docs.map(member => GroupService.getShareableGroupMember(member)),
+    });
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

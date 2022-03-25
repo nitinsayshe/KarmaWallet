@@ -188,6 +188,45 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
   return _settings;
 };
 
+const buildGetMemberQuery = async (req: IRequest<IGroupRequestParams>, karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin]) => {
+  const { groupId } = req.params;
+  if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+  let requestorUserGroup: IUserGroupDocument;
+
+  // user must be a member of this group or a karma member
+  // to view its members
+  if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
+    requestorUserGroup = await UserGroupModel.findOne({
+      group: groupId,
+      user: req.requestor._id,
+    });
+
+    if (
+      !requestorUserGroup
+        || requestorUserGroup.status === UserGroupStatus.Left
+        || requestorUserGroup.status === UserGroupStatus.Removed
+        || requestorUserGroup.status === UserGroupStatus.Banned
+    ) {
+      throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
+    }
+  }
+
+  // regular members only need to see verified and approved members
+  // only admins (or higher) and karma members need to be able to
+  // see all the other members.
+  const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
+    ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
+    : [UserGroupStatus.Left];
+
+  const query: FilterQuery<IUserGroup> = {
+    group: groupId,
+    status: { $nin: statusesToExclude },
+  };
+
+  return query;
+};
+
 export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   try {
@@ -308,44 +347,35 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
   }
 };
 
-export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
-  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
-
+export const getGroupMembers = async (req: IRequest, query: FilterQuery<IUserGroup>) => {
   try {
-    const { groupId } = req.params;
-    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-
-    let requestorUserGroup: IUserGroupDocument;
-
-    // user must be a member of this group or a karma member
-    // to view its members
-    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
-      requestorUserGroup = await UserGroupModel.findOne({
-        group: groupId,
-        user: req.requestor._id,
-      });
-
-      if (
-        !requestorUserGroup
-        || requestorUserGroup.status === UserGroupStatus.Left
-        || requestorUserGroup.status === UserGroupStatus.Removed
-        || requestorUserGroup.status === UserGroupStatus.Banned
-      ) {
-        throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
-      }
-    }
-
-    // regular members only need to see verified and approved members
-    // only admins (or higher) and karma members need to be able to
-    // see all the other members.
-    const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
-      ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
-      : [UserGroupStatus.Left];
-
-    const query: FilterQuery<IUserGroup> = {
-      group: groupId,
-      status: { $nin: statusesToExclude },
+    const getMemberQuery = await buildGetMemberQuery(req);
+    const options = {
+      projection: query?.projection || '',
+      populate: query.population || [
+        {
+          path: 'user',
+          model: UserModel,
+        },
+      ],
+      page: query?.skip || 1,
+      sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
+      limit: query?.limit || 20,
     };
+
+    const fullQuery = { ...getMemberQuery, ...query.filter };
+    console.log('>>>>> options', options);
+    console.log('>>>>> fullQuery', fullQuery);
+
+    return UserGroupModel.paginate(fullQuery, options);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getAllGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
+  try {
+    const query = await buildGetMemberQuery(req);
 
     const memberUserGroups = await UserGroupModel
       .find(query)
@@ -972,7 +1002,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
   }
   try {
     const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const members = await getGroupMembers(req);
+    const members = await getAllGroupMembers(req);
     const memberIds = members.map(m => (m.user as IUserDocument)._id);
     const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
     const memberDonationsTotalDollars = await getOffsetTransactionsTotal({ userId: { $in: memberIds } });

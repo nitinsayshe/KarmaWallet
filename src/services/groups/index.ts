@@ -23,6 +23,11 @@ import { IRequest } from '../../types/request';
 import * as TokenService from '../token';
 import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
+import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
+import {
+  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions, IEquivalencyObject,
+} from '../impact/utils/carbon';
+import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 
 dayjs.extend(utc);
@@ -37,6 +42,11 @@ export interface IGetGroupRequest {
 
 export interface IUserGroupsRequest {
   userId: string;
+}
+
+export interface IUserGroupRequest {
+  userId: string;
+  groupId: string;
 }
 
 export interface IGroupRequestParams {
@@ -67,6 +77,10 @@ export interface IJoinGroupRequest {
   code: string;
   email: string;
   userId: string;
+}
+
+export interface IGetGroupOffsetRequestParams {
+  groupId: string,
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -377,6 +391,7 @@ export const getShareableGroup = ({
   name,
   code,
   domains,
+  logo,
   settings,
   owner,
   status,
@@ -394,6 +409,7 @@ export const getShareableGroup = ({
     name,
     code,
     domains,
+    logo,
     settings,
     status,
     owner: _owner,
@@ -474,6 +490,39 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
       ]);
   } catch (err) {
     throw asCustomError(err);
+  }
+};
+
+export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  const { userId, groupId } = req.params;
+  if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
+    throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+  }
+  if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
+  if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  try {
+    const userGroup = await UserGroupModel.findOne({ group: groupId, user: userId })
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+          populate: [
+            {
+              path: 'company',
+              model: CompanyModel,
+            },
+            {
+              path: 'owner',
+              model: UserModel,
+            },
+          ],
+        },
+      ]);
+    if (!userGroup) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
+    return userGroup;
+  } catch (e) {
+    throw asCustomError(e);
   }
 };
 
@@ -912,5 +961,84 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     return userGroup;
   } catch (err) {
     throw asCustomError(err);
+  }
+};
+
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+  const { requestor } = req;
+  const { groupId } = req.params;
+  if (!groupId) {
+    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  }
+  try {
+    const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
+    const members = await getGroupMembers(req);
+    const memberIds = members.map(m => (m.user as IUserDocument)._id);
+    const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
+    const memberDonationsTotalDollars = await getOffsetTransactionsTotal({ userId: { $in: memberIds } });
+    const memberDonationsTotalTonnes = await getRareOffsetAmount({ userId: { $in: memberIds } });
+    const memberDonations = {
+      dollars: memberDonationsTotalDollars,
+      tonnes: memberDonationsTotalTonnes,
+    };
+
+    // TODO: update w/ real value once group donation functionality is added
+    const groupDonations = {
+      dollars: 0,
+      tonnes: 0,
+    };
+
+    const totalDonations = {
+      dollars: memberDonations.dollars + groupDonations.dollars,
+      tonnes: memberDonations.tonnes + groupDonations.tonnes,
+    };
+
+    return {
+      userGroup,
+      members: members.length,
+      membersWithDonations,
+      groupDonations,
+      memberDonations,
+      totalDonations,
+    };
+  } catch (e) {
+    throw asCustomError(e);
+  }
+};
+
+export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+  const { groupId } = req.params;
+
+  if (!groupId) {
+    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  }
+  try {
+    const { totalDonations } = await getGroupOffsetData(req);
+
+    const averageAmericanEmissions = {
+      monthly: averageAmericanEmissionsData.Monthly,
+      annually: averageAmericanEmissionsData.Annually * 2,
+    };
+
+    const useAverageAmericanEmissions = !totalDonations.tonnes;
+
+    let equivalency: IEquivalencyObject;
+
+    const equivalencies = getEquivalencies(useAverageAmericanEmissions ? averageAmericanEmissions.annually : totalDonations.tonnes);
+
+    if (useAverageAmericanEmissions) {
+      equivalency = equivalencies.negative[getRandomInt(0, equivalencies.negative.length - 1)];
+    } else {
+      equivalency = equivalencies.positive[getRandomInt(0, equivalencies.positive.length - 1)];
+    }
+
+    return {
+      useAverageAmericanEmissions,
+      totalDonations,
+      equivalency,
+      averageAmericanEmissions,
+    };
+  } catch (e) {
+    throw asCustomError(e);
   }
 };

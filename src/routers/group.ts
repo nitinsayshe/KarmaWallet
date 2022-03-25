@@ -12,7 +12,8 @@ groupRouter.route('/check-code')
   .get(GroupController.checkCode);
 
 groupRouter.route('/:groupId/members')
-  .get(authenticate, GroupController.getGroupMembers);
+  .get(authenticate, GroupController.getGroupMembers)
+  .put(authenticate, GroupController.updateUserGroups);
 
 groupRouter.route('/:groupId/offset-data')
   .get(authenticate, GroupController.getGroupOffsetData);

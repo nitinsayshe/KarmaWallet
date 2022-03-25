@@ -1,5 +1,7 @@
 import isemail from 'isemail';
-import { FilterQuery, Schema } from 'mongoose';
+import {
+  FilterQuery, Schema, UpdateQuery,
+} from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
@@ -62,6 +64,11 @@ export interface IUpdateUserGroupRequestBody {
   email: string;
   role: UserGroupRole;
   status: UserGroupStatus;
+}
+
+export interface IUpdateUserGroupsRequestBody {
+  status: UserGroupStatus;
+  memberIds: string[];
 }
 
 export interface IGroupRequestBody {
@@ -959,6 +966,117 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     userGroup.lastModified = dayjs().utc().toDate();
     await userGroup.save();
     return userGroup;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IUpdateUserGroupsRequestBody>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  const { groupId } = req.params;
+  const {
+    status,
+    memberIds = [],
+  } = req.body;
+
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    // verify that at least 1 batch update supported property
+    // has been passed
+    //
+    // currently, we only support batch status updates...but adding
+    // here in case this is updated in the future and we allow
+    // different types of batch updates.
+    if (!status) throw new CustomError('No updatable data found.', ErrorTypes.INVALID_ARG);
+
+    if (status) {
+      if (!Object.values(UserGroupStatus).find(s => s === status)) {
+        throw new CustomError('Invalid status found.', ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    const userGroups = await UserGroupModel.find({
+      user: req.requestor,
+      group: groupId,
+    })
+      .populate([
+        {
+          path: 'user',
+          model: UserModel,
+        },
+        {
+          path: 'group',
+          model: GroupModel,
+        },
+      ]);
+
+    const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === req.requestor._id.toString());
+
+    if (
+      !karmaAllowList.includes(req.requestor.role as UserRoles)
+      && (
+        !requestorUserGroup
+        || (
+          requestorUserGroup.role !== UserGroupRole.Admin
+          && requestorUserGroup.role !== UserGroupRole.SuperAdmin
+          && requestorUserGroup.role !== UserGroupRole.Owner
+        )
+      )
+    ) {
+      // user must be a karma member, or an admin or higher to make this request
+      throw new CustomError('You are not allowed to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    let rolesRequestorIsAllowedToUpdate: UserGroupRole[];
+
+    if (requestorUserGroup.role === UserGroupRole.SuperAdmin && rolesRequestorIsAllowedToUpdate.length === 1) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin];
+    }
+
+    if (requestorUserGroup.role === UserGroupRole.Owner) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin];
+    }
+
+    if (req.requestor.role === UserRoles.Admin || req.requestor.role === UserRoles.SuperAdmin) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+    }
+
+    const query: FilterQuery<IUserGroup> = {
+      $and: [
+        { role: { $in: rolesRequestorIsAllowedToUpdate } },
+        { group: groupId },
+      ],
+    };
+
+    // if no memberIds are specified, then will attempt to update
+    // ALL members that the requestor is allowed to update
+    if (memberIds?.length) query.$and.push({ user: { $in: memberIds } });
+
+    const memberUserGroups = await UserGroupModel.find(query);
+
+    if (memberIds?.length && memberUserGroups.length !== memberIds.length) {
+      // at least 1 id was included that the requestor is not allowed to update
+      throw new CustomError(
+        'You are not allowed to update all of these users. Please check the list of members to be updated and try again.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    const timestamp = dayjs().utc().toDate();
+
+    const update: UpdateQuery<IUserGroup> = {
+      status,
+      lastModified: timestamp,
+    };
+    const updatedMemberUserGroups = await UserGroupModel.updateMany(query, update, { new: true });
+
+    console.log(updatedMemberUserGroups);
+
+    // TODO: verify that all user groups were updated?
+    // TODO: add to change log for group for record keeping and maintenance
+
+    return [] as IUserGroupDocument[];
   } catch (err) {
     throw asCustomError(err);
   }

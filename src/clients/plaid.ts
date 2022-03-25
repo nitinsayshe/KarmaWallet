@@ -94,7 +94,6 @@ export class PlaidClient extends SdkClient {
     try {
       const response = await this._client.transactionsGet(request);
       let { transactions } = response.data;
-      // eslint-disable-next-line camelcase
       const { total_transactions: totalTransactions } = response.data;
 
       // plaid rate limits are set to 30 requests per minute

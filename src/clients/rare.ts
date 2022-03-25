@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
-import { asCustomError } from '../lib/customError';
+import { ErrorTypes } from '../lib/constants';
+import CustomError, { asCustomError } from '../lib/customError';
 import { IRareTransaction } from '../integrations/rare/transaction';
 import { SdkClient } from './sdkClient';
 
@@ -26,9 +27,8 @@ export class RareClient extends SdkClient {
   };
 
   getProject = async (projectId: string) => {
-    if (!projectId) throw new Error('A project id is required.');
-
     try {
+      if (!projectId) throw new CustomError('A project id is required.', ErrorTypes.INVALID_ARG);
       const result = await this._client.get(`/projects/${projectId}`);
       return result.data;
     } catch (err) {
@@ -47,10 +47,10 @@ export class RareClient extends SdkClient {
 
   getTransactions = async (rareUserId: string): Promise<IRareTransactionsResponse> => {
     try {
+      if (!rareUserId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
       const result = await this._client.get<IRareTransactionsResponse>(`transactions/users/${rareUserId}/transactions`);
       return result.data;
     } catch (err) {
-      console.log(err);
       throw asCustomError(err);
     }
   };

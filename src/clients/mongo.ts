@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Client } from './client';
+import { ConnectionClient } from './connectionClient';
 
 const {
   DB_USER,
@@ -8,7 +8,7 @@ const {
   DB_URL,
 } = process.env;
 
-export class _MongoClient extends Client {
+export class _MongoClient extends ConnectionClient {
   private _db: typeof mongoose = null;
 
   constructor() {

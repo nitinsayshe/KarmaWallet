@@ -9,12 +9,12 @@ import {
   Worker,
   WorkerOptions,
 } from 'bullmq';
-import { Client } from '../client';
+import { ConnectionClient } from '../connectionClient';
 import { _RedisClient, RedisClient } from '../redis';
 
 export const MAX_WORKERS = 4;
 
-export abstract class _BullClient extends Client {
+export abstract class _BullClient extends ConnectionClient {
   protected _queueName: string;
   protected _numWorkers: number;
   protected _queue: Queue = null;

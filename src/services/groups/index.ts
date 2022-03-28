@@ -990,7 +990,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
       const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
 
       if (donationsTotalDollars > 0) {
-        membersWithDonations += 0;
+        membersWithDonations += 1;
       }
 
       memberDonations.dollars += donationsTotalDollars;

@@ -201,6 +201,8 @@ export const mapSectorsToCompanies = async () => {
           companiesWithMultiSectors += 1;
         }
 
+        if (!!row.displayName) company.companyName = row.displayName;
+
         await company.save();
 
         companiesUpdated += 1;

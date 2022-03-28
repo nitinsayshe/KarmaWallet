@@ -71,20 +71,6 @@ const getCompanySectors = (
   return companySectors;
 };
 
-export const findRowsWithNoSectors = async () => {
-  const rawData: ISectorsToCompanyMapping[] = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'sectors-to-companies.csv'));
-
-  let count = 0;
-
-  for (const row of rawData) {
-    if (!row.primarySector) {
-      count += 1;
-    }
-  }
-
-  console.log('>>>>> count', count);
-};
-
 export const mapSectorsToCompanies = async () => {
   try {
     const rawData: ISectorsToCompanyMapping[] = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'sectors-to-companies.csv'));

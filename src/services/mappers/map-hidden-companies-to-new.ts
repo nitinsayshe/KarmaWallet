@@ -224,9 +224,18 @@ export const mapHiddenCompaniesToNew = async () => {
       }
     }
 
-    // starting companies: 7524
-
     console.log(`[+] ${updatedWithParentCount} companies updated with parent companies\n`);
+
+    // console.log('setting default hidden property for all other companies...');
+    // companies = await CompanyModel.find({});
+    // let defaultHiddenCompaniesCount = 0;
+    // for (const company of companies) {
+    //   if (!company.hidden) {
+    //     defaultHiddenCompaniesCount += 1;
+    //   }
+    // }
+
+    // console.log(`[+] ${defaultHiddenCompaniesCount} companies updated with defualt hidden value`);
   } catch (err) {
     throw asCustomError(err);
   }

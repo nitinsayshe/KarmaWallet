@@ -17,6 +17,7 @@ export enum GroupPrivacyStatus {
 export enum GroupStatus {
   Open = 'open',
   Locked = 'locked',
+  Deleted = 'deleted',
 }
 
 export interface IGroupIntegrations {

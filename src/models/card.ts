@@ -6,7 +6,8 @@ import {
   ObjectId,
 } from 'mongoose';
 import { CardStatus } from '../lib/constants';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
+import { IShareableUser, IUserDocument } from './user';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -31,17 +32,21 @@ export interface ICardIntegrations {
   rare: IRareCardIntegration;
 }
 
-export interface ICard {
-  userId: ObjectId;
+export interface IShareableCard {
+  userId: IRef<ObjectId, IShareableUser>;
   name: string;
   mask: string;
   type: string;
   subtype: string;
   status: CardStatus;
   institution: string;
-  integrations: ICardIntegrations;
   createdOn: Date;
   lastModified: Date;
+}
+
+export interface ICard extends IShareableCard {
+  userId: IRef<ObjectId, IUserDocument>;
+  integrations: ICardIntegrations;
 }
 
 export interface ICardDocument extends ICard, Document {}

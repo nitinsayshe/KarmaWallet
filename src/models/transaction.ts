@@ -1,13 +1,15 @@
 import {
   Schema,
+  ObjectId,
   model,
   Document,
   Model,
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
-import { ICardDocument } from './card';
-import { ICompanyDocument } from './company';
-import { IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
+import { ICardDocument, IShareableCard } from './card';
+import { ICompanyDocument, IShareableCompany } from './company';
+import { IPlaidCategoryMapping, IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
+import { IShareableUser, IUserDocument } from './user';
 
 export interface IPlaidTransactionLocation {
   address: string;
@@ -80,18 +82,25 @@ export interface ITransactionIntegrations {
   rare?: IRareTransactionIntegration;
 }
 
-export interface ITransaction {
-  userId: Schema.Types.ObjectId;
-  companyId: IRef<Schema.Types.ObjectId, ICompanyDocument>;
-  cardId: ICardDocument['_id'];
-  category: number;
-  subCategory: number;
-  carbonMultiplier: IPlaidCategoryMappingDocument['_id'];
+export interface IShareableTransaction {
+  userId: IRef<ObjectId, IShareableUser>;
+  companyId: IRef<ObjectId, IShareableCompany>;
+  cardId: IRef<ObjectId, IShareableCard>;
+  carbonMultiplier: IRef<ObjectId, IPlaidCategoryMapping>;
   amount: number;
   date: Date;
-  integrations?: ITransactionIntegrations;
+  category: number;
+  subCategory: number;
   createdOn: Date;
   lastModified: Date;
+}
+
+export interface ITransaction extends IShareableTransaction {
+  userId: IRef<ObjectId, IUserDocument>;
+  companyId: IRef<ObjectId, ICompanyDocument>;
+  cardId: IRef<ObjectId, ICardDocument>;
+  carbonMultiplier: IRef<ObjectId, IPlaidCategoryMappingDocument>;
+  integrations?: ITransactionIntegrations;
 }
 
 export interface ITransactionAggregate extends ITransaction {

@@ -109,3 +109,21 @@ export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupReque
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getGroupOffsetData: IRequestHandler<GroupService.IGetGroupOffsetRequestParams, { state: string }, {} > = async (req, res) => {
+  try {
+    const groupDashboard = await GroupService.getGroupOffsetData(req);
+    output.api(req, res, { ...groupDashboard, userGroup: GroupService.getShareableUserGroup(groupDashboard.userGroup) });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getGroupOffsetEquivalency: IRequestHandler<GroupService.IGetGroupOffsetRequestParams, { state: string }, {} > = async (req, res) => {
+  try {
+    const groupOffsetEquivalency = await GroupService.getGroupOffsetEquivalency(req);
+    output.api(req, res, groupOffsetEquivalency);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

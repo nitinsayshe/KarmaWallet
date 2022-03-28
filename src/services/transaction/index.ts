@@ -2,7 +2,7 @@ import { AnyObject } from 'mongoose';
 import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
-import { RareClient } from '../../integrations/rare/sdk';
+import { RareClient } from '../../clients/rare';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };

@@ -25,7 +25,7 @@ import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import {
-  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions, IEquivalencyObject,
+  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, IEquivalencyObject,
 } from '../impact/utils/carbon';
 import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
@@ -971,16 +971,31 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }
   try {
-    const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const members = await getGroupMembers(req);
-    const memberIds = members.map(m => (m.user as IUserDocument)._id);
-    const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
-    const memberDonationsTotalDollars = await getOffsetTransactionsTotal({ userId: { $in: memberIds } });
-    const memberDonationsTotalTonnes = await getRareOffsetAmount({ userId: { $in: memberIds } });
+    const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
+    const membersPromise = await getGroupMembers(req);
+    const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
+
     const memberDonations = {
-      dollars: memberDonationsTotalDollars,
-      tonnes: memberDonationsTotalTonnes,
+      dollars: 0,
+      tonnes: 0,
     };
+
+    let membersWithDonations = 0;
+
+    for (const member of members) {
+      const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+      const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
+      const donationsTotalTonnesPromise = getRareOffsetAmount(query);
+
+      const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+
+      if (donationsTotalDollars > 0) {
+        membersWithDonations += 0;
+      }
+
+      memberDonations.dollars += donationsTotalDollars;
+      memberDonations.tonnes += donationsTotalTonnes;
+    }
 
     // TODO: update w/ real value once group donation functionality is added
     const groupDonations = {

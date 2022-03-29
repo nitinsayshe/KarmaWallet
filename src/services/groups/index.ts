@@ -1,5 +1,7 @@
 import isemail from 'isemail';
-import { FilterQuery, Schema } from 'mongoose';
+import {
+  FilterQuery, Schema, UpdateQuery,
+} from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
@@ -63,6 +65,11 @@ export interface IUpdateUserGroupRequestBody {
   email: string;
   role: UserGroupRole;
   status: UserGroupStatus;
+}
+
+export interface IUpdateUserGroupsRequestBody {
+  status: UserGroupStatus;
+  memberIds: string[];
 }
 
 export interface IGroupRequestBody {
@@ -189,6 +196,45 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
   return _settings;
 };
 
+const buildGetMemberQuery = async (req: IRequest<IGroupRequestParams>, karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin]) => {
+  const { groupId } = req.params;
+  if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+  let requestorUserGroup: IUserGroupDocument;
+
+  // user must be a member of this group or a karma member
+  // to view its members
+  if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
+    requestorUserGroup = await UserGroupModel.findOne({
+      group: groupId,
+      user: req.requestor._id,
+    });
+
+    if (
+      !requestorUserGroup
+        || requestorUserGroup.status === UserGroupStatus.Left
+        || requestorUserGroup.status === UserGroupStatus.Removed
+        || requestorUserGroup.status === UserGroupStatus.Banned
+    ) {
+      throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
+    }
+  }
+
+  // regular members only need to see verified and approved members
+  // only admins (or higher) and karma members need to be able to
+  // see all the other members.
+  const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
+    ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
+    : [UserGroupStatus.Left];
+
+  const query: FilterQuery<IUserGroup> = {
+    group: groupId,
+    status: { $nin: statusesToExclude },
+  };
+
+  return query;
+};
+
 export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   try {
@@ -309,44 +355,31 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
   }
 };
 
-export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
-  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
-
+export const getGroupMembers = async (req: IRequest, query: FilterQuery<IUserGroup>) => {
   try {
-    const { groupId } = req.params;
-    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-
-    let requestorUserGroup: IUserGroupDocument;
-
-    // user must be a member of this group or a karma member
-    // to view its members
-    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
-      requestorUserGroup = await UserGroupModel.findOne({
-        group: groupId,
-        user: req.requestor._id,
-      });
-
-      if (
-        !requestorUserGroup
-        || requestorUserGroup.status === UserGroupStatus.Left
-        || requestorUserGroup.status === UserGroupStatus.Removed
-        || requestorUserGroup.status === UserGroupStatus.Banned
-      ) {
-        throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
-      }
-    }
-
-    // regular members only need to see verified and approved members
-    // only admins (or higher) and karma members need to be able to
-    // see all the other members.
-    const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
-      ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
-      : [UserGroupStatus.Left];
-
-    const query: FilterQuery<IUserGroup> = {
-      group: groupId,
-      status: { $nin: statusesToExclude },
+    const getMemberQuery = await buildGetMemberQuery(req);
+    const options = {
+      projection: query?.projection || '',
+      populate: query.population || [
+        {
+          path: 'user',
+          model: UserModel,
+        },
+      ],
+      page: query?.skip || 1,
+      sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
+      limit: query?.limit || 20,
     };
+
+    return UserGroupModel.paginate({ ...getMemberQuery, ...query.filter }, options);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getAllGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
+  try {
+    const query = await buildGetMemberQuery(req);
 
     const memberUserGroups = await UserGroupModel
       .find(query)
@@ -970,6 +1003,116 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
+export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IUpdateUserGroupsRequestBody>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  const { groupId } = req.params;
+  const {
+    status,
+    memberIds = [],
+  } = req.body;
+
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    // verify that at least 1 batch update supported property
+    // has been passed
+    //
+    // currently, we only support batch status updates...but adding
+    // here in case this is updated in the future and we allow
+    // different types of batch updates.
+    if (!status) throw new CustomError('No updatable data found.', ErrorTypes.INVALID_ARG);
+
+    if (status) {
+      if (!Object.values(UserGroupStatus).find(s => s === status)) {
+        throw new CustomError('Invalid status found.', ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    const userGroups = await UserGroupModel.find({
+      user: req.requestor,
+      group: groupId,
+    })
+      .populate([
+        {
+          path: 'user',
+          model: UserModel,
+        },
+        {
+          path: 'group',
+          model: GroupModel,
+        },
+      ]);
+
+    const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === req.requestor._id.toString());
+
+    if (
+      !karmaAllowList.includes(req.requestor.role as UserRoles)
+      && (
+        !requestorUserGroup
+        || (
+          requestorUserGroup.role !== UserGroupRole.Admin
+          && requestorUserGroup.role !== UserGroupRole.SuperAdmin
+          && requestorUserGroup.role !== UserGroupRole.Owner
+        )
+      )
+    ) {
+      // user must be a karma member, or an admin or higher to make this request
+      throw new CustomError('You are not allowed to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    let rolesRequestorIsAllowedToUpdate: UserGroupRole[];
+
+    if (requestorUserGroup.role === UserGroupRole.SuperAdmin && rolesRequestorIsAllowedToUpdate.length === 1) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin];
+    }
+
+    if (requestorUserGroup.role === UserGroupRole.Owner) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin];
+    }
+
+    if (req.requestor.role === UserRoles.Admin || req.requestor.role === UserRoles.SuperAdmin) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+    }
+
+    const query: FilterQuery<IUserGroup> = {
+      $and: [
+        { role: { $in: rolesRequestorIsAllowedToUpdate } },
+        { group: groupId },
+      ],
+    };
+
+    // if no memberIds are specified, then will attempt to update
+    // ALL members that the requestor is allowed to update
+    if (memberIds?.length) query.$and.push({ user: { $in: memberIds } });
+
+    const memberUserGroups = await UserGroupModel.find(query);
+
+    if (memberIds?.length && memberUserGroups.length !== memberIds.length) {
+      // at least 1 id was included that the requestor is not allowed to update
+      throw new CustomError(
+        'You are not allowed to update all of these users. Please check the list of members to be updated and try again.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    const timestamp = dayjs().utc().toDate();
+
+    const update: UpdateQuery<IUserGroup> = {
+      status,
+      lastModified: timestamp,
+    };
+    await UserGroupModel.updateMany(query, update);
+    const updatedMemberUserGroups = await UserGroupModel.find(query);
+
+    // TODO: verify that all user groups were updated?
+    // TODO: add to change log for group for record keeping and maintenance
+
+    return updatedMemberUserGroups;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
@@ -978,7 +1121,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
       throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     }
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const membersPromise = getGroupMembers(req);
+    const membersPromise = getAllGroupMembers(req);
     const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
 
     const memberDonations = {

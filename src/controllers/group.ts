@@ -25,8 +25,12 @@ export const getGroup: IRequestHandler = async (req, res) => {
 
 export const getGroupMembers: IRequestHandler = async (req, res) => {
   try {
-    const groupMembers = await GroupService.getGroupMembers(req);
-    output.api(req, res, groupMembers.map(member => GroupService.getShareableGroupMember(member)));
+    const query = aqp(req.query, { skipKey: 'page' });
+    const groupMembers = await GroupService.getGroupMembers(req, query);
+    output.api(req, res, {
+      ...groupMembers,
+      docs: groupMembers.docs.map(member => GroupService.getShareableGroupMember(member)),
+    });
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -105,6 +109,15 @@ export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupReque
   try {
     const userGroup = await GroupService.updateUserGroup(req);
     output.api(req, res, GroupService.getShareableUserGroup(userGroup));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const updateUserGroups: IRequestHandler<GroupService.IGroupRequestParams, {}, GroupService.IUpdateUserGroupsRequestBody> = async (req, res) => {
+  try {
+    const userGroups = await GroupService.updateUserGroups(req);
+    output.api(req, res, userGroups.map(userGroup => GroupService.getShareableUserGroup(userGroup)));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

@@ -12,15 +12,17 @@ dayjs.extend(utc);
  */
 
 export const exec = async () => {
+  const cachedDocumentsToBeDeleted: string[] = [];
   const cachedDataDocuments = await CachedDataModel.find({});
   for (const cachedDataDocument of cachedDataDocuments) {
     try {
       if (!dayjs(cachedDataDocument.ttl).isBefore(dayjs().utc().toDate())) continue;
-      await cachedDataDocument.delete();
+      cachedDocumentsToBeDeleted.push(cachedDataDocument._id.toString());
     } catch (err) {
       throw asCustomError(err);
     }
   }
+  await CachedDataModel.deleteMany({ _id: { $in: cachedDocumentsToBeDeleted } });
   return 'Expired cachedData documents removed.';
 };
 

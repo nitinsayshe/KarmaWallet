@@ -48,7 +48,7 @@ export const getCachedData = async (key: string): Promise<ICachedData> => {
   return cachedData;
 };
 
-export const deleteCachedData = async (key: string) => {
+export const deleteCachedData = (key: string) => {
   if (!key) {
     throw new CustomError('Key is required', ErrorTypes.INVALID_ARG);
   }

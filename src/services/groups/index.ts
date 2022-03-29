@@ -988,8 +988,6 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     let membersWithDonations = 0;
 
-    // TODO: we should prob have a way to build these.
-    // maybe fns like const getGroupOffsetCacheKey = (groupId) => `${CachedDataKeys.GroupOffsetData}_${groupId}`;
     const cachedDataKey = getGroupOffsetDataKey(groupId);
     let cachedData = await getCachedData(cachedDataKey);
 

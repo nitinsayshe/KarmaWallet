@@ -73,9 +73,9 @@ export interface IRareTransactionIntegration {
   refunded?: boolean;
   refunded_ts?: string;
   projectName?: string;
-  fee_amt?: { type: Number },
-  subtotal_amt?: { type: Number },
-  tonnes_amt?: { type: Number },
+  fee_amt?: number,
+  subtotal_amt?: number,
+  tonnes_amt?: number,
 }
 
 export interface ITransactionIntegrations {

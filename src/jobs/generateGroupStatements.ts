@@ -4,7 +4,7 @@ import { FilterQuery, ObjectId } from 'mongoose';
 import { mockRequest } from '../lib/constants/request';
 import { asCustomError } from '../lib/customError';
 import { GroupModel, GroupStatus } from '../models/group';
-import { StatementModel } from '../models/groupStatement';
+import { StatementModel } from '../models/statement';
 import { ITransaction, ITransactionDocument } from '../models/transaction';
 import { IUserDocument, UserModel } from '../models/user';
 import { getGroupMembers } from '../services/groups';
@@ -83,11 +83,13 @@ export const exec = async () => {
       let totalDollarsToMatch = 0;
 
       if (!!group.settings.matching.maxDollarAmount) {
-        const offsetsPerUser: {[key: string]: IUserOffsets} = {};
+        // will hold total matched and unmatched amounts
+        // for every member for this year.
+        const offsetsPerMember: {[key: string]: IUserOffsets} = {};
 
         for (const transaction of statementTransactions) {
-          if (!offsetsPerUser[transaction.userId.toString()]) {
-            offsetsPerUser[transaction.userId.toString()] = {
+          if (!offsetsPerMember[transaction.userId.toString()]) {
+            offsetsPerMember[transaction.userId.toString()] = {
               matched: 0,
               unmatched: 0,
             };
@@ -97,20 +99,27 @@ export const exec = async () => {
           let unmatchedAmount = 0;
 
           if (!!transaction.matched?.status) {
-            matchedAmount = offsetsPerUser[transaction.userId.toString()].matched;
-            unmatchedAmount = transaction.amount - matchedAmount;
+            matchedAmount = transaction.matched.amount;
+            const diff = transaction.amount - matchedAmount;
+            // if diff is greater than 0, means that this transaction
+            // was previously only partially matched and there is
+            // still a smaller amount left to be matched that
+            // needs to be accounted for.
+            unmatchedAmount = diff > 0 ? diff : 0;
           } else {
             unmatchedAmount = transaction.amount;
           }
 
-          offsetsPerUser[transaction.userId.toString()].matched += matchedAmount;
-          offsetsPerUser[transaction.userId.toString()].unmatched += unmatchedAmount;
+          offsetsPerMember[transaction.userId.toString()].matched += matchedAmount;
+          offsetsPerMember[transaction.userId.toString()].unmatched += unmatchedAmount;
         }
 
+        // get just this month's transactions out of full year worth
+        // of transactions
         const thisMonthsTransactions = statementTransactions.filter(t => monthStart.isBefore(t.date));
 
         for (const transaction of thisMonthsTransactions) {
-          const userOffsets = offsetsPerUser[transaction.userId.toString()];
+          const userOffsets = offsetsPerMember[transaction.userId.toString()];
 
           // if user has already been matched 100%, skip this transaction
           if (userOffsets.matched >= group.settings.matching.maxDollarAmount) continue;
@@ -134,13 +143,25 @@ export const exec = async () => {
         totalDollarsToMatch = statementTransactions.reduce((prev, curr) => curr.amount + prev, 0);
       }
 
+      const toBeMatchedTransactions = !!toBeMatched.length
+        ? toBeMatched
+        : statementTransactions.map(t => ({
+          value: t.amount,
+          transaction: t,
+        }));
+
+      let toBeMatchedTonnes = 0;
+      for (const toBeMatchedTransaction of toBeMatchedTransactions) {
+        toBeMatchedTonnes += (toBeMatchedTransaction.transaction as ITransactionDocument).integrations.rare.tonnes_amt;
+      }
+
       const statement = new StatementModel({
         group,
         offsets: {
           toBeMatched: {
             dollars: totalDollarsToMatch,
-            tonnes: 0,
-            transactions: toBeMatched,
+            tonnes: toBeMatchedTonnes,
+            transactions: toBeMatchedTransactions,
           },
           totalMemberOffsets: {
             dollars: memberDonationsTotalDollars,

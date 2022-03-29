@@ -44,30 +44,46 @@ export interface IStatementDocument extends IStatement, Document {}
 export type IStatementModel = IModel<IStatement>;
 
 const statementSchema = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'user',
+  },
   group: {
     type: Schema.Types.ObjectId,
     ref: 'group',
-  },
-  transactor: {
-    // specifying user here because eventually we will support group transactors
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: 'user',
-    },
   },
   offsets: {
     type: {
       matched: {
         type: {
-          date: { type: Date },
           dollars: { type: Number },
           tonnes: { type: Number },
+          transactor: {
+            // specifying user here because eventually we will support group transactors
+            user: {
+              type: Schema.Types.ObjectId,
+              ref: 'user',
+            },
+          },
+          date: { type: Date },
         },
       },
       toBeMatched: {
         type: {
           dollars: { type: Number },
           tonnes: { type: Number },
+          // breakdown of each transaction to be matched
+          // and how much of it is to be matched (accounts
+          // for partial matches)
+          transactions: {
+            type: [{
+              value: Number,
+              transaction: {
+                type: Schema.Types.ObjectId,
+                ref: 'transaction',
+              },
+            }],
+          },
         },
       },
       totalMemberOffsets: {

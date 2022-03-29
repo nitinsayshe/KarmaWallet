@@ -8,7 +8,6 @@ import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
-
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -27,10 +26,12 @@ import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import {
-  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, countUsersWithOffsetTransactions, IEquivalencyObject,
+  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, IEquivalencyObject,
 } from '../impact/utils/carbon';
 import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
+import { createCachedData, getCachedData } from '../cachedData';
+import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 
 dayjs.extend(utc);
 
@@ -529,13 +530,18 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
 export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { userId, groupId } = req.params;
-  if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
-    throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
-  }
-  if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
-  if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   try {
-    const userGroup = await UserGroupModel.findOne({ group: groupId, user: userId })
+    if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
+    if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    // reassigning query if app user is present to ensure safety
+    let query: { group: string, user?: string } = { group: groupId, user: userId };
+    if (req.requestor._id.toString() === process.env.APP_USER_ID) {
+      query = { group: groupId };
+    }
+    const userGroup = await UserGroupModel.findOne(query)
       .populate([
         {
           path: 'group',
@@ -1107,42 +1113,69 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
   }
 };
 
-export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
-  if (!groupId) {
-    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
-  }
   try {
-    const userGroup = await getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const members = await getAllGroupMembers(req);
-    const memberIds = members.map(m => (m.user as IUserDocument)._id);
-    const membersWithDonations = await countUsersWithOffsetTransactions({ userId: { $in: memberIds } });
-    const memberDonationsTotalDollars = await getOffsetTransactionsTotal({ userId: { $in: memberIds } });
-    const memberDonationsTotalTonnes = await getRareOffsetAmount({ userId: { $in: memberIds } });
-    const memberDonations = {
-      dollars: memberDonationsTotalDollars,
-      tonnes: memberDonationsTotalTonnes,
-    };
+    if (!groupId) {
+      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    }
+    const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
+    const membersPromise = getAllGroupMembers(req);
+    const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
 
-    // TODO: update w/ real value once group donation functionality is added
-    const groupDonations = {
+    const memberDonations = {
       dollars: 0,
       tonnes: 0,
     };
 
-    const totalDonations = {
-      dollars: memberDonations.dollars + groupDonations.dollars,
-      tonnes: memberDonations.tonnes + groupDonations.tonnes,
-    };
+    let membersWithDonations = 0;
+
+    const cachedDataKey = getGroupOffsetDataKey(groupId);
+    let cachedData = await getCachedData(cachedDataKey);
+
+    if (!cachedData || bustCache) {
+      for (const member of members) {
+        const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
+        const donationsTotalTonnesPromise = getRareOffsetAmount(query);
+
+        const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+
+        if (donationsTotalDollars > 0) {
+          membersWithDonations += 1;
+        }
+
+        memberDonations.dollars += donationsTotalDollars;
+        memberDonations.tonnes += donationsTotalTonnes;
+      }
+
+      // TODO: update w/ real value once group donation functionality is added
+      const groupDonations = {
+        dollars: 0,
+        tonnes: 0,
+      };
+
+      const totalDonations = {
+        dollars: memberDonations.dollars + groupDonations.dollars,
+        tonnes: memberDonations.tonnes + groupDonations.tonnes,
+      };
+
+      const cachedDataValue = {
+        membersWithDonations,
+        groupDonations,
+        memberDonations,
+        totalDonations,
+      };
+
+      cachedData = await createCachedData({ key: cachedDataKey, value: cachedDataValue });
+    }
 
     return {
       userGroup,
       members: members.length,
-      membersWithDonations,
-      groupDonations,
-      memberDonations,
-      totalDonations,
+      ...cachedData.value,
+      lastUpdated: cachedData.lastUpdated,
     };
   } catch (e) {
     throw asCustomError(e);
@@ -1151,7 +1184,6 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
 export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { groupId } = req.params;
-
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }

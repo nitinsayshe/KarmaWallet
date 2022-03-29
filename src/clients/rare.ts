@@ -15,7 +15,7 @@ export class RareClient extends SdkClient {
     super('Rare');
   }
 
-  _init = () => {
+  protected _init() {
     this._client = axios.create({
       headers: {
         'x-api-key': process.env.RARE_API_KEY,
@@ -24,7 +24,7 @@ export class RareClient extends SdkClient {
       },
       baseURL: `https://${process.env.RARE_ENV}.catch-carbon-api.rare.org`,
     });
-  };
+  }
 
   getProject = async (projectId: string) => {
     try {

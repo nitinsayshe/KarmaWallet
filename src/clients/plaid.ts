@@ -23,7 +23,7 @@ export class PlaidClient extends SdkClient {
     super('Plaid');
   }
 
-  _init = () => {
+  protected _init() {
     const { PLAID_SECRET, PLAID_CLIENT_ID } = process.env;
     const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
     const configuration = new Configuration({
@@ -37,7 +37,7 @@ export class PlaidClient extends SdkClient {
       },
     });
     this._client = new PlaidApi(configuration);
-  };
+  }
 
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);

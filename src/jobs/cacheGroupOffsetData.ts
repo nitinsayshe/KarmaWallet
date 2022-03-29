@@ -4,14 +4,18 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import { getGroupOffsetData, IGetGroupOffsetRequestParams } from '../services/groups';
 import { IRequest } from '../types/request';
 import { UserModel } from '../models/user';
-import { asCustomError } from '../lib/customError';
+import CustomError, { asCustomError } from '../lib/customError';
+import { ErrorTypes } from '../lib/constants';
 
 /**
  * iterates over all groups and caches offsetdata
  */
 
 export const exec = async () => {
-  const appUser = await UserModel.findOne({ _id: '6241e2260c9177f79772fdc5' });
+  const { APP_USER_ID } = process.env;
+  if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
+  const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+  if (!appUser) throw new CustomError('AppUser not found', ErrorTypes.SERVICE);
   const groups = await GroupModel.find({});
   for (const group of groups) {
     try {

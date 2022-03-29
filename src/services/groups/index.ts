@@ -497,14 +497,14 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
 export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { userId, groupId } = req.params;
-  if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
-    throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
-  }
-  if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
-  if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   try {
-    // reassigning query for
-    let query = { group: groupId, user: userId };
+    if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
+    if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    // reassigning query if app user is present to ensure safety
+    let query: { group: string, user?: string } = { group: groupId, user: userId };
     if (req.requestor._id.toString() === process.env.APP_USER_ID) {
       query = { group: groupId };
     }
@@ -973,12 +973,12 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
-  if (!groupId) {
-    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
-  }
   try {
+    if (!groupId) {
+      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    }
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const membersPromise = await getGroupMembers(req);
+    const membersPromise = getGroupMembers(req);
     const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
 
     const memberDonations = {
@@ -1043,7 +1043,6 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
 export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { groupId } = req.params;
-
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }

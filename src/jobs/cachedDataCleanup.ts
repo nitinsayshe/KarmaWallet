@@ -15,10 +15,8 @@ export const exec = async () => {
   const cachedDataDocuments = await CachedDataModel.find({});
   for (const cachedDataDocument of cachedDataDocuments) {
     try {
-      console.log('not deleting');
       if (!dayjs(cachedDataDocument.ttl).isBefore(dayjs().utc().toDate())) continue;
       await cachedDataDocument.delete();
-      console.log('deleting');
     } catch (err) {
       throw asCustomError(err);
     }

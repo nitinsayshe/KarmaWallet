@@ -129,6 +129,7 @@ export class PlaidClient extends SdkClient {
           if (!!cards.length) {
             for (const card of cards) {
               card.status = CardStatus.Unlinked;
+              card.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
               card.integrations.plaid.accessToken = null;
               // await card.save();
             }

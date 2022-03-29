@@ -13,7 +13,7 @@ export default () => cors({
     }
     return callback(null, true);
   },
-  allowedHeaders: ['Authorization', 'authkey', 'content-type', 'X-Requested-With'],
+  allowedHeaders: ['Authorization', 'authkey', 'content-type', 'X-Requested-With', 'serviceName'],
   exposedHeaders: ['API-Token-Expiry'],
   credentials: true,
 });

@@ -7,7 +7,7 @@ import { GroupModel, GroupStatus } from '../models/group';
 import { StatementModel } from '../models/statement';
 import { ITransaction, ITransactionDocument } from '../models/transaction';
 import { IUserDocument, UserModel } from '../models/user';
-import { getGroupMembers } from '../services/groups';
+import { getAllGroupMembers } from '../services/groups';
 import { getOffsetTransactions, getOffsetTransactionsTotal, getRareOffsetAmount } from '../services/impact/utils/carbon';
 import { IRef } from '../types/model';
 
@@ -111,7 +111,7 @@ export const exec = async () => {
       // get list of all member ids
       const memberMockRequest = { ...mockRequest, requestor: appUser };
       memberMockRequest.params = { groupId: group._id.toString() };
-      const members = await getGroupMembers(memberMockRequest);
+      const members = await getAllGroupMembers(memberMockRequest);
       const memberIds: string[] = members.map(m => (m.user as IUserDocument)._id);
       const matchPercent = group.settings.matching.matchPercentage / 100;
 

@@ -2,9 +2,7 @@ import path from 'path';
 import { Job, SandboxedJob, Worker } from 'bullmq';
 import { QueueNames, JobNames } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
-import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import { RedisClient } from '../../redis';
-import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 
 export class _MainBullClient extends _BullClient {
   constructor() {
@@ -47,36 +45,20 @@ export class _MainBullClient extends _BullClient {
   };
 
   _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
-    switch (job.name) {
-      case JobNames.TransactionsMonitor:
-        TransactionsMonitor.onComplete();
-        break;
-      case JobNames.UserPlaidTransactionMapper:
-        UserPlaidTransactionMapper.onComplete(job as SandboxedJob, result);
-        break;
-      case JobNames.GlobalPlaidTransactionMapper:
-        console.log(`${JobNames.GlobalPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
-        break;
-      case JobNames.CacheGroupOffsetData:
-        console.log(`${JobNames.CacheGroupOffsetData} finished: \n ${JSON.stringify(result)}`);
-        break;
-      default:
-        console.log(`job ${job.id} complete`, result);
-        break;
+    if (this._jobsDictionary[job.name]?.onComplete) {
+      this._jobsDictionary[job.name]?.onComplete(job, result);
+    } else {
+      console.log(`\n[+] Job: ${job.name} completed successfully`);
+      console.log(result, '\n');
     }
   };
 
   _onJobFailed = async (job: Job | SandboxedJob, err: Error) => {
-    switch (job.name) {
-      case JobNames.TransactionsMonitor:
-        TransactionsMonitor.onFailed((job as SandboxedJob), err);
-        break;
-      case 'dummy':
-        console.log('>>>>> doing something specific to dummy job failure');
-        break;
-      default:
-        console.log(`job ${job.id} failed`, err);
-        break;
+    if (!!this._jobsDictionary[job.name]?.onFailure) {
+      this._jobsDictionary[job.name]?.onFailure(job, err);
+    } else {
+      console.log(`\n[-] Job: ${job.name} failed`);
+      console.log(err, '\n');
     }
   };
 }

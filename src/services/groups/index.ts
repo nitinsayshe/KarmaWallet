@@ -29,6 +29,8 @@ import {
 } from '../impact/utils/carbon';
 import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
+import { createCachedData, getCachedData } from '../cachedData';
+import { CachedDataKeys } from '../../lib/constants/cachedData';
 
 dayjs.extend(utc);
 
@@ -982,39 +984,52 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     let membersWithDonations = 0;
 
-    for (const member of members) {
-      const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
-      const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
-      const donationsTotalTonnesPromise = getRareOffsetAmount(query);
+    // TODO: we should prob have a way to build these.
+    // maybe fns like const getGroupOffsetCacheKey = (groupId) => `${CachedDataKeys.GroupOffsetData}_${groupId}`;
+    const cachedDataKey = `${CachedDataKeys.GroupOffsetData}_${groupId}`;
+    let cachedData = await getCachedData(cachedDataKey);
 
-      const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+    if (!cachedData) {
+      for (const member of members) {
+        const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
+        const donationsTotalTonnesPromise = getRareOffsetAmount(query);
 
-      if (donationsTotalDollars > 0) {
-        membersWithDonations += 1;
+        const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+
+        if (donationsTotalDollars > 0) {
+          membersWithDonations += 1;
+        }
+
+        memberDonations.dollars += donationsTotalDollars;
+        memberDonations.tonnes += donationsTotalTonnes;
       }
 
-      memberDonations.dollars += donationsTotalDollars;
-      memberDonations.tonnes += donationsTotalTonnes;
+      // TODO: update w/ real value once group donation functionality is added
+      const groupDonations = {
+        dollars: 0,
+        tonnes: 0,
+      };
+
+      const totalDonations = {
+        dollars: memberDonations.dollars + groupDonations.dollars,
+        tonnes: memberDonations.tonnes + groupDonations.tonnes,
+      };
+
+      const cachedDataValue = {
+        membersWithDonations,
+        groupDonations,
+        memberDonations,
+        totalDonations,
+      };
+
+      cachedData = await createCachedData({ key: cachedDataKey, value: cachedDataValue });
     }
-
-    // TODO: update w/ real value once group donation functionality is added
-    const groupDonations = {
-      dollars: 0,
-      tonnes: 0,
-    };
-
-    const totalDonations = {
-      dollars: memberDonations.dollars + groupDonations.dollars,
-      tonnes: memberDonations.tonnes + groupDonations.tonnes,
-    };
 
     return {
       userGroup,
       members: members.length,
-      membersWithDonations,
-      groupDonations,
-      memberDonations,
-      totalDonations,
+      ...cachedData.value,
     };
   } catch (e) {
     throw asCustomError(e);

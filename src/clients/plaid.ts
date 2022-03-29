@@ -21,6 +21,9 @@ export class PlaidClient extends SdkClient {
 
   constructor() {
     super('Plaid');
+  }
+
+  protected _init() {
     const { PLAID_SECRET, PLAID_CLIENT_ID } = process.env;
     const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
     const configuration = new Configuration({

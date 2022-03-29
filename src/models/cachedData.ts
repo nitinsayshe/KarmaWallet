@@ -23,4 +23,4 @@ const cachedDataSchema = new Schema({
   value: { type: Schema.Types.Mixed },
 });
 
-export const CacheDataModel = model<ICachedDataDocument, Model<ICachedData>>('cachedData', cachedDataSchema);
+export const CachedDataModel = model<ICachedDataDocument, Model<ICachedData>>('cachedData', cachedDataSchema);

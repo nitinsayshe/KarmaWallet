@@ -6,7 +6,6 @@ import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
-
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -30,7 +29,7 @@ import {
 import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
-import { CachedDataKeys } from '../../lib/constants/cachedData';
+import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 
 dayjs.extend(utc);
 
@@ -504,7 +503,12 @@ export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
   if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
   if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   try {
-    const userGroup = await UserGroupModel.findOne({ group: groupId, user: userId })
+    // reassigning query for
+    let query = { group: groupId, user: userId };
+    if (req.requestor._id.toString() === process.env.APP_USER_ID) {
+      query = { group: groupId };
+    }
+    const userGroup = await UserGroupModel.findOne(query)
       .populate([
         {
           path: 'group',
@@ -986,7 +990,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     // TODO: we should prob have a way to build these.
     // maybe fns like const getGroupOffsetCacheKey = (groupId) => `${CachedDataKeys.GroupOffsetData}_${groupId}`;
-    const cachedDataKey = `${CachedDataKeys.GroupOffsetData}_${groupId}`;
+    const cachedDataKey = getGroupOffsetDataKey(groupId);
     let cachedData = await getCachedData(cachedDataKey);
 
     if (!cachedData || bustCache) {
@@ -1030,6 +1034,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
       userGroup,
       members: members.length,
       ...cachedData.value,
+      lastUpdated: cachedData.lastUpdated,
     };
   } catch (e) {
     throw asCustomError(e);

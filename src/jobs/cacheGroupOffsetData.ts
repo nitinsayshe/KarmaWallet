@@ -5,21 +5,18 @@ import { getGroupOffsetData, IGetGroupOffsetRequestParams } from '../services/gr
 import { IRequest } from '../types/request';
 import { UserModel } from '../models/user';
 import { asCustomError } from '../lib/customError';
-import { UserGroupModel } from '../models/userGroup';
 
 /**
  * iterates over all groups and caches offsetdata
  */
 
 export const exec = async () => {
+  const appUser = await UserModel.findOne({ _id: '6241e2260c9177f79772fdc5' });
   const groups = await GroupModel.find({});
   for (const group of groups) {
     try {
-      // finds any user in the group to bypass checks
-      const userGroup = await UserGroupModel.findOne({ group });
-      const user = await UserModel.findOne({ _id: userGroup.user });
       const mockRequest = ({
-        requestor: user,
+        requestor: appUser,
         authKey: '',
         params: { groupId: group._id.toString() },
       } as IRequest<IGetGroupOffsetRequestParams, {}, {}>);

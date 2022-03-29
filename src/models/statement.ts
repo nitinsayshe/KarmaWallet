@@ -21,6 +21,8 @@ export interface IMatchedOffsetData extends IOffsetData {
 }
 
 export interface IOffsetsStatement {
+  matchPercentage: number,
+  maxDollarAmount: number,
   matched: IMatchedOffsetData;
   toBeMatched: IOffsetData;
   totalMemberOffsets: IOffsetData;
@@ -54,6 +56,8 @@ const statementSchema = new Schema({
   },
   offsets: {
     type: {
+      matchPercentage: { type: Number },
+      maxDollarAmount: { type: Number },
       matched: {
         type: {
           dollars: { type: Number },

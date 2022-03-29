@@ -183,6 +183,8 @@ export const exec = async () => {
       const statement = new StatementModel({
         group,
         offsets: {
+          matchPercentage: group.settings.matching.matchPercentage,
+          maxDollarAmount: group.settings.matching.maxDollarAmount,
           toBeMatched: {
             dollars: totalDollarsToMatch,
             tonnes: toBeMatchedTonnes,

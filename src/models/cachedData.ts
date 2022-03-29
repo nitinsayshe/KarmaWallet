@@ -17,10 +17,10 @@ export interface ICachedDataDocument extends ICachedData, Document {}
 export type ICachedDataModel = IModel<ICachedData>;
 
 const cachedDataSchema = new Schema({
-  key: { type: String },
-  lastUpdated: { type: Date },
-  ttl: { type: Date },
-  value: { type: Schema.Types.Mixed },
+  key: { type: String, required: true },
+  lastUpdated: { type: Date, required: true },
+  ttl: { type: Date, required: true },
+  value: { type: Schema.Types.Mixed, required: true },
 });
 
 export const CachedDataModel = model<ICachedDataDocument, Model<ICachedData>>('cachedData', cachedDataSchema);

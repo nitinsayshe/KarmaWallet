@@ -16,6 +16,7 @@ export interface IPlaidCardIntegration {
   publicToken: string;
   linkSessionId: string;
   institutionId: string;
+  unlinkedAccessTokens: string[];
 }
 
 export interface IRareCardIntegration {
@@ -77,6 +78,7 @@ const cardSchema = new Schema({
         publicToken: { type: String },
         linkSessionId: { type: String },
         institutionId: { type: String },
+        unlinkedAccessTokens: [{ type: String }],
       },
     },
     rare: {

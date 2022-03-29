@@ -125,6 +125,7 @@ export class PlaidClient extends SdkClient {
         if (!!cards.length) {
           for (const card of cards) {
             card.status = CardStatus.Unlinked;
+            card.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
             card.integrations.plaid.accessToken = null;
             await card.save();
           }
@@ -136,6 +137,9 @@ export class PlaidClient extends SdkClient {
 
       if (!!e.response.data.error_message) {
         logger.error(e.response.data.error_message);
+      } else {
+        console.log('[-] getPlaidTransactions error');
+        console.log(e);
       }
     }
   };

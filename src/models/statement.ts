@@ -98,10 +98,15 @@ const statementSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'transaction',
   }],
+  // the date this statement is for
   date: {
     type: Date,
     default: new Date(),
   },
+  // the date this statement was generated
+  // will usually be the 1st day of the month
+  // after `date`
+  createdOn: { type: Date },
 });
 statementSchema.plugin(mongoosePaginate);
 

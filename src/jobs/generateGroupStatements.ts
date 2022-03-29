@@ -45,7 +45,46 @@ const getStartAndEndDates = () => {
   return [yearStart, monthStart, monthEnd];
 };
 
+const getOffsetsPerMember = (statementTransactions: ITransactionDocument[]) => {
+  // will hold total matched and unmatched amounts
+  // for every member for this year.
+  const offsetsPerMember: {[key: string]: IUserOffsets} = {};
+
+  for (const transaction of statementTransactions) {
+    // create default data for this user if doesnt already exist
+    if (!offsetsPerMember[transaction.userId.toString()]) {
+      offsetsPerMember[transaction.userId.toString()] = {
+        matched: 0,
+        unmatched: 0,
+      };
+    }
+
+    let matchedAmount = 0;
+    let unmatchedAmount = 0;
+
+    if (!!transaction.matched?.status) {
+      matchedAmount = transaction.matched.amount;
+      const diff = transaction.amount - matchedAmount;
+      // if diff is greater than 0, means that this transaction
+      // was previously only partially matched and there is
+      // still a smaller amount left to be matched that
+      // needs to be accounted for.
+      unmatchedAmount = diff > 0 ? diff : 0;
+    } else {
+      unmatchedAmount = transaction.amount;
+    }
+
+    offsetsPerMember[transaction.userId.toString()].matched += matchedAmount;
+    offsetsPerMember[transaction.userId.toString()].unmatched += unmatchedAmount;
+  }
+
+  return offsetsPerMember;
+};
+
 export const exec = async () => {
+  console.log('\ngenerating monthly group offset statements...');
+  let statementCount = 0;
+
   try {
     const appUser = await UserModel.findOne({ _id: '6241e2260c9177f79772fdc5' });
     const groups = await GroupModel.find({
@@ -58,11 +97,23 @@ export const exec = async () => {
     const [yearStart, monthStart, monthEnd] = getStartAndEndDates();
 
     for (const group of groups) {
+      const _statement = await StatementModel.findOne({ group, date: monthStart.toDate() });
+
+      // preventative measure to ensure only 1 statement gets
+      // created per group, per month
+      //
+      // multiple statements could be generated if a job fails
+      // and retries. in such a case, another statement will
+      // not be created for this group and the job will pick
+      // up where it left off.
+      if (!!_statement) continue;
+
       // get list of all member ids
       const memberMockRequest = { ...mockRequest, requestor: appUser };
       memberMockRequest.params = { groupId: group._id.toString() };
       const members = await getGroupMembers(memberMockRequest);
       const memberIds: string[] = members.map(m => (m.user as IUserDocument)._id);
+      const matchPercent = group.settings.matching.matchPercentage / 100;
 
       const offsetTransactionQuery: FilterQuery<ITransaction> = {
         $and: [
@@ -72,7 +123,7 @@ export const exec = async () => {
         ],
       };
 
-      const statementTransactions = await getOffsetTransactions(offsetTransactionQuery);
+      const allTransactions = await getOffsetTransactions(offsetTransactionQuery);
       const memberDonationsTotalDollars = await getOffsetTransactionsTotal(offsetTransactionQuery);
       const memberDonationsTotalTonnes = await getRareOffsetAmount(offsetTransactionQuery);
 
@@ -83,40 +134,11 @@ export const exec = async () => {
       let totalDollarsToMatch = 0;
 
       if (!!group.settings.matching.maxDollarAmount) {
-        // will hold total matched and unmatched amounts
-        // for every member for this year.
-        const offsetsPerMember: {[key: string]: IUserOffsets} = {};
-
-        for (const transaction of statementTransactions) {
-          if (!offsetsPerMember[transaction.userId.toString()]) {
-            offsetsPerMember[transaction.userId.toString()] = {
-              matched: 0,
-              unmatched: 0,
-            };
-          }
-
-          let matchedAmount = 0;
-          let unmatchedAmount = 0;
-
-          if (!!transaction.matched?.status) {
-            matchedAmount = transaction.matched.amount;
-            const diff = transaction.amount - matchedAmount;
-            // if diff is greater than 0, means that this transaction
-            // was previously only partially matched and there is
-            // still a smaller amount left to be matched that
-            // needs to be accounted for.
-            unmatchedAmount = diff > 0 ? diff : 0;
-          } else {
-            unmatchedAmount = transaction.amount;
-          }
-
-          offsetsPerMember[transaction.userId.toString()].matched += matchedAmount;
-          offsetsPerMember[transaction.userId.toString()].unmatched += unmatchedAmount;
-        }
+        const offsetsPerMember = getOffsetsPerMember(allTransactions);
 
         // get just this month's transactions out of full year worth
         // of transactions
-        const thisMonthsTransactions = statementTransactions.filter(t => monthStart.isBefore(t.date));
+        const thisMonthsTransactions = allTransactions.filter(t => monthStart.isBefore(t.date));
 
         for (const transaction of thisMonthsTransactions) {
           const userOffsets = offsetsPerMember[transaction.userId.toString()];
@@ -131,22 +153,24 @@ export const exec = async () => {
           // to be matched for this user, only add the amount left
           // otherwise, add the entire transaction amount to the
           // total.
-          const value = transaction.amount >= leftToBeMatched
+          let value = transaction.amount >= leftToBeMatched
             ? leftToBeMatched
             : transaction.amount;
+
+          value *= matchPercent;
 
           totalDollarsToMatch += value;
           toBeMatched.push({ value, transaction });
         }
       } else {
         // matching 100% with no max...getting total for all offsets for the month
-        totalDollarsToMatch = statementTransactions.reduce((prev, curr) => curr.amount + prev, 0);
+        totalDollarsToMatch = allTransactions.reduce((prev, curr) => (curr.amount * matchPercent) + prev, 0);
       }
 
       const toBeMatchedTransactions = !!toBeMatched.length
         ? toBeMatched
-        : statementTransactions.map(t => ({
-          value: t.amount,
+        : allTransactions.map(t => ({
+          value: t.amount * matchPercent,
           transaction: t,
         }));
 
@@ -154,6 +178,7 @@ export const exec = async () => {
       for (const toBeMatchedTransaction of toBeMatchedTransactions) {
         toBeMatchedTonnes += (toBeMatchedTransaction.transaction as ITransactionDocument).integrations.rare.tonnes_amt;
       }
+      toBeMatchedTonnes *= matchPercent;
 
       const statement = new StatementModel({
         group,
@@ -168,17 +193,20 @@ export const exec = async () => {
             tonnes: memberDonationsTotalTonnes,
           },
         },
-        transactions: statementTransactions,
-        date: dayjs().utc().toDate(),
+        transactions: allTransactions.filter(t => monthStart.isBefore(t.date)),
+        date: monthStart.toDate(),
+        createdOn: dayjs().utc().toDate(),
       });
 
-      console.log('>>>>> statement', statement);
-
-      // await statement.save();
+      await statement.save();
+      statementCount += 1;
 
       // TODO: send email to owner and superadmins notifying them that a new statement is available
     }
+
+    console.log(`[+] ${statementCount} statements generated successfully\n`);
   } catch (err) {
+    console.log(`\n[-] An error occurred while generating monthly group offset statements. ${statementCount} statement were created before this error occurred.\n`);
     throw asCustomError(err);
   }
 };

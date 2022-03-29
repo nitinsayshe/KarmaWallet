@@ -8,6 +8,7 @@ import {
 import { IModel, IRef } from '../types/model';
 import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
+import { IGroupDocument, IShareableGroup } from './group';
 import { IPlaidCategoryMapping, IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
 import { IShareableUser, IUserDocument } from './user';
 
@@ -82,6 +83,21 @@ export interface ITransactionIntegrations {
   rare?: IRareTransactionIntegration;
 }
 
+export interface ITransactionOnBehalfOf {
+  user: IRef<ObjectId, (IShareableUser | IUserDocument)>;
+  group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
+}
+
+export interface ITransactionMatch {
+  status: boolean;
+  amount: number;
+  date: Date;
+}
+
+export interface ITransactionAssociation {
+  group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>
+}
+
 export interface IShareableTransaction {
   userId: IRef<ObjectId, IShareableUser>;
   companyId: IRef<ObjectId, IShareableCompany>;
@@ -101,6 +117,9 @@ export interface ITransaction extends IShareableTransaction {
   cardId: IRef<ObjectId, ICardDocument>;
   carbonMultiplier: IRef<ObjectId, IPlaidCategoryMappingDocument>;
   integrations?: ITransactionIntegrations;
+  onBehalfOf?: ITransactionOnBehalfOf;
+  matched?: ITransactionMatch;
+  association?: ITransactionAssociation;
 }
 
 export interface ITransactionAggregate extends ITransaction {
@@ -176,12 +195,43 @@ const transactionSchema = new Schema({
   },
   createdOn: { type: Date },
   lastModified: { type: Date },
+  /**
+   * transactions can be made on behalf of others...setting
+   * this specifies who this transaction was made for.
+   */
   onBehalfOf: {
     type: {
       user: {
         type: Schema.Types.ObjectId,
         ref: 'user',
       },
+      group: {
+        type: Schema.Types.ObjectId,
+        ref: 'group',
+      },
+    },
+  },
+  /**
+   * some entities offer matching of certain transaction types
+   * (like offset donations). if status is true, the transaction
+   * has been matched.
+   */
+  matched: {
+    type: {
+      status: {
+        type: Boolean,
+        default: false,
+      },
+      amount: { type: Number },
+      date: { type: Date },
+    },
+  },
+  /**
+   * donations can be associated with specific entities
+   * for matchines purposes.
+   */
+  association: {
+    type: {
       group: {
         type: Schema.Types.ObjectId,
         ref: 'group',

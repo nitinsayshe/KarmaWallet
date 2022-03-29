@@ -23,7 +23,7 @@ export class PlaidClient extends SdkClient {
     super('Plaid');
   }
 
-  _init = () => {
+  protected _init() {
     const { PLAID_SECRET, PLAID_CLIENT_ID } = process.env;
     const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
     const configuration = new Configuration({
@@ -37,7 +37,7 @@ export class PlaidClient extends SdkClient {
       },
     });
     this._client = new PlaidApi(configuration);
-  };
+  }
 
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
@@ -125,6 +125,7 @@ export class PlaidClient extends SdkClient {
         if (!!cards.length) {
           for (const card of cards) {
             card.status = CardStatus.Unlinked;
+            card.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
             card.integrations.plaid.accessToken = null;
             await card.save();
           }
@@ -136,6 +137,9 @@ export class PlaidClient extends SdkClient {
 
       if (!!e.response.data.error_message) {
         logger.error(e.response.data.error_message);
+      } else {
+        console.log('[-] getPlaidTransactions error');
+        console.log(e);
       }
     }
   };

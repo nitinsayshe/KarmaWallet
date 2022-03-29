@@ -42,6 +42,7 @@ export class _MainBullClient extends _BullClient {
   initCronJobs = () => {
     this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 3 * * *' } });
     this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */2 * * *' } });
+    this.createJob(JobNames.CacheGroupOffsetData, null, { jobId: `${JobNames.CacheGroupOffsetData}-bihourly`, repeat: { cron: '0 */2 * * *' } });
   };
 
   _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
@@ -54,6 +55,9 @@ export class _MainBullClient extends _BullClient {
         break;
       case JobNames.GlobalPlaidTransactionMapper:
         console.log(`${JobNames.GlobalPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
+        break;
+      case JobNames.CacheGroupOffsetData:
+        console.log(`${JobNames.CacheGroupOffsetData} finished: \n ${JSON.stringify(result)}`);
         break;
       default:
         console.log(`job ${job.id} complete`, result);

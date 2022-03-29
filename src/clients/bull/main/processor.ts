@@ -6,6 +6,7 @@ import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionM
 import * as SendEmail from '../../../jobs/sendEmail';
 import { _MongoClient } from '../../mongo';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
+import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 
 const MongoClient = new _MongoClient();
 
@@ -29,6 +30,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.TransactionsMonitor:
       result = TransactionsMonitor.exec();
+      break;
+    case JobNames.CacheGroupOffsetData:
+      result = CacheGroupOffsetData.exec();
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);

@@ -966,7 +966,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
   if (!groupId) {
@@ -989,7 +989,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
     const cachedDataKey = `${CachedDataKeys.GroupOffsetData}_${groupId}`;
     let cachedData = await getCachedData(cachedDataKey);
 
-    if (!cachedData) {
+    if (!cachedData || bustCache) {
       for (const member of members) {
         const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
         const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);

@@ -6,7 +6,6 @@ import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
-
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -29,6 +28,8 @@ import {
 } from '../impact/utils/carbon';
 import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
+import { createCachedData, getCachedData } from '../cachedData';
+import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 
 dayjs.extend(utc);
 
@@ -496,13 +497,18 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
 export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { userId, groupId } = req.params;
-  if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
-    throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
-  }
-  if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
-  if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   try {
-    const userGroup = await UserGroupModel.findOne({ group: groupId, user: userId })
+    if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
+    if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    // reassigning query if app user is present to ensure safety
+    let query: { group: string, user?: string } = { group: groupId, user: userId };
+    if (req.requestor._id.toString() === process.env.APP_USER_ID) {
+      query = { group: groupId };
+    }
+    const userGroup = await UserGroupModel.findOne(query)
       .populate([
         {
           path: 'group',
@@ -964,15 +970,15 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
-export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
-  if (!groupId) {
-    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
-  }
   try {
+    if (!groupId) {
+      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    }
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const membersPromise = await getGroupMembers(req);
+    const membersPromise = getGroupMembers(req);
     const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
 
     const memberDonations = {
@@ -982,39 +988,51 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     let membersWithDonations = 0;
 
-    for (const member of members) {
-      const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
-      const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
-      const donationsTotalTonnesPromise = getRareOffsetAmount(query);
+    const cachedDataKey = getGroupOffsetDataKey(groupId);
+    let cachedData = await getCachedData(cachedDataKey);
 
-      const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+    if (!cachedData || bustCache) {
+      for (const member of members) {
+        const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
+        const donationsTotalTonnesPromise = getRareOffsetAmount(query);
 
-      if (donationsTotalDollars > 0) {
-        membersWithDonations += 1;
+        const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+
+        if (donationsTotalDollars > 0) {
+          membersWithDonations += 1;
+        }
+
+        memberDonations.dollars += donationsTotalDollars;
+        memberDonations.tonnes += donationsTotalTonnes;
       }
 
-      memberDonations.dollars += donationsTotalDollars;
-      memberDonations.tonnes += donationsTotalTonnes;
+      // TODO: update w/ real value once group donation functionality is added
+      const groupDonations = {
+        dollars: 0,
+        tonnes: 0,
+      };
+
+      const totalDonations = {
+        dollars: memberDonations.dollars + groupDonations.dollars,
+        tonnes: memberDonations.tonnes + groupDonations.tonnes,
+      };
+
+      const cachedDataValue = {
+        membersWithDonations,
+        groupDonations,
+        memberDonations,
+        totalDonations,
+      };
+
+      cachedData = await createCachedData({ key: cachedDataKey, value: cachedDataValue });
     }
-
-    // TODO: update w/ real value once group donation functionality is added
-    const groupDonations = {
-      dollars: 0,
-      tonnes: 0,
-    };
-
-    const totalDonations = {
-      dollars: memberDonations.dollars + groupDonations.dollars,
-      tonnes: memberDonations.tonnes + groupDonations.tonnes,
-    };
 
     return {
       userGroup,
       members: members.length,
-      membersWithDonations,
-      groupDonations,
-      memberDonations,
-      totalDonations,
+      ...cachedData.value,
+      lastUpdated: cachedData.lastUpdated,
     };
   } catch (e) {
     throw asCustomError(e);
@@ -1023,7 +1041,6 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
 export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
   const { groupId } = req.params;
-
   if (!groupId) {
     throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
   }

@@ -3,8 +3,9 @@ export abstract class SdkClient {
 
   constructor(n: string) {
     this.name = n;
+    this._init = this._init.bind(this);
     this._init();
   }
 
-  abstract _init (): void;
+  protected abstract _init (): void;
 }

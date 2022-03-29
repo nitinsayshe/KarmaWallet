@@ -23,7 +23,7 @@ export class PlaidClient extends SdkClient {
     super('Plaid');
   }
 
-  _init = () => {
+  protected _init() {
     const { PLAID_SECRET, PLAID_CLIENT_ID } = process.env;
     const PLAID_ENV = process.env.PLAID_ENV || 'sandbox';
     const configuration = new Configuration({
@@ -37,7 +37,7 @@ export class PlaidClient extends SdkClient {
       },
     });
     this._client = new PlaidApi(configuration);
-  };
+  }
 
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
@@ -93,6 +93,7 @@ export class PlaidClient extends SdkClient {
     };
     try {
       const response = await this._client.transactionsGet(request);
+
       let { transactions } = response.data;
       const { total_transactions: totalTransactions } = response.data;
 
@@ -120,22 +121,30 @@ export class PlaidClient extends SdkClient {
       }
       return transactions;
     } catch (e: any) {
-      try {
-        const cards = await CardModel.find({ 'integrations.plaid.accessToken': access_token });
-        if (!!cards.length) {
-          for (const card of cards) {
-            card.status = CardStatus.Unlinked;
-            card.integrations.plaid.accessToken = null;
-            await card.save();
+      console.log('[-] error getting plaid transactions.');
+
+      if (e.response?.data?.error_code === 'INVALID_ACCESS_TOKEN') {
+        try {
+          const cards = await CardModel.find({ 'integrations.plaid.accessToken': access_token });
+          if (!!cards.length) {
+            for (const card of cards) {
+              card.status = CardStatus.Unlinked;
+              card.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
+              card.integrations.plaid.accessToken = null;
+              await card.save();
+            }
           }
+        } catch (err) {
+          console.log('[-] error unlinking card');
+          // TODO: update so we can be notified if this happens and we can manually fix.
+          logger.error(err);
         }
-      } catch (err) {
-        // TODO: update so we can be notified if this happens and we can manually fix.
-        logger.error(err);
       }
 
-      if (!!e.response.data.error_message) {
-        logger.error(e.response.data.error_message);
+      if (!!e.response?.data) {
+        logger.error(e.response.data);
+      } else {
+        console.log(e);
       }
     }
   };

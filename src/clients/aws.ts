@@ -99,10 +99,7 @@ export class AwsClient extends SdkClient {
       };
 
       const result = await this._client.s3.upload(imageData)
-        .promise()
-        .catch(e => {
-          throw asCustomError(e);
-        });
+        .promise();
 
       const rawUrl = result.Location;
 

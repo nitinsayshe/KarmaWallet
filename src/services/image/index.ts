@@ -28,7 +28,7 @@ export interface IUploadImageRequestBody {
   resourceId?: string;
 }
 
-export const checkMimeType = (mimeType: string) => {
+export const checkMimeTypeForImage = (mimeType: string) => {
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
   return allowedMimeTypes.includes(mimeType);
 };
@@ -46,7 +46,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
       throw new CustomError('File size is too large', ErrorTypes.INVALID_ARG);
     }
 
-    if (!checkMimeType(file.mimetype)) {
+    if (!checkMimeTypeForImage(file.mimetype)) {
       throw new CustomError('Invalid file type', ErrorTypes.INVALID_ARG);
     }
 

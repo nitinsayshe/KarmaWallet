@@ -88,9 +88,15 @@ export interface ITransactionOnBehalfOf {
   group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
 }
 
+export interface ITransactionMatcher {
+  user: IRef<ObjectId, IUserDocument>;
+  group: IRef<ObjectId, IGroupDocument>;
+}
+
 export interface ITransactionMatch {
   status: boolean;
   amount: number;
+  matcher: ITransactionMatcher;
   date: Date;
 }
 
@@ -224,11 +230,23 @@ const transactionSchema = new Schema({
       },
       amount: { type: Number },
       date: { type: Date },
+      matcher: {
+        type: {
+          user: {
+            type: Schema.Types.ObjectId,
+            ref: 'user',
+          },
+          group: {
+            type: Schema.Types.ObjectId,
+            ref: 'group',
+          },
+        },
+      },
     },
   },
   /**
    * donations can be associated with specific entities
-   * for matchines purposes.
+   * for matchings purposes.
    */
   association: {
     type: {

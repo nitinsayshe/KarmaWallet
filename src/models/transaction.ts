@@ -83,20 +83,15 @@ export interface ITransactionIntegrations {
   rare?: IRareTransactionIntegration;
 }
 
-export interface ITransactionOnBehalfOf {
+export interface IUserOrGroup {
   user: IRef<ObjectId, (IShareableUser | IUserDocument)>;
   group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
-}
-
-export interface ITransactionMatcher {
-  user: IRef<ObjectId, IUserDocument>;
-  group: IRef<ObjectId, IGroupDocument>;
 }
 
 export interface ITransactionMatch {
   status: boolean;
   amount: number;
-  matcher: ITransactionMatcher;
+  matcher: IUserOrGroup;
   date: Date;
 }
 
@@ -123,7 +118,7 @@ export interface ITransaction extends IShareableTransaction {
   cardId: IRef<ObjectId, ICardDocument>;
   carbonMultiplier: IRef<ObjectId, IPlaidCategoryMappingDocument>;
   integrations?: ITransactionIntegrations;
-  onBehalfOf?: ITransactionOnBehalfOf;
+  onBehalfOf?: IUserOrGroup;
   matched?: ITransactionMatch;
   association?: ITransactionAssociation;
 }

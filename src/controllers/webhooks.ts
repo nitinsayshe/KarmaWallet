@@ -23,7 +23,8 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   if (req.headers?.['rare-webhook-key'] !== 'KFVKe5584dBb6y22SSwePMPG8MaskwvSxr86tWYPT4R8WkG6JDbUcMGMBE838jQu') return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
   try {
     const client = new KarmaApiClient();
-    console.log('/////////////// RARE TRANSACTION ///////////////////////\n');
+    console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
+    console.log(req);
     console.log({ rareTransaction: req?.body?.transaction });
 
     const rareTransaction = req?.body?.transaction;
@@ -32,7 +33,7 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     await client.sendRareWebhook(uid);
     api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });
   } catch (e) {
-    console.log('/////////////// RARE WEBHOOK ERROR ///////////////////////\n');
+    console.log('\n\n/////////////// RARE WEBHOOK ERROR ///////////////////////\n\n');
     error(req, res, asCustomError(e));
   }
 };

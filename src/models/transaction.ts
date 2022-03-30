@@ -95,10 +95,6 @@ export interface ITransactionMatch {
   date: Date;
 }
 
-export interface ITransactionAssociation {
-  group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>
-}
-
 export interface IShareableTransaction {
   userId: IRef<ObjectId, IShareableUser>;
   companyId: IRef<ObjectId, IShareableCompany>;
@@ -120,7 +116,7 @@ export interface ITransaction extends IShareableTransaction {
   integrations?: ITransactionIntegrations;
   onBehalfOf?: IUserOrGroup;
   matched?: ITransactionMatch;
-  association?: ITransactionAssociation;
+  association?: IUserOrGroup;
 }
 
 export interface ITransactionAggregate extends ITransaction {
@@ -245,6 +241,10 @@ const transactionSchema = new Schema({
    */
   association: {
     type: {
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'user',
+      },
       group: {
         type: Schema.Types.ObjectId,
         ref: 'group',

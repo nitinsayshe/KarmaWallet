@@ -60,10 +60,13 @@ const statementSchema = new Schema({
           dollars: { type: Number },
           tonnes: { type: Number },
           transactor: {
-            // specifying user here because eventually we will support group transactors
             user: {
               type: Schema.Types.ObjectId,
               ref: 'user',
+            },
+            group: {
+              type: Schema.Types.ObjectId,
+              ref: 'group',
             },
           },
           date: { type: Date },

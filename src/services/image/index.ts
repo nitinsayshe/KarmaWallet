@@ -1,9 +1,16 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
-  ErrorTypes,
-  UserRoles,
+  ErrorTypes, UserRoles, UserGroupRole,
 } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 import CustomError, { asCustomError } from '../../lib/customError';
+import { AwsClient } from '../../clients/aws';
+import { getCompanyById } from '../company';
+import { getUserGroup } from '../groups';
+import { mockRequest } from '../../lib/constants/request';
+
+dayjs.extend(utc);
 
 export enum ResourceTypes {
   GroupLogo = 'groupLogo',
@@ -13,46 +20,77 @@ export enum ResourceTypes {
 }
 
 export interface IUploadImageRequestBody {
-  file: Blob;
   resourceType: ResourceTypes;
-  resourceId?: String;
+  resourceId?: string;
 }
 
 export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>) => {
   try {
-    const { requestor } = req;
-    const { resourceType, resourceId, file } = req.body;
-    let url: string;
+    const { requestor, file } = req;
+    const { resourceType, resourceId } = req.body;
+
     if (!resourceType) {
       throw new CustomError('A resource type must be specified.', ErrorTypes.INVALID_ARG);
     }
     if (!Object.values(ResourceTypes).includes(resourceType)) {
       throw new CustomError('Invalid resource type', ErrorTypes.INVALID_ARG);
     }
-    if (resourceType === ResourceTypes.Karma) {
-      if (requestor.role === UserRoles.None) {
-        throw new CustomError('You are not authorized to upload an image of this resource type.', ErrorTypes.UNAUTHORIZED);
+
+    const imageData = {
+      file: file.buffer, name: file.originalname, bucket: 'dev.karmawallet.io', contentType: file.mimetype,
+    };
+
+    const requestorId = requestor._id.toString();
+    const dateString = dayjs().utc().toDate().toISOString();
+    let filename: string;
+
+    // ResourceType Checks
+    switch (resourceType) {
+      case ResourceTypes.GroupLogo: {
+        const userGroupRequest = {
+          ...req,
+          requestor,
+          body: {},
+          params: {
+            groupId: resourceId,
+            userId: requestorId,
+          },
+          query: {},
+        };
+        const userGroup = await getUserGroup(userGroupRequest);
+        if (![UserGroupRole.Admin, UserGroupRole.Owner, UserGroupRole.SuperAdmin].includes(userGroup.role)) throw new CustomError('You are not authorized to upload a logo to this group.', ErrorTypes.UNAUTHORIZED);
+        break;
       }
-      url = 'https://cdn.karmawallet.io/uploads/1212832_234234234_234234.png';
-    }
-    if (resourceType === ResourceTypes.CompanyLogo) {
-      // TODO: verify access control for changing a company logo
-      if (requestor.role === UserRoles.None) {
-        throw new CustomError('You are not authorized to upload an image of this resource type.', ErrorTypes.UNAUTHORIZED);
+      case ResourceTypes.UserAvatar:
+        filename = `users/${requestorId}/${dateString}_${file.originalname}`;
+        break;
+      case ResourceTypes.Karma:
+        if (requestor.role === UserRoles.None) {
+          throw new CustomError('You are not authorized to upload an image of this resource type.', ErrorTypes.UNAUTHORIZED);
+        }
+        filename = `uploads/${dateString}_${requestorId}_${file.originalname}`;
+        break;
+      case ResourceTypes.CompanyLogo: {
+        // TODO: check if UserRoles permissions are correct
+        if (requestor.role === UserRoles.None) {
+          throw new CustomError('You are not authorized to upload an image of this resource type.', ErrorTypes.UNAUTHORIZED);
+        }
+        const company = await getCompanyById(mockRequest, resourceId);
+        if (!company) throw new CustomError(`A company with id ${resourceId} was not found`, ErrorTypes.NOT_FOUND);
+        // TODO: through slugify company name and add to filename
+        const companyNameSlug = company.companyName.replace(/\s+/g, '-').toLowerCase();
+        filename = `companies/${resourceId}/${dateString}_${companyNameSlug}`;
+        break;
       }
-      // check requestor privs
-      url = 'https://cdn.karmawallet.io/company/8sdfsdfj93jsssd/logo.png';
+      default:
+        throw new CustomError('Invalid resource type', ErrorTypes.INVALID_ARG);
     }
-    if (resourceType === ResourceTypes.GroupLogo) {
-      // check group/usergroup
-      url = 'https://cdn.karmawallet.io/group/8sdfsdfjffsdd3sd/logo.png';
-    }
-    if (resourceType === ResourceTypes.UserAvatar) {
-      // do user stuff
-      url = 'https://cdn.karmawallet.io/user/8sdfsdfjfferd3sd/logo.png';
-    }
+
     // upload image
-    return url;
+    imageData.name = filename;
+    const client = new AwsClient();
+    const imageResponse = await client.uploadImage(imageData);
+    return imageResponse;
   } catch (err) {
     throw asCustomError(err);
   }

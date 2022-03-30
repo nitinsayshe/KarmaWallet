@@ -1,4 +1,5 @@
 import aws from 'aws-sdk';
+import { Express } from 'express';
 import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
@@ -22,16 +23,16 @@ interface IUploadRequest {
   acl?: aws.S3.ObjectCannedACL;
   bucket?: aws.S3.BucketName;
   contentType?: aws.S3.ContentType;
-  ext: string;
-  file: Buffer;
-  name: string;
+  ext?: string;
+  file: Express.Multer.File | Blob | Buffer | string;
+  name?: string;
 }
 
 export class AwsClient extends SdkClient {
-  _client: IAwsClient = null;
+  _client: IAwsClient;
 
   constructor() {
-    super('Rare');
+    super('AWS');
   }
 
   protected _init() {
@@ -96,11 +97,15 @@ export class AwsClient extends SdkClient {
         ACL: acl,
         Body: file,
         Bucket: bucket,
-        ContentType: contentType || `image/${ext === 'svg' ? 'svg+xml' : ext}`,
-        Key: `${name}.${ext}`,
+        ContentType: contentType,
+        Key: name,
       };
 
-      const result = await this._client.s3.upload(imageData).promise();
+      const result = await this._client.s3.upload(imageData)
+        .promise()
+        .catch(e => {
+          throw asCustomError(e);
+        });
 
       const image = {
         url: result.Location,

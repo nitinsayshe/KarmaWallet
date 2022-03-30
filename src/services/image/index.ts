@@ -99,7 +99,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
           query: {},
         };
         const userGroup = await getUserGroup(userGroupRequest);
-        if ([UserGroupRole.Admin, UserGroupRole.Owner, UserGroupRole.SuperAdmin].find(r => r === userGroup.role)) throw new CustomError('You are not authorized to upload a logo to this group.', ErrorTypes.UNAUTHORIZED);
+        if (![UserGroupRole.Admin, UserGroupRole.Owner, UserGroupRole.SuperAdmin].find(r => r === userGroup.role)) throw new CustomError('You are not authorized to upload a logo to this group.', ErrorTypes.UNAUTHORIZED);
         filename = `group/${resourceId}/${itemId}-${file.originalname}`;
         break;
       }
@@ -108,7 +108,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
         break;
       case ResourceTypes.Karma:
         if (requestor.role === UserRoles.None) {
-          throw new CustomError('You are not authorized to upload an image of this resource type.', ErrorTypes.UNAUTHORIZED);
+          throw new CustomError('Unauthorized', ErrorTypes.UNAUTHORIZED);
         }
         filename = `uploads/${itemId}-${file.originalname}`;
         break;

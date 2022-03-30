@@ -24,7 +24,6 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   try {
     const client = new KarmaApiClient();
     console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
-    console.log(req);
     console.log({ rareTransaction: req?.body?.transaction });
 
     const rareTransaction = req?.body?.transaction;

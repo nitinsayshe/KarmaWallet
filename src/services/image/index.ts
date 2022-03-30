@@ -47,18 +47,23 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
     // ResourceType Checks
     switch (resourceType) {
       case ResourceTypes.GroupLogo: {
-        const userGroupRequest = {
-          ...req,
-          requestor,
-          body: {},
-          params: {
-            groupId: resourceId,
-            userId: requestorId,
-          },
-          query: {},
-        };
-        const userGroup = await getUserGroup(userGroupRequest);
-        if (![UserGroupRole.Admin, UserGroupRole.Owner, UserGroupRole.SuperAdmin].includes(userGroup.role)) throw new CustomError('You are not authorized to upload a logo to this group.', ErrorTypes.UNAUTHORIZED);
+        // checking if the requestor is karma admin or above
+        // before checking userGroup permissions
+        if (![UserRoles.Admin, UserRoles.SuperAdmin].find(r => r === requestor.role)) {
+          const userGroupRequest = {
+            ...req,
+            requestor,
+            body: {},
+            params: {
+              groupId: resourceId,
+              userId: requestorId,
+            },
+            query: {},
+          };
+          const userGroup = await getUserGroup(userGroupRequest);
+          if ([UserGroupRole.Admin, UserGroupRole.Owner, UserGroupRole.SuperAdmin].find(r => r === userGroup.role)) throw new CustomError('You are not authorized to upload a logo to this group.', ErrorTypes.UNAUTHORIZED);
+        }
+        filename = `group/${resourceId}/${dateString}_${file.originalname}`;
         break;
       }
       case ResourceTypes.UserAvatar:
@@ -79,7 +84,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
         if (!company) throw new CustomError(`A company with id ${resourceId} was not found`, ErrorTypes.NOT_FOUND);
         // TODO: through slugify company name and add to filename
         const companyNameSlug = company.companyName.replace(/\s+/g, '-').toLowerCase();
-        filename = `companies/${resourceId}/${dateString}_${companyNameSlug}`;
+        filename = `company/${resourceId}/${dateString}_${companyNameSlug}`;
         break;
       }
       default:

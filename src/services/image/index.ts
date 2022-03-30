@@ -119,12 +119,12 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
           throw new CustomError('You are not authorized to upload an image of this resource type.', ErrorTypes.UNAUTHORIZED);
         }
         const company = await getCompanyById(mockRequest, resourceId);
-        if (!company) throw new CustomError(`A company with id ${resourceId} was not found`, ErrorTypes.NOT_FOUND);
+        if (!company) throw new CustomError(`A company with id ${resourceId} was not found.`, ErrorTypes.NOT_FOUND);
         filename = `company/${resourceId}/${itemId}-${company.slug}`;
         break;
       }
       default:
-        throw new CustomError('Invalid resource type', ErrorTypes.INVALID_ARG);
+        throw new CustomError('Invalid resource type.', ErrorTypes.INVALID_ARG);
     }
 
     imageData.name = filename;

@@ -86,7 +86,7 @@ export const exec = async () => {
   let statementCount = 0;
 
   try {
-    const appUser = await UserModel.findOne({ _id: '6241e2260c9177f79772fdc5' });
+    const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
     const groups = await GroupModel.find({
       $and: [
         { 'settings.matching.enabled': true },

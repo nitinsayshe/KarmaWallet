@@ -3,7 +3,7 @@ import { Express } from 'express';
 import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
-import { EmailAddresses, ErrorTypes } from '../lib/constants';
+import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
 
 interface IAwsClient {
   s3: aws.S3,
@@ -23,7 +23,6 @@ interface IUploadRequest {
   acl?: aws.S3.ObjectCannedACL;
   bucket?: aws.S3.BucketName;
   contentType?: aws.S3.ContentType;
-  ext?: string;
   file: Express.Multer.File | Blob | Buffer | string;
   name?: string;
 }
@@ -84,14 +83,12 @@ export class AwsClient extends SdkClient {
     acl = 'public-read',
     bucket = process.env.S3_BUCKET,
     contentType,
-    ext,
     file,
     name,
   }: IUploadRequest) => {
     try {
       if (!file) throw new CustomError('An image file is required.', ErrorTypes.INVALID_ARG);
       if (!name) throw new CustomError('An file name is required.', ErrorTypes.INVALID_ARG);
-      if (!ext) throw new CustomError('An file extension is required.', ErrorTypes.INVALID_ARG);
 
       const imageData = {
         ACL: acl,
@@ -107,8 +104,12 @@ export class AwsClient extends SdkClient {
           throw asCustomError(e);
         });
 
+      const rawUrl = result.Location;
+
       const image = {
-        url: result.Location,
+        // this can be modified to support more buckets
+        // w/ subdomain CNAME paths in the future
+        url: process.env.S3_BUCKET === KarmaWalletCdnUrl ? rawUrl.replace('https://s3.amazonaws.com/', 'https://') : rawUrl,
         filename: result.Key,
       };
 

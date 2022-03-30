@@ -1,3 +1,4 @@
+import aqp from 'api-query-params';
 import isemail from 'isemail';
 import {
   FilterQuery, Schema, UpdateQuery,
@@ -32,6 +33,8 @@ import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
+import { IOffsetsStatement, IStatement, IStatementDocument } from '../../models/statement';
+import { getStatements } from '../statements';
 
 dayjs.extend(utc);
 
@@ -420,6 +423,42 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   return GroupModel.paginate(query.filter, options);
 };
 
+export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, FilterQuery<IStatement>>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  try {
+    const { groupId } = req.params;
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    // only karma admins+ or group superadmins+ are allowed
+    // to view these statements.
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      const groupAllowList = [UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+
+      const userGroup = await UserGroupModel.findOne({
+        user: req.requestor._id.toString(),
+        group: groupId,
+        role: { $in: groupAllowList },
+      });
+
+      if (!userGroup) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    const aqpQuery = aqp(req.query, { skipKey: 'page' });
+    const query = {
+      ...aqpQuery,
+      filter: {
+        ...aqpQuery.filter,
+        group: groupId,
+        offset: { $exists: true },
+      },
+    };
+
+    return getStatements(req, query);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const getShareableGroup = ({
   _id,
   name,
@@ -467,6 +506,46 @@ export const getShareableGroupMember = ({
     role,
     status,
     joinedOn,
+  };
+};
+
+export const getShareableGroupOffsetStatementRef = ({
+  _id,
+  offsets,
+  date,
+}: IStatementDocument) => {
+  const {
+    matchPercentage,
+    maxDollarAmount,
+    matched,
+    toBeMatched,
+    totalMemberOffsets,
+  } = offsets;
+  const _offsets: IOffsetsStatement = {
+    matchPercentage,
+    maxDollarAmount,
+    toBeMatched: {
+      dollars: toBeMatched.dollars,
+      tonnes: toBeMatched.tonnes,
+    },
+    totalMemberOffsets: {
+      dollars: totalMemberOffsets.dollars,
+      tonnes: totalMemberOffsets.tonnes,
+    },
+  };
+
+  if (!!matched?.dollars) {
+    _offsets.matched = {
+      dollars: matched.dollars,
+      tonnes: matched.tonnes,
+      date: matched.date,
+    };
+  }
+
+  return {
+    _id,
+    offsets: _offsets,
+    date,
   };
 };
 

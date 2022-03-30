@@ -23,6 +23,18 @@ export const getGroup: IRequestHandler = async (req, res) => {
   }
 };
 
+export const getGroupOffsetStatements: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+  try {
+    const statements = await GroupService.getGroupOffsetStatements(req);
+    output.api(req, res, {
+      ...statements,
+      docs: statements.docs.map(statement => GroupService.getShareableGroupOffsetStatementRef(statement)),
+    });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getGroupMembers: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });

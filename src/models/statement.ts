@@ -7,9 +7,7 @@ import {
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
-import { IGroupDocument, IShareableGroup } from './group';
 import { IShareableTransaction, ITransactionDocument } from './transaction';
-import { IShareableUser, IUserDocument } from './user';
 
 export interface IOffsetData {
   dollars: number;
@@ -23,22 +21,21 @@ export interface IMatchedOffsetData extends IOffsetData {
 export interface IOffsetsStatement {
   matchPercentage: number,
   maxDollarAmount: number,
-  matched: IMatchedOffsetData;
+  matched?: IMatchedOffsetData;
   toBeMatched: IOffsetData;
   totalMemberOffsets: IOffsetData;
 }
 
-export interface IShareableStatement {
-  group: IRef<ObjectId, IShareableGroup>;
-  transactor?: IRef<ObjectId, IShareableUser>;
-  offsets: IOffsetsStatement;
-  transactions: IRef<ObjectId, IShareableTransaction>;
+export interface IShareableStatementRef {
+  offsets?: IOffsetsStatement;
   date: Date;
 }
 
+export interface IShareableStatement extends IShareableStatementRef {
+  transactions: IRef<ObjectId, IShareableTransaction>;
+}
+
 export interface IStatement extends IShareableStatement {
-  group: IRef<ObjectId, IGroupDocument>;
-  transactor?: IRef<ObjectId, IUserDocument>;
   transactions: IRef<ObjectId, ITransactionDocument>;
 }
 

@@ -147,7 +147,7 @@ export const exec = async () => {
           if (userOffsets.matched >= group.settings.matching.maxDollarAmount) continue;
 
           // get remaining balance to be matched for this user
-          const leftToBeMatched = (group.settings.matching.maxDollarAmount as number) - userOffsets.matched;
+          const leftToBeMatched = group.settings.matching.maxDollarAmount - userOffsets.matched;
 
           // if this transaction is greater than the amount left
           // to be matched for this user, only add the amount left

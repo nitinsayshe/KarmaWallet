@@ -429,22 +429,22 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
 export const getDummyStatements = () => {
   const count = 30;
   const statements: (IShareableStatementRef & { _id: string })[] = [];
-
-  const timestamp = dayjs().subtract(count, 'months').set('date', 14);
+  let timestamp = dayjs().set('date', 14);
 
   for (let i = 0; i < count; i++) {
+    const amount = getRandomInt(5, 5000);
     const matched = !!getRandomInt(0, 1);
     const statement: IShareableStatementRef = {
       offsets: {
         matchPercentage: 50,
         maxDollarAmount: 150,
         toBeMatched: {
-          dollars: 1.34,
-          tonnes: 0.077,
+          dollars: amount * 0.8,
+          tonnes: (amount * 0.018) * 0.8,
         },
         totalMemberOffsets: {
-          dollars: 2.68,
-          tonnes: 0.154,
+          dollars: amount,
+          tonnes: amount * 0.018,
         },
       },
       date: timestamp.toDate(),
@@ -462,6 +462,8 @@ export const getDummyStatements = () => {
       _id: nanoid(16),
       ...statement,
     });
+
+    timestamp = timestamp.subtract(1, 'month');
   }
 
   return {

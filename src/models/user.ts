@@ -39,7 +39,6 @@ export interface IShareableUser {
 export interface IUser extends IShareableUser {
   emails: IEmail[];
   password: string;
-  emailVerified: boolean;
   lastModified: Date;
   integrations?: IUserIntegrations;
 }
@@ -69,7 +68,6 @@ const userSchema = new Schema({
     default: 'none',
     enum: Object.values(UserRoles),
   },
-  emailVerified: { type: Boolean, default: false },
   lastModified: { type: Date, default: new Date() },
   legacyId: { type: String },
   integrations: {

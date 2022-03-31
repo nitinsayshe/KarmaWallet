@@ -79,6 +79,7 @@ export const register = async (req: IRequest, {
     // map new legacy user to new user
     const rawUser = {
       ...legacyUser.toObject(),
+      emails: [{ email, verified: false }],
       legacyId: legacyUser._id,
     };
 
@@ -149,6 +150,7 @@ export const getUserById = async (_: IRequest, uid: string) => {
 export const getShareableUser = ({
   _id,
   email,
+  emails,
   name,
   dateJoined,
   zipcode,
@@ -158,6 +160,7 @@ export const getShareableUser = ({
 }: IUserDocument) => ({
   _id,
   email,
+  emails,
   name,
   dateJoined,
   zipcode,
@@ -189,10 +192,11 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
 
 export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
   if (updates?.email) {
+    // TODO: update user email array
     if (!isValidEmailFormat(updates.email)) {
       throw new CustomError('Invalid email', ErrorTypes.INVALID_ARG);
+      // updates.emails = false;
     }
-    updates.emailVerified = false;
   }
   const user = await UserModel.findById(uid);
   if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);

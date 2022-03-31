@@ -631,7 +631,7 @@ export class PlaidMapper {
   };
 
   writeCompaniesToCsv = async () => {
-    const companies = await CompanyModel.find({}).select('companyName').lean();
+    const companies = await CompanyModel.find({ 'hidden.status': false }).select('companyName').lean();
     const fields = ['companyName', '_id'];
     const opts = { fields };
     try {
@@ -726,7 +726,7 @@ export class PlaidMapper {
           && e.companyId.toString() === data.companyId);
 
       if (!matchFound) {
-        const company = await CompanyModel.findOne({ legacyId: data.companyId });
+        const company = await CompanyModel.findOne({ legacyId: data.companyId, 'hidden.status': false });
         const m = new MatchedCompanyNameModel({
           original: match.original,
           companyName: match.companyName,

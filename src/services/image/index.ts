@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
 import { nanoid } from 'nanoid';
-import slugify from 'slugify';
+import { slugify } from '../../lib/slugify';
 import {
   ErrorTypes, UserRoles, UserGroupRole,
 } from '../../lib/constants';
@@ -120,7 +120,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
         }
         const company = await getCompanyById(mockRequest, resourceId);
         if (!company) throw new CustomError(`A company with id ${resourceId} was not found.`, ErrorTypes.NOT_FOUND);
-        filename = `company/${resourceId}/${itemId}-${company.slug}`;
+        filename = `company/${resourceId}/${itemId}-${slugify(company.slug)}`;
         break;
       }
       default:

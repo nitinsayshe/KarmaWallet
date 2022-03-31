@@ -129,7 +129,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
 
     imageData.name = filename;
     const client = new AwsClient();
-    return await client.uploadImage(imageData);
+    return client.uploadImage(imageData);
   } catch (err) {
     throw asCustomError(err);
   }

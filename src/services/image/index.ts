@@ -129,7 +129,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
 
     imageData.name = filename;
     const client = new AwsClient();
-    return client.uploadImage(imageData);
+    return client.uploadToS3(imageData);
   } catch (err) {
     throw asCustomError(err);
   }

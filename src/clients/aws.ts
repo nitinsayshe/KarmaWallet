@@ -79,7 +79,7 @@ export class AwsClient extends SdkClient {
     return this._client.ses.sendEmail(params).promise();
   };
 
-  uploadImage = async ({
+  uploadToS3 = async ({
     acl = 'public-read',
     bucket = process.env.S3_BUCKET,
     contentType,
@@ -103,14 +103,12 @@ export class AwsClient extends SdkClient {
 
       const rawUrl = result.Location;
 
-      const image = {
+      return {
         // this can be modified to support more buckets
         // w/ subdomain CNAME paths in the future
         url: process.env.S3_BUCKET === KarmaWalletCdnUrl ? rawUrl.replace('https://s3.amazonaws.com/', 'https://') : rawUrl,
         filename: result.Key,
       };
-
-      return { image };
     } catch (err) {
       const error = asCustomError(err);
       Logger.error(error);

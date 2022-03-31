@@ -1,8 +1,9 @@
+import { FilterQuery } from 'mongoose';
 import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 import { CompanyUnsdgModel } from '../../models/companyUnsdg';
-import { CompanyModel } from '../../models/company';
+import { CompanyModel, ICompany } from '../../models/company';
 import { toUTC } from '../../lib/date';
 
 /**
@@ -319,10 +320,12 @@ const createUNSDGs = async (subCategories: IUnsdgSubcategoryDocument[]) => {
   return unsdgs;
 };
 
-const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[]) => {
+const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[], includeHidden = false) => {
   console.log('creating companyUnsdgs...');
   let count = 0;
-  const companies = await CompanyModel.find().lean();
+  const query: FilterQuery<ICompany> = {};
+  if (!includeHidden) query['hidden.status'] = false;
+  const companies = await CompanyModel.find(query).lean();
 
   for (const company of companies) {
     for (let i = 0; i < 17; i++) {

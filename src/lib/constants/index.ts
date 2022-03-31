@@ -128,3 +128,5 @@ export const RareTransactionQuery: {
 } = {
   'integrations.rare': { $ne: null },
 };
+
+export const KarmaWalletCdnUrl = 'cdn.karmawallet.io';

@@ -1,8 +1,9 @@
 import aws from 'aws-sdk';
+import { Express } from 'express';
 import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
-import { EmailAddresses, ErrorTypes } from '../lib/constants';
+import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
 
 interface IAwsClient {
   s3: aws.S3,
@@ -22,16 +23,15 @@ interface IUploadRequest {
   acl?: aws.S3.ObjectCannedACL;
   bucket?: aws.S3.BucketName;
   contentType?: aws.S3.ContentType;
-  ext: string;
-  file: Buffer;
-  name: string;
+  file: Express.Multer.File | Blob | Buffer | string;
+  name?: string;
 }
 
 export class AwsClient extends SdkClient {
-  _client: IAwsClient = null;
+  _client: IAwsClient;
 
   constructor() {
-    super('Rare');
+    super('AWS');
   }
 
   protected _init() {
@@ -83,27 +83,30 @@ export class AwsClient extends SdkClient {
     acl = 'public-read',
     bucket = process.env.S3_BUCKET,
     contentType,
-    ext,
     file,
     name,
   }: IUploadRequest) => {
     try {
       if (!file) throw new CustomError('An image file is required.', ErrorTypes.INVALID_ARG);
       if (!name) throw new CustomError('An file name is required.', ErrorTypes.INVALID_ARG);
-      if (!ext) throw new CustomError('An file extension is required.', ErrorTypes.INVALID_ARG);
 
       const imageData = {
         ACL: acl,
         Body: file,
         Bucket: bucket,
-        ContentType: contentType || `image/${ext === 'svg' ? 'svg+xml' : ext}`,
-        Key: `${name}.${ext}`,
+        ContentType: contentType,
+        Key: name,
       };
 
-      const result = await this._client.s3.upload(imageData).promise();
+      const result = await this._client.s3.upload(imageData)
+        .promise();
+
+      const rawUrl = result.Location;
 
       const image = {
-        url: result.Location,
+        // this can be modified to support more buckets
+        // w/ subdomain CNAME paths in the future
+        url: process.env.S3_BUCKET === KarmaWalletCdnUrl ? rawUrl.replace('https://s3.amazonaws.com/', 'https://') : rawUrl,
         filename: result.Key,
       };
 

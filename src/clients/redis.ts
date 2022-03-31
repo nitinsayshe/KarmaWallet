@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 import { ErrorTypes } from '../lib/constants';
 import CustomError from '../lib/customError';
-import { Client } from './client';
+import { ConnectionClient } from './connectionClient';
 
 const {
   REDIS_USER,
@@ -10,7 +10,7 @@ const {
   REDIS_PORT,
 } = process.env;
 
-export class _RedisClient extends Client {
+export class _RedisClient extends ConnectionClient {
   pub: Redis.Redis;
   sub: Redis.Redis;
   _consumerName = '';

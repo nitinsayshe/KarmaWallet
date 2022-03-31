@@ -27,6 +27,7 @@ jobs:
     - run: echo 'NODE_ENV=production' >> .env
     - run: echo 'PORT=8012' >> .env
     - run: echo 'FRONTEND_DOMAIN=https://karmawallet.io' >> .env
+    - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
     - run: echo 'DB_USER=${{secrets.PRODUCTION_DB_USER}}' >> .env
     - run: echo 'DB_NAME=${{secrets.PRODUCTION_DB_NAME}}' >> .env
     - run: echo 'DB_URL=${{secrets.PRODUCTION_DB_URL}}:27112' >> .env

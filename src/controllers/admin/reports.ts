@@ -2,6 +2,7 @@ import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
 import * as ReportService from '../../services/reports';
 import { asCustomError } from '../../lib/customError';
+import { IReportRequestParams } from '../../services/reports/utils/types';
 
 export const getAllReports: IRequestHandler = async (req, res) => {
   try {
@@ -12,7 +13,7 @@ export const getAllReports: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getReport: IRequestHandler<ReportService.IReportRequestParams> = async (req, res) => {
+export const getReport: IRequestHandler<IReportRequestParams> = async (req, res) => {
   try {
     const reportData = await ReportService.getReport(req);
     output.api(req, res, reportData);

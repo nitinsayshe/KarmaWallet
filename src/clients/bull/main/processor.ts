@@ -4,7 +4,12 @@ import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as SendEmail from '../../../jobs/sendEmail';
-import { MongoClient } from '../../mongo';
+import { _MongoClient } from '../../mongo';
+import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
+import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
+import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
+
+const MongoClient = new _MongoClient();
 
 // Sandboxed processors must be exported as default to run correctly
 // See line 25: node_modules/bullmq/dist/cjs/classes/child-processor.js
@@ -21,16 +26,24 @@ export default async (job: SandboxedJob) => {
     case JobNames.GlobalPlaidTransactionMapper:
       result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
       break;
-    case JobNames.UserPlaidTransactionMapper:
-      result = await UserPlaidTransactionMapper.exec(data);
-      break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
+      break;
+    case JobNames.TransactionsMonitor:
+      result = TransactionsMonitor.exec();
+      break;
+    case JobNames.CacheGroupOffsetData:
+      result = CacheGroupOffsetData.exec();
+      break;
+    case JobNames.CachedDataCleanup:
+      result = CachedDataCleanup.exec();
+      break;
+    case JobNames.UserPlaidTransactionMapper:
+      result = await UserPlaidTransactionMapper.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found');
       break;
   }
-  MongoClient.disconnect();
   return result;
 };

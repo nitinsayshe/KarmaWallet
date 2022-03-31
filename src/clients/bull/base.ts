@@ -9,12 +9,17 @@ import {
   Worker,
   WorkerOptions,
 } from 'bullmq';
-import { Client } from '../client';
+import { ConnectionClient } from '../connectionClient';
 import { _RedisClient, RedisClient } from '../redis';
 
 export const MAX_WORKERS = 4;
 
-export abstract class _BullClient extends Client {
+interface IJobDictionary {
+  onComplete?(job: Job | SandboxedJob, result: any): void;
+  onFailure?(job: Job | SandboxedJob, err: Error): void;
+}
+
+export abstract class _BullClient extends ConnectionClient {
   protected _queueName: string;
   protected _numWorkers: number;
   protected _queue: Queue = null;
@@ -24,6 +29,7 @@ export abstract class _BullClient extends Client {
   protected _queueOptions: QueueOptions = {};
   protected _workerOptions: WorkerOptions = {};
   protected _jobOptions: JobsOptions = {};
+  protected _jobsDictionary: {[key: string]: IJobDictionary} = {};
 
   static defaultSchedulerOpts: QueueSchedulerOptions = {};
 
@@ -93,7 +99,8 @@ export abstract class _BullClient extends Client {
 
   initCronJobs?(): void;
 
-  createJob = (name: string, data: any, opts: JobsOptions = {}) => {
+  createJob = (name: string, data: any, opts: JobsOptions = {}, altOpts: IJobDictionary = {}) => {
+    this._jobsDictionary[name] = altOpts;
     this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...opts });
   };
 }

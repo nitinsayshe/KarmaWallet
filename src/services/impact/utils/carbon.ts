@@ -1,6 +1,7 @@
+import { FilterQuery, Types } from 'mongoose';
 import { convertKgToMT, formatNumber } from '../../../lib/number';
 import { RareTransactionQuery } from '../../../lib/constants';
-import { TransactionModel } from '../../../models/transaction';
+import { TransactionModel, ITransaction } from '../../../models/transaction';
 import { MiscModel } from '../../../models/misc';
 
 export enum EquivalencyKey {
@@ -139,7 +140,7 @@ export const buildCarbonMultiplierPipeline = (uid: string) => {
     date: 1,
   };
   const pipeline = TransactionModel.aggregate()
-    .match({ userId: uid, carbonMultiplier: { $ne: null } })
+    .match({ userId: new Types.ObjectId(uid), carbonMultiplier: { $ne: null } })
     .lookup({
       from: 'plaid_category_mappings',
       localField: 'carbonMultiplier',
@@ -213,36 +214,53 @@ export const getMonthlyEmissionsAverage = async (uid: string) => {
   return emissions;
 };
 
+export interface IEquivalencyObject {
+  text: string;
+  icon: string;
+  textNoQuantity: string;
+  quantity: number;
+}
+
 export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKey) => equivalenciesData.reduce((acc, eq) => {
   const {
     perMt, phrase, type, key,
   } = eq;
   if (!keySelector || (keySelector === key)) {
-    const tonnes = Math.round(metricTons * perMt);
-    if (tonnes < 1) return acc;
-    const isPlural = tonnes > 1;
-    const text = `${formatNumber(Math.round(tonnes))} ${phrase(isPlural)}`;
-    const obj = { text, icon: key };
+    const quantity = Math.round(metricTons * perMt);
+    if (quantity < 1) return acc;
+    const isPlural = quantity > 1;
+    const textNoQuantity = phrase(isPlural);
+    const text = `${formatNumber(Math.round(quantity))} ${phrase(isPlural)}`;
+    const obj = {
+      text, icon: key, textNoQuantity, quantity,
+    };
     acc[type].push(obj);
   }
   return acc;
 }, { positive: [], negative: [] });
 
-export const getOffsetTransactionsCount = (uid: string) => TransactionModel.find({ userId: uid, ...RareTransactionQuery }).count();
+export const getOffsetTransactionsCount = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...RareTransactionQuery, ...query }).count();
 
-export const getOffsetTransactions = (uid: string) => TransactionModel.find({ userId: uid, ...RareTransactionQuery });
+export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...RareTransactionQuery, ...query });
 
-export const getOffsetTransactionsTotal = async (uid: string) => {
+export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ userId: uid, ...RareTransactionQuery })
-    .group({ _id: '$userId', total: { $sum: '$amount' } });
+    .match({ ...RareTransactionQuery, ...query })
+    .group({ _id: 'total', total: { $sum: '$amount' } });
   return aggResult?.length ? aggResult[0].total : 0;
 };
 
-export const getRareOffsetAmount = async (uid: string) => {
+export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ userId: uid, ...RareTransactionQuery })
-    .group({ _id: '$userId', total: { $sum: '$integrations.rare.tonnes_amt' } });
+    .match({ ...RareTransactionQuery, ...query })
+    .group({ _id: '$userId', total: { $sum: 1 } });
+  return aggResult.length;
+};
+
+export const getRareOffsetAmount = async (query: FilterQuery<ITransaction>) => {
+  const aggResult = await TransactionModel.aggregate()
+    .match({ ...RareTransactionQuery, ...query })
+    .group({ _id: 'total', total: { $sum: '$integrations.rare.tonnes_amt' } });
   const sumTotal = aggResult?.length ? aggResult[0].total : 0;
   return sumTotal;
 };

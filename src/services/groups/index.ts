@@ -1,12 +1,11 @@
 import isemail from 'isemail';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Schema } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
-
 import { DOMAIN_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CompanyModel } from '../../models/company';
@@ -23,6 +22,14 @@ import { IRequest } from '../../types/request';
 import * as TokenService from '../token';
 import { sendGroupVerificationEmail } from '../email';
 import { getUser } from '../user';
+import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
+import {
+  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, IEquivalencyObject,
+} from '../impact/utils/carbon';
+import { getRandomInt } from '../../lib/number';
+import { IRef } from '../../types/model';
+import { createCachedData, getCachedData } from '../cachedData';
+import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 
 dayjs.extend(utc);
 
@@ -36,6 +43,11 @@ export interface IGetGroupRequest {
 
 export interface IUserGroupsRequest {
   userId: string;
+}
+
+export interface IUserGroupRequest {
+  userId: string;
+  groupId: string;
 }
 
 export interface IGroupRequestParams {
@@ -66,6 +78,10 @@ export interface IJoinGroupRequest {
   code: string;
   email: string;
   userId: string;
+}
+
+export interface IGetGroupOffsetRequestParams {
+  groupId: string,
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -121,43 +137,42 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
   if (!!settings) {
     // settings provided...only add supported settings
     // to group...
-    const {
-      privacyStatus,
-      allowInvite,
-      allowDomainRestriction,
-      allowSubgroups,
-      approvalRequired,
-      matching,
-    } = settings;
 
     if (
-      !privacyStatus
-      && !allowInvite
-      && !allowDomainRestriction
-      && !allowSubgroups
-      && !approvalRequired
-      && !matching
+      !('privacyStatus' in settings)
+      && !('allowInvite' in settings)
+      && !('allowDomainRestriction' in settings)
+      && !('allowSubgroups' in settings)
+      && !('approvalRequired' in settings)
+      && !('matching' in settings)
     ) {
       throw new CustomError('No valid settings were found. Please try again.', ErrorTypes.INVALID_ARG);
     }
 
-    if (!!privacyStatus) _settings.privacyStatus = privacyStatus;
-    if (!!allowInvite) _settings.allowInvite = allowInvite;
-    if (!!allowDomainRestriction) {
-      _settings.allowDomainRestriction = allowDomainRestriction;
+    if ('privacyStatus' in settings) {
+      if (!Object.values(GroupPrivacyStatus).includes(settings.privacyStatus)) {
+        throw new CustomError('Invalid Privacy Status found.', ErrorTypes.INVALID_ARG);
+      }
+
+      _settings.privacyStatus = settings.privacyStatus;
     }
 
-    if (!!allowSubgroups) _settings.allowSubgroups = allowSubgroups;
-    if (!!approvalRequired) _settings.approvalRequired = approvalRequired;
-    if (!!matching) {
+    if ('allowInvite' in settings) _settings.allowInvite = !!settings.allowInvite;
+    if ('allowDomainRestriction' in settings) {
+      _settings.allowDomainRestriction = !!settings.allowDomainRestriction;
+    }
+
+    if ('allowSubgroups' in settings) _settings.allowSubgroups = !!settings.allowSubgroups;
+    if ('approvalRequired' in settings) _settings.approvalRequired = !!settings.approvalRequired;
+    if ('matching' in settings) {
       const {
         enabled,
         matchPercentage = -1,
         maxDollarAmount = -1,
-      } = matching;
+      } = settings.matching;
 
       if (enabled) {
-        _settings.matching.enabled = enabled;
+        _settings.matching.enabled = !!enabled;
 
         if (!matchPercentage && !maxDollarAmount) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
         const _matchPercentage = parseFloat(`${matchPercentage}`);
@@ -204,7 +219,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
 
     if (!!owner) {
       // requestor must have appropriate permissions to assign a group owner.
-      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You do not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
+      if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You are not authorized to assign an owner to a group.', ErrorTypes.UNAUTHORIZED);
       const _owner = await getUser(req, { _id: owner });
       if (!_owner) throw new CustomError(`Owner with id: ${owner} could not be found.`, ErrorTypes.NOT_FOUND);
       group.owner = _owner;
@@ -377,6 +392,7 @@ export const getShareableGroup = ({
   name,
   code,
   domains,
+  logo,
   settings,
   owner,
   status,
@@ -394,6 +410,7 @@ export const getShareableGroup = ({
     name,
     code,
     domains,
+    logo,
     settings,
     status,
     owner: _owner,
@@ -428,7 +445,10 @@ export const getShareableUserGroup = ({
   status,
   joinedOn,
 }: IUserGroupDocument): (IShareableUserGroup & { _id: string }) => {
-  const _group = getShareableGroup(group as IGroupDocument);
+  let _group: IRef<Schema.Types.ObjectId, IShareableGroup | IGroup> = group;
+  if (!!(_group as IGroupDocument)?.name) {
+    _group = getShareableGroup(group as IGroupDocument);
+  }
 
   return {
     _id,
@@ -471,6 +491,44 @@ export const getUserGroups = async (req: IRequest<IUserGroupsRequest>) => {
       ]);
   } catch (err) {
     throw asCustomError(err);
+  }
+};
+
+export const getUserGroup = async (req: IRequest<IUserGroupRequest>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  const { userId, groupId } = req.params;
+  try {
+    if (req.requestor._id.toString() !== userId && !karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      throw new CustomError('You are not authorized to request this user\'s groups.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!userId) throw new CustomError('A user id is required', ErrorTypes.INVALID_ARG);
+    if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    // reassigning query if app user is present to ensure safety
+    let query: { group: string, user?: string } = { group: groupId, user: userId };
+    if (req.requestor._id.toString() === process.env.APP_USER_ID) {
+      query = { group: groupId };
+    }
+    const userGroup = await UserGroupModel.findOne(query)
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+          populate: [
+            {
+              path: 'company',
+              model: CompanyModel,
+            },
+            {
+              path: 'owner',
+              model: UserModel,
+            },
+          ],
+        },
+      ]);
+    if (!userGroup) throw new CustomError(`A group with id: ${groupId} could not be found.`, ErrorTypes.NOT_FOUND);
+    return userGroup;
+  } catch (e) {
+    throw asCustomError(e);
   }
 };
 
@@ -526,10 +584,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup: IUserGroupDocument = await UserGroupModel.findOne({
-      group,
-      user,
-    });
+    const existingUserGroup: IUserGroupDocument = await UserGroupModel
+      .findOne({
+        group,
+        user,
+      })
+      .populate([
+        {
+          path: 'group',
+          ref: GroupModel,
+        },
+      ]);
 
     if (existingUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
@@ -546,7 +611,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     let validEmail: string;
-    if (group.settings.allowDomainRestriction && group.domains.length > 0) {
+    const hasDomainRestrictions = group.settings.allowDomainRestriction && group.domains.length > 0;
+    if (hasDomainRestrictions) {
       if (!isemail.validate(email, { minDomainAtoms: 2 })) {
         throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
       }
@@ -573,9 +639,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     // send verification email if
+    // group has domain restriction AND
     // altEmail exists and is unverified or
     // doesnt already exist and is not their primary email
-    if ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail)) {
+    if (hasDomainRestrictions && ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail))) {
       const token = await TokenService.createToken({
         user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
       });
@@ -900,5 +967,110 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     return userGroup;
   } catch (err) {
     throw asCustomError(err);
+  }
+};
+
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
+  const { requestor } = req;
+  const { groupId } = req.params;
+  try {
+    if (!groupId) {
+      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    }
+    const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
+    const membersPromise = getGroupMembers(req);
+    const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
+
+    const memberDonations = {
+      dollars: 0,
+      tonnes: 0,
+    };
+
+    let membersWithDonations = 0;
+
+    const cachedDataKey = getGroupOffsetDataKey(groupId);
+    let cachedData = await getCachedData(cachedDataKey);
+
+    if (!cachedData || bustCache) {
+      for (const member of members) {
+        const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
+        const donationsTotalTonnesPromise = getRareOffsetAmount(query);
+
+        const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+
+        if (donationsTotalDollars > 0) {
+          membersWithDonations += 1;
+        }
+
+        memberDonations.dollars += donationsTotalDollars;
+        memberDonations.tonnes += donationsTotalTonnes;
+      }
+
+      // TODO: update w/ real value once group donation functionality is added
+      const groupDonations = {
+        dollars: 0,
+        tonnes: 0,
+      };
+
+      const totalDonations = {
+        dollars: memberDonations.dollars + groupDonations.dollars,
+        tonnes: memberDonations.tonnes + groupDonations.tonnes,
+      };
+
+      const cachedDataValue = {
+        membersWithDonations,
+        groupDonations,
+        memberDonations,
+        totalDonations,
+      };
+
+      cachedData = await createCachedData({ key: cachedDataKey, value: cachedDataValue });
+    }
+
+    return {
+      userGroup,
+      members: members.length,
+      ...cachedData.value,
+      lastUpdated: cachedData.lastUpdated,
+    };
+  } catch (e) {
+    throw asCustomError(e);
+  }
+};
+
+export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetRequestParams>) => {
+  const { groupId } = req.params;
+  if (!groupId) {
+    throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+  }
+  try {
+    const { totalDonations } = await getGroupOffsetData(req);
+
+    const averageAmericanEmissions = {
+      monthly: averageAmericanEmissionsData.Monthly,
+      annually: averageAmericanEmissionsData.Annually * 2,
+    };
+
+    const useAverageAmericanEmissions = !totalDonations.tonnes;
+
+    let equivalency: IEquivalencyObject;
+
+    const equivalencies = getEquivalencies(useAverageAmericanEmissions ? averageAmericanEmissions.annually : totalDonations.tonnes);
+
+    if (useAverageAmericanEmissions) {
+      equivalency = equivalencies.negative[getRandomInt(0, equivalencies.negative.length - 1)];
+    } else {
+      equivalency = equivalencies.positive[getRandomInt(0, equivalencies.positive.length - 1)];
+    }
+
+    return {
+      useAverageAmericanEmissions,
+      totalDonations,
+      equivalency,
+      averageAmericanEmissions,
+    };
+  } catch (e) {
+    throw asCustomError(e);
   }
 };

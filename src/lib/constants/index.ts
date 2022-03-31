@@ -49,11 +49,6 @@ export enum EmailAddresses {
   ReplyTo = 'support@karmawallet.io',
 }
 
-export enum JobStatus {
-  Active = 'active',
-  Inactive = 'inactive',
-}
-
 export enum CardStatus {
   Linked = 'linked',
   Unlinked = 'unlinked',
@@ -95,6 +90,8 @@ export enum SocketEvents {
 export const AllowedOrigins = [
   'http://localhost:3000',
   'https://localhost:3000',
+  'http://localhost:3001',
+  'https://localhost:3001',
   'http://localhost:5000',
   'https://localhost:5000',
   'https://www.karmawallet.io',
@@ -113,6 +110,14 @@ export const AllowedOrigins = [
   'https://admin.karmawallet.io',
   'http://admin.staging.karmawallet.io',
   'https://admin.staging.karmawallet.io',
+  'http://admin.sandbox-1.karmawallet.io',
+  'https://admin.sandbox-1.karmawallet.io',
+  'http://group.karmawallet.io',
+  'https://group.karmawallet.io',
+  'http://group.staging.karmawallet.io',
+  'https://group.staging.karmawallet.io',
+  'http://group.sandbox-1.karmawallet.io',
+  'https://group.sandbox-1.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;
@@ -124,3 +129,5 @@ export const RareTransactionQuery: {
 } = {
   'integrations.rare': { $ne: null },
 };
+
+export const KarmaWalletCdnUrl = 'cdn.karmawallet.io';

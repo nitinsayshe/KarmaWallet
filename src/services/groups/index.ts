@@ -5,6 +5,7 @@ import {
 } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { nanoid } from 'nanoid';
 import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
@@ -458,7 +459,7 @@ export const getDummyStatements = () => {
     }
 
     statements.push({
-      _id: '624306ec2aae7948b5e5275b',
+      _id: nanoid(16),
       ...statement,
     });
   }

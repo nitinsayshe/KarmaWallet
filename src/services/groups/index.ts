@@ -33,7 +33,9 @@ import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
-import { IOffsetsStatement, IStatement, IStatementDocument } from '../../models/statement';
+import {
+  IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
+} from '../../models/statement';
 import { getStatements } from '../statements';
 
 dayjs.extend(utc);
@@ -423,7 +425,59 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   return GroupModel.paginate(query.filter, options);
 };
 
-export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, FilterQuery<IStatement>>) => {
+export const getDummyStatements = () => {
+  const count = 30;
+  const statements: (IShareableStatementRef & { _id: string })[] = [];
+
+  const timestamp = dayjs().subtract(count, 'months').set('date', 14);
+
+  for (let i = 0; i < count; i++) {
+    const matched = !!getRandomInt(0, 1);
+    const statement: IShareableStatementRef = {
+      offsets: {
+        matchPercentage: 50,
+        maxDollarAmount: 150,
+        toBeMatched: {
+          dollars: 1.34,
+          tonnes: 0.077,
+        },
+        totalMemberOffsets: {
+          dollars: 2.68,
+          tonnes: 0.154,
+        },
+      },
+      date: timestamp.toDate(),
+    };
+
+    if (matched) {
+      statement.offsets.matched = {
+        dollars: 1.34,
+        tonnes: 0.077,
+        date: timestamp.toDate(),
+      };
+    }
+
+    statements.push({
+      _id: '624306ec2aae7948b5e5275b',
+      ...statement,
+    });
+  }
+
+  return {
+    docs: statements,
+    totalDocs: 1,
+    limit: count,
+    totalPages: 1,
+    page: 1,
+    pagingCounter: 1,
+    hasPrevPage: false,
+    hasNextPage: false,
+    prevPage: null as any,
+    nextPage: null as any,
+  };
+};
+
+export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, (FilterQuery<IStatement> & { state?: 'dev' })>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   try {
     const { groupId } = req.params;

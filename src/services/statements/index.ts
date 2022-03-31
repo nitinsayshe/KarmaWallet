@@ -19,7 +19,7 @@ export const getStatements = (_: IRequest, query: FilterQuery<IStatement>) => {
     ],
     lean: true,
     page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, date: 1 } : { date: 1 },
+    sort: query?.sort ? { date: 1, ...query.sort } : { date: 1 },
     limit: query?.limit || 10,
   };
   return StatementModel.paginate(query.filter, options);

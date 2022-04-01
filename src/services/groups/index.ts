@@ -1,9 +1,11 @@
+import aqp from 'api-query-params';
 import isemail from 'isemail';
 import {
   FilterQuery, Schema, UpdateQuery,
 } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { nanoid } from 'nanoid';
 import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
@@ -32,6 +34,10 @@ import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
+import {
+  IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
+} from '../../models/statement';
+import { getStatements } from '../statements';
 
 dayjs.extend(utc);
 
@@ -420,6 +426,96 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   return GroupModel.paginate(query.filter, options);
 };
 
+export const getDummyStatements = () => {
+  const count = 30;
+  const statements: (IShareableStatementRef & { _id: string })[] = [];
+  let timestamp = dayjs().set('date', 14);
+
+  for (let i = 0; i < count; i++) {
+    const amount = getRandomInt(5, 5000);
+    const matched = !!getRandomInt(0, 1);
+    const statement: IShareableStatementRef = {
+      offsets: {
+        matchPercentage: 50,
+        maxDollarAmount: 150,
+        toBeMatched: {
+          dollars: amount * 0.8,
+          tonnes: (amount * 0.018) * 0.8,
+        },
+        totalMemberOffsets: {
+          dollars: amount,
+          tonnes: amount * 0.018,
+        },
+      },
+      date: timestamp.toDate(),
+    };
+
+    if (matched) {
+      statement.offsets.matched = {
+        dollars: 1.34,
+        tonnes: 0.077,
+        date: timestamp.toDate(),
+      };
+    }
+
+    statements.push({
+      _id: nanoid(16),
+      ...statement,
+    });
+
+    timestamp = timestamp.subtract(1, 'month');
+  }
+
+  return {
+    docs: statements,
+    totalDocs: 1,
+    limit: count,
+    totalPages: 1,
+    page: 1,
+    pagingCounter: 1,
+    hasPrevPage: false,
+    hasNextPage: false,
+    prevPage: null as any,
+    nextPage: null as any,
+  };
+};
+
+export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, (FilterQuery<IStatement> & { state?: 'dev' })>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  try {
+    const { groupId } = req.params;
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    // only karma admins+ or group superadmins+ are allowed
+    // to view these statements.
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      const groupAllowList = [UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+
+      const userGroup = await UserGroupModel.findOne({
+        user: req.requestor._id.toString(),
+        group: groupId,
+        role: { $in: groupAllowList },
+      });
+
+      if (!userGroup) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    const aqpQuery = aqp(req.query, { skipKey: 'page' });
+    const query = {
+      ...aqpQuery,
+      filter: {
+        ...aqpQuery.filter,
+        group: groupId,
+        offset: { $exists: true },
+      },
+    };
+
+    return getStatements(req, query);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const getShareableGroup = ({
   _id,
   name,
@@ -467,6 +563,46 @@ export const getShareableGroupMember = ({
     role,
     status,
     joinedOn,
+  };
+};
+
+export const getShareableGroupOffsetStatementRef = ({
+  _id,
+  offsets,
+  date,
+}: IStatementDocument) => {
+  const {
+    matchPercentage,
+    maxDollarAmount,
+    matched,
+    toBeMatched,
+    totalMemberOffsets,
+  } = offsets;
+  const _offsets: IOffsetsStatement = {
+    matchPercentage,
+    maxDollarAmount,
+    toBeMatched: {
+      dollars: toBeMatched.dollars,
+      tonnes: toBeMatched.tonnes,
+    },
+    totalMemberOffsets: {
+      dollars: totalMemberOffsets.dollars,
+      tonnes: totalMemberOffsets.tonnes,
+    },
+  };
+
+  if (!!matched?.dollars) {
+    _offsets.matched = {
+      dollars: matched.dollars,
+      tonnes: matched.tonnes,
+      date: matched.date,
+    };
+  }
+
+  return {
+    _id,
+    offsets: _offsets,
+    date,
   };
 };
 

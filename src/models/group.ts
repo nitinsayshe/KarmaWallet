@@ -17,6 +17,7 @@ export enum GroupPrivacyStatus {
 export enum GroupStatus {
   Open = 'open',
   Locked = 'locked',
+  Deleted = 'deleted',
 }
 
 export interface IGroupIntegrations {
@@ -30,18 +31,18 @@ export interface IGroupIntegrations {
 }
 
 export interface IGroupMatching {
-  enabled: Boolean,
-  matchPercentage: Number;
-  maxDollarAmount: Number;
+  enabled: boolean,
+  matchPercentage: number;
+  maxDollarAmount: number;
   lastModified: Date;
 }
 
 export interface IGroupSettings {
   privacyStatus: GroupPrivacyStatus;
-  allowInvite: Boolean;
-  allowDomainRestriction: Boolean;
-  allowSubgroups: Boolean;
-  approvalRequired: Boolean;
+  allowInvite: boolean;
+  allowDomainRestriction: boolean;
+  allowSubgroups: boolean;
+  approvalRequired: boolean;
   matching: IGroupMatching;
 }
 

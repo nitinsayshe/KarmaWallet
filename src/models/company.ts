@@ -10,7 +10,7 @@ import { IModel, IRef } from '../types/model';
 import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 
-export interface ISharableCompany {
+export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
   companyName: string;
@@ -20,13 +20,13 @@ export interface ISharableCompany {
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define
-  parentCompany: IRef<number, ISharableCompany>;
+  parentCompany: IRef<number, IShareableCompany>;
   sectors: IRef<ObjectId, ISector>[];
   slug: string;
   url: string;
 }
 
-export interface ICompany extends ISharableCompany {
+export interface ICompany extends IShareableCompany {
   dataSources: IRef<ObjectId, IDataSourceDocument>[];
   legacyId: number;
   // eslint-disable-next-line no-use-before-define

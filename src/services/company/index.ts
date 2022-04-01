@@ -2,7 +2,7 @@ import { FilterQuery } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
-  CompanyModel, ICompany, ICompanyDocument, ICompanyModel, ISharableCompany,
+  CompanyModel, ICompany, ICompanyDocument, ICompanyModel, IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg } from '../../models/companyUnsdg';
 import { DataSourceModel, IDataSourceModel } from '../../models/dataSource';
@@ -175,7 +175,7 @@ export const getShareableCompany = ({
   const _dataSources = (!!dataSources && !!(dataSources as IDataSourceModel[]).filter(d => !!Object.keys(d).length).length)
     ? dataSources.map(d => getShareableDataSource(d as IDataSourceModel))
     : dataSources;
-  const _parentCompany: ISharableCompany = (!!parentCompany && Object.keys(parentCompany).length)
+  const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
   const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)

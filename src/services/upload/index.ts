@@ -36,7 +36,7 @@ const ImageFileExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
 export const removeFileExtension = (filename: string, fileExensions: string[]) => {
   const extension = filename.split('.').pop()?.toLowerCase();
   if (extension && fileExensions.find(ext => ext === extension)) {
-    return filename.replace(extension, '');
+    return filename.replace(`.${extension}`, '');
   }
   return filename;
 };
@@ -184,10 +184,12 @@ export const uploadCsv = async (req: IRequest<{}, {}, ICsvUploadBody>) => {
       throw new CustomError(`File size is too large (${MAX_FILE_SIZE_IN_MB} MB max.).`, ErrorTypes.INVALID_ARG);
     }
 
+    removeFileExtension(slugify(filename || file.originalname), ['.csv']);
+
     const fileData = {
       file: file.buffer,
       // ensures that the filename has proper extension
-      name: `uploads/${removeFileExtension(slugify(filename || file.originalname), ['.csv'])}.csv`,
+      name: `uploads/${slugify(removeFileExtension(file.originalname, ['csv']))}.csv`,
       contentType: 'application/octet-stream',
     };
 

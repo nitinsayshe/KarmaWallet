@@ -7,11 +7,23 @@ import { IRequestHandler } from '../types/request';
 import { IRareTransaction } from '../integrations/rare/transaction';
 import { MainBullClient } from '../clients/bull/main';
 import { JobNames } from '../lib/constants/jobScheduler';
+import { IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
+// these are query parameters that were sent
+// from the karma frontend to the rare transactions
+// page, and then rare is taking them and dropping
+// then into the body of this request for us
+
+interface IRareRelayedQueryParams {
+  groupId?: string;
+  statementIds?: string[];
+}
 interface IRareTransactionBody {
   transaction: IRareTransaction;
+  // TODO: may need to update this property name...
+  params?: IRareRelayedQueryParams;
 }
 
 interface IUserPlaidTransactionsMapBody {
@@ -29,7 +41,21 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
     await mapTransactions([rareTransaction]);
-    await client.sendRareWebhook(uid);
+
+    const { statementIds, groupId } = (req.body.params || {});
+    if (!!statementIds) {
+      const matchStatementData: IGroupOffsetMatchData = {
+        groupId,
+        statementIds,
+        totalAmountMatched: rareTransaction.amt,
+        transactor: { user: uid, group: req.body.params.groupId },
+      };
+      await matchMemberOffsets(req, matchStatementData);
+      // TODO: send socket event notifying user of matches being successfully applied.
+    } else {
+      await client.sendRareWebhook(uid);
+    }
+
     api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });
   } catch (e) {
     console.log('\n\n/////////////// RARE WEBHOOK ERROR ///////////////////////\n\n');

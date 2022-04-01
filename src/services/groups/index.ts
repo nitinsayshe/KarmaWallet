@@ -1,7 +1,7 @@
 import aqp from 'api-query-params';
 import isemail from 'isemail';
 import {
-  FilterQuery, Schema, UpdateQuery,
+  FilterQuery, isValidObjectId, Schema, UpdateQuery,
 } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -34,7 +34,10 @@ import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 import { IOffsetsStatement, IStatement, IStatementDocument } from '../../models/statement';
-import { getStatements } from '../statements';
+import { getStatements, getAllStatements } from '../statements';
+import {
+  ITransactionDocument, ITransactionMatch, TransactionModel,
+} from '../../models/transaction';
 
 dayjs.extend(utc);
 
@@ -92,6 +95,16 @@ export interface IJoinGroupRequest {
 
 export interface IGetGroupOffsetRequestParams {
   groupId: string,
+}
+
+export interface IGroupOffsetMatchData {
+  statementIds: string[];
+  groupId: string;
+  totalAmountMatched: number;
+  transactor: {
+    user?: string;
+    group?: string;
+  };
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -828,6 +841,124 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
     }
 
     await userGroup.save();
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetMatchData) => {
+  try {
+    const {
+      groupId,
+      statementIds = [],
+      totalAmountMatched,
+      transactor,
+    } = matchData;
+
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+    if (!isValidObjectId(groupId)) throw new CustomError('Invalid group id found.', ErrorTypes.INVALID_ARG);
+    if (!totalAmountMatched) throw new CustomError('A total dollar amount matched is required.', ErrorTypes.INVALID_ARG);
+    if (totalAmountMatched <= 0) throw new CustomError('The total dollar amount matched must be a positive amount.', ErrorTypes.INVALID_ARG);
+    if (!statementIds) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
+    if (!Array.isArray(statementIds)) throw new CustomError('Invalid statement id(s). Must be an array of ids.', ErrorTypes.INVALID_ARG);
+    if (!statementIds.length) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
+    const invalidStatementIds = statementIds.filter(s => !isValidObjectId(s));
+    if (invalidStatementIds.length) throw new CustomError(`The follow statement ids are invalid: ${invalidStatementIds.join(', ')}.`, ErrorTypes.INVALID_ARG);
+    if (!transactor || (!transactor.user && !transactor.group)) throw new CustomError('The transactor is required.', ErrorTypes.INVALID_ARG);
+    if (!!transactor.user && !isValidObjectId(transactor.user)) throw new CustomError('Invalid transactor user found.', ErrorTypes.INVALID_ARG);
+    if (!!transactor.group && !isValidObjectId(transactor.group)) throw new CustomError('Invalid transactor group found.', ErrorTypes.INVALID_ARG);
+
+    const statements = await getAllStatements(req, {
+      $and: [
+        { _id: { $in: statementIds } },
+        { offsets: { $exists: true } },
+        { group: groupId },
+      ],
+    })
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+        },
+        {
+          path: 'offsets',
+          populate: {
+            path: 'toBeMatched',
+            populate: {
+              path: 'transactions',
+              populate: {
+                path: 'transaction',
+                model: TransactionModel,
+              },
+            },
+          },
+        },
+      ]);
+
+    if (statements.length !== statementIds.length) {
+      const missingStatementIds = statementIds.filter(s => !statements.find(ss => ss._id.toString() === s));
+      throw new CustomError(`The follow statements could not be found: ${missingStatementIds.join(', ')}`, ErrorTypes.INVALID_ARG);
+    }
+
+    // get the total that was to be matched for all statements
+    const totalToBeMatched = statements.reduce((acc, curr) => curr.offsets.toBeMatched.dollars + acc, 0);
+
+    let user: IUserDocument = null;
+    let group: IGroupDocument = null;
+
+    if (!!transactor.user) {
+      user = await UserModel.findOne({ _id: transactor.user });
+      if (!user) throw new CustomError(`Transactor user with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
+    }
+
+    if (!!transactor.group) {
+      group = await GroupModel.findOne({ _id: transactor.group });
+      if (!group) throw new CustomError(`Transactor group with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
+    }
+
+    let percentageMatched = 1;
+
+    if (totalToBeMatched > totalAmountMatched) {
+      // the full amount to be matched was not met,
+      // calculating the perventage for the amount that
+      // was actually paid.
+      percentageMatched = totalAmountMatched / totalToBeMatched;
+    }
+
+    const timestamp = dayjs().utc().toDate();
+    for (const statement of statements) {
+      const dollarsMatched = statement.offsets.toBeMatched.dollars * percentageMatched;
+      const tonnesMatched = statement.offsets.toBeMatched.tonnes * percentageMatched;
+
+      const matched = {
+        dollars: dollarsMatched,
+        tonnes: tonnesMatched,
+        date: timestamp,
+        transactor: { user, group },
+      };
+
+      statement.offsets.matched = matched;
+      await statement.save();
+
+      for (const toBeMatchedTransaction of statement.offsets.toBeMatched.transactions) {
+        const { value, transaction } = toBeMatchedTransaction;
+
+        const valueMatched = value * percentageMatched;
+
+        const matchedTransaction: ITransactionMatch = {
+          amount: valueMatched,
+          date: timestamp,
+          matcher: { user, group },
+          status: true,
+        };
+
+        (transaction as ITransactionDocument).matched = matchedTransaction;
+        await (transaction as ITransactionDocument).save();
+      }
+    }
+
+    // TODO: send email to members letting them know the group has matched their transactions?
+    //   - if we do this, we should probably re-run the group member data job so shows live data
   } catch (err) {
     throw asCustomError(err);
   }

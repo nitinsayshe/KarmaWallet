@@ -7,7 +7,6 @@ import { IRequestHandler } from '../types/request';
 import { IRareTransaction } from '../integrations/rare/transaction';
 import { MainBullClient } from '../clients/bull/main';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -37,24 +36,27 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     const client = new KarmaApiClient();
     console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
     console.log({ rareTransaction: req?.body?.transaction });
+    console.log(req.body);
 
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
     await mapTransactions([rareTransaction]);
 
-    const { statementIds, groupId } = (req.body.params || {});
-    if (!!statementIds) {
-      const matchStatementData: IGroupOffsetMatchData = {
-        groupId,
-        statementIds,
-        totalAmountMatched: rareTransaction.amt,
-        transactor: { user: uid, group: req.body.params.groupId },
-      };
-      await matchMemberOffsets(req, matchStatementData);
-      // TODO: send socket event notifying user of matches being successfully applied.
-    } else {
-      await client.sendRareWebhook(uid);
-    }
+    // const { statementIds, groupId } = (req.body.params || {});
+    // if (!!statementIds) {
+    // const matchStatementData: IGroupOffsetMatchData = {
+    //   groupId,
+    //   statementIds,
+    //   totalAmountMatched: rareTransaction.amt,
+    //   transactor: { user: uid, group: req.body.params.groupId },
+    // };
+    // await matchMemberOffsets(req, matchStatementData);
+    // TODO: send socket event notifying user of matches being successfully applied.
+    // } else {
+    //   await client.sendRareWebhook(uid);
+    // }
+
+    await client.sendRareWebhook(uid);
 
     api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });
   } catch (e) {

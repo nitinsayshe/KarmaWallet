@@ -57,8 +57,6 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
       await client.sendRareWebhook(uid);
     }
 
-    await client.sendRareWebhook(uid);
-
     api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });
   } catch (e) {
     console.log('\n\n/////////////// RARE WEBHOOK ERROR ///////////////////////\n\n');

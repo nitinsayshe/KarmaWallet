@@ -865,8 +865,11 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
     const invalidStatementIds = statementIds.filter(s => !isValidObjectId(s));
     if (invalidStatementIds.length) throw new CustomError(`The follow statement ids are invalid: ${invalidStatementIds.join(', ')}.`, ErrorTypes.INVALID_ARG);
     if (!transactor || (!transactor.user && !transactor.group)) throw new CustomError('The transactor is required.', ErrorTypes.INVALID_ARG);
-    if (!!transactor.user && !isValidObjectId(transactor.user)) throw new CustomError('Invalid transactor user found.', ErrorTypes.INVALID_ARG);
-    if (!!transactor.group && !isValidObjectId(transactor.group)) throw new CustomError('Invalid transactor group found.', ErrorTypes.INVALID_ARG);
+    if (!!transactor.group && !isValidObjectId(transactor.group)) {
+      throw new CustomError('Invalid transactor group found.', ErrorTypes.INVALID_ARG);
+    }
+
+    req.requestor = await UserModel.findOne({ _id: process.env.APP_USER_ID });
 
     const statements = await getAllStatements(req, {
       $and: [
@@ -881,17 +884,8 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
           model: GroupModel,
         },
         {
-          path: 'offsets',
-          populate: {
-            path: 'toBeMatched',
-            populate: {
-              path: 'transactions',
-              populate: {
-                path: 'transaction',
-                model: TransactionModel,
-              },
-            },
-          },
+          path: 'offsets.toBeMatched.transactions.transaction',
+          model: TransactionModel,
         },
       ]);
 
@@ -907,7 +901,11 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
     let group: IGroupDocument = null;
 
     if (!!transactor.user) {
-      user = await UserModel.findOne({ _id: transactor.user });
+      // have to account for old ui passing legacy id
+      user = isValidObjectId(transactor.user)
+        ? await UserModel.findOne({ _id: transactor.user })
+        : await UserModel.findOne({ legacyId: transactor.user });
+
       if (!user) throw new CustomError(`Transactor user with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
     }
 

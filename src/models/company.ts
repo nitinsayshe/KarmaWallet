@@ -9,6 +9,7 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
+import { slugify } from '../lib/slugify';
 
 export interface IHiddenCompany {
   status: boolean;
@@ -61,7 +62,6 @@ const companySchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'sector',
   }],
-  slug: { type: String }, // TODO: update to virtual
   url: { type: String, default: null },
   // TODO: update this field whenever usdgs are updated
   // too expensive to make virtual
@@ -90,5 +90,10 @@ const companySchema = new Schema({
   },
 });
 companySchema.plugin(mongoosePaginate);
+
+// eslint-disable-next-line func-names
+companySchema.virtual('slug').get(function (this: ICompanyDocument) {
+  return slugify(this.companyName);
+});
 
 export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);

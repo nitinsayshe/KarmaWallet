@@ -84,8 +84,8 @@ export interface ITransactionIntegrations {
 }
 
 export interface IUserOrGroup {
-  user: IRef<ObjectId, (IShareableUser | IUserDocument)>;
-  group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
+  user?: IRef<ObjectId, (IShareableUser | IUserDocument)>;
+  group?: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
 }
 
 export interface ITransactionMatch {

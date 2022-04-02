@@ -5,6 +5,7 @@ import {
 } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { nanoid } from 'nanoid';
 import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
@@ -33,7 +34,9 @@ import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
-import { IOffsetsStatement, IStatement, IStatementDocument } from '../../models/statement';
+import {
+  IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
+} from '../../models/statement';
 import { getStatements, getAllStatements } from '../statements';
 import {
   ITransactionDocument, ITransactionMatch, TransactionModel,
@@ -436,7 +439,61 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
   return GroupModel.paginate(query.filter, options);
 };
 
-export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, FilterQuery<IStatement>>) => {
+export const getDummyStatements = () => {
+  const count = 30;
+  const statements: (IShareableStatementRef & { _id: string })[] = [];
+  let timestamp = dayjs().set('date', 14);
+
+  for (let i = 0; i < count; i++) {
+    const amount = getRandomInt(5, 5000);
+    const matched = !!getRandomInt(0, 1);
+    const statement: IShareableStatementRef = {
+      offsets: {
+        matchPercentage: 50,
+        maxDollarAmount: 150,
+        toBeMatched: {
+          dollars: amount * 0.8,
+          tonnes: (amount * 0.018) * 0.8,
+        },
+        totalMemberOffsets: {
+          dollars: amount,
+          tonnes: amount * 0.018,
+        },
+      },
+      date: timestamp.toDate(),
+    };
+
+    if (matched) {
+      statement.offsets.matched = {
+        dollars: 1.34,
+        tonnes: 0.077,
+        date: timestamp.toDate(),
+      };
+    }
+
+    statements.push({
+      _id: nanoid(16),
+      ...statement,
+    });
+
+    timestamp = timestamp.subtract(1, 'month');
+  }
+
+  return {
+    docs: statements,
+    totalDocs: 1,
+    limit: count,
+    totalPages: 1,
+    page: 1,
+    pagingCounter: 1,
+    hasPrevPage: false,
+    hasNextPage: false,
+    prevPage: null as any,
+    nextPage: null as any,
+  };
+};
+
+export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, (FilterQuery<IStatement> & { state?: 'dev' })>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   try {
     const { groupId } = req.params;

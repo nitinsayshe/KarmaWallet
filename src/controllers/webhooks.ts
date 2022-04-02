@@ -22,7 +22,7 @@ interface IRareRelayedQueryParams {
 interface IRareTransactionBody {
   transaction: IRareTransaction;
   // TODO: may need to update this property name...
-  params?: IRareRelayedQueryParams;
+  forwarded_query_params?: IRareRelayedQueryParams;
 }
 
 interface IUserPlaidTransactionsMapBody {
@@ -31,7 +31,7 @@ interface IUserPlaidTransactionsMapBody {
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
-  if (req.headers?.['rare-webhook-key'] !== 'KFVKe5584dBb6y22SSwePMPG8MaskwvSxr86tWYPT4R8WkG6JDbUcMGMBE838jQu') return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+  if (process.env.KW_ENV !== 'staging' && req.headers?.['rare-webhook-key'] !== 'KFVKe5584dBb6y22SSwePMPG8MaskwvSxr86tWYPT4R8WkG6JDbUcMGMBE838jQu') return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
   try {
     const client = new KarmaApiClient();
     console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');

@@ -22,7 +22,6 @@ interface IRareRelayedQueryParams {
 }
 interface IRareTransactionBody {
   transaction: IRareTransaction;
-  // TODO: may need to update this property name...
   forwarded_query_params?: IRareRelayedQueryParams;
 }
 

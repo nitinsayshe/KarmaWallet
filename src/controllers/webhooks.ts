@@ -37,7 +37,6 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     const client = new KarmaApiClient();
     console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
     console.log({ rareTransaction: req?.body?.transaction });
-    console.log(req.body);
 
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
@@ -47,7 +46,8 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     if (!!statementIds) {
       const matchStatementData: IGroupOffsetMatchData = {
         groupId,
-        statementIds,
+        // if only 1 statement id is received, shows up as a string
+        statementIds: typeof statementIds === 'string' ? [statementIds] : statementIds,
         totalAmountMatched: rareTransaction.amt,
         transactor: { user: uid, group: groupId },
       };

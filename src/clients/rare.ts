@@ -9,7 +9,7 @@ interface IRareTransactionsResponse {
 }
 
 export class RareClient extends SdkClient {
-  _client: AxiosInstance = null;
+  _client: AxiosInstance;
 
   constructor() {
     super('Rare');

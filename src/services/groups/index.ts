@@ -82,6 +82,7 @@ export interface IGroupRequestBody {
   owner?: string; // the id of the owner
   name: string;
   code: string;
+  logo: string;
   status: GroupStatus;
   settings: IGroupSettings;
   domains: string[];
@@ -897,6 +898,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     owner,
     name,
     code,
+    logo,
     status,
     settings,
     domains,
@@ -904,7 +906,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
-    if (!owner && !name && !code && !status && !settings && !domains) {
+    if (!owner && !name && !code && !logo && !status && !settings && !domains) {
       throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
     }
 
@@ -980,6 +982,14 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     if (!!code) {
       if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
       group.code = code;
+    }
+
+    if (!!logo) {
+      if (!logo.includes(`group/${group._id}`)) {
+        throw new CustomError('Invalid logo url found. Please upload image first, then use returned url.', ErrorTypes.INVALID_ARG);
+      }
+
+      group.logo = logo;
     }
 
     if (!!status && group.status !== status) {

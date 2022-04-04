@@ -29,9 +29,12 @@ const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgMod
     },
   });
 
-export const getCompanyById = async (__: IRequest, _id: string) => {
+export const getCompanyById = async (__: IRequest, _id: string, includeHidden = false) => {
   try {
-    const company = await CompanyModel.findOne({ _id })
+    const query: FilterQuery<ICompany> = { _id };
+    if (!includeHidden) query['hidden.status'] = false;
+
+    const company = await CompanyModel.findOne(query)
       .populate({
         path: 'parentCompany',
         model: CompanyModel,
@@ -63,7 +66,7 @@ export const getCompanyById = async (__: IRequest, _id: string) => {
   }
 };
 
-export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>) => {
+export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const options = {
     projection: query?.projection || '',
     populate: query.population || [
@@ -95,15 +98,19 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>) => {
     sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
     limit: query?.limit || 10,
   };
-  return CompanyModel.paginate(query.filter, options);
+  const filter: FilterQuery<ICompany> = { ...query.filter };
+  if (!includeHidden) filter['hidden.status'] = false;
+  return CompanyModel.paginate(filter, options);
 };
 
-export const compare = async (__: IRequest, query: FilterQuery<ICompany>) => {
+export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   let topPick: ICompanyDocument = null;
   let noClearPick = false;
   let topPickScore = 30;
 
-  const companies: ICompanyDocument[] = await CompanyModel.find({ _id: { $in: query.companies } })
+  const _query: FilterQuery<ICompany> = { _id: { $in: query.companies } };
+  if (!includeHidden) query['hidden.status'] = false;
+  const companies: ICompanyDocument[] = await CompanyModel.find(_query)
     .populate({
       path: 'sectors',
       model: SectorModel,
@@ -129,9 +136,13 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>) => {
 };
 
 // TODO: update to use new partner collection
-export const getPartners = (req: IRequest, companiesCount: number) => CompanyModel
-  .find({ isPartner: true })
-  .limit(companiesCount);
+export const getPartners = (req: IRequest, companiesCount: number, includeHidden = false) => {
+  const query: FilterQuery<ICompany> = { isPartner: true };
+  if (!includeHidden) query['hidden.status'] = false;
+  return CompanyModel
+    .find(query)
+    .limit(companiesCount);
+};
 
 export const getCompanyUNSDGs = async (__: IRequest, companyId: string, year: number) => {
   try {

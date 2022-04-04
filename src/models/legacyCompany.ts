@@ -7,10 +7,68 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 
+export interface IBadgeCounts {
+  people: number;
+  planet: number;
+}
+
+interface ILogos {
+  source: string;
+  ritekit: string;
+  original: string;
+  clearbit: string;
+}
+
 export interface ILegacyCompany {
   _id: number;
+  companyName: string;
   dataSource: 'justCapital' | '1ForThePlanet' | 'bCorp' | 'cdpClimateChange' | 'cdpForests' | 'cdpWaterSecurity' | 'greenSeal' | 'saferChoice';
+  combinedScore: number;
+  dataYear: never;
+  categories: number[];
+  hasScore: boolean;
+  subCategories: number[];
+  slug: string;
+  isBrand: boolean;
+  peopleScore: number;
+  climateActionScore: number;
+  sustainabilityScore: number;
+  diversityScore: number;
+  employeeWelfareScore: number;
+  planetScore: number;
+  url: string;
+  grade: string;
+  badges: number[];
+  unSdg1: boolean;
+  unSdg2: boolean;
+  unSdg3: boolean;
+  unSdg4: boolean;
+  unSdg5: boolean;
+  unSdg6: boolean;
+  unSdg7: boolean;
+  unSdg8: boolean;
+  unSdg9: boolean;
+  unSdg10: boolean;
+  unSdg11: boolean;
+  unSdg12: boolean;
+  unSdg13: boolean;
+  unSdg14: boolean;
+  unSdg15: boolean;
+  unSdg16: boolean;
+  unSdg17: boolean;
   parentCompany: number;
+  saferChoice: boolean;
+  cdpForests: boolean;
+  cdpWaterSecurity: boolean;
+  cdpClimateChange: boolean;
+  greenSeal: boolean;
+  onePercentForThePlanet: boolean;
+  badgeCounts: IBadgeCounts;
+  logo: string;
+  logos: ILogos;
+  brands: number[];
+  relevanceScore: number;
+  isPartner: boolean;
 }
 
 export interface ILegacyCompanyDocument extends ILegacyCompany, Document {
@@ -103,3 +161,4 @@ const legacyCompanySchema = new Schema({
 legacyCompanySchema.plugin(mongoosePaginate);
 
 export const LegacyCompanyModel = model<ILegacyCompanyDocument, PaginateModel<ILegacyCompany>>('legacy_company', legacyCompanySchema);
+export const LegacyHiddenCompanyModel = model<ILegacyCompanyDocument, PaginateModel<ILegacyCompany>>('hidden_company', legacyCompanySchema);

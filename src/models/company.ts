@@ -11,6 +11,12 @@ import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
 
+export interface IHiddenCompany {
+  status: boolean;
+  reason: string;
+  lastModified: Date;
+}
+
 export interface ISharableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -21,7 +27,7 @@ export interface ISharableCompany {
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define
-  parentCompany: IRef<number, ISharableCompany>;
+  parentCompany: IRef<ObjectId, ISharableCompany>;
   sectors: IRef<ObjectId, ISector>[];
   slug: string;
   url: string;
@@ -29,10 +35,12 @@ export interface ISharableCompany {
 
 export interface ICompany extends ISharableCompany {
   dataSources: IRef<ObjectId, IDataSourceDocument>[];
+  hidden: IHiddenCompany;
   legacyId: number;
   // eslint-disable-next-line no-use-before-define
-  parentCompany: IRef<number, ICompanyDocument>;
+  parentCompany: IRef<ObjectId, ICompanyDocument>;
   sectors: IRef<ObjectId, ISectorDocument>[];
+  notes: string;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -68,6 +76,17 @@ const companySchema = new Schema({
     type: Number,
     required: true,
     unique: true,
+  },
+  notes: {
+    type: String,
+  },
+  hidden: {
+    type: {
+      status: Boolean,
+      reason: String,
+      lastModified: Date,
+    },
+    required: true,
   },
 });
 companySchema.plugin(mongoosePaginate);

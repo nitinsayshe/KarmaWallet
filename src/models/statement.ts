@@ -18,11 +18,19 @@ export interface IMatchedOffsetData extends IOffsetData {
   date: Date;
 }
 
+export interface IToBeMatchedTransaction {
+  value: number;
+  transaction: IRef<ObjectId, ITransactionDocument>;
+}
+export interface IToBeMatchedData extends IOffsetData {
+  transactions?: IToBeMatchedTransaction[];
+}
+
 export interface IOffsetsStatement {
   matchPercentage: number,
   maxDollarAmount: number,
   matched?: IMatchedOffsetData;
-  toBeMatched: IOffsetData;
+  toBeMatched: IToBeMatchedData;
   totalMemberOffsets: IOffsetData;
 }
 

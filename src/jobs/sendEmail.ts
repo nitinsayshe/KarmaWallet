@@ -2,7 +2,7 @@ import { SandboxedJob } from 'bullmq';
 import { SendEmailResponse } from 'aws-sdk/clients/ses';
 import { AWSError } from 'aws-sdk';
 
-import { sendMail } from '../services/aws/email';
+import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';
 
 interface ISesEmailResult {
@@ -21,7 +21,8 @@ export interface ISendEmailParams {
 export const exec = async ({
   template, senderEmail, subject, recipientEmail, replyToAddresses,
 }: ISendEmailParams) => {
-  const emailResponse = await sendMail({
+  const awsClient = new AwsClient();
+  const emailResponse = await awsClient.sendMail({
     senderEmail, template, subject, replyToAddresses, recipientEmail,
   });
   return emailResponse;

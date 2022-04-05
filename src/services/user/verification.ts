@@ -11,7 +11,8 @@ import {
 import * as TokenService from '../token';
 import { IRequest } from '../../types/request';
 import { sendAltEmailVerification } from '../email';
-import { UserGroupModel, UserGroupStatus } from '../../models/userGroup';
+import { UserGroupModel } from '../../models/userGroup';
+import { UserGroupStatus } from '../../types/groups';
 
 export interface IEmailVerificationData {
   email: string;

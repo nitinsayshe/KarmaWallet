@@ -16,7 +16,7 @@ import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup, GroupStatus,
 } from '../../models/group';
 import {
-  IShareableUserGroup, IUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
+  IShareableUserGroup, IUserGroup, IUserGroupDocument, UserGroupModel,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
 import * as TokenService from '../token';
@@ -30,6 +30,7 @@ import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
+import { UserGroupStatus } from '../../types/groups';
 
 dayjs.extend(utc);
 
@@ -378,6 +379,10 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
         path: 'owner',
         model: UserModel,
       },
+      {
+        path: 'members',
+        model: UserGroupModel,
+      },
     ],
     lean: true,
     page: query?.skip || 1,
@@ -394,6 +399,7 @@ export const getShareableGroup = ({
   domains,
   logo,
   settings,
+  members,
   owner,
   status,
   lastModified,
@@ -414,6 +420,7 @@ export const getShareableGroup = ({
     settings,
     status,
     owner: _owner,
+    totalMembers: members.length,
     lastModified,
     createdOn,
   };

@@ -13,6 +13,7 @@ import webhook from './webhooks';
 import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
 import notFound from './404';
+import upload from './upload';
 
 const routers = (app: Express) => {
   user(app);
@@ -23,6 +24,7 @@ const routers = (app: Express) => {
   company(app);
   transaction(app);
   impact(app);
+  upload(app);
   // sector(app);
   // subsector(app);
   webhook(app);

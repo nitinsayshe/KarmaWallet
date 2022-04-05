@@ -1,13 +1,16 @@
 import {
   Schema,
+  ObjectId,
   model,
   Document,
   Model,
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
-import { ICardDocument } from './card';
-import { ICompanyDocument } from './company';
-import { IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
+import { ICardDocument, IShareableCard } from './card';
+import { ICompanyDocument, IShareableCompany } from './company';
+import { IGroupDocument, IShareableGroup } from './group';
+import { IPlaidCategoryMapping, IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
+import { IShareableUser, IUserDocument } from './user';
 
 export interface IPlaidTransactionLocation {
   address: string;
@@ -70,9 +73,9 @@ export interface IRareTransactionIntegration {
   refunded?: boolean;
   refunded_ts?: string;
   projectName?: string;
-  fee_amt?: { type: Number },
-  subtotal_amt?: { type: Number },
-  tonnes_amt?: { type: Number },
+  fee_amt?: number,
+  subtotal_amt?: number,
+  tonnes_amt?: number,
 }
 
 export interface ITransactionIntegrations {
@@ -80,18 +83,40 @@ export interface ITransactionIntegrations {
   rare?: IRareTransactionIntegration;
 }
 
-export interface ITransaction {
-  userId: Schema.Types.ObjectId;
-  companyId: IRef<Schema.Types.ObjectId, ICompanyDocument>;
-  cardId: ICardDocument['_id'];
-  category: number;
-  subCategory: number;
-  carbonMultiplier: IPlaidCategoryMappingDocument['_id'];
+export interface IUserOrGroup {
+  user: IRef<ObjectId, (IShareableUser | IUserDocument)>;
+  group: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
+}
+
+export interface ITransactionMatch {
+  status: boolean;
+  amount: number;
+  matcher: IUserOrGroup;
+  date: Date;
+}
+
+export interface IShareableTransaction {
+  userId: IRef<ObjectId, IShareableUser>;
+  companyId: IRef<ObjectId, IShareableCompany>;
+  cardId: IRef<ObjectId, IShareableCard>;
+  carbonMultiplier: IRef<ObjectId, IPlaidCategoryMapping>;
   amount: number;
   date: Date;
-  integrations?: ITransactionIntegrations;
+  category: number;
+  subCategory: number;
   createdOn: Date;
   lastModified: Date;
+}
+
+export interface ITransaction extends IShareableTransaction {
+  userId: IRef<ObjectId, IUserDocument>;
+  companyId: IRef<ObjectId, ICompanyDocument>;
+  cardId: IRef<ObjectId, ICardDocument>;
+  carbonMultiplier: IRef<ObjectId, IPlaidCategoryMappingDocument>;
+  integrations?: ITransactionIntegrations;
+  onBehalfOf?: IUserOrGroup;
+  matched?: ITransactionMatch;
+  association?: IUserOrGroup;
 }
 
 export interface ITransactionAggregate extends ITransaction {
@@ -167,7 +192,54 @@ const transactionSchema = new Schema({
   },
   createdOn: { type: Date },
   lastModified: { type: Date },
+  /**
+   * transactions can be made on behalf of others...setting
+   * this specifies who this transaction was made for.
+   */
   onBehalfOf: {
+    type: {
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: 'user',
+      },
+      group: {
+        type: Schema.Types.ObjectId,
+        ref: 'group',
+      },
+    },
+  },
+  /**
+   * some entities offer matching of certain transaction types
+   * (like offset donations). if status is true, the transaction
+   * has been matched.
+   */
+  matched: {
+    type: {
+      status: {
+        type: Boolean,
+        default: false,
+      },
+      amount: { type: Number },
+      date: { type: Date },
+      matcher: {
+        type: {
+          user: {
+            type: Schema.Types.ObjectId,
+            ref: 'user',
+          },
+          group: {
+            type: Schema.Types.ObjectId,
+            ref: 'group',
+          },
+        },
+      },
+    },
+  },
+  /**
+   * donations can be associated with specific entities
+   * for matchings purposes.
+   */
+  association: {
     type: {
       user: {
         type: Schema.Types.ObjectId,

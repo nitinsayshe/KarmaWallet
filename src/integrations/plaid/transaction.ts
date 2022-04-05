@@ -3,7 +3,9 @@ import utc from 'dayjs/plugin/utc';
 import { Schema } from 'mongoose';
 import { Transaction as IPlaidTransaction } from 'plaid';
 import { IPlaidCategoryMappingDocument } from '../../models/plaidCategoryMapping';
-import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
+import {
+  ITransaction, ITransactionIntegrations, ITransactionModel, TransactionModel,
+} from '../../models/transaction';
 
 dayjs.extend(utc);
 
@@ -142,7 +144,7 @@ class Transaction {
           if (key === 'date') {
             this._transaction.date = this.date.toDate();
           } else if (key === 'integrations') {
-            this._transaction.integrations.plaid = value.plaid;
+            this._transaction.integrations.plaid = (value as ITransactionIntegrations).plaid;
           } else {
             // force cast here to avoid string string as index error
             (this._transaction as any)[key] = value;

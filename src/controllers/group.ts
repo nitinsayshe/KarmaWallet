@@ -23,10 +23,31 @@ export const getGroup: IRequestHandler = async (req, res) => {
   }
 };
 
+export const getGroupOffsetStatements: IRequestHandler<GroupService.IGroupRequestParams, { state: 'dev' }> = async (req, res) => {
+  try {
+    if (req.query.state === 'dev') {
+      output.api(req, res, GroupService.getDummyStatements());
+      return;
+    }
+
+    const statements = await GroupService.getGroupOffsetStatements(req);
+    output.api(req, res, {
+      ...statements,
+      docs: statements.docs.map(statement => GroupService.getShareableGroupOffsetStatementRef(statement)),
+    });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getGroupMembers: IRequestHandler = async (req, res) => {
   try {
-    const groupMembers = await GroupService.getGroupMembers(req);
-    output.api(req, res, groupMembers.map(member => GroupService.getShareableGroupMember(member)));
+    const query = aqp(req.query, { skipKey: 'page' });
+    const groupMembers = await GroupService.getGroupMembers(req, query);
+    output.api(req, res, {
+      ...groupMembers,
+      docs: groupMembers.docs.map(member => GroupService.getShareableGroupMember(member)),
+    });
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -105,6 +126,15 @@ export const updateUserGroup: IRequestHandler<GroupService.IUpdateUserGroupReque
   try {
     const userGroup = await GroupService.updateUserGroup(req);
     output.api(req, res, GroupService.getShareableUserGroup(userGroup));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const updateUserGroups: IRequestHandler<GroupService.IGroupRequestParams, {}, GroupService.IUpdateUserGroupsRequestBody> = async (req, res) => {
+  try {
+    const userGroups = await GroupService.updateUserGroups(req);
+    output.api(req, res, userGroups.map(userGroup => GroupService.getShareableUserGroup(userGroup)));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

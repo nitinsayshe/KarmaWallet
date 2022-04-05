@@ -9,6 +9,7 @@ import { parse } from 'json2csv';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
+import { ObjectId } from 'mongoose';
 import { printTable } from '../logger';
 import User from './user';
 import { CompanyModel } from '../../models/company';
@@ -351,7 +352,7 @@ export class PlaidMapper {
 
               if (!card) return null;
 
-              return new Transaction(card.userId, card._id, transaction);
+              return new Transaction((card.userId as ObjectId), card._id, transaction);
             })
             .filter(card => !!card),
         ];

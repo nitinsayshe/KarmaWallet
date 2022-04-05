@@ -1,7 +1,11 @@
+import aqp from 'api-query-params';
 import isemail from 'isemail';
-import { FilterQuery, Schema } from 'mongoose';
+import {
+  FilterQuery, isValidObjectId, Schema, UpdateQuery,
+} from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { nanoid } from 'nanoid';
 import {
   emailVerificationDays, TokenTypes,
   ErrorTypes, UserGroupRole, UserRoles,
@@ -30,6 +34,13 @@ import { getRandomInt } from '../../lib/number';
 import { IRef } from '../../types/model';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
+import {
+  IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
+} from '../../models/statement';
+import { getStatements, getAllStatements } from '../statements';
+import {
+  ITransactionDocument, ITransactionMatch, TransactionModel,
+} from '../../models/transaction';
 import { UserGroupStatus } from '../../types/groups';
 
 dayjs.extend(utc);
@@ -66,10 +77,16 @@ export interface IUpdateUserGroupRequestBody {
   status: UserGroupStatus;
 }
 
+export interface IUpdateUserGroupsRequestBody {
+  status: UserGroupStatus;
+  memberIds: string[];
+}
+
 export interface IGroupRequestBody {
   owner?: string; // the id of the owner
   name: string;
   code: string;
+  logo: string;
   status: GroupStatus;
   settings: IGroupSettings;
   domains: string[];
@@ -83,6 +100,16 @@ export interface IJoinGroupRequest {
 
 export interface IGetGroupOffsetRequestParams {
   groupId: string,
+}
+
+export interface IGroupOffsetMatchData {
+  statementIds: string[];
+  groupId: string;
+  totalAmountMatched: number;
+  transactor: {
+    user?: string;
+    group?: string;
+  };
 }
 
 const MAX_CODE_LENGTH = 16;
@@ -188,6 +215,45 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
   }
 
   return _settings;
+};
+
+const buildGetMemberQuery = async (req: IRequest<IGroupRequestParams>, karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin]) => {
+  const { groupId } = req.params;
+  if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+  let requestorUserGroup: IUserGroupDocument;
+
+  // user must be a member of this group or a karma member
+  // to view its members
+  if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
+    requestorUserGroup = await UserGroupModel.findOne({
+      group: groupId,
+      user: req.requestor._id,
+    });
+
+    if (
+      !requestorUserGroup
+        || requestorUserGroup.status === UserGroupStatus.Left
+        || requestorUserGroup.status === UserGroupStatus.Removed
+        || requestorUserGroup.status === UserGroupStatus.Banned
+    ) {
+      throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
+    }
+  }
+
+  // regular members only need to see verified and approved members
+  // only admins (or higher) and karma members need to be able to
+  // see all the other members.
+  const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
+    ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
+    : [UserGroupStatus.Left];
+
+  const query: FilterQuery<IUserGroup> = {
+    group: groupId,
+    status: { $nin: statusesToExclude },
+  };
+
+  return query;
 };
 
 export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
@@ -314,44 +380,31 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
   }
 };
 
-export const getGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
-  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
-
+export const getGroupMembers = async (req: IRequest, query: FilterQuery<IUserGroup>) => {
   try {
-    const { groupId } = req.params;
-    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-
-    let requestorUserGroup: IUserGroupDocument;
-
-    // user must be a member of this group or a karma member
-    // to view its members
-    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
-      requestorUserGroup = await UserGroupModel.findOne({
-        group: groupId,
-        user: req.requestor._id,
-      });
-
-      if (
-        !requestorUserGroup
-        || requestorUserGroup.status === UserGroupStatus.Left
-        || requestorUserGroup.status === UserGroupStatus.Removed
-        || requestorUserGroup.status === UserGroupStatus.Banned
-      ) {
-        throw new CustomError('You are not authorized to view this group\'s members.', ErrorTypes.UNAUTHORIZED);
-      }
-    }
-
-    // regular members only need to see verified and approved members
-    // only admins (or higher) and karma members need to be able to
-    // see all the other members.
-    const statusesToExclude = requestorUserGroup?.role === UserGroupRole.Member
-      ? [UserGroupStatus.Unverified, UserGroupStatus.Left, UserGroupStatus.Removed, UserGroupStatus.Banned]
-      : [UserGroupStatus.Left];
-
-    const query: FilterQuery<IUserGroup> = {
-      group: groupId,
-      status: { $nin: statusesToExclude },
+    const getMemberQuery = await buildGetMemberQuery(req);
+    const options = {
+      projection: query?.projection || '',
+      populate: query.population || [
+        {
+          path: 'user',
+          model: UserModel,
+        },
+      ],
+      page: query?.skip || 1,
+      sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
+      limit: query?.limit || 20,
     };
+
+    return UserGroupModel.paginate({ ...getMemberQuery, ...query.filter }, options);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getAllGroupMembers = async (req: IRequest<IGroupRequestParams>) => {
+  try {
+    const query = await buildGetMemberQuery(req);
 
     const memberUserGroups = await UserGroupModel
       .find(query)
@@ -394,6 +447,96 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
     limit: query?.limit || 10,
   };
   return GroupModel.paginate(query.filter, options);
+};
+
+export const getDummyStatements = () => {
+  const count = 30;
+  const statements: (IShareableStatementRef & { _id: string })[] = [];
+  let timestamp = dayjs().set('date', 14);
+
+  for (let i = 0; i < count; i++) {
+    const amount = getRandomInt(5, 5000);
+    const matched = !!getRandomInt(0, 1);
+    const statement: IShareableStatementRef = {
+      offsets: {
+        matchPercentage: 50,
+        maxDollarAmount: 150,
+        toBeMatched: {
+          dollars: amount * 0.8,
+          tonnes: (amount * 0.018) * 0.8,
+        },
+        totalMemberOffsets: {
+          dollars: amount,
+          tonnes: amount * 0.018,
+        },
+      },
+      date: timestamp.toDate(),
+    };
+
+    if (matched) {
+      statement.offsets.matched = {
+        dollars: 1.34,
+        tonnes: 0.077,
+        date: timestamp.toDate(),
+      };
+    }
+
+    statements.push({
+      _id: nanoid(16),
+      ...statement,
+    });
+
+    timestamp = timestamp.subtract(1, 'month');
+  }
+
+  return {
+    docs: statements,
+    totalDocs: 1,
+    limit: count,
+    totalPages: 1,
+    page: 1,
+    pagingCounter: 1,
+    hasPrevPage: false,
+    hasNextPage: false,
+    prevPage: null as any,
+    nextPage: null as any,
+  };
+};
+
+export const getGroupOffsetStatements = async (req: IRequest<IGroupRequestParams, (FilterQuery<IStatement> & { state?: 'dev' })>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  try {
+    const { groupId } = req.params;
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    // only karma admins+ or group superadmins+ are allowed
+    // to view these statements.
+    if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
+      const groupAllowList = [UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+
+      const userGroup = await UserGroupModel.findOne({
+        user: req.requestor._id.toString(),
+        group: groupId,
+        role: { $in: groupAllowList },
+      });
+
+      if (!userGroup) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    const aqpQuery = aqp(req.query, { skipKey: 'page' });
+    const query = {
+      ...aqpQuery,
+      filter: {
+        ...aqpQuery.filter,
+        group: groupId,
+        offset: { $exists: true },
+      },
+    };
+
+    return getStatements(req, query);
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const getShareableGroup = ({
@@ -445,6 +588,46 @@ export const getShareableGroupMember = ({
     role,
     status,
     joinedOn,
+  };
+};
+
+export const getShareableGroupOffsetStatementRef = ({
+  _id,
+  offsets,
+  date,
+}: IStatementDocument) => {
+  const {
+    matchPercentage,
+    maxDollarAmount,
+    matched,
+    toBeMatched,
+    totalMemberOffsets,
+  } = offsets;
+  const _offsets: IOffsetsStatement = {
+    matchPercentage,
+    maxDollarAmount,
+    toBeMatched: {
+      dollars: toBeMatched.dollars,
+      tonnes: toBeMatched.tonnes,
+    },
+    totalMemberOffsets: {
+      dollars: totalMemberOffsets.dollars,
+      tonnes: totalMemberOffsets.tonnes,
+    },
+  };
+
+  if (!!matched?.dollars) {
+    _offsets.matched = {
+      dollars: matched.dollars,
+      tonnes: matched.tonnes,
+      date: matched.date,
+    };
+  }
+
+  return {
+    _id,
+    offsets: _offsets,
+    date,
   };
 };
 
@@ -732,6 +915,122 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
   }
 };
 
+export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetMatchData) => {
+  try {
+    const {
+      groupId,
+      statementIds = [],
+      totalAmountMatched,
+      transactor,
+    } = matchData;
+
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+    if (!isValidObjectId(groupId)) throw new CustomError('Invalid group id found.', ErrorTypes.INVALID_ARG);
+    if (!totalAmountMatched) throw new CustomError('A total dollar amount matched is required.', ErrorTypes.INVALID_ARG);
+    if (totalAmountMatched <= 0) throw new CustomError('The total dollar amount matched must be a positive amount.', ErrorTypes.INVALID_ARG);
+    if (!statementIds) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
+    if (!Array.isArray(statementIds)) throw new CustomError('Invalid statement id(s). Must be an array of ids.', ErrorTypes.INVALID_ARG);
+    if (!statementIds.length) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
+    const invalidStatementIds = statementIds.filter(s => !isValidObjectId(s));
+    if (invalidStatementIds.length) throw new CustomError(`The follow statement ids are invalid: ${invalidStatementIds.join(', ')}.`, ErrorTypes.INVALID_ARG);
+    if (!transactor || (!transactor.user && !transactor.group)) throw new CustomError('The transactor is required.', ErrorTypes.INVALID_ARG);
+    if (!!transactor.group && !isValidObjectId(transactor.group)) {
+      throw new CustomError('Invalid transactor group found.', ErrorTypes.INVALID_ARG);
+    }
+
+    req.requestor = await UserModel.findOne({ _id: process.env.APP_USER_ID });
+
+    const statements = await getAllStatements(req, {
+      $and: [
+        { _id: { $in: statementIds } },
+        { offsets: { $exists: true } },
+        { group: groupId },
+      ],
+    })
+      .populate([
+        {
+          path: 'group',
+          model: GroupModel,
+        },
+        {
+          path: 'offsets.toBeMatched.transactions.transaction',
+          model: TransactionModel,
+        },
+      ]);
+
+    if (statements.length !== statementIds.length) {
+      const missingStatementIds = statementIds.filter(s => !statements.find(ss => ss._id.toString() === s));
+      throw new CustomError(`The follow statements could not be found: ${missingStatementIds.join(', ')}`, ErrorTypes.INVALID_ARG);
+    }
+
+    // get the total that was to be matched for all statements
+    const totalToBeMatched = statements.reduce((acc, curr) => curr.offsets.toBeMatched.dollars + acc, 0);
+
+    let user: IUserDocument = null;
+    let group: IGroupDocument = null;
+
+    if (!!transactor.user) {
+      // have to account for old ui passing legacy id
+      user = isValidObjectId(transactor.user)
+        ? await UserModel.findOne({ _id: transactor.user })
+        : await UserModel.findOne({ legacyId: transactor.user });
+
+      if (!user) throw new CustomError(`Transactor user with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
+    }
+
+    if (!!transactor.group) {
+      group = await GroupModel.findOne({ _id: transactor.group });
+      if (!group) throw new CustomError(`Transactor group with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
+    }
+
+    let percentageMatched = 1;
+
+    if (totalToBeMatched > totalAmountMatched) {
+      // the full amount to be matched was not met,
+      // calculating the perventage for the amount that
+      // was actually paid.
+      percentageMatched = totalAmountMatched / totalToBeMatched;
+    }
+
+    const timestamp = dayjs().utc().toDate();
+    for (const statement of statements) {
+      const dollarsMatched = statement.offsets.toBeMatched.dollars * percentageMatched;
+      const tonnesMatched = statement.offsets.toBeMatched.tonnes * percentageMatched;
+
+      const matched = {
+        dollars: dollarsMatched,
+        tonnes: tonnesMatched,
+        date: timestamp,
+        transactor: { user, group },
+      };
+
+      statement.offsets.matched = matched;
+      await statement.save();
+
+      for (const toBeMatchedTransaction of statement.offsets.toBeMatched.transactions) {
+        const { value, transaction } = toBeMatchedTransaction;
+
+        const valueMatched = value * percentageMatched;
+
+        const matchedTransaction: ITransactionMatch = {
+          amount: valueMatched,
+          date: timestamp,
+          matcher: { user, group },
+          status: true,
+        };
+
+        (transaction as ITransactionDocument).matched = matchedTransaction;
+        await (transaction as ITransactionDocument).save();
+      }
+    }
+
+    // TODO: send email to members letting them know the group has matched their transactions?
+    //   - if we do this, we should probably re-run the group member data job so shows live data
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupRequestBody>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
   const { groupId } = req.params;
@@ -739,6 +1038,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     owner,
     name,
     code,
+    logo,
     status,
     settings,
     domains,
@@ -746,7 +1046,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
-    if (!owner && !name && !code && !status && !settings && !domains) {
+    if (!owner && !name && !code && !logo && !status && !settings && !domains) {
       throw new CustomError('No updatable data found.', ErrorTypes.UNPROCESSABLE);
     }
 
@@ -822,6 +1122,14 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     if (!!code) {
       if (!isValidCode(code)) throw new CustomError('Invalid code found. Group codes can only contain letters, numbers, and hyphens (-).', ErrorTypes.INVALID_ARG);
       group.code = code;
+    }
+
+    if (!!logo) {
+      if (!logo.includes(`group/${group._id}`)) {
+        throw new CustomError('Invalid logo url found. Please upload image first, then use returned url.', ErrorTypes.INVALID_ARG);
+      }
+
+      group.logo = logo;
     }
 
     if (!!status && group.status !== status) {
@@ -981,6 +1289,116 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
   }
 };
 
+export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IUpdateUserGroupsRequestBody>) => {
+  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  const { groupId } = req.params;
+  const {
+    status,
+    memberIds = [],
+  } = req.body;
+
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    // verify that at least 1 batch update supported property
+    // has been passed
+    //
+    // currently, we only support batch status updates...but adding
+    // here in case this is updated in the future and we allow
+    // different types of batch updates.
+    if (!status) throw new CustomError('No updatable data found.', ErrorTypes.INVALID_ARG);
+
+    if (status) {
+      if (!Object.values(UserGroupStatus).find(s => s === status)) {
+        throw new CustomError('Invalid status found.', ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    const userGroups = await UserGroupModel.find({
+      user: req.requestor,
+      group: groupId,
+    })
+      .populate([
+        {
+          path: 'user',
+          model: UserModel,
+        },
+        {
+          path: 'group',
+          model: GroupModel,
+        },
+      ]);
+
+    const requestorUserGroup = userGroups.find(u => (u.user as IUserDocument)._id.toString() === req.requestor._id.toString());
+
+    if (
+      !karmaAllowList.includes(req.requestor.role as UserRoles)
+      && (
+        !requestorUserGroup
+        || (
+          requestorUserGroup.role !== UserGroupRole.Admin
+          && requestorUserGroup.role !== UserGroupRole.SuperAdmin
+          && requestorUserGroup.role !== UserGroupRole.Owner
+        )
+      )
+    ) {
+      // user must be a karma member, or an admin or higher to make this request
+      throw new CustomError('You are not allowed to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    let rolesRequestorIsAllowedToUpdate: UserGroupRole[];
+
+    if (requestorUserGroup.role === UserGroupRole.SuperAdmin && rolesRequestorIsAllowedToUpdate.length === 1) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin];
+    }
+
+    if (requestorUserGroup.role === UserGroupRole.Owner) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin];
+    }
+
+    if (req.requestor.role === UserRoles.Admin || req.requestor.role === UserRoles.SuperAdmin) {
+      rolesRequestorIsAllowedToUpdate = [UserGroupRole.Member, UserGroupRole.Admin, UserGroupRole.SuperAdmin, UserGroupRole.Owner];
+    }
+
+    const query: FilterQuery<IUserGroup> = {
+      $and: [
+        { role: { $in: rolesRequestorIsAllowedToUpdate } },
+        { group: groupId },
+      ],
+    };
+
+    // if no memberIds are specified, then will attempt to update
+    // ALL members that the requestor is allowed to update
+    if (memberIds?.length) query.$and.push({ user: { $in: memberIds } });
+
+    const memberUserGroups = await UserGroupModel.find(query);
+
+    if (memberIds?.length && memberUserGroups.length !== memberIds.length) {
+      // at least 1 id was included that the requestor is not allowed to update
+      throw new CustomError(
+        'You are not allowed to update all of these users. Please check the list of members to be updated and try again.',
+        ErrorTypes.UNAUTHORIZED,
+      );
+    }
+
+    const timestamp = dayjs().utc().toDate();
+
+    const update: UpdateQuery<IUserGroup> = {
+      status,
+      lastModified: timestamp,
+    };
+    await UserGroupModel.updateMany(query, update);
+    const updatedMemberUserGroups = await UserGroupModel.find(query);
+
+    // TODO: verify that all user groups were updated?
+    // TODO: add to change log for group for record keeping and maintenance
+
+    return updatedMemberUserGroups;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
@@ -989,7 +1407,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
       throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     }
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const membersPromise = getGroupMembers(req);
+    const membersPromise = getAllGroupMembers(req);
     const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
 
     const memberDonations = {

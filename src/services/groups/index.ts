@@ -297,6 +297,10 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
           path: 'owner',
           model: UserModel,
         },
+        {
+          path: 'members',
+          model: UserGroupModel,
+        },
       ]);
 
     if (!group) {
@@ -420,7 +424,7 @@ export const getShareableGroup = ({
     settings,
     status,
     owner: _owner,
-    totalMembers: members.length,
+    totalMembers: members?.length || null,
     lastModified,
     createdOn,
   };

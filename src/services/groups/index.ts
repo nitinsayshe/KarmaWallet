@@ -20,7 +20,7 @@ import {
   IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup, GroupStatus,
 } from '../../models/group';
 import {
-  IShareableUserGroup, IUserGroup, IUserGroupDocument, UserGroupModel, UserGroupStatus,
+  IShareableUserGroup, IUserGroup, IUserGroupDocument, UserGroupModel,
 } from '../../models/userGroup';
 import { IRequest } from '../../types/request';
 import * as TokenService from '../token';
@@ -41,6 +41,7 @@ import { getStatements, getAllStatements } from '../statements';
 import {
   ITransactionDocument, ITransactionMatch, TransactionModel,
 } from '../../models/transaction';
+import { UserGroupStatus } from '../../types/groups';
 
 dayjs.extend(utc);
 
@@ -362,6 +363,10 @@ export const getGroup = async (req: IRequest<IGroupRequestParams, IGetGroupReque
           path: 'owner',
           model: UserModel,
         },
+        {
+          path: 'members',
+          model: UserGroupModel,
+        },
       ]);
 
     if (!group) {
@@ -430,6 +435,10 @@ export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
       {
         path: 'owner',
         model: UserModel,
+      },
+      {
+        path: 'members',
+        model: UserGroupModel,
       },
     ],
     lean: true,
@@ -537,6 +546,7 @@ export const getShareableGroup = ({
   domains,
   logo,
   settings,
+  members,
   owner,
   status,
   lastModified,
@@ -557,6 +567,7 @@ export const getShareableGroup = ({
     settings,
     status,
     owner: _owner,
+    totalMembers: members?.length || null,
     lastModified,
     createdOn,
   };

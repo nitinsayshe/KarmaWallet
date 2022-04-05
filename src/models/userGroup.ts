@@ -7,19 +7,11 @@ import {
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { UserGroupRole } from '../lib/constants';
+import { UserGroupStatus } from '../types/groups';
 import { IModel, IRef } from '../types/model';
 import { IGroup, IShareableGroup } from './group';
 import { ISubgroup } from './subgroup';
 import { IShareableUser, IUser } from './user';
-
-export enum UserGroupStatus {
-  Unverified = 'unverified',
-  Verified = 'verified',
-  Approved = 'approved',
-  Removed = 'removed',
-  Banned = 'banned',
-  Left = 'left',
-}
 
 export interface IShareableGroupMember {
   name: string;

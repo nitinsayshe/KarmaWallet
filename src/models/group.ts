@@ -5,6 +5,7 @@ import {
   PaginateModel,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
+import { UserGroupStatus } from '../types/groups';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser } from './user';
 
@@ -58,6 +59,7 @@ export interface IShareableGroup {
   settings: IGroupSettings;
   owner: IRef<Schema.Types.ObjectId, (IShareableOwner | IShareableUser)>;
   status: GroupStatus;
+  totalMembers: number;
   createdOn: Date;
   lastModified: Date;
 }
@@ -67,7 +69,8 @@ export interface IGroup extends IShareableGroup {
   domains: string[];
   invites: string[];
   logo: string;
-  company: string,
+  company: string;
+  members: Schema.Types.ObjectId[]
 }
 
 export interface IGroupDocument extends IGroup, Document {}
@@ -132,5 +135,13 @@ const groupSchema = new Schema({
   },
 });
 groupSchema.plugin(mongoosePaginate);
+
+groupSchema.virtual('members', {
+  ref: 'UserGroup',
+  localField: '_id',
+  foreignField: 'group',
+  justOne: false,
+  match: { status: { $nin: [UserGroupStatus.Banned, UserGroupStatus.Left, UserGroupStatus.Removed] } },
+});
 
 export const GroupModel = model<IGroupDocument, PaginateModel<IGroup>>('group', groupSchema);

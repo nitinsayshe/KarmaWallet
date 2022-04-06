@@ -23,8 +23,13 @@ export const getGroup: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getGroupOffsetStatements: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+export const getGroupOffsetStatements: IRequestHandler<GroupService.IGroupRequestParams, { state: 'dev' }> = async (req, res) => {
   try {
+    if (req.query.state === 'dev') {
+      output.api(req, res, GroupService.getDummyStatements());
+      return;
+    }
+
     const statements = await GroupService.getGroupOffsetStatements(req);
     output.api(req, res, {
       ...statements,

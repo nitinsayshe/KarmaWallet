@@ -27,7 +27,7 @@ export interface IShareableCompany {
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define
-  parentCompany: IRef<number, IShareableCompany>;
+  parentCompany: IRef<ObjectId, IShareableCompany>;
   sectors: IRef<ObjectId, ISector>[];
   slug: string;
   url: string;

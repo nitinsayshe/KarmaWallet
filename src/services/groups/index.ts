@@ -1369,7 +1369,11 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
 
     // if no memberIds are specified, then will attempt to update
     // ALL members that the requestor is allowed to update
-    if (memberIds?.length) query.$and.push({ user: { $in: memberIds } });
+    if (memberIds?.length) {
+      query.$and.push({ user: { $in: memberIds.filter(id => id !== req.requestor._id) } });
+    } else {
+      query.$and.push({ user: { $ne: req.requestor._id } });
+    }
 
     const memberUserGroups = await UserGroupModel.find(query);
 

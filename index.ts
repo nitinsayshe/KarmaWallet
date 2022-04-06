@@ -29,7 +29,7 @@ const port = process.env.PORT || 8012;
   app.use(checkToken);
   app.use(identify);
   app.use(express.urlencoded({ extended: true }) as any); // temp workaround for broken types with express typings
-  app.use(express.json() as any); // temp workaround for broken types with express typings
+  app.use(express.json({ limit: `${100 * 1024 * 1024}mb` }) as any); // temp workaround for broken types with express typings { limit: `${100 * 1024 * 1024}mb` }
   app.use(await rateLimiter({ keyPrefix: 'main-middleware' }));
 
   const httpServer = app.listen(port, () => {

@@ -69,7 +69,7 @@ export const sendGroupVerificationEmail = async ({
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
-  const verificationLink = `${domain}/account?altEmailVerification=${token}`;
+  const verificationLink = `${domain}/account?emailVerification=${token}`;
   const template = buildTemplate(EmailTemplates.GroupVerification, {
     verificationLink, name, token, groupName,
   });

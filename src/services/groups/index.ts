@@ -744,11 +744,11 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    const existingAltEmail = user?.emails?.find(e => e.email === validEmail);
+    const existingEmail = user?.emails?.find(e => e.email === validEmail);
 
     // add groupEmail to user's list of altEmails if doesnt already exist and
     // is not their primary email
-    if (!existingAltEmail && user.email !== validEmail) {
+    if (!existingEmail) {
       user.emails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
@@ -757,9 +757,9 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     // send verification email if
     // group has domain restriction AND
-    // altEmail exists and is unverified or
-    // doesnt already exist and is not their primary email
-    if (hasDomainRestrictions && ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail))) {
+    // email exists and is unverified or
+    // doesnt already exist
+    if (hasDomainRestrictions && ((existingEmail?.status === UserEmailStatus.Unverified) || !existingEmail)) {
       const token = await TokenService.createToken({
         user, days: emailVerificationDays, type: TokenTypes.Email, resource: { altEmail: validEmail },
       });
@@ -768,10 +768,9 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       });
     }
 
-    // if the email used is the user's primary email OR
-    // is an alt email that has already been verified, set
+    // if the email used already exists and has been verified
     // the role to Verified.
-    const defaultStatus = validEmail === user.email || user.emails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
+    const defaultStatus = existingEmail?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
       ? UserGroupStatus.Verified
       : UserGroupStatus.Unverified;
 

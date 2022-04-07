@@ -826,9 +826,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // add groupEmail to user's list of altEmails if doesnt already exist and
     // is not their primary email
     if (!existingEmail) {
+      const usersWithEmail = await UserModel.find({ 'emails.email': validEmail });
+      if (usersWithEmail.length > 0) throw new CustomError('This email is already in use.', ErrorTypes.UNPROCESSABLE);
       user.emails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
+        primary: false,
       });
     }
 

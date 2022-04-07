@@ -13,9 +13,16 @@ export enum UserEmailStatus {
   Verified = 'verified',
 }
 
+// TODO: remove after mapping
+export interface IAltEmail {
+  email: string;
+  status: UserEmailStatus;
+}
+
 export interface IEmail {
   email: string;
   status: UserEmailStatus;
+  primary: boolean;
 }
 
 export interface IRareUserIntegration {
@@ -38,6 +45,7 @@ export interface IShareableUser {
 
 export interface IUser extends IShareableUser {
   emails: IEmail[];
+  altEmails: IAltEmail[];
   password: string;
   lastModified: Date;
   integrations?: IUserIntegrations;
@@ -56,6 +64,7 @@ const userSchema = new Schema({
         enum: Object.values(UserEmailStatus),
         default: UserEmailStatus.Unverified,
       },
+      primary: { type: Boolean, default: false },
     },
   }],
   name: { type: String, required: true },
@@ -68,6 +77,16 @@ const userSchema = new Schema({
     default: 'none',
     enum: Object.values(UserRoles),
   },
+  altEmails: [{
+    type: {
+      email: { type: String },
+      status: {
+        type: String,
+        enum: Object.values(UserEmailStatus),
+        default: UserEmailStatus.Unverified,
+      },
+    },
+  }],
   lastModified: { type: Date, default: new Date() },
   legacyId: { type: String },
   integrations: {

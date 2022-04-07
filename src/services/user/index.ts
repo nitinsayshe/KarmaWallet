@@ -4,7 +4,7 @@ import { FilterQuery } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  IUser, IUserDocument, UserModel,
+  IUser, IUserDocument, UserEmailStatus, UserModel,
 } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
@@ -56,7 +56,7 @@ export const register = async (req: IRequest, {
       throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
     }
     const hash = await argon2.hash(password);
-    const emailExists = await UserModel.findOne({ email });
+    const emailExists = await UserModel.findOne({ 'emails.email': email });
     if (emailExists) {
       throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
     }
@@ -96,7 +96,7 @@ export const register = async (req: IRequest, {
 };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
-  const user = await UserModel.findOne({ email });
+  const user = await UserModel.findOne({ 'emails.email': email });
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
@@ -190,18 +190,45 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   return updateUser(req, user, { password: hash });
 };
 
+type UserKeys = keyof IUser;
+
 export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
-  if (updates?.email) {
-    // TODO: update user email array
-    if (!isValidEmailFormat(updates.email)) {
-      throw new CustomError('Invalid email', ErrorTypes.INVALID_ARG);
-      // updates.emails = false;
+  const user = await UserModel.findOne({ _id: uid });
+  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+  if (updates?.email && isValidEmailFormat(updates.email)) {
+    const existingEmail = user.emails.find(email => email.email === updates.email);
+    if (!existingEmail) {
+      user.emails.map(email => ({ ...email, primary: false }));
+      user.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
+      // TODO: Send verification email
+    } else {
+      user.emails.map(email => {
+        if (updates.email === email.email) {
+          return { ...email, primary: true };
+        }
+        return { ...email, primary: false };
+      });
     }
   }
-  const user = await UserModel.findById(uid);
-  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
-
-  return updateUser(req, user, updates);
+  const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
+  // TODO: find solution to allow dynamic setting of fields
+  for (const key of allowedFields) {
+    switch (key) {
+      case 'name':
+        user.name = updates.name;
+        break;
+      case 'zipcode':
+        user.zipcode = updates.zipcode;
+        break;
+      case 'subscribedUpdates':
+        user.subscribedUpdates = updates.subscribedUpdates;
+        break;
+      default:
+        break;
+    }
+  }
+  await user.save();
+  return user;
 };
 
 export const updatePassword = async (req: IRequest, newPassword: string, currentPassword: string) => {
@@ -215,7 +242,7 @@ export const updatePassword = async (req: IRequest, newPassword: string, current
 
 export const createPasswordResetToken = async (_: IRequest, email: string) => {
   const minutes = passwordResetTokenMinutes;
-  const user = await UserModel.findOne({ email });
+  const user = await UserModel.findOne({ 'emails.email': email });
   if (user) {
     await TokenService.createToken({ user, minutes, type: TokenTypes.Password });
   }
@@ -226,7 +253,7 @@ export const createPasswordResetToken = async (_: IRequest, email: string) => {
 
 export const resetPasswordFromToken = async (req: IRequest, email: string, value: string, password: string) => {
   const errMsg = 'Token not found. Please request password reset again.';
-  const user = await UserModel.findOne({ email }, '_id');
+  const user = await UserModel.findOne({ 'emails.email': email });
   if (!user) {
     throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   }

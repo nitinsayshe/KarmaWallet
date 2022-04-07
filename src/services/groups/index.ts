@@ -778,11 +778,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup: IUserGroupDocument = await UserGroupModel
-      .findOne({
-        group,
-        user,
-      })
+    const existingUserGroups: IUserGroupDocument[] = await UserGroupModel
+      .find({ group })
       .populate([
         {
           path: 'group',
@@ -790,16 +787,18 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         },
       ]);
 
-    if (existingUserGroup?.status === UserGroupStatus.Banned) {
+    const usersUserGroup = existingUserGroups.find(g => g.user.toString() === user._id.toString());
+
+    if (usersUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
     }
 
     // TODO: status === Removed, check if needs approval to join again
 
     if (
-      existingUserGroup?.status === UserGroupStatus.Unverified
-      || existingUserGroup?.status === UserGroupStatus.Verified
-      || existingUserGroup?.status === UserGroupStatus.Approved
+      usersUserGroup?.status === UserGroupStatus.Unverified
+      || usersUserGroup?.status === UserGroupStatus.Verified
+      || usersUserGroup?.status === UserGroupStatus.Approved
     ) {
       throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
     }
@@ -820,6 +819,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
       validEmail = _validEmail;
     }
+
+    const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
+
+    if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
 
     const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
 
@@ -853,12 +856,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       : UserGroupStatus.Unverified;
 
     let userGroup: IUserGroupDocument = null;
-    if (!!existingUserGroup) {
-      existingUserGroup.email = validEmail;
-      existingUserGroup.role = UserGroupRole.Member;
-      existingUserGroup.status = defaultStatus;
+    if (!!usersUserGroup) {
+      usersUserGroup.email = validEmail;
+      usersUserGroup.role = UserGroupRole.Member;
+      usersUserGroup.status = defaultStatus;
 
-      await existingUserGroup.save();
+      await usersUserGroup.save();
     } else {
       userGroup = new UserGroupModel({
         user,
@@ -873,7 +876,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     await user.save();
 
-    return userGroup ?? existingUserGroup;
+    return userGroup ?? usersUserGroup;
   } catch (err) {
     throw asCustomError(err);
   }

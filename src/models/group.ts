@@ -98,22 +98,26 @@ const groupSchema = new Schema({
     default: new Date(),
   },
   settings: {
-    privacyStatus: {
-      type: String,
-      enum: Object.values(GroupPrivacyStatus),
-      default: GroupPrivacyStatus.Private,
-    },
-    allowInvite: { type: Boolean },
-    allowDomainRestriction: { type: Boolean },
-    allowSubgroups: { type: Boolean },
-    approvalRequired: { type: Boolean },
-    matching: {
-      enabled: { type: Boolean },
-      matchPercentage: { type: Number },
-      maxDollarAmount: { type: Number },
-      lastModified: {
-        type: Date,
-        default: new Date(),
+    type: {
+      privacyStatus: {
+        type: String,
+        enum: Object.values(GroupPrivacyStatus),
+        default: GroupPrivacyStatus.Private,
+      },
+      allowInvite: { type: Boolean },
+      allowDomainRestriction: { type: Boolean },
+      allowSubgroups: { type: Boolean },
+      approvalRequired: { type: Boolean },
+      matching: {
+        type: {
+          enabled: { type: Boolean },
+          matchPercentage: { type: Number },
+          maxDollarAmount: { type: Number },
+          lastModified: {
+            type: Date,
+            default: new Date(),
+          },
+        },
       },
     },
   },

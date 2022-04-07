@@ -122,8 +122,8 @@ const defaultGroupSettings: IGroupSettings = {
   approvalRequired: false,
   matching: {
     enabled: false,
-    matchPercentage: -1,
-    maxDollarAmount: -1,
+    matchPercentage: null,
+    maxDollarAmount: null,
     lastModified: dayjs().utc().toDate(),
   },
 };
@@ -160,12 +160,11 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   return Array.from(_domains);
 };
 
-export const verifyGroupSettings = (settings: IGroupSettings) => {
-  const _settings = { ...defaultGroupSettings };
+export const verifyGroupSettings = (settings: IGroupSettings, previousSettings?: IGroupSettings) => {
+  const _settings = { ...defaultGroupSettings, ...(previousSettings || {}) };
   if (!!settings) {
     // settings provided...only add supported settings
     // to group...
-
     if (
       !('privacyStatus' in settings)
       && !('allowInvite' in settings)
@@ -195,21 +194,67 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
     if ('matching' in settings) {
       const {
         enabled,
-        matchPercentage = -1,
-        maxDollarAmount = -1,
+        matchPercentage,
+        maxDollarAmount,
       } = settings.matching;
 
       if (enabled) {
-        _settings.matching.enabled = !!enabled;
-
         if (!matchPercentage && !maxDollarAmount) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
-        const _matchPercentage = parseFloat(`${matchPercentage}`);
-        const _maxDollarAmount = parseFloat(`${maxDollarAmount}`);
-        if (isNaN(_matchPercentage)) throw new CustomError('Invalid match percent found. Must be a number.', ErrorTypes.INVALID_ARG);
-        if (isNaN(_maxDollarAmount)) throw new CustomError('Invalid max dollar amount found. Must be a number.', ErrorTypes.INVALID_ARG);
-        if (matchPercentage < 0 && maxDollarAmount < 0) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
-        _settings.matching.matchPercentage = _matchPercentage;
-        _settings.matching.maxDollarAmount = _maxDollarAmount;
+
+        let _matchPercentage: number;
+        let _maxDollarAmount: number;
+        let changeFound = _settings.matching.enabled !== !!enabled;
+
+        if (!!matchPercentage) {
+          _matchPercentage = parseFloat(`${matchPercentage}`);
+
+          if (isNaN(_matchPercentage)) throw new CustomError('Invalid match percent found. Must be a number.', ErrorTypes.INVALID_ARG);
+          if (_matchPercentage <= 0 || _matchPercentage > 100) throw new CustomError('Invalid match percent found. Must be a number greater than 0, but less than or equal to 100.', ErrorTypes.INVALID_ARG);
+
+          if (_settings.matching.matchPercentage !== _matchPercentage) changeFound = true;
+
+          _settings.matching.matchPercentage = _matchPercentage;
+        } else {
+          if (_settings.matching.matchPercentage !== null) changeFound = true;
+
+          _settings.matching.matchPercentage = null;
+        }
+
+        if (!!maxDollarAmount) {
+          _maxDollarAmount = parseFloat(`${maxDollarAmount}`);
+
+          if (isNaN(_maxDollarAmount)) throw new CustomError('Invalid max dollar amount found. Must be a number.', ErrorTypes.INVALID_ARG);
+          if (_maxDollarAmount < 0) throw new CustomError('Invalid max dollar amount found. Must be a number greater than or equal to 0.', ErrorTypes.INVALID_ARG);
+
+          if (!!_maxDollarAmount) {
+            if (_settings.matching.maxDollarAmount !== _maxDollarAmount) changeFound = true;
+
+            _settings.matching.maxDollarAmount = _maxDollarAmount;
+          } else {
+            // maxDollarAmount was set to 0, so just defaulting to null
+            if (_settings.matching.maxDollarAmount !== null) changeFound = true;
+
+            _settings.matching.maxDollarAmount = null;
+          }
+        } else {
+          if (_settings.matching.maxDollarAmount !== null) changeFound = true;
+
+          _settings.matching.maxDollarAmount = null;
+        }
+
+        _settings.matching.enabled = !!enabled;
+        if (changeFound) _settings.matching.lastModified = dayjs().utc().toDate();
+      } else {
+        const changeFound = _settings.matching.enabled !== enabled
+          || _settings.matching.matchPercentage !== null
+          || _settings.matching.maxDollarAmount !== null;
+
+        _settings.matching.matchPercentage = null;
+        _settings.matching.maxDollarAmount = null;
+        _settings.matching.enabled = false;
+        if (changeFound) {
+          _settings.matching.lastModified = dayjs().utc().toDate();
+        }
       }
     }
   }
@@ -1146,8 +1191,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     }
 
     if (!!settings) {
-      const updatedSettings = { ...group.settings, ...settings };
-      group.settings = verifyGroupSettings(updatedSettings);
+      group.settings = verifyGroupSettings(settings, (group.toObject()).settings);
     }
 
     if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);

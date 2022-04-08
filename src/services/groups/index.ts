@@ -841,7 +841,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // doesnt already exist
     if (hasDomainRestrictions && ((existingEmail?.status === UserEmailStatus.Unverified) || !existingEmail)) {
       const token = await TokenService.createToken({
-        user, days: emailVerificationDays, type: TokenTypes.Email, resource: { altEmail: validEmail },
+        user, days: emailVerificationDays, type: TokenTypes.Email, resource: { email: validEmail },
       });
       await sendGroupVerificationEmail({
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,

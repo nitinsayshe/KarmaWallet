@@ -11,6 +11,7 @@ import { IGroupOffsetMatchData, matchMemberOffsets, getGroup } from '../services
 import { IRareRelayedQueryParams } from '../integrations/rare/types';
 import { Logger } from '../services/logger';
 import { validateStatementList } from '../services/statements';
+import { IStatementDocument } from '../models/statement';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -54,7 +55,7 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
       }
     }
 
-    let statements;
+    let statements: IStatementDocument[] = [];
     if (statementIds) {
       try {
         // if only 1 statement id is received, shows up as a string

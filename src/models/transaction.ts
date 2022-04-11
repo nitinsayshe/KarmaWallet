@@ -196,6 +196,10 @@ const transactionSchema = new Schema({
     },
   },
   createdOn: { type: Date },
+  /**
+   * transactions can be made on behalf of others...setting
+   * this specifies who this transaction was made for.
+   */
   onBehalfOf: {
     type: {
       user: {

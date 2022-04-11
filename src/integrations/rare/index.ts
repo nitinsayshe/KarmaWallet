@@ -6,7 +6,7 @@ import { RareTransactionMapper } from './mapper';
 import { IRareTransaction } from './transaction';
 import { IGroupDocument } from '../../models/group';
 
-export const mapTransactions = async (rareTransactions: IRareTransaction[] = [], isMatch: boolean = false, group: IGroupDocument = null) => {
+export const mapTransactions = async (rareTransactions: IRareTransaction[] = [], isMatch = false, group: IGroupDocument = null) => {
   try {
     if (!rareTransactions.length) throw new CustomError('No rare transactions found. Exiting.');
 

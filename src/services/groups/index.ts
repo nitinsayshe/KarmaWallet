@@ -108,7 +108,7 @@ export interface IGroupOffsetMatchData {
   totalAmountMatched: number;
   transactor: {
     user?: string;
-    group?: IGroupDocument;
+    group?: IRef<Schema.Types.ObjectId, IGroupDocument>;
   };
 }
 
@@ -982,7 +982,6 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
     req.requestor = await UserModel.findOne({ _id: process.env.APP_USER_ID });
 
     // get the total that was to be matched for all statements
-
     const totalToBeMatched = statements.reduce((acc, curr) => curr.offsets.toBeMatched.dollars + acc, 0);
 
     let user: IUserDocument = null;

@@ -1,6 +1,9 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ITransactionDocument, MatchTypes, TransactionModel } from '../../models/transaction';
+import {
+  ITransaction,
+  ITransactionDocument, MatchTypes, TransactionModel,
+} from '../../models/transaction';
 import { IUserDocument } from '../../models/user';
 import { ICompanyDocument } from '../../models/company';
 import { ErrorTypes } from '../../lib/constants';
@@ -68,26 +71,32 @@ export class Transaction {
     this._plaidCategoryMapping = await PlaidCategoryMappingModel.findOne({ _id: '61e96acb12e95f10dcdcf00e' });
   };
 
-  toKarmaFormat = () => ({
-    userId: this._userId,
-    cardId: this._cardId,
-    companyId: this._companyId,
-    amount: this._amount,
-    date: this._date,
-    integrations: this._transaction?.integrations?.rare || {
-      rare: {
-        ...this._rareTransaction,
-        projectName: 'Catch Carbon Project',
+  toKarmaFormat = () => {
+    const transaction: Partial<ITransaction> = {
+      userId: this._userId,
+      cardId: this._cardId,
+      companyId: this._companyId,
+      amount: this._amount,
+      date: this._date,
+      integrations: this._transaction?.integrations || {
+        rare: {
+          ...this._rareTransaction,
+          projectName: 'Catch Carbon Project',
+        },
       },
-    },
-    category: this._category,
-    subcategory: this._subCategory,
-    carbonMultiplier: this._plaidCategoryMapping,
-    matchType: this.__matchType,
-    assocation: {
-      group: this._group,
-    },
-  });
+      category: this._category,
+      subCategory: this._subCategory,
+      carbonMultiplier: this._plaidCategoryMapping,
+      matchType: this._matchType,
+    };
+    const group = this._group;
+    if (group) {
+      transaction.association = {
+        group,
+      };
+    }
+    return transaction;
+  };
 
   save = async () => {
     try {

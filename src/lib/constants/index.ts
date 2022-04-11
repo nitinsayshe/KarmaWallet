@@ -118,6 +118,8 @@ export const AllowedOrigins = [
   'https://group.staging.karmawallet.io',
   'http://group.sandbox-1.karmawallet.io',
   'https://group.sandbox-1.karmawallet.io',
+  'https://frontend.staging.karmawallet.io',
+  'http://frontend.staging.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;

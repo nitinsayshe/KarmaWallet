@@ -10,7 +10,7 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { Card, IRareCard } from './card';
 import { IPlaidCategoryMappingDocument, PlaidCategoryMappingModel } from '../../models/plaidCategoryMapping';
-import { IGroupDocument } from '../../models/group';
+import { IGroup } from '../../models/group';
 
 dayjs.extend(utc);
 
@@ -40,7 +40,7 @@ export class Transaction {
   private _rareTransaction: IRareTransaction = null;
   private _transaction: ITransactionDocument = null;
   private _plaidCategoryMapping: IPlaidCategoryMappingDocument = null;
-  private __group: IGroupDocument = null;
+  private __group: IGroup = null;
   private __matchType: MatchTypes = null;
 
   constructor(user: IUserDocument, company: ICompanyDocument, card: Card, rareTransaction: IRareTransaction) {
@@ -65,7 +65,7 @@ export class Transaction {
   get _matchType() { return this.__matchType; }
   set _matchType(matchType: MatchTypes) { this.__matchType = matchType; }
   get _group() { return this.__group; }
-  set _group(group: IGroupDocument) { this.__group = group; }
+  set _group(group: IGroup) { this.__group = group; }
 
   load = async () => {
     this._plaidCategoryMapping = await PlaidCategoryMappingModel.findOne({ _id: '61e96acb12e95f10dcdcf00e' });
@@ -87,8 +87,11 @@ export class Transaction {
       category: this._category,
       subCategory: this._subCategory,
       carbonMultiplier: this._plaidCategoryMapping,
-      matchType: this._matchType,
     };
+    const matchType = this._matchType;
+    if (matchType) {
+      transaction.matchType = matchType;
+    }
     const group = this._group;
     if (group) {
       transaction.association = {

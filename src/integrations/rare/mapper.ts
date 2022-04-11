@@ -5,7 +5,9 @@ import { ErrorTypes } from '../../lib/constants';
 import { Card } from './card';
 import { IRareTransaction, Transaction } from './transaction';
 import { MatchTypes } from '../../models/transaction';
-import { IGroupDocument } from '../../models/group';
+import { IGroup, IGroupDocument } from '../../models/group';
+import { mockRequest } from '../../lib/constants/request';
+import { getUserGroups } from '../../services/groups';
 
 export class RareTransactionMapper {
   _rareTransactions: IRareTransaction[] = [];
@@ -65,6 +67,12 @@ export class RareTransactionMapper {
 
         if (group) {
           _transaction._group = group;
+        } else {
+        // if user is associated with group, get group and set transaction._group
+          const [userGroup] = await getUserGroups({ ...mockRequest, requestor: user, params: { userId: user._id.toString() } });
+          if (userGroup) {
+            _transaction._group = userGroup.group as IGroup;
+          }
         }
 
         await _transaction.load();

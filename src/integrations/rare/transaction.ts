@@ -1,12 +1,13 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ITransactionDocument, TransactionModel } from '../../models/transaction';
+import { ITransactionDocument, MatchTypes, TransactionModel } from '../../models/transaction';
 import { IUserDocument } from '../../models/user';
 import { ICompanyDocument } from '../../models/company';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { Card, IRareCard } from './card';
 import { IPlaidCategoryMappingDocument, PlaidCategoryMappingModel } from '../../models/plaidCategoryMapping';
+import { IGroupDocument } from '../../models/group';
 
 dayjs.extend(utc);
 
@@ -36,6 +37,8 @@ export class Transaction {
   private _rareTransaction: IRareTransaction = null;
   private _transaction: ITransactionDocument = null;
   private _plaidCategoryMapping: IPlaidCategoryMappingDocument = null;
+  private __group: IGroupDocument = null;
+  private __matchType: MatchTypes = null;
 
   constructor(user: IUserDocument, company: ICompanyDocument, card: Card, rareTransaction: IRareTransaction) {
     if (!user) throw new CustomError('Rare Integration Trasaction Error - no user provided', ErrorTypes.INVALID_ARG);
@@ -56,6 +59,10 @@ export class Transaction {
   get _date() { return this._transaction?.date || new Date(this._rareTransaction.processed_ts); }
   get _category() { return 10; } // hardcoding for now
   get _subCategory() { return 100002; } // hard coding for now
+  get _matchType() { return this.__matchType; }
+  set _matchType(matchType: MatchTypes) { this.__matchType = matchType; }
+  get _group() { return this.__group; }
+  set _group(group: IGroupDocument) { this.__group = group; }
 
   load = async () => {
     this._plaidCategoryMapping = await PlaidCategoryMappingModel.findOne({ _id: '61e96acb12e95f10dcdcf00e' });
@@ -76,6 +83,10 @@ export class Transaction {
     category: this._category,
     subcategory: this._subCategory,
     carbonMultiplier: this._plaidCategoryMapping,
+    matchType: this.__matchType,
+    assocation: {
+      group: this._group,
+    },
   });
 
   save = async () => {

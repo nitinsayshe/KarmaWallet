@@ -37,9 +37,9 @@ import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 import {
   IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
 } from '../../models/statement';
-import { getStatements, getAllStatements } from '../statements';
+import { getStatements } from '../statements';
 import {
-  ITransactionDocument, ITransactionMatch, TransactionModel,
+  ITransactionDocument, ITransactionMatch, MatchTypes,
 } from '../../models/transaction';
 import { UserGroupStatus } from '../../types/groups';
 
@@ -103,12 +103,12 @@ export interface IGetGroupOffsetRequestParams {
 }
 
 export interface IGroupOffsetMatchData {
-  statementIds: string[];
-  groupId: string;
+  group: IGroupDocument;
+  statements: IStatementDocument[];
   totalAmountMatched: number;
   transactor: {
     user?: string;
-    group?: string;
+    group?: IGroupDocument;
   };
 }
 
@@ -966,21 +966,14 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
 export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetMatchData) => {
   try {
     const {
-      groupId,
-      statementIds = [],
+      group,
+      statements,
       totalAmountMatched,
       transactor,
     } = matchData;
 
-    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-    if (!isValidObjectId(groupId)) throw new CustomError('Invalid group id found.', ErrorTypes.INVALID_ARG);
     if (!totalAmountMatched) throw new CustomError('A total dollar amount matched is required.', ErrorTypes.INVALID_ARG);
     if (totalAmountMatched <= 0) throw new CustomError('The total dollar amount matched must be a positive amount.', ErrorTypes.INVALID_ARG);
-    if (!statementIds) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
-    if (!Array.isArray(statementIds)) throw new CustomError('Invalid statement id(s). Must be an array of ids.', ErrorTypes.INVALID_ARG);
-    if (!statementIds.length) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
-    const invalidStatementIds = statementIds.filter(s => !isValidObjectId(s));
-    if (invalidStatementIds.length) throw new CustomError(`The follow statement ids are invalid: ${invalidStatementIds.join(', ')}.`, ErrorTypes.INVALID_ARG);
     if (!transactor || (!transactor.user && !transactor.group)) throw new CustomError('The transactor is required.', ErrorTypes.INVALID_ARG);
     if (!!transactor.group && !isValidObjectId(transactor.group)) {
       throw new CustomError('Invalid transactor group found.', ErrorTypes.INVALID_ARG);
@@ -988,34 +981,11 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
 
     req.requestor = await UserModel.findOne({ _id: process.env.APP_USER_ID });
 
-    const statements = await getAllStatements(req, {
-      $and: [
-        { _id: { $in: statementIds } },
-        { offsets: { $exists: true } },
-        { group: groupId },
-      ],
-    })
-      .populate([
-        {
-          path: 'group',
-          model: GroupModel,
-        },
-        {
-          path: 'offsets.toBeMatched.transactions.transaction',
-          model: TransactionModel,
-        },
-      ]);
-
-    if (statements.length !== statementIds.length) {
-      const missingStatementIds = statementIds.filter(s => !statements.find(ss => ss._id.toString() === s));
-      throw new CustomError(`The follow statements could not be found: ${missingStatementIds.join(', ')}`, ErrorTypes.INVALID_ARG);
-    }
-
     // get the total that was to be matched for all statements
+
     const totalToBeMatched = statements.reduce((acc, curr) => curr.offsets.toBeMatched.dollars + acc, 0);
 
     let user: IUserDocument = null;
-    let group: IGroupDocument = null;
 
     if (!!transactor.user) {
       // have to account for old ui passing legacy id
@@ -1024,11 +994,6 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
         : await UserModel.findOne({ legacyId: transactor.user });
 
       if (!user) throw new CustomError(`Transactor user with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
-    }
-
-    if (!!transactor.group) {
-      group = await GroupModel.findOne({ _id: transactor.group });
-      if (!group) throw new CustomError(`Transactor group with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
     }
 
     let percentageMatched = 1;
@@ -1487,10 +1452,15 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
         memberDonations.tonnes += donationsTotalTonnes;
       }
 
-      // TODO: update w/ real value once group donation functionality is added
+      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': groupId };
+      const groupDonationsTotalDollarsPromise = getOffsetTransactionsTotal(groupTransactionQuery);
+      const groupDonationsTotalTonnesPromise = getRareOffsetAmount(groupTransactionQuery);
+
+      const [groupDonationsTotalDollars, groupDonationsTotalTonnes] = await Promise.all([groupDonationsTotalDollarsPromise, groupDonationsTotalTonnesPromise]);
+
       const groupDonations = {
-        dollars: 0,
-        tonnes: 0,
+        dollars: groupDonationsTotalDollars,
+        tonnes: groupDonationsTotalTonnes,
       };
 
       const totalDonations = {

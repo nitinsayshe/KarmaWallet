@@ -4,6 +4,8 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { Card } from './card';
 import { IRareTransaction, Transaction } from './transaction';
+import { MatchTypes } from '../../models/transaction';
+import { IGroupDocument } from '../../models/group';
 
 export class RareTransactionMapper {
   _rareTransactions: IRareTransaction[] = [];
@@ -15,7 +17,7 @@ export class RareTransactionMapper {
 
   get transactions() { return this._transactions; }
 
-  mapTransactions = async () => {
+  mapTransactions = async (isMatch: boolean, group: IGroupDocument) => {
     try {
       // TODO: update to Rare ID when in DB
       const rare = await CompanyModel.findOne({ legacyId: 15302 });
@@ -56,8 +58,18 @@ export class RareTransactionMapper {
         await card.save();
 
         const _transaction = new Transaction(user, rare, card, transaction);
+
+        if (isMatch) {
+          _transaction._matchType = MatchTypes.Offset;
+        }
+
+        if (group) {
+          _transaction._group = group;
+        }
+
         await _transaction.load();
         await _transaction.save();
+
         this._transactions.push(_transaction);
 
         //    ??? how to handle carbonMultiplier for these?

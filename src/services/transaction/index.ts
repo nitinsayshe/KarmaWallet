@@ -29,7 +29,7 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
       { userId: req?.requestor?._id },
       { 'onBehalfOf.user': req?.requestor?._id },
     ],
-    'association.group': null,
+    matchType: null,
     ...RareTransactionQuery,
   });
   if (transactions.length === 0) return [];

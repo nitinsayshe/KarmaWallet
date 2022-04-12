@@ -1,6 +1,17 @@
-import { isValidObjectId, Schema } from 'mongoose';
-import { ISector, ISectorModel } from '../../models/sector';
+import { FilterQuery, isValidObjectId, Schema } from 'mongoose';
+import { ErrorTypes } from '../../lib/constants';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { ISector, ISectorModel, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
+import { IRequest } from '../../types/request';
+
+export enum SectorConfig {
+  BrowseBy = 'browse-by',
+}
+
+export interface ISectorRequestQuery extends FilterQuery<ISector> {
+  config: SectorConfig;
+}
 
 export const getShareableSector = ({
   _id,
@@ -19,4 +30,50 @@ export const getShareableSector = ({
     carbonMultiplier,
     parentSectors: _parentSectors,
   };
+};
+
+const browsByQuery = {
+  _id: {
+    $in: [
+      '62192ef1f022c9e3fbff0aac',
+      '62192ef3f022c9e3fbff0c20',
+      '62192ef2f022c9e3fbff0aec',
+      '62192ef2f022c9e3fbff0b52',
+      '62192ef3f022c9e3fbff0c40',
+      '62192ef3f022c9e3fbff0ba4',
+    ],
+  },
+};
+
+export const getSectors = async (_: IRequest<{}, ISectorRequestQuery, {}>, query: FilterQuery<ISector>, config?: SectorConfig) => {
+  try {
+    let _config = {};
+
+    if (!!config) {
+      switch (config) {
+        case SectorConfig.BrowseBy:
+          _config = browsByQuery;
+          break;
+        default:
+          throw new CustomError(`Invalid sector config found: ${config}`, ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    const options = {
+      projection: query?.projection || '',
+      populate: query.population || [
+        {
+          path: 'parentSectors',
+          model: SectorModel,
+        },
+      ],
+      page: query?.skip || 1,
+      sort: query?.sort ? { ...query.sort, _id: 1 } : { tier: 1, name: 1, _id: 1 },
+      limit: query?.limit || 25,
+    };
+    const filter: FilterQuery<ISector> = { ..._config, ...query.filter };
+    return SectorModel.paginate(filter, options);
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

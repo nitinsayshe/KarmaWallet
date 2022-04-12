@@ -3,7 +3,7 @@ import * as SectorsController from '../controllers/sectors';
 
 const router = Router();
 
-router.route('/browse-by')
-  .get(SectorsController.getBrowseBySectors);
+router.route('/')
+  .get(SectorsController.getSectors);
 
 export default (app: Express) => app.use('/sectors', router);

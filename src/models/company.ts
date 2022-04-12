@@ -17,7 +17,7 @@ export interface IHiddenCompany {
   lastModified: Date;
 }
 
-export interface ISharableCompany {
+export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
   companyName: string;
@@ -27,13 +27,13 @@ export interface ISharableCompany {
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define
-  parentCompany: IRef<ObjectId, ISharableCompany>;
+  parentCompany: IRef<ObjectId, IShareableCompany>;
   sectors: IRef<ObjectId, ISector>[];
   slug: string;
   url: string;
 }
 
-export interface ICompany extends ISharableCompany {
+export interface ICompany extends IShareableCompany {
   dataSources: IRef<ObjectId, IDataSourceDocument>[];
   hidden: IHiddenCompany;
   legacyId: number;
@@ -48,47 +48,53 @@ export interface ICompanyDocument extends ICompany, Document {
 }
 export type ICompanyModel = IModel<ICompany>;
 
-const companySchema = new Schema({
-  companyName: { type: String, required: true },
-  dataSources: [{
-    type: Schema.Types.ObjectId,
-    ref: 'data_source',
-  }],
-  // TODO: update this field whenver unsdgs are updated.
-  // too expensive to make virtual
-  combinedScore: { type: Number },
-  dataYear: { type: Number }, // ??? do want to track this on the company?
-  sectors: [{
-    type: Schema.Types.ObjectId,
-    ref: 'sector',
-  }],
-  url: { type: String, default: null },
-  // TODO: update this field whenever usdgs are updated
-  // too expensive to make virtual
-  grade: { type: String, default: null },
-  parentCompany: {
-    type: Schema.Types.ObjectId,
-    ref: 'company',
-  },
-  logo: { type: String },
-  relevanceScore: { type: Number, default: null },
-  legacyId: {
-    type: Number,
-    required: true,
-    unique: true,
-  },
-  notes: {
-    type: String,
-  },
-  hidden: {
-    type: {
-      status: Boolean,
-      reason: String,
-      lastModified: Date,
+const companySchema = new Schema(
+  {
+    companyName: { type: String, required: true },
+    dataSources: [{
+      type: Schema.Types.ObjectId,
+      ref: 'data_source',
+    }],
+    // TODO: update this field whenver unsdgs are updated.
+    // too expensive to make virtual
+    combinedScore: { type: Number },
+    dataYear: { type: Number }, // ??? do want to track this on the company?
+    sectors: [{
+      type: Schema.Types.ObjectId,
+      ref: 'sector',
+    }],
+    url: { type: String, default: null },
+    // TODO: update this field whenever usdgs are updated
+    // too expensive to make virtual
+    grade: { type: String, default: null },
+    parentCompany: {
+      type: Schema.Types.ObjectId,
+      ref: 'company',
     },
-    required: true,
+    logo: { type: String },
+    relevanceScore: { type: Number, default: null },
+    legacyId: {
+      type: Number,
+      required: true,
+      unique: true,
+    },
+    notes: {
+      type: String,
+    },
+    hidden: {
+      type: {
+        status: Boolean,
+        reason: String,
+        lastModified: Date,
+      },
+      required: true,
+    },
   },
-});
+  {
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
+);
 companySchema.plugin(mongoosePaginate);
 
 // eslint-disable-next-line func-names

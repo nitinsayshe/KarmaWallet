@@ -2,9 +2,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { mapHiddenCompaniesToNew } from '../src/services/mappers/map-hidden-companies-to-new';
-import { mapParentCompanies } from '../src/services/mappers/map-parent-companies';
-import { mapSectorsToCompanies } from '../src/services/mappers/sectors-to-companies-mapping';
+import { removeNegativeOneFromMatchingAndPercent } from '../src/services/mappers/group-settings-update';
 
 (async () => {
   try {
@@ -15,9 +13,7 @@ import { mapSectorsToCompanies } from '../src/services/mappers/sectors-to-compan
     await MongoClient.init();
 
     // add mappers here...
-    await mapHiddenCompaniesToNew();
-    await mapSectorsToCompanies();
-    await mapParentCompanies();
+    await removeNegativeOneFromMatchingAndPercent();
 
     await MongoClient.disconnect();
   } catch (err) {

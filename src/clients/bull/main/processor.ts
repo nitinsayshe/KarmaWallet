@@ -8,6 +8,7 @@ import { _MongoClient } from '../../mongo';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
+import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 
 const MongoClient = new _MongoClient();
 
@@ -40,6 +41,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);
+      break;
+    case JobNames.GenerateGroupOffsetStatements:
+      result = await GenerateGroupStatements.exec();
       break;
     default:
       console.log('>>>>> invalid job name found');

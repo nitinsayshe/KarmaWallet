@@ -1,5 +1,9 @@
 import { AnyObject } from 'mongoose';
-import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
+import {
+  ITransaction,
+  ITransactionModel,
+  TransactionModel,
+} from '../../models/transaction';
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 import { RareClient } from '../../clients/rare';
@@ -29,6 +33,7 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
       { userId: req?.requestor?._id },
       { 'onBehalfOf.user': req?.requestor?._id },
     ],
+    matchType: null,
     ...RareTransactionQuery,
   });
   if (transactions.length === 0) return [];

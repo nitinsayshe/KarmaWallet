@@ -1,12 +1,16 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ITransactionDocument, TransactionModel } from '../../models/transaction';
+import {
+  ITransaction,
+  ITransactionDocument, MatchTypes, TransactionModel,
+} from '../../models/transaction';
 import { IUserDocument } from '../../models/user';
 import { ICompanyDocument } from '../../models/company';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { Card, IRareCard } from './card';
 import { IPlaidCategoryMappingDocument, PlaidCategoryMappingModel } from '../../models/plaidCategoryMapping';
+import { IGroup } from '../../models/group';
 
 dayjs.extend(utc);
 
@@ -36,6 +40,8 @@ export class Transaction {
   private _rareTransaction: IRareTransaction = null;
   private _transaction: ITransactionDocument = null;
   private _plaidCategoryMapping: IPlaidCategoryMappingDocument = null;
+  private __group: IGroup = null;
+  private __matchType: MatchTypes = null;
 
   constructor(user: IUserDocument, company: ICompanyDocument, card: Card, rareTransaction: IRareTransaction) {
     if (!user) throw new CustomError('Rare Integration Trasaction Error - no user provided', ErrorTypes.INVALID_ARG);
@@ -56,27 +62,42 @@ export class Transaction {
   get _date() { return this._transaction?.date || new Date(this._rareTransaction.processed_ts); }
   get _category() { return 10; } // hardcoding for now
   get _subCategory() { return 100002; } // hard coding for now
+  get _matchType() { return this.__matchType; }
+  set _matchType(matchType: MatchTypes) { this.__matchType = matchType; }
+  get _group() { return this.__group; }
+  set _group(group: IGroup) { this.__group = group; }
 
   load = async () => {
     this._plaidCategoryMapping = await PlaidCategoryMappingModel.findOne({ _id: '61e96acb12e95f10dcdcf00e' });
   };
 
-  toKarmaFormat = () => ({
-    userId: this._userId,
-    cardId: this._cardId,
-    companyId: this._companyId,
-    amount: this._amount,
-    date: this._date,
-    integrations: this._transaction?.integrations?.rare || {
-      rare: {
-        ...this._rareTransaction,
-        projectName: 'Catch Carbon Project',
+  toKarmaFormat = () => {
+    const transaction: Partial<ITransaction> = {
+      userId: this._userId,
+      cardId: this._cardId,
+      companyId: this._companyId,
+      amount: this._amount,
+      date: this._date,
+      integrations: this._transaction?.integrations || {
+        rare: {
+          ...this._rareTransaction,
+          projectName: 'Catch Carbon Project',
+        },
       },
-    },
-    category: this._category,
-    subcategory: this._subCategory,
-    carbonMultiplier: this._plaidCategoryMapping,
-  });
+      category: this._category,
+      subCategory: this._subCategory,
+      carbonMultiplier: this._plaidCategoryMapping,
+    };
+    const matchType = this._matchType;
+    if (matchType) transaction.matchType = matchType;
+    const group = this._group;
+    if (group) {
+      transaction.association = {
+        group,
+      };
+    }
+    return transaction;
+  };
 
   save = async () => {
     try {

@@ -72,7 +72,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
     }
 
     if (file.size > MAX_FILE_SIZE_IN_MB) {
-      throw new CustomError(`File size is too large (${MAX_FILE_SIZE_IN_MB} MB max.).`, ErrorTypes.INVALID_ARG);
+      throw new CustomError(`File size is too large (${MAX_FILE_SIZE_IN_MB / (1024 * 1024)} MB max.).`, ErrorTypes.INVALID_ARG);
     }
 
     if (!checkMimeTypeForValidImageType(file.mimetype)) {
@@ -181,7 +181,7 @@ export const uploadCsv = async (req: IRequest<{}, {}, ICsvUploadBody>) => {
     }
 
     if (file.size > MAX_FILE_SIZE_IN_MB) {
-      throw new CustomError(`File size is too large (${MAX_FILE_SIZE_IN_MB} MB max.).`, ErrorTypes.INVALID_ARG);
+      throw new CustomError(`File size is too large (${MAX_FILE_SIZE_IN_MB / (1024 * 1024)} MB max.).`, ErrorTypes.INVALID_ARG);
     }
 
     removeFileExtension(slugify(filename || file.originalname), ['.csv']);

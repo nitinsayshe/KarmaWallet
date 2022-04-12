@@ -1,5 +1,9 @@
 import { AnyObject } from 'mongoose';
-import { ITransaction, ITransactionModel, TransactionModel } from '../../models/transaction';
+import {
+  ITransaction,
+  ITransactionModel,
+  TransactionModel,
+} from '../../models/transaction';
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 import { RareClient } from '../../clients/rare';

@@ -118,7 +118,7 @@ export const exec = async () => {
       const offsetTransactionQuery: FilterQuery<ITransaction> = {
         $and: [
           { userId: { $in: memberIds } },
-          { 'association.type.group': group._id.toString() },
+          { 'association.group': group._id },
           { date: { $gte: !!group.settings.matching.maxDollarAmount ? yearStart.toDate() : monthStart.toDate() } },
           { date: { $lte: monthEnd.toDate() } },
         ],

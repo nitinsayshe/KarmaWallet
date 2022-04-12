@@ -5,12 +5,12 @@ import { ISector, ISectorModel, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 
-export enum SectorConfig {
+export enum SectorConfigType {
   BrowseBy = 'browse-by',
 }
 
 export interface ISectorRequestQuery extends FilterQuery<ISector> {
-  config: SectorConfig;
+  config: SectorConfigType;
 }
 
 export const getShareableSector = ({
@@ -45,13 +45,13 @@ const browsByQuery = {
   },
 };
 
-export const getSectors = async (_: IRequest<{}, ISectorRequestQuery, {}>, query: FilterQuery<ISector>, config?: SectorConfig) => {
+export const getSectors = async (_: IRequest<{}, ISectorRequestQuery, {}>, query: FilterQuery<ISector>, config?: SectorConfigType) => {
   try {
     let _config = {};
 
     if (!!config) {
       switch (config) {
-        case SectorConfig.BrowseBy:
+        case SectorConfigType.BrowseBy:
           _config = browsByQuery;
           break;
         default:

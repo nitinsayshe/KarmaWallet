@@ -7,7 +7,7 @@ import admin from './admin';
 import transaction from './transaction';
 import impact from './impact';
 import company from './company';
-// import sector from './sector';
+import sectors from './sectors';
 // import subsector from './subsector';
 import webhook from './webhooks';
 import comparisonGame from './comparisonGame';
@@ -25,7 +25,7 @@ const routers = (app: Express) => {
   transaction(app);
   impact(app);
   upload(app);
-  // sector(app);
+  sectors(app);
   // subsector(app);
   webhook(app);
   comparisonGame(app);

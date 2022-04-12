@@ -68,7 +68,7 @@ export class RareTransactionMapper {
         if (group) {
           _transaction._group = group;
         } else {
-        // if user is associated with group, get group and set transaction._group
+          // if user is associated with group, get group and set transaction._group
           const [userGroup] = await getUserGroups({ ...mockRequest, requestor: user, params: { userId: user._id.toString() } });
           if (userGroup) {
             _transaction._group = userGroup.group as IGroup;

@@ -89,9 +89,7 @@ export class Transaction {
       carbonMultiplier: this._plaidCategoryMapping,
     };
     const matchType = this._matchType;
-    if (matchType) {
-      transaction.matchType = matchType;
-    }
+    if (matchType) transaction.matchType = matchType;
     const group = this._group;
     if (group) {
       transaction.association = {

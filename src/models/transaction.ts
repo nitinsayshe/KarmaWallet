@@ -13,7 +13,7 @@ import { IPlaidCategoryMapping, IPlaidCategoryMappingDocument } from './plaidCat
 import { IShareableUser, IUserDocument } from './user';
 
 export enum MatchTypes {
-  Offset = 'offset'
+  Offset = 'offset',
 }
 
 export interface IPlaidTransactionLocation {

@@ -1451,7 +1451,8 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
         memberDonations.tonnes += donationsTotalTonnes;
       }
 
-      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': groupId };
+      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': (userGroup.group as IGroupDocument)._id };
+
       const groupDonationsTotalDollarsPromise = getOffsetTransactionsTotal(groupTransactionQuery);
       const groupDonationsTotalTonnesPromise = getRareOffsetAmount(groupTransactionQuery);
 

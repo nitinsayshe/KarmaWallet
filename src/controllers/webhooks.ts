@@ -12,6 +12,7 @@ import { IRareRelayedQueryParams } from '../integrations/rare/types';
 import { Logger } from '../services/logger';
 import { validateStatementList } from '../services/statements';
 import { IStatementDocument } from '../models/statement';
+import { UserModel } from '../models/user';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -49,7 +50,7 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
           ...mockRequest.params,
           groupId,
         };
-        group = await getGroup(req);
+        group = await getGroup(mockRequest);
       } catch (e) {
         Logger.error(asCustomError(e));
       }
@@ -59,6 +60,10 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     if (statementIds) {
       try {
         // if only 1 statement id is received, shows up as a string
+        const { APP_USER_ID } = process.env;
+        if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
+        const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+        req.requestor = appUser;
         statements = await validateStatementList(req, typeof statementIds === 'string' ? [statementIds] : statementIds, group);
       } catch (e) {
         Logger.error(asCustomError(e));

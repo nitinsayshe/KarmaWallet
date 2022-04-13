@@ -34,6 +34,7 @@ class KarmaApiClient {
 
   sendPlaidTransactionsReadyWebhook = async (userId: string) => {
     try {
+      console.log('>>>>> sending plaid webhook to API');
       const result = await this._client.post('/webhook/plaid/transactions-ready', { userId });
       return result.data;
     } catch (err) {

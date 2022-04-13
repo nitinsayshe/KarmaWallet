@@ -13,6 +13,7 @@ import { Logger } from '../services/logger';
 import { validateStatementList } from '../services/statements';
 import { IStatementDocument } from '../models/statement';
 import { UserModel } from '../models/user';
+import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -96,7 +97,7 @@ export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransac
   if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
   try {
     const { userId, accessToken } = req.body;
-    MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken });
+    MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
     api(req, res, { message: `${JobNames.UserPlaidTransactionMapper} added to queue` });
   } catch (e) {
     error(req, res, asCustomError(e));

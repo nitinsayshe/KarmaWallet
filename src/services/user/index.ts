@@ -17,6 +17,8 @@ import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { resendEmailVerification } from './verification';
+import { sendWelcomeEmail } from '../email';
 
 dayjs.extend(utc);
 
@@ -79,7 +81,7 @@ export const register = async (req: IRequest, {
     // map new legacy user to new user
     const rawUser = {
       ...legacyUser.toObject(),
-      emails: [{ email, verified: false }],
+      emails: [{ email, verified: false, primary: true }],
       legacyId: legacyUser._id,
     };
 
@@ -88,6 +90,10 @@ export const register = async (req: IRequest, {
     await newUser.save();
 
     const authKey = await Session.createSession(newUser._id.toString());
+
+    const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
+    await resendEmailVerification(verificationEmailRequest);
+    await sendWelcomeEmail({ name: newUser.name, recipientEmail: email });
 
     return { user: newUser, authKey };
   } catch (err) {

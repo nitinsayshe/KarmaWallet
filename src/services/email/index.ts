@@ -54,7 +54,6 @@ interface IEmailVerificationTemplateParams {
 interface IWelcomeEmailTemplateParams {
   name: string;
   domain?: string;
-  token: string;
   recipientEmail: string;
   senderEmail?: string;
   replyToAddresses?: string[];
@@ -125,20 +124,18 @@ export const sendEmailVerification = async ({
 export const sendWelcomeEmail = async ({
   name,
   domain = process.env.FRONTEND_DOMAIN,
-  token,
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IWelcomeEmailTemplateParams) => {
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
-    name, domain, token, recipientEmail,
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], {
+    name, domain, recipientEmail,
   });
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
-  const verificationLink = `${domain}/account?emailVerification=${token}`;
   const template = buildTemplate(EmailTemplates.Welcome, {
-    verificationLink, name, token,
+    name, domain,
   });
   const subject = 'Welcome to KarmaWallet!';
   const jobData = {

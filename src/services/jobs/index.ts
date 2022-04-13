@@ -61,10 +61,10 @@ export const sendPrimaryEmailVerification = async (req: IRequest<{}, {}, ISendEm
 
 export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendWelcomeEmailParams>) => {
   const {
-    name, domain, token, recipientEmail,
+    name, domain, recipientEmail,
   } = req.body;
   await EmailService.sendWelcomeEmail({
-    name, domain, token, recipientEmail,
+    name, domain, recipientEmail,
   });
   return 'Job added to queue';
 };

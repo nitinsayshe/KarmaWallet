@@ -865,16 +865,18 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
+    // const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
 
-    if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
+    // if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
 
     const existingEmail = user?.emails?.find(e => e.email === validEmail);
-    // add groupEmail to user's list of altEmails if doesnt already exist and
+    // add groupEmail to user's list of emails
+    // if doesnt already exist and
     // is not their primary email
     if (!existingEmail) {
+      // check if any other user has email
       const usersWithEmail = await UserModel.find({ 'emails.email': validEmail });
-      if (usersWithEmail.length > 0) throw new CustomError('This email is already in use.', ErrorTypes.UNPROCESSABLE);
+      if (usersWithEmail?.length > 0) throw new CustomError('This email is already in use.', ErrorTypes.UNPROCESSABLE);
       user.emails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,

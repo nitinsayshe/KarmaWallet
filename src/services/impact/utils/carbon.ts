@@ -246,8 +246,8 @@ export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => Trans
 export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...RareTransactionQuery, ...query })
-    .group({ _id: 'total', total: { $sum: '$amount' } });
-  return aggResult?.length ? aggResult[0].total : 0;
+    .group({ _id: 'total', total: { $sum: '$integrations.rare.subtotal_amt' } });
+  return aggResult?.length ? aggResult[0].total / 100 : 0;
 };
 
 export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {

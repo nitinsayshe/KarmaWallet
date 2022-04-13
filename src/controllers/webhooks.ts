@@ -7,7 +7,12 @@ import { IRequestHandler } from '../types/request';
 import { IRareTransaction } from '../integrations/rare/transaction';
 import { MainBullClient } from '../clients/bull/main';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
+import { IGroupOffsetMatchData, matchMemberOffsets, getGroup } from '../services/groups';
+import { IRareRelayedQueryParams } from '../integrations/rare/types';
+import { Logger } from '../services/logger';
+import { validateStatementList } from '../services/statements';
+import { IStatementDocument } from '../models/statement';
+import { UserModel } from '../models/user';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -16,10 +21,6 @@ const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 // page, and then rare is taking them and dropping
 // then into the body of this request for us
 
-interface IRareRelayedQueryParams {
-  groupId?: string;
-  statementIds?: string[];
-}
 interface IRareTransactionBody {
   transaction: IRareTransaction;
   forwarded_query_params?: IRareRelayedQueryParams;
@@ -35,20 +36,48 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   try {
     const client = new KarmaApiClient();
     console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
-    console.log({ rareTransaction: req?.body?.transaction });
+    console.log({ rareTransaction: req?.body });
 
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
-    await mapTransactions([rareTransaction]);
-
     const { statementIds, groupId } = (req.body.forwarded_query_params || {});
+
+    let group;
+    if (groupId) {
+      try {
+        const mockRequest = { ...req };
+        mockRequest.params = {
+          ...mockRequest.params,
+          groupId,
+        };
+        group = await getGroup(mockRequest);
+      } catch (e) {
+        Logger.error(asCustomError(e));
+      }
+    }
+
+    let statements: IStatementDocument[] = [];
+    if (statementIds) {
+      try {
+        // if only 1 statement id is received, shows up as a string
+        const { APP_USER_ID } = process.env;
+        if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
+        const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+        req.requestor = appUser;
+        statements = await validateStatementList(req, typeof statementIds === 'string' ? [statementIds] : statementIds, group);
+      } catch (e) {
+        Logger.error(asCustomError(e));
+      }
+    }
+    const isMatch = statements.length > 0;
+    await mapTransactions([rareTransaction], isMatch, group);
+
     if (!!statementIds) {
       const matchStatementData: IGroupOffsetMatchData = {
-        groupId,
-        // if only 1 statement id is received, shows up as a string
-        statementIds: typeof statementIds === 'string' ? [statementIds] : statementIds,
+        group,
+        statements,
         totalAmountMatched: rareTransaction.amt,
-        transactor: { user: uid, group: groupId },
+        transactor: { user: uid, group },
       };
       await matchMemberOffsets(req, matchStatementData);
       // TODO: send socket event notifying user of matches being successfully applied.

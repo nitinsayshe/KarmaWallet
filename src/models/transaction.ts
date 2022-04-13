@@ -12,6 +12,10 @@ import { IGroupDocument, IShareableGroup } from './group';
 import { IPlaidCategoryMapping, IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
 import { IShareableUser, IUserDocument } from './user';
 
+export enum MatchTypes {
+  Offset = 'offset',
+}
+
 export interface IPlaidTransactionLocation {
   address: string;
   city: string;
@@ -106,6 +110,7 @@ export interface IShareableTransaction {
   subCategory: number;
   createdOn: Date;
   lastModified: Date;
+  matchType: MatchTypes;
 }
 
 export interface ITransaction extends IShareableTransaction {
@@ -191,7 +196,6 @@ const transactionSchema = new Schema({
     },
   },
   createdOn: { type: Date },
-  lastModified: { type: Date },
   /**
    * transactions can be made on behalf of others...setting
    * this specifies who this transaction was made for.
@@ -235,6 +239,7 @@ const transactionSchema = new Schema({
       },
     },
   },
+  matchType: { type: String, enum: Object.values(MatchTypes) },
   /**
    * donations can be associated with specific entities
    * for matchings purposes.

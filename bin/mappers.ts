@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { mapUserEmailsToArray } from '../src/services/mappers/map-user-emails-to-array';
+import { removeNegativeOneFromMatchingAndPercent } from '../src/services/mappers/group-settings-update';
 
 (async () => {
   try {
@@ -13,9 +13,7 @@ import { mapUserEmailsToArray } from '../src/services/mappers/map-user-emails-to
     await MongoClient.init();
 
     // add mappers here...
-    // await mapHiddenCompaniesToNew();
-    // await mapSectorsToCompanies();
-    await mapUserEmailsToArray();
+    await removeNegativeOneFromMatchingAndPercent();
 
     await MongoClient.disconnect();
   } catch (err) {

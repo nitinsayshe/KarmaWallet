@@ -93,7 +93,6 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
         model: DataSourceModel,
       },
     ],
-    lean: true,
     page: query?.skip || 1,
     sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
     limit: query?.limit || 10,

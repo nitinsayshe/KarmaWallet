@@ -4,15 +4,16 @@ import { UserModel } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { RareTransactionMapper } from './mapper';
 import { IRareTransaction } from './transaction';
+import { IGroupDocument } from '../../models/group';
 
-export const mapTransactions = async (rareTransactions: IRareTransaction[] = []) => {
+export const mapTransactions = async (rareTransactions: IRareTransaction[] = [], isMatch = false, group: IGroupDocument = null) => {
   try {
     if (!rareTransactions.length) throw new CustomError('No rare transactions found. Exiting.');
 
     console.log('mapping rare transactions...');
 
     const mapper = new RareTransactionMapper(rareTransactions);
-    await mapper.mapTransactions();
+    await mapper.mapTransactions(isMatch, group);
 
     if (mapper.transactions.length) {
       console.log(`[+] ${mapper.transactions.length}/${rareTransactions.length} rare transactions mapped\n`);

@@ -28,7 +28,7 @@ const getStartDate = (d: Dayjs) => d
   .set('hour', 0)
   .set('minute', 0)
   .set('second', 0)
-  .set('millisecond', 0);
+  .set('millisecond', 1);
 
 const getStartAndEndDates = () => {
   const yearStart = getStartDate(dayjs()).set('month', 1);
@@ -118,7 +118,7 @@ export const exec = async () => {
       const offsetTransactionQuery: FilterQuery<ITransaction> = {
         $and: [
           { userId: { $in: memberIds } },
-          { 'association.type.group': group._id.toString() },
+          { 'association.group': group._id },
           { date: { $gte: !!group.settings.matching.maxDollarAmount ? yearStart.toDate() : monthStart.toDate() } },
           { date: { $lte: monthEnd.toDate() } },
         ],

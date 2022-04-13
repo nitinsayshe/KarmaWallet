@@ -37,9 +37,9 @@ import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 import {
   IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
 } from '../../models/statement';
-import { getStatements, getAllStatements } from '../statements';
+import { getStatements } from '../statements';
 import {
-  ITransactionDocument, ITransactionMatch, TransactionModel,
+  ITransactionDocument, ITransactionMatch, MatchTypes,
 } from '../../models/transaction';
 import { UserGroupStatus } from '../../types/groups';
 
@@ -103,12 +103,12 @@ export interface IGetGroupOffsetRequestParams {
 }
 
 export interface IGroupOffsetMatchData {
-  statementIds: string[];
-  groupId: string;
+  group: IGroupDocument;
+  statements: IStatementDocument[];
   totalAmountMatched: number;
   transactor: {
     user?: string;
-    group?: string;
+    group?: IRef<Schema.Types.ObjectId, IGroupDocument>;
   };
 }
 
@@ -122,8 +122,8 @@ const defaultGroupSettings: IGroupSettings = {
   approvalRequired: false,
   matching: {
     enabled: false,
-    matchPercentage: -1,
-    maxDollarAmount: -1,
+    matchPercentage: null,
+    maxDollarAmount: null,
     lastModified: dayjs().utc().toDate(),
   },
 };
@@ -160,12 +160,11 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   return Array.from(_domains);
 };
 
-export const verifyGroupSettings = (settings: IGroupSettings) => {
-  const _settings = { ...defaultGroupSettings };
+export const verifyGroupSettings = (settings: IGroupSettings, previousSettings?: IGroupSettings) => {
+  const _settings = { ...defaultGroupSettings, ...(previousSettings || {}) };
   if (!!settings) {
     // settings provided...only add supported settings
     // to group...
-
     if (
       !('privacyStatus' in settings)
       && !('allowInvite' in settings)
@@ -195,21 +194,67 @@ export const verifyGroupSettings = (settings: IGroupSettings) => {
     if ('matching' in settings) {
       const {
         enabled,
-        matchPercentage = -1,
-        maxDollarAmount = -1,
+        matchPercentage,
+        maxDollarAmount,
       } = settings.matching;
 
       if (enabled) {
-        _settings.matching.enabled = !!enabled;
-
         if (!matchPercentage && !maxDollarAmount) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
-        const _matchPercentage = parseFloat(`${matchPercentage}`);
-        const _maxDollarAmount = parseFloat(`${maxDollarAmount}`);
-        if (isNaN(_matchPercentage)) throw new CustomError('Invalid match percent found. Must be a number.', ErrorTypes.INVALID_ARG);
-        if (isNaN(_maxDollarAmount)) throw new CustomError('Invalid max dollar amount found. Must be a number.', ErrorTypes.INVALID_ARG);
-        if (matchPercentage < 0 && maxDollarAmount < 0) throw new CustomError('To support group matching, a match percentage or max dollar amount must be specified.', ErrorTypes.INVALID_ARG);
-        _settings.matching.matchPercentage = _matchPercentage;
-        _settings.matching.maxDollarAmount = _maxDollarAmount;
+
+        let _matchPercentage: number;
+        let _maxDollarAmount: number;
+        let changeFound = _settings.matching.enabled !== !!enabled;
+
+        if (!!matchPercentage) {
+          _matchPercentage = parseFloat(`${matchPercentage}`);
+
+          if (isNaN(_matchPercentage)) throw new CustomError('Invalid match percent found. Must be a number.', ErrorTypes.INVALID_ARG);
+          if (_matchPercentage <= 0 || _matchPercentage > 100) throw new CustomError('Invalid match percent found. Must be a number greater than 0, but less than or equal to 100.', ErrorTypes.INVALID_ARG);
+
+          if (_settings.matching.matchPercentage !== _matchPercentage) changeFound = true;
+
+          _settings.matching.matchPercentage = _matchPercentage;
+        } else {
+          if (_settings.matching.matchPercentage !== null) changeFound = true;
+
+          _settings.matching.matchPercentage = null;
+        }
+
+        if (!!maxDollarAmount) {
+          _maxDollarAmount = parseFloat(`${maxDollarAmount}`);
+
+          if (isNaN(_maxDollarAmount)) throw new CustomError('Invalid max dollar amount found. Must be a number.', ErrorTypes.INVALID_ARG);
+          if (_maxDollarAmount < 0) throw new CustomError('Invalid max dollar amount found. Must be a number greater than or equal to 0.', ErrorTypes.INVALID_ARG);
+
+          if (!!_maxDollarAmount) {
+            if (_settings.matching.maxDollarAmount !== _maxDollarAmount) changeFound = true;
+
+            _settings.matching.maxDollarAmount = _maxDollarAmount;
+          } else {
+            // maxDollarAmount was set to 0, so just defaulting to null
+            if (_settings.matching.maxDollarAmount !== null) changeFound = true;
+
+            _settings.matching.maxDollarAmount = null;
+          }
+        } else {
+          if (_settings.matching.maxDollarAmount !== null) changeFound = true;
+
+          _settings.matching.maxDollarAmount = null;
+        }
+
+        _settings.matching.enabled = !!enabled;
+        if (changeFound) _settings.matching.lastModified = dayjs().utc().toDate();
+      } else {
+        const changeFound = _settings.matching.enabled !== enabled
+          || _settings.matching.matchPercentage !== null
+          || _settings.matching.maxDollarAmount !== null;
+
+        _settings.matching.matchPercentage = null;
+        _settings.matching.maxDollarAmount = null;
+        _settings.matching.enabled = false;
+        if (changeFound) {
+          _settings.matching.lastModified = dayjs().utc().toDate();
+        }
       }
     }
   }
@@ -778,11 +823,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroup: IUserGroupDocument = await UserGroupModel
-      .findOne({
-        group,
-        user,
-      })
+    const existingUserGroups: IUserGroupDocument[] = await UserGroupModel
+      .find({ group })
       .populate([
         {
           path: 'group',
@@ -790,16 +832,18 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         },
       ]);
 
-    if (existingUserGroup?.status === UserGroupStatus.Banned) {
+    const usersUserGroup = existingUserGroups.find(g => g.user.toString() === user._id.toString());
+
+    if (usersUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
     }
 
     // TODO: status === Removed, check if needs approval to join again
 
     if (
-      existingUserGroup?.status === UserGroupStatus.Unverified
-      || existingUserGroup?.status === UserGroupStatus.Verified
-      || existingUserGroup?.status === UserGroupStatus.Approved
+      usersUserGroup?.status === UserGroupStatus.Unverified
+      || usersUserGroup?.status === UserGroupStatus.Verified
+      || usersUserGroup?.status === UserGroupStatus.Approved
     ) {
       throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
     }
@@ -821,8 +865,11 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    const existingEmail = user?.emails?.find(e => e.email === validEmail);
+    const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
 
+    if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
+
+    const existingEmail = user?.emails?.find(e => e.email === validEmail);
     // add groupEmail to user's list of altEmails if doesnt already exist and
     // is not their primary email
     if (!existingEmail) {
@@ -855,12 +902,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       : UserGroupStatus.Unverified;
 
     let userGroup: IUserGroupDocument = null;
-    if (!!existingUserGroup) {
-      existingUserGroup.email = validEmail;
-      existingUserGroup.role = UserGroupRole.Member;
-      existingUserGroup.status = defaultStatus;
+    if (!!usersUserGroup) {
+      usersUserGroup.email = validEmail;
+      usersUserGroup.role = UserGroupRole.Member;
+      usersUserGroup.status = defaultStatus;
 
-      await existingUserGroup.save();
+      await usersUserGroup.save();
     } else {
       userGroup = new UserGroupModel({
         user,
@@ -875,7 +922,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     await user.save();
 
-    return userGroup ?? existingUserGroup;
+    return userGroup ?? usersUserGroup;
   } catch (err) {
     throw asCustomError(err);
   }
@@ -920,21 +967,14 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
 export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetMatchData) => {
   try {
     const {
-      groupId,
-      statementIds = [],
+      group,
+      statements,
       totalAmountMatched,
       transactor,
     } = matchData;
 
-    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-    if (!isValidObjectId(groupId)) throw new CustomError('Invalid group id found.', ErrorTypes.INVALID_ARG);
     if (!totalAmountMatched) throw new CustomError('A total dollar amount matched is required.', ErrorTypes.INVALID_ARG);
     if (totalAmountMatched <= 0) throw new CustomError('The total dollar amount matched must be a positive amount.', ErrorTypes.INVALID_ARG);
-    if (!statementIds) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
-    if (!Array.isArray(statementIds)) throw new CustomError('Invalid statement id(s). Must be an array of ids.', ErrorTypes.INVALID_ARG);
-    if (!statementIds.length) throw new CustomError('At least one statement id is required.', ErrorTypes.INVALID_ARG);
-    const invalidStatementIds = statementIds.filter(s => !isValidObjectId(s));
-    if (invalidStatementIds.length) throw new CustomError(`The follow statement ids are invalid: ${invalidStatementIds.join(', ')}.`, ErrorTypes.INVALID_ARG);
     if (!transactor || (!transactor.user && !transactor.group)) throw new CustomError('The transactor is required.', ErrorTypes.INVALID_ARG);
     if (!!transactor.group && !isValidObjectId(transactor.group)) {
       throw new CustomError('Invalid transactor group found.', ErrorTypes.INVALID_ARG);
@@ -942,34 +982,10 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
 
     req.requestor = await UserModel.findOne({ _id: process.env.APP_USER_ID });
 
-    const statements = await getAllStatements(req, {
-      $and: [
-        { _id: { $in: statementIds } },
-        { offsets: { $exists: true } },
-        { group: groupId },
-      ],
-    })
-      .populate([
-        {
-          path: 'group',
-          model: GroupModel,
-        },
-        {
-          path: 'offsets.toBeMatched.transactions.transaction',
-          model: TransactionModel,
-        },
-      ]);
-
-    if (statements.length !== statementIds.length) {
-      const missingStatementIds = statementIds.filter(s => !statements.find(ss => ss._id.toString() === s));
-      throw new CustomError(`The follow statements could not be found: ${missingStatementIds.join(', ')}`, ErrorTypes.INVALID_ARG);
-    }
-
     // get the total that was to be matched for all statements
     const totalToBeMatched = statements.reduce((acc, curr) => curr.offsets.toBeMatched.dollars + acc, 0);
 
     let user: IUserDocument = null;
-    let group: IGroupDocument = null;
 
     if (!!transactor.user) {
       // have to account for old ui passing legacy id
@@ -978,11 +994,6 @@ export const matchMemberOffsets = async (req: IRequest, matchData: IGroupOffsetM
         : await UserModel.findOne({ legacyId: transactor.user });
 
       if (!user) throw new CustomError(`Transactor user with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
-    }
-
-    if (!!transactor.group) {
-      group = await GroupModel.findOne({ _id: transactor.group });
-      if (!group) throw new CustomError(`Transactor group with id: ${transactor.user} could not be found.`, ErrorTypes.NOT_FOUND);
     }
 
     let percentageMatched = 1;
@@ -1148,8 +1159,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     }
 
     if (!!settings) {
-      const updatedSettings = { ...group.settings, ...settings };
-      group.settings = verifyGroupSettings(updatedSettings);
+      group.settings = verifyGroupSettings(settings, (group.toObject()).settings);
     }
 
     if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
@@ -1371,7 +1381,11 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
 
     // if no memberIds are specified, then will attempt to update
     // ALL members that the requestor is allowed to update
-    if (memberIds?.length) query.$and.push({ user: { $in: memberIds } });
+    if (memberIds?.length) {
+      query.$and.push({ user: { $in: memberIds.filter(id => id !== req.requestor._id) } });
+    } else {
+      query.$and.push({ user: { $ne: req.requestor._id } });
+    }
 
     const memberUserGroups = await UserGroupModel.find(query);
 
@@ -1438,10 +1452,16 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
         memberDonations.tonnes += donationsTotalTonnes;
       }
 
-      // TODO: update w/ real value once group donation functionality is added
+      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': (userGroup.group as IGroupDocument)._id };
+
+      const groupDonationsTotalDollarsPromise = getOffsetTransactionsTotal(groupTransactionQuery);
+      const groupDonationsTotalTonnesPromise = getRareOffsetAmount(groupTransactionQuery);
+
+      const [groupDonationsTotalDollars, groupDonationsTotalTonnes] = await Promise.all([groupDonationsTotalDollarsPromise, groupDonationsTotalTonnesPromise]);
+
       const groupDonations = {
-        dollars: 0,
-        tonnes: 0,
+        dollars: groupDonationsTotalDollars,
+        tonnes: groupDonationsTotalTonnes,
       };
 
       const totalDonations = {

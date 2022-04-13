@@ -4,6 +4,7 @@ import pino from 'pino-http';
 import helmet from 'helmet';
 import process from 'process';
 import compression from 'compression';
+import { EventEmitter } from 'events';
 import { MongoClient } from './src/clients/mongo';
 import { RedisClient } from './src/clients/redis';
 import cors from './src/middleware/cors';
@@ -14,6 +15,8 @@ import errorHandler from './src/middleware/errorHandler';
 import { SocketClient } from './src/clients/socket';
 import routers from './src/routers';
 import { MainBullClient } from './src/clients/bull/main';
+
+EventEmitter.defaultMaxListeners = 30;
 
 const port = process.env.PORT || 8012;
 

@@ -1,7 +1,7 @@
 import aqp from 'api-query-params';
 import isemail from 'isemail';
 import {
-  FilterQuery, isValidObjectId, Schema, UpdateQuery,
+  FilterQuery, isValidObjectId, ObjectId, Schema, UpdateQuery,
 } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -865,7 +865,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
+    const emailAlreadyUsed = !!existingUserGroups.find(g => (g.email === email && (g.user as ObjectId).toString() !== req.requestor._id.toString()));
 
     if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
 

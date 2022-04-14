@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { removeNegativeOneFromMatchingAndPercent } from '../src/services/mappers/group-settings-update';
 
 (async () => {
   try {
@@ -13,7 +12,6 @@ import { removeNegativeOneFromMatchingAndPercent } from '../src/services/mappers
     await MongoClient.init();
 
     // add mappers here...
-    await removeNegativeOneFromMatchingAndPercent();
 
     await MongoClient.disconnect();
   } catch (err) {

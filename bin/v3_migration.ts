@@ -3,11 +3,11 @@ import { MongoClient } from '../src/clients/mongo';
 import { mapExistingItems as mapExistingPlaidItems, mapTransactionsFromPlaid, mapPlaidCategoriesToKarmaCategoriesAndCarbonMultiplier } from '../src/integrations/plaid';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { createSectors, mapCarbonMultipliersToSectors, mapPlaidCategoriesToKarmaSectors } from '../src/services/mappers/new_sectors';
-import { mapCompaniesToV3 } from '../src/services/mappers/new_companies';
-import { mapUsersToV3 } from '../src/services/mappers/new_user';
+import { createSectors, mapCarbonMultipliersToSectors, mapPlaidCategoriesToKarmaSectors } from '../src/services/scripts/new_sectors';
+import { mapCompaniesToV3 } from '../src/services/scripts/new_companies';
+import { mapUsersToV3 } from '../src/services/scripts/new_user';
 import { IRequest } from '../src/types/request';
-import { updateAllTransactionsWithUpdatedCarbonMultipliers } from '../src/services/mappers/update_transactions_carbon_multipliers';
+import { updateAllTransactionsWithUpdatedCarbonMultipliers } from '../src/services/scripts/update_transactions_carbon_multipliers';
 
 (async () => {
   try {

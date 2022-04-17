@@ -1,4 +1,6 @@
-import { FilterQuery, isValidObjectId, Schema } from 'mongoose';
+import {
+  FilterQuery, isValidObjectId, Schema,
+} from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
@@ -8,6 +10,10 @@ import {
 } from '../../models/sector';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+
+export interface ISectorsRequestParams {
+  sectorId: string;
+}
 
 export interface ISectorsRequestQuery {
   /**
@@ -34,6 +40,29 @@ export interface ISectorsRequestQuery {
   sectorIds: string[];
 }
 
+export const getChildSectors = (req: IRequest<ISectorsRequestParams, ISectorsRequestQuery>) => {
+  try {
+    const { sectorId } = req.params;
+    const { tier, deepestTier } = req.query;
+
+    if (!sectorId) throw new CustomError('A sector id is required.', ErrorTypes.INVALID_ARG);
+
+    const query: FilterQuery<ISector> = { parentSectors: sectorId };
+    if (!!tier) query.tier = tier;
+    if (!!deepestTier && !tier) query.tier = { $lte: deepestTier };
+
+    return SectorModel
+      .find(query)
+      .sort({ tier: 1, name: 1 })
+      .populate({
+        path: 'parentSectors',
+        model: SectorModel,
+      });
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const getSectorsById = async (_: IRequest, sectorIds: string[]) => {
   try {
     const invalidSectorIds = sectorIds.filter(sectorId => !isValidObjectId(sectorId));
@@ -42,7 +71,7 @@ export const getSectorsById = async (_: IRequest, sectorIds: string[]) => {
 
     const sectors = await SectorModel
       .find({ _id: { $in: sectorIds } })
-      .sort({ tier: -1, name: -1 })
+      .sort({ tier: 1, name: 1 })
       .populate({
         path: 'parentSectors',
         model: SectorModel,
@@ -60,7 +89,7 @@ export const getSectorsByTier = async (_: IRequest, tier: number) => {
 
     const sectors = await SectorModel
       .find({ tier })
-      .sort({ name: -1 })
+      .sort({ name: 1 })
       .populate({
         path: 'parentSectors',
         model: SectorModel,
@@ -86,7 +115,7 @@ export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>) => {
 
     const sectors = await SectorModel
       .find(query)
-      .sort({ tier: -1, name: -1 });
+      .sort({ tier: 1, name: 1 });
 
     return sectors;
   } catch (err) {

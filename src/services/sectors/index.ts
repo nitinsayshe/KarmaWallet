@@ -11,18 +11,16 @@ import {
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 
+export enum SectorConfigType {
+  BrowseBy = 'browse-by',
+}
+
 export interface ISectorsRequestParams {
   sectorId: string;
 }
 
-export interface ISectorsRequestQuery {
-  /**
-   * get all sectors of a specific tier
-   *
-   * will be ignored if `sectorIds` query param
-   * is found.
-   */
-  tier: number;
+export interface ISectorsRequestQuery extends FilterQuery<ISector> {
+  config: SectorConfigType;
   /**
    * get all sectors of a specific tier and
    * all their parent sectors
@@ -31,93 +29,57 @@ export interface ISectorsRequestQuery {
    * query param is also found.
    */
   deepestTier: number;
-  /**
-   * an array of sectors ids to retrieve.
-   *
-   * will override any other query params if
-   * provided.
-   */
-  sectorIds: string[];
 }
 
-export const getChildSectors = (req: IRequest<ISectorsRequestParams, ISectorsRequestQuery>) => {
-  try {
-    const { sectorId } = req.params;
-    const { tier, deepestTier } = req.query;
-
-    if (!sectorId) throw new CustomError('A sector id is required.', ErrorTypes.INVALID_ARG);
-
-    const query: FilterQuery<ISector> = { parentSectors: sectorId };
-    if (!!tier) query.tier = tier;
-    if (!!deepestTier && !tier) query.tier = { $lte: deepestTier };
-
-    return SectorModel
-      .find(query)
-      .sort({ tier: 1, name: 1 })
-      .populate({
-        path: 'parentSectors',
-        model: SectorModel,
-      });
-  } catch (err) {
-    throw asCustomError(err);
-  }
+const browsByQuery = {
+  _id: {
+    $in: [
+      '62192ef1f022c9e3fbff0aac',
+      '62192ef3f022c9e3fbff0c20',
+      '62192ef2f022c9e3fbff0aec',
+      '62192ef2f022c9e3fbff0b52',
+      '62192ef3f022c9e3fbff0c40',
+      '62192ef3f022c9e3fbff0ba4',
+    ],
+  },
 };
 
-export const getSectorsById = async (_: IRequest, sectorIds: string[]) => {
+export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>, query: FilterQuery<ISector>, config?: SectorConfigType) => {
   try {
-    const invalidSectorIds = sectorIds.filter(sectorId => !isValidObjectId(sectorId));
+    const { deepestTier } = req.query;
 
-    if (invalidSectorIds) throw new CustomError(`The following sectors ids are invalid: ${invalidSectorIds.join(', ')}`, ErrorTypes.INVALID_ARG);
+    let _config = {};
 
-    const sectors = await SectorModel
-      .find({ _id: { $in: sectorIds } })
-      .sort({ tier: 1, name: 1 })
-      .populate({
-        path: 'parentSectors',
-        model: SectorModel,
-      });
+    if (!!config) {
+      switch (config) {
+        case SectorConfigType.BrowseBy:
+          _config = browsByQuery;
+          break;
+        default:
+          throw new CustomError(`Invalid sector config found: ${config}`, ErrorTypes.INVALID_ARG);
+      }
+    }
 
-    return sectors;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
+    const options = {
+      projection: query?.projection || '',
+      populate: query.population || [
+        {
+          path: 'parentSectors',
+          model: SectorModel,
+        },
+      ],
+      page: query?.skip || 1,
+      sort: query?.sort ? { ...query.sort, _id: 1 } : { tier: 1, name: 1, _id: 1 },
+      limit: query?.limit || 25,
+    };
+    const filter: FilterQuery<ISector> = {
+      ..._config,
+      ...query.filter,
+    };
 
-export const getSectorsByTier = async (_: IRequest, tier: number) => {
-  try {
-    if (!tier) throw new CustomError('A tier is required.', ErrorTypes.INVALID_ARG);
+    if (!!deepestTier) query.tier = { $lte: deepestTier };
 
-    const sectors = await SectorModel
-      .find({ tier })
-      .sort({ name: 1 })
-      .populate({
-        path: 'parentSectors',
-        model: SectorModel,
-      });
-
-    return sectors;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>) => {
-  const {
-    deepestTier, sectorIds, tier,
-  } = req.query;
-
-  try {
-    const query: FilterQuery<ISector> = {};
-
-    if (!!sectorIds) return getSectorsById(req, sectorIds);
-    if (!!tier) return getSectorsByTier(req, tier);
-    if (!!deepestTier) query.tier = { $gte: deepestTier };
-
-    const sectors = await SectorModel
-      .find(query)
-      .sort({ tier: 1, name: 1 });
-
-    return sectors;
+    return SectorModel.paginate(filter, options);
   } catch (err) {
     throw asCustomError(err);
   }

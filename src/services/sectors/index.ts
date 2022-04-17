@@ -15,20 +15,8 @@ export enum SectorConfigType {
   BrowseBy = 'browse-by',
 }
 
-export interface ISectorsRequestParams {
-  sectorId: string;
-}
-
 export interface ISectorsRequestQuery extends FilterQuery<ISector> {
   config: SectorConfigType;
-  /**
-   * get all sectors of a specific tier and
-   * all their parent sectors
-   *
-   * will be ignored if `tier` or `sectorIds`
-   * query param is also found.
-   */
-  deepestTier: number;
 }
 
 const browsByQuery = {
@@ -46,8 +34,6 @@ const browsByQuery = {
 
 export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>, query: FilterQuery<ISector>, config?: SectorConfigType) => {
   try {
-    const { deepestTier } = req.query;
-
     let _config = {};
 
     if (!!config) {
@@ -72,12 +58,11 @@ export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>, query:
       sort: query?.sort ? { ...query.sort, _id: 1 } : { tier: 1, name: 1, _id: 1 },
       limit: query?.limit || 25,
     };
+
     const filter: FilterQuery<ISector> = {
       ..._config,
       ...query.filter,
     };
-
-    if (!!deepestTier) query.tier = { $lte: deepestTier };
 
     return SectorModel.paginate(filter, options);
   } catch (err) {

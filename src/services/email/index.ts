@@ -15,6 +15,22 @@ export enum EmailTemplates {
   Welcome = 'welcome'
 }
 
+interface IEmailTemplateParams {
+  name: string;
+  recipientEmail: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
+  domain?: string;
+}
+
+interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
+  token: string;
+}
+
+interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
+  groupName: string;
+}
+
 export const buildTemplate = (templateName: string, data: any) => {
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
   const stylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
@@ -31,22 +47,6 @@ export const buildTemplate = (templateName: string, data: any) => {
   const template = Handlebars.compile(templateString);
   return template(data);
 };
-
-interface IEmailTemplateParams {
-  name: string;
-  recipientEmail: string;
-  senderEmail?: string;
-  replyToAddresses?: string[];
-  domain?: string;
-}
-
-interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
-  token: string;
-}
-
-interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
-  groupName: string;
-}
 
 export const sendGroupVerificationEmail = async ({
   name, domain = process.env.FRONTEND_DOMAIN, token, groupName, recipientEmail, senderEmail = EmailAddresses.NoReply, replyToAddresses = [EmailAddresses.ReplyTo],

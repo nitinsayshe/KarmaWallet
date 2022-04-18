@@ -41,12 +41,8 @@ export const resendEmailVerification = async (req: IRequest<{}, {}, Partial<IEma
   const { email } = req.body;
   const days = emailVerificationDays;
   emailChecks(requestor, email);
-  const token = await TokenService.createToken({
-    user: requestor, days, type: TokenTypes.Email, resource: { email },
-  });
-  await sendEmailVerification({
-    name: requestor.name, token: token.value, recipientEmail: email,
-  });
+  const token = await TokenService.createToken({ user: requestor, days, type: TokenTypes.Email, resource: { email } });
+  await sendEmailVerification({ name: requestor.name, token: token.value, recipientEmail: email });
   return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
 };
 

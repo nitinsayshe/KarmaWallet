@@ -41,6 +41,8 @@ export interface IEmailVerificationData {
   tokenValue: string;
 }
 
+type UserKeys = keyof IUser;
+
 export const register = async (req: IRequest, {
   password,
   email,
@@ -92,8 +94,10 @@ export const register = async (req: IRequest, {
     const authKey = await Session.createSession(newUser._id.toString());
 
     const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-    await resendEmailVerification(verificationEmailRequest);
-    await sendWelcomeEmail({ name: newUser.name, recipientEmail: email });
+    await Promise.all([
+      resendEmailVerification(verificationEmailRequest),
+      sendWelcomeEmail({ name: newUser.name, recipientEmail: email }),
+    ]);
 
     return { user: newUser, authKey };
   } catch (err) {
@@ -196,8 +200,6 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   return updateUser(req, user, { password: hash });
 };
 
-type UserKeys = keyof IUser;
-
 export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
   const user = await UserModel.findOne({ _id: uid });
   if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
@@ -208,12 +210,7 @@ export const updateProfile = async (req: IRequest, uid: string, updates: Partial
       user.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
       // TODO: Send verification email
     } else {
-      user.emails.map(email => {
-        if (updates.email === email.email) {
-          return { ...email, primary: true };
-        }
-        return { ...email, primary: false };
-      });
+      user.emails.map(email => ({ ...email, primary: updates.email === email.email }));
     }
   }
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];

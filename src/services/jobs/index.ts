@@ -2,26 +2,18 @@ import { IRequest } from '../../types/request';
 import * as EmailService from '../email';
 import { MainBullClient } from '../../clients/bull/main';
 
-export interface ISendGroupVerificationEmailParams {
+export interface ISendEmailParams {
   name: string;
   domain: string;
+  recipientEmail: string;
+}
+
+export interface ISendVerificationEmailParams extends ISendEmailParams {
+  token: string;
+}
+
+export interface ISendGroupVerificationEmailParams extends ISendVerificationEmailParams {
   groupName: string;
-  recipientEmail: string;
-  token: string;
-}
-
-export interface ISendEmailVerificationParams {
-  name: string;
-  domain: string;
-  recipientEmail: string;
-  token: string;
-}
-
-export interface ISendWelcomeEmailParams {
-  name: string;
-  domain: string;
-  recipientEmail: string;
-  token: string;
 }
 
 export interface ICreateJobParams {
@@ -30,50 +22,31 @@ export interface ICreateJobParams {
 }
 
 export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmailParams>) => {
-  const {
-    name, domain, token, groupName, recipientEmail,
-  } = req.body;
-  await EmailService.sendGroupVerificationEmail({
-    name, domain, token, groupName, recipientEmail,
-  });
+  const { name, domain, token, groupName, recipientEmail } = req.body;
+  await EmailService.sendGroupVerificationEmail({ name, domain, token, groupName, recipientEmail });
   return 'Job added to queue';
 };
 
-export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendEmailVerificationParams>) => {
-  const {
-    name, domain, token, recipientEmail,
-  } = req.body;
-  await EmailService.sendEmailVerification({
-    name, domain, token, recipientEmail,
-  });
+export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
+  const { name, domain, token, recipientEmail } = req.body;
+  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail });
   return 'Job added to queue';
 };
 
-export const sendPrimaryEmailVerification = async (req: IRequest<{}, {}, ISendEmailVerificationParams>) => {
-  const {
-    name, domain, token, recipientEmail,
-  } = req.body;
-  await EmailService.sendEmailVerification({
-    name, domain, token, recipientEmail,
-  });
+export const sendPrimaryEmailVerification = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
+  const { name, domain, token, recipientEmail } = req.body;
+  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail });
   return 'Job added to queue';
 };
 
-export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendWelcomeEmailParams>) => {
-  const {
-    name, domain, recipientEmail,
-  } = req.body;
-  await EmailService.sendWelcomeEmail({
-    name, domain, recipientEmail,
-  });
+export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) => {
+  const { name, domain, recipientEmail } = req.body;
+  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail });
   return 'Job added to queue';
 };
 
 export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
-  const {
-    name,
-    data,
-  } = req.body;
+  const { name, data } = req.body;
   MainBullClient.createJob(name, data);
   return 'Job added to queue';
 };

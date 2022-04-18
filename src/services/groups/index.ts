@@ -865,10 +865,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    // const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
-
-    // if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
-
     const existingEmail = user?.emails?.find(e => e.email === validEmail);
     // add groupEmail to user's list of emails
     // if doesnt already exist and

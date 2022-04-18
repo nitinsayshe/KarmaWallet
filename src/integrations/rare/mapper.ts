@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { CompanyModel } from '../../models/company';
 import { UserModel } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -29,7 +30,8 @@ export class RareTransactionMapper {
         // api once we have confirmed what that structure will
         // look like
         // TODO: update to use ObjectId (new users)
-        const user = await UserModel.findOne({ $or: [{ legacyId: transaction.user.external_id }, { _id: transaction.user.external_id }] });
+        const userQuery = Types.ObjectId.isValid(transaction.user.external_id) ? { _id: transaction.user.external_id } : { legacyId: transaction.user.external_id };
+        const user = await UserModel.findOne(userQuery);
 
         // TODO: update this to structure returned from rare
         // api once we have confirmed what that structure will

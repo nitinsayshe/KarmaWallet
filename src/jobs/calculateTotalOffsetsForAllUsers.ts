@@ -27,28 +27,15 @@ export const exec = async () => {
             },
           },
         }, {
+          $group: {
+            _id: '$userId',
+          },
+        }, {
           $lookup: {
             from: 'users',
-            localField: 'userId',
+            localField: '_id',
             foreignField: '_id',
             as: 'user',
-          },
-        }, {
-          $unwind: {
-            path: '$user',
-            preserveNullAndEmptyArrays: true,
-          },
-        }, {
-          $project: {
-            _id: 0,
-            user: 1,
-          },
-        }, {
-          $group: {
-            _id: null,
-            user: {
-              $addToSet: '$user',
-            },
           },
         }, {
           $unwind: {

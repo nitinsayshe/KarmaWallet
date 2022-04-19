@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { getTotalOffsetsForAllUsers } from '../src/services/scripts/getTotalOffsetsForAllUsers';
 
 (async () => {
   try {
@@ -13,7 +12,6 @@ import { getTotalOffsetsForAllUsers } from '../src/services/scripts/getTotalOffs
     await MongoClient.init();
 
     // add mappers here...
-    await getTotalOffsetsForAllUsers();
 
     await MongoClient.disconnect();
   } catch (err) {

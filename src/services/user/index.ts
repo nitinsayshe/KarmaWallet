@@ -206,9 +206,12 @@ export const updateProfile = async (req: IRequest, uid: string, updates: Partial
   if (updates?.email && isValidEmailFormat(updates.email)) {
     const existingEmail = user.emails.find(email => email.email === updates.email);
     if (!existingEmail) {
-      user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
-      user.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
+      const userWithEmail = await UserModel.findOne({ 'emails.email': updates.email });
+      if (!userWithEmail) {
+        user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
+        user.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
       // TODO: Send verification email
+      }
     } else {
       user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: updates.email === email.email }));
     }
@@ -216,6 +219,8 @@ export const updateProfile = async (req: IRequest, uid: string, updates: Partial
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
+    const value = typeof updates?.[key];
+    if (value === 'undefined') continue;
     switch (key) {
       case 'name':
         user.name = updates.name;

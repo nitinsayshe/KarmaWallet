@@ -31,7 +31,7 @@ const usdgSchema = new Schema({
   },
   subCategory: {
     type: Schema.Types.ObjectId,
-    ref: 'unsdg_subCategory',
+    ref: 'unsdg_subcategory',
   },
   subCategoryIndex: { type: Number },
   goalNum: { type: Number },

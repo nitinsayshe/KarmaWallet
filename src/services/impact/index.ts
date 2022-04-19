@@ -89,7 +89,8 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
 
   // Add 3rd Equivalency (positive) if User hasx purchased any offsets
   if (totalOffset > 0) {
-    const equivalency = totalEquivalencies.positive[getRandomInt(0, totalEquivalencies.positive.length - 1)];
+    const { positive } = CarbonService.getEquivalencies(totalOffset);
+    const equivalency = positive[getRandomInt(0, positive.length - 1)];
     equivalencies.push({ ...equivalency, type: CarbonService.EquivalencyObjectType.Offsets });
   }
 

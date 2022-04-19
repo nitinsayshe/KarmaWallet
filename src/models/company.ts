@@ -51,10 +51,6 @@ export type ICompanyModel = IModel<ICompany>;
 const companySchema = new Schema(
   {
     companyName: { type: String, required: true },
-    dataSources: [{
-      type: Schema.Types.ObjectId,
-      ref: 'data_source',
-    }],
     // TODO: update this field whenver unsdgs are updated.
     // too expensive to make virtual
     combinedScore: { type: Number },

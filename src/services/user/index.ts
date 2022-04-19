@@ -41,7 +41,7 @@ export interface IEmailVerificationData {
   tokenValue: string;
 }
 
-type UserKeys = keyof IUser;
+type UserKeys = keyof IUserData;
 
 export const register = async (req: IRequest, {
   password,
@@ -200,8 +200,10 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   return updateUser(req, user, { password: hash });
 };
 
-export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
+export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
+  const uid = req.requestor._id;
   const user = await UserModel.findOne({ _id: uid });
+  const updates = req.body;
   if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
   if (updates?.email && isValidEmailFormat(updates.email)) {
     const existingEmail = user.emails.find(email => email.email === updates.email);
@@ -219,8 +221,7 @@ export const updateProfile = async (req: IRequest, uid: string, updates: Partial
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
-    const value = typeof updates?.[key];
-    if (value === 'undefined') continue;
+    if (typeof updates?.[key] === 'undefined') continue;
     switch (key) {
       case 'name':
         user.name = updates.name;

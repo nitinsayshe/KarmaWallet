@@ -1,6 +1,6 @@
 import * as User from '../services/user';
 import * as output from '../services/output';
-import { allowFields, verifyRequiredFields } from '../lib/requestData';
+import { verifyRequiredFields } from '../lib/requestData';
 import { ErrorTypes, TokenTypes } from '../lib/constants';
 import * as Token from '../services/token';
 import { isValidEmailFormat } from '../lib/string';
@@ -65,17 +65,9 @@ export const logout: IRequestHandler = async (req, res) => {
   }
 };
 
-export const updateProfile: IRequestHandler = async (req, res) => {
+export const updateProfile: IRequestHandler<{}, {}, User.IUserData> = async (req, res) => {
   try {
-    const { body } = req;
-    const { _id } = req.requestor;
-    const allowedFields = ['name', 'email', 'zipcode', 'subscribedUpdates'];
-    const updates = allowFields(allowedFields, body);
-    if (!Object.values(updates).length) {
-      output.error(req, res, new CustomError('No valid update fields in request.'));
-      return;
-    }
-    const user = await User.updateProfile(req, _id, updates);
+    const user = await User.updateProfile(req);
     output.api(req, res, User.getShareableUser(user));
   } catch (err) {
     output.error(req, res, asCustomError(err));

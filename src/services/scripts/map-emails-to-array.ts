@@ -9,7 +9,7 @@ export const mapUserEmailsToArray = async () => {
   for (const user of users) {
     const emails = [];
     emails.push({ email: user.email, status: UserEmailStatus.Verified, primary: true });
-    if (user.altEmails.length > 0) {
+    if (user.altEmails?.length > 0) {
       user.altEmails.forEach((altEmail) => {
         if (!altEmail?.email) return;
         emails.push({ email: altEmail.email, status: altEmail.status, primary: false });

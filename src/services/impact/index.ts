@@ -5,18 +5,18 @@ import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
 
-// TODO: values provided by Anushka 2/2/22. these may need to change
-export const averageAmericanEmissions = {
-  Monthly: 9 / 12,
-  Annually: 9,
-  Lifetime: 1000,
-};
-
 interface IShowUserAmericanAverageParams {
   userId: string;
   cachedTransactionTotal?: number;
   catchedTransactionCount?: number;
 }
+
+// values provided by Anushka 2/2/22. these may need to change
+export const averageAmericanEmissions = {
+  Monthly: 9 / 12,
+  Annually: 9,
+  Lifetime: 1000,
+};
 
 const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catchedTransactionCount }: IShowUserAmericanAverageParams) => {
   // if the UID and both no cached data, show averages
@@ -31,13 +31,13 @@ const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catche
 
 const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: number, totalOffset: number) => {
   /**
-     * Logic to Determine Number used for Total Equivalency
-     * Case: Net Emissions > 0: Use Net Emissions
-     * Case: Negative Net Emissions and 0 Gross Emissions: Use American Average over 2 years
-     * Case: Negative Net Emissions and  > 0 Gross Emissions: Use Total Offset
-     * Case: 0 Net Emissions and > 0 Gross Emissions and > 0 Offset: Use Total Offset
-     * Case: 0 Net Emissions and 0 Gross Emissions: Use American Average over 2 years
-     */
+   * Logic to Determine Number used for Total Equivalency
+   * Case: Net Emissions > 0: Use Net Emissions
+   * Case: Negative Net Emissions and 0 Gross Emissions: Use American Average over 2 years
+   * Case: Negative Net Emissions and  > 0 Gross Emissions: Use Total Offset
+   * Case: 0 Net Emissions and > 0 Gross Emissions and > 0 Offset: Use Total Offset
+   * Case: 0 Net Emissions and 0 Gross Emissions: Use American Average over 2 years
+   */
 
   if (netEmissions > 0) return netEmissions;
   if (netEmissions < 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
@@ -46,6 +46,8 @@ const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: numb
   if (netEmissions === 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
 };
 
+// TODO: split this up so offsets and emissions can be accessed
+//   and retrieved separately.
 export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   const _id = req?.requestor?._id;
   let totalEmissions = 0;
@@ -77,10 +79,11 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   const totalEquivalencies = CarbonService.getEquivalencies(getAmountForTotalEquivalency(netEmissions, totalEmissions, totalOffset));
 
   const totalEquivalency = totalEquivalencies.negative[getRandomInt(0, totalEquivalencies.negative.length - 1)];
-  totalEquivalency.type = 'total';
+  totalEquivalency.type = CarbonService.EquivalencyObjectType.Total;
+
   const monthlyEquivalenciesFiltered = monthlyEquivalencies.negative.filter(eq => eq.icon !== totalEquivalency.icon);
   const monthlyEquivalency = monthlyEquivalenciesFiltered[getRandomInt(0, monthlyEquivalenciesFiltered.length - 1)];
-  monthlyEquivalency.type = 'monthly';
+  monthlyEquivalency.type = CarbonService.EquivalencyObjectType.Monthly;
 
   const equivalencies = [totalEquivalency, monthlyEquivalency];
 
@@ -88,7 +91,7 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   if (totalOffset > 0) {
     const { positive } = CarbonService.getEquivalencies(totalOffset);
     const equivalency = positive[getRandomInt(0, positive.length - 1)];
-    equivalencies.push({ ...equivalency, type: 'offsets' });
+    equivalencies.push({ ...equivalency, type: CarbonService.EquivalencyObjectType.Offsets });
   }
 
   return {

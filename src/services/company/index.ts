@@ -40,7 +40,7 @@ export const getCompanyById = async (__: IRequest, _id: string, includeHidden = 
         model: CompanyModel,
         populate: [
           {
-            path: 'sectors',
+            path: 'sectors.sector',
             model: SectorModel,
           },
           {
@@ -50,7 +50,7 @@ export const getCompanyById = async (__: IRequest, _id: string, includeHidden = 
         ],
       })
       .populate({
-        path: 'sectors',
+        path: 'sectors.sector',
         model: SectorModel,
       })
       .populate({
@@ -75,7 +75,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
         model: CompanyModel,
         populate: [
           {
-            path: 'sectors',
+            path: 'sectors.sector',
             model: SectorModel,
           },
           {
@@ -85,7 +85,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
         ],
       },
       {
-        path: 'sectors',
+        path: 'sectors.sector',
         model: SectorModel,
       },
       {
@@ -111,7 +111,7 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)
     .populate({
-      path: 'sectors',
+      path: 'sectors.sector',
       model: SectorModel,
     })
     .lean();
@@ -188,8 +188,11 @@ export const getShareableCompany = ({
   const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
-  const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)
-    ? sectors.map(s => getShareableSector(s as ISectorModel))
+  const _sectors = (!!sectors && !!sectors.filter(s => !!Object.keys(s.sector).length).length)
+    ? sectors.map(s => ({
+      sector: getShareableSector(s.sector as ISectorModel),
+      primary: s.primary,
+    }))
     : sectors;
 
   return {

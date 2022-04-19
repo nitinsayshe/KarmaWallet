@@ -19,7 +19,7 @@ export interface ISectorsRequestQuery extends FilterQuery<ISector> {
   config: SectorConfigType;
 }
 
-const browsByQuery = {
+const browseByQuery = {
   _id: {
     $in: [
       '62192ef1f022c9e3fbff0aac',
@@ -39,7 +39,7 @@ export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>, query:
     if (!!config) {
       switch (config) {
         case SectorConfigType.BrowseBy:
-          _config = browsByQuery;
+          _config = browseByQuery;
           break;
         default:
           throw new CustomError(`Invalid sector config found: ${config}`, ErrorTypes.INVALID_ARG);

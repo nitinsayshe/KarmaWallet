@@ -10,17 +10,18 @@ import { ICompanyDocument } from './company';
 import { ISectorDocument } from './sector';
 import { IUserDocument } from './user';
 
-export interface ICompanyTransactionTotals {
-  company: IRef<ObjectId, ICompanyDocument>;
+export interface ITransactionTotals {
   totalSpent: number;
   transactionCount: number;
 }
 
-export interface ISectorTransactionTotals {
+export interface ICompanyTransactionTotals extends ITransactionTotals {
+  company: IRef<ObjectId, ICompanyDocument>;
+}
+
+export interface ISectorTransactionTotals extends ITransactionTotals {
   sector: IRef<ObjectId, ISectorDocument>;
   tier: number;
-  totalSpent: number;
-  transactionCount: number;
   companies: IRef<ObjectId, ICompanyDocument>[];
 }
 

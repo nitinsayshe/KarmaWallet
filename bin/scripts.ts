@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { updateCompanySectorsWithPrimaryStatus } from '../src/services/scripts/updateSectorsWithPrimary';
+import { storeTotals } from '../src/services/transaction/totals';
 
 (async () => {
   try {
@@ -14,7 +14,7 @@ import { updateCompanySectorsWithPrimaryStatus } from '../src/services/scripts/u
 
     // add mappers here...
     // await storeTotals();
-    await updateCompanySectorsWithPrimaryStatus();
+    await storeTotals();
 
     await MongoClient.disconnect();
   } catch (err) {

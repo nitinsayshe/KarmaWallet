@@ -229,6 +229,8 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
         // TODO: remove when legacy user is removed
         legacyUser.emails = legacyUser.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
         legacyUser.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
+        // updating requestor for access to new email
+        resendEmailVerification({ ...req, requestor: user });
       }
     } else {
       user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: updates.email === email.email }));
@@ -258,7 +260,6 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   }
   await user.save();
   await legacyUser.save();
-  resendEmailVerification(req);
   return user;
 };
 

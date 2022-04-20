@@ -19,6 +19,7 @@ import { LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { sendWelcomeEmail } from '../email';
+import { verifyRequiredFields } from '../../lib/requestData';
 
 dayjs.extend(utc);
 
@@ -26,6 +27,11 @@ export interface ILoginData {
   email: string;
   password?: string;
   token?: string;
+}
+
+export interface IUpdatePasswordBody {
+  newPassword: string;
+  password: string;
 }
 
 export interface IUserData extends ILoginData {
@@ -191,6 +197,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
   }
 };
 
+// used internally in multiple services to update a user's password
 const changePassword = async (req: IRequest, user: IUserDocument, newPassword: string) => {
   const passwordValidation = validatePassword(newPassword);
   if (!passwordValidation.valid) {
@@ -240,17 +247,20 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   return user;
 };
 
-export const updatePassword = async (req: IRequest, newPassword: string, currentPassword: string) => {
-  const passwordMatch = await argon2.verify(req.requestor.password, currentPassword);
-  if (!passwordMatch) {
-    throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
-  }
+// used as endpoint for UI to update password
+export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>) => {
+  const { newPassword, password } = req.body;
+  if (!newPassword || !password) throw new CustomError('New and current passwords required.', ErrorTypes.INVALID_ARG);
+  const passwordMatch = await argon2.verify(req.requestor.password, password);
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
   const user = await changePassword(req, req.requestor._id, newPassword);
   return user;
 };
 
-export const createPasswordResetToken = async (_: IRequest, email: string) => {
+export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>) => {
   const minutes = passwordResetTokenMinutes;
+  const { email } = req.body;
+  if (!email || !isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const user = await UserModel.findOne({ 'emails.email': email });
   if (user) {
     await TokenService.createToken({ user, minutes, type: TokenTypes.Password });
@@ -260,16 +270,17 @@ export const createPasswordResetToken = async (_: IRequest, email: string) => {
   return { message };
 };
 
-export const resetPasswordFromToken = async (req: IRequest, email: string, value: string, password: string) => {
+export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData & IUpdatePasswordBody)>) => {
+  const { newPassword, token, email } = req.body;
+  const requiredFields = ['newPassword', 'token', 'email'];
+  const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
+  if (!isValid) throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
+  if (!isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const errMsg = 'Token not found. Please request password reset again.';
   const user = await UserModel.findOne({ 'emails.email': email });
-  if (!user) {
-    throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
-  }
-  const token = await TokenService.getTokenAndConsume(user, value, TokenTypes.Password);
-  if (!token) {
-    throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
-  }
-  const _user = await changePassword(req, user, password);
+  if (!user) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  const existingToken = await TokenService.getTokenAndConsume(user, token, TokenTypes.Password);
+  if (!existingToken) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  const _user = await changePassword(req, user, newPassword);
   return _user;
 };

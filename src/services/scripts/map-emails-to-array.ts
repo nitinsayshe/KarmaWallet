@@ -1,6 +1,7 @@
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
-import { UserEmailStatus, UserModel } from '../../models/user';
+import { LegacyUserModel } from '../../models/legacyUser';
+import { IAltEmail, UserEmailStatus, UserModel } from '../../models/user';
 
 export const mapUserEmailsToArray = async () => {
   const { APP_USER_ID } = process.env;
@@ -9,12 +10,19 @@ export const mapUserEmailsToArray = async () => {
   for (const user of users) {
     const emails = [];
     emails.push({ email: user.email, status: UserEmailStatus.Verified, primary: true });
-    if (user.altEmails?.length > 0) {
-      user.altEmails.forEach((altEmail) => {
+    if (user?.altEmails?.length > 0) {
+      user.altEmails.forEach((altEmail: IAltEmail) => {
         if (!altEmail?.email) return;
         emails.push({ email: altEmail.email, status: altEmail.status, primary: false });
       });
     }
+    user.emails = emails;
+    await user.save();
+  }
+  const legacyUsers = await LegacyUserModel.find({});
+  for (const user of legacyUsers) {
+    const emails = [];
+    emails.push({ email: user.email, status: UserEmailStatus.Verified, primary: true });
     user.emails = emails;
     await user.save();
   }

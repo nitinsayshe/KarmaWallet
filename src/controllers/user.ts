@@ -1,4 +1,4 @@
-import * as User from '../services/user';
+import * as UserService from '../services/user';
 import * as output from '../services/output';
 import { verifyRequiredFields } from '../lib/requestData';
 import { ErrorTypes, TokenTypes } from '../lib/constants';
@@ -8,12 +8,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 
-interface IUpdatePasswordBody {
-  newPassword: string;
-  password: string;
-}
-
-export const register: IRequestHandler<{}, {}, User.IUserData> = async (req, res) => {
+export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['password', 'email', 'name', 'subscribedUpdates'];
@@ -26,23 +21,23 @@ export const register: IRequestHandler<{}, {}, User.IUserData> = async (req, res
     const {
       password, email, name, zipcode, subscribedUpdates,
     } = body;
-    const { user, authKey } = await User.register(req, {
+    const { user, authKey } = await UserService.register(req, {
       password, email, name, zipcode, subscribedUpdates,
     });
-    output.api(req, res, User.getShareableUser(user), authKey);
+    output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const login: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
+export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
   try {
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
     const { password, email } = req.body;
-    const { user, authKey } = await User.login(req, {
+    const { user, authKey } = await UserService.login(req, {
       password, email,
     });
-    output.api(req, res, User.getShareableUser(user), authKey);
+    output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -50,7 +45,7 @@ export const login: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) 
 
 export const getProfile: IRequestHandler = async (req, res) => {
   try {
-    output.api(req, res, User.getShareableUser(req.requestor));
+    output.api(req, res, UserService.getShareableUser(req.requestor));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -58,51 +53,41 @@ export const getProfile: IRequestHandler = async (req, res) => {
 
 export const logout: IRequestHandler = async (req, res) => {
   try {
-    await User.logout(req, req.authKey);
+    await UserService.logout(req, req.authKey);
     output.api(req, res, 'Success');
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const updateProfile: IRequestHandler<{}, {}, User.IUserData> = async (req, res) => {
+export const updateProfile: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
-    const user = await User.updateProfile(req);
-    output.api(req, res, User.getShareableUser(user));
+    const user = await UserService.updateProfile(req);
+    output.api(req, res, UserService.getShareableUser(user));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const updatePassword: IRequestHandler<{}, {}, IUpdatePasswordBody> = async (req, res) => {
+export const updatePassword: IRequestHandler<{}, {}, UserService.IUpdatePasswordBody> = async (req, res) => {
   try {
-    const { newPassword, password } = req.body;
-    if (!newPassword || !password) {
-      output.error(req, res, new CustomError('New and current passwords required.', ErrorTypes.INVALID_ARG));
-      return;
-    }
-    const user = await User.updatePassword(req, newPassword, password);
-    output.api(req, res, User.getShareableUser(user));
+    const user = await UserService.updatePassword(req);
+    output.api(req, res, UserService.getShareableUser(user));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const createPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
+export const createPasswordResetToken: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email || !isValidEmailFormat(email)) {
-      output.error(req, res, new CustomError('Invalid email.', ErrorTypes.INVALID_ARG));
-      return;
-    }
-    const data = await User.createPasswordResetToken(req, email);
+    const data = await UserService.createPasswordResetToken(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const checkPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> = async (req, res) => {
+export const checkPasswordResetToken: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
   try {
     const { email, token } = req.body;
     if (!token) {
@@ -113,7 +98,7 @@ export const checkPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> =
       output.error(req, res, new CustomError('Invalid email.', ErrorTypes.AUTHENTICATION));
       return;
     }
-    const user = await User.getUser(req, { email });
+    const user = await UserService.getUser(req, { email });
     if (!user) {
       output.error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
       return;
@@ -129,27 +114,16 @@ export const checkPasswordResetToken: IRequestHandler<{}, {}, User.ILoginData> =
   }
 };
 
-export const resetPasswordFromToken: IRequestHandler<{}, {}, (User.ILoginData & IUpdatePasswordBody)> = async (req, res) => {
+export const resetPasswordFromToken: IRequestHandler<{}, {}, (UserService.ILoginData & UserService.IUpdatePasswordBody)> = async (req, res) => {
   try {
-    const { newPassword, token, email } = req.body;
-    const requiredFields = ['newPassword', 'token', 'email'];
-    const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
-    if (!isValid) {
-      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
-      return;
-    }
-    if (!isValidEmailFormat(email)) {
-      output.error(req, res, new CustomError('Invalid email.', ErrorTypes.INVALID_ARG));
-      return;
-    }
-    const user = await User.resetPasswordFromToken(req, email, token, newPassword);
-    output.api(req, res, User.getShareableUser(user));
+    const user = await UserService.resetPasswordFromToken(req);
+    output.api(req, res, UserService.getShareableUser(user));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const resendEmailVerification: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
+export const resendEmailVerification: IRequestHandler<{}, {}, Partial<UserService.IEmailVerificationData>> = async (req, res) => {
   try {
     const data = await UserVerificationService.resendEmailVerification(req);
     output.api(req, res, data);
@@ -158,7 +132,7 @@ export const resendEmailVerification: IRequestHandler<{}, {}, Partial<User.IEmai
   }
 };
 
-export const verifyEmail: IRequestHandler<{}, {}, Partial<User.IEmailVerificationData>> = async (req, res) => {
+export const verifyEmail: IRequestHandler<{}, {}, Partial<UserService.IEmailVerificationData>> = async (req, res) => {
   try {
     const data = await UserVerificationService.verifyEmail(req);
     output.api(req, res, data);

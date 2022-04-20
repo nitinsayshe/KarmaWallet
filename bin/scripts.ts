@@ -13,7 +13,6 @@ import { updateCompanySectorsWithPrimaryStatus } from '../src/services/scripts/u
     await MongoClient.init();
 
     // add mappers here...
-    // await storeTotals();
     await updateCompanySectorsWithPrimaryStatus();
 
     await MongoClient.disconnect();

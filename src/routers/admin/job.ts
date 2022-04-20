@@ -10,10 +10,7 @@ router.route('/group-verification-email')
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendGroupVerificationEmail);
 
 router.route('/email-verification')
-  .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendPrimaryEmailVerification);
-
-router.route('/alt-email-verification')
-  .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendAltEmailVerificationEmail);
+  .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendEmailVerification);
 
 router.route('/welcome-email')
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendWelcomeEmail);

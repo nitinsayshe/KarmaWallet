@@ -2,13 +2,14 @@ import { SandboxedJob } from 'bullmq';
 import { JobNames } from '../../../lib/constants/jobScheduler';
 import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
-import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
-import * as SendEmail from '../../../jobs/sendEmail';
 import { _MongoClient } from '../../mongo';
-import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
-import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
+import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
+import * as SendEmail from '../../../jobs/sendEmail';
+import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
+import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
+import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 
 const MongoClient = new _MongoClient();
 
@@ -30,14 +31,17 @@ export default async (job: SandboxedJob) => {
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
       break;
-    case JobNames.TransactionsMonitor:
-      result = TransactionsMonitor.exec();
-      break;
     case JobNames.CacheGroupOffsetData:
       result = CacheGroupOffsetData.exec();
       break;
     case JobNames.CachedDataCleanup:
       result = CachedDataCleanup.exec();
+      break;
+    case JobNames.TotalOffsetsForAllUsers:
+      result = TotalOffsetsForAllUsers.exec();
+      break;
+    case JobNames.TransactionsMonitor:
+      result = TransactionsMonitor.exec();
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);

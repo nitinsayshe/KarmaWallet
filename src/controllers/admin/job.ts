@@ -12,25 +12,16 @@ export const sendGroupVerificationEmail: IRequestHandler<{}, {}, JobService.ISen
   }
 };
 
-export const sendAltEmailVerificationEmail: IRequestHandler<{}, {}, JobService.ISendEmailVerificationParams> = async (req, res) => {
+export const sendEmailVerification: IRequestHandler<{}, {}, JobService.ISendVerificationEmailParams> = async (req, res) => {
   try {
-    const message = await JobService.sendAltEmailVerificationEmail(req);
+    const message = await JobService.sendEmailVerification(req);
     output.api(req, res, message);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const sendPrimaryEmailVerification: IRequestHandler<{}, {}, JobService.ISendEmailVerificationParams> = async (req, res) => {
-  try {
-    const message = await JobService.sendPrimaryEmailVerification(req);
-    output.api(req, res, message);
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
-export const sendWelcomeEmail: IRequestHandler<{}, {}, JobService.ISendWelcomeEmailParams> = async (req, res) => {
+export const sendWelcomeEmail: IRequestHandler<{}, {}, JobService.ISendEmailParams> = async (req, res) => {
   try {
     const message = await JobService.sendWelcomeEmail(req);
     output.api(req, res, message);

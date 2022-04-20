@@ -27,13 +27,7 @@ export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGrou
   return 'Job added to queue';
 };
 
-export const sendAltEmailVerificationEmail = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
-  const { name, domain, token, recipientEmail } = req.body;
-  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail });
-  return 'Job added to queue';
-};
-
-export const sendPrimaryEmailVerification = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
+export const sendEmailVerification = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
   const { name, domain, token, recipientEmail } = req.body;
   await EmailService.sendEmailVerification({ name, domain, token, recipientEmail });
   return 'Job added to queue';

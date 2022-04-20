@@ -9,6 +9,7 @@ import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
+import * as GenerateUserTransactionTotals from '../../../jobs/generageUserTransactionTotals';
 
 const MongoClient = new _MongoClient();
 
@@ -45,8 +46,11 @@ export default async (job: SandboxedJob) => {
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();
       break;
+    case JobNames.GenerageUserTransactionTotals:
+      result = await GenerateUserTransactionTotals.exec();
+      break;
     default:
-      console.log('>>>>> invalid job name found');
+      console.log('>>>>> invalid job name found: ', name);
       break;
   }
   return result;

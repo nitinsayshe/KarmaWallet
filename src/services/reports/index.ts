@@ -96,6 +96,11 @@ export const getSummary = async (_: IRequest) => {
       }
     }
 
+    const totalOffsets = await ReportModel
+      .findOne({ totalOffsetsForAllUsers: { $exists: true } })
+      .sort({ createdOn: -1 })
+      .lean();
+
     return {
       users: {
         total: totalUsersCount,
@@ -107,6 +112,10 @@ export const getSummary = async (_: IRequest) => {
       },
       transactions: {
         total: transactions,
+      },
+      totalOffsets: {
+        dollars: totalOffsets.totalOffsetsForAllUsers.dollars,
+        tons: totalOffsets.totalOffsetsForAllUsers.tons,
       },
     };
   } catch (err) {

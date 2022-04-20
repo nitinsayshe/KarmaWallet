@@ -22,6 +22,14 @@ interface IParsedUser {
   lastLogin: Date;
 }
 
+const splitNameIntoFirstAndLast = (name: string): { firstName: string, lastName: string } => {
+  name = name.trim();
+  const names = name.split(' ');
+  const firstName = names.length < 3 ? names[0] : names.slice(0, names.length - 1).join(' ');
+  const lastName = names.length > 1 ? names[names.length - 1] : null;
+  return { firstName, lastName };
+};
+
 export const generateUserEmailList = async () => {
   console.log('\ngenerating user email report...');
   try {
@@ -29,7 +37,7 @@ export const generateUserEmailList = async () => {
     const parsedUsers: IParsedUser[] = [];
 
     for (const user of users) {
-      const [firstName, lastName] = user.name.split(' ');
+      const { firstName, lastName } = splitNameIntoFirstAndLast(user.name);
 
       const logins = await LegacySessionModel.find({ uid: user.legacyId }).sort({ sessionTime: -1 }).lean();
       const cards = await CardModel.find({ userId: user._id, status: CardStatus.Linked }).lean();

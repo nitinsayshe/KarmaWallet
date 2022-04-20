@@ -17,6 +17,11 @@ export interface IHiddenCompany {
   lastModified: Date;
 }
 
+export interface ICompanySector {
+  sector: IRef<ObjectId, ISector | ISectorDocument>;
+  primary: boolean;
+}
+
 export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -28,9 +33,10 @@ export interface IShareableCompany {
   logo: string;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, IShareableCompany>;
-  sectors: IRef<ObjectId, ISector>[];
+  sectors: ICompanySector[];
   slug: string;
   url: string;
+  lastModified: Date;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -39,7 +45,6 @@ export interface ICompany extends IShareableCompany {
   legacyId: number;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, ICompanyDocument>;
-  sectors: IRef<ObjectId, ISectorDocument>[];
   notes: string;
 }
 
@@ -60,8 +65,16 @@ const companySchema = new Schema(
     combinedScore: { type: Number },
     dataYear: { type: Number }, // ??? do want to track this on the company?
     sectors: [{
-      type: Schema.Types.ObjectId,
-      ref: 'sector',
+      type: {
+        sector: {
+          type: Schema.Types.ObjectId,
+          ref: 'sector',
+        },
+        primary: {
+          type: Boolean,
+          default: false,
+        },
+      },
     }],
     url: { type: String, default: null },
     // TODO: update this field whenever usdgs are updated
@@ -89,6 +102,7 @@ const companySchema = new Schema(
       },
       required: true,
     },
+    lastModified: { type: Date },
   },
   {
     toJSON: { virtuals: true },

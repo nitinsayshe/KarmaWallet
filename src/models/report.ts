@@ -6,6 +6,11 @@ import {
 } from 'mongoose';
 import { IModel } from '../types/model';
 
+export interface ITotalOffsetsForAllUsers {
+  dollars: number;
+  tons: number;
+}
+
 export interface ITransactionsMonitor {
   totalTransactions: number;
   missingCarbonMultiplier: number;
@@ -13,12 +18,20 @@ export interface ITransactionsMonitor {
 }
 
 export interface IReport {
+  totalOffsetsForAllUsers?: ITotalOffsetsForAllUsers;
   transactionsMonitor?: ITransactionsMonitor;
   createdOn: Date;
 }
 
 export interface IReportDocument extends IReport, Document {}
 export type IReportModel = IModel<IReport>;
+
+const totalOffsetsForAllUsers = {
+  type: {
+    dollars: Number,
+    tons: Number,
+  },
+};
 
 const transactionsMonitor = {
   type: {
@@ -29,6 +42,7 @@ const transactionsMonitor = {
 };
 
 const reportSchema = new Schema({
+  totalOffsetsForAllUsers,
   transactionsMonitor,
   createdOn: Date,
 });

@@ -1,6 +1,7 @@
 import { IRequest } from '../../types/request';
 import * as EmailService from '../email';
 import { MainBullClient } from '../../clients/bull/main';
+import { UserModel } from '../../models/user';
 
 export interface ISendEmailParams {
   name: string;
@@ -22,20 +23,23 @@ export interface ICreateJobParams {
 }
 
 export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmailParams>) => {
+  const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
   const { name, domain, token, groupName, recipientEmail } = req.body;
-  await EmailService.sendGroupVerificationEmail({ name, domain, token, groupName, recipientEmail });
+  await EmailService.sendGroupVerificationEmail({ name, domain, token, groupName, recipientEmail, user: appUser._id });
   return 'Job added to queue';
 };
 
 export const sendEmailVerification = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
+  const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
   const { name, domain, token, recipientEmail } = req.body;
-  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail });
+  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail, user: appUser._id });
   return 'Job added to queue';
 };
 
 export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) => {
+  const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
   const { name, domain, recipientEmail } = req.body;
-  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail });
+  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail, user: appUser._id });
   return 'Job added to queue';
 };
 

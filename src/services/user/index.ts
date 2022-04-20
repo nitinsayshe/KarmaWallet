@@ -111,7 +111,7 @@ export const register = async (req: IRequest, {
     const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
     await Promise.all([
       resendEmailVerification(verificationEmailRequest),
-      sendWelcomeEmail({ name: newUser.name, recipientEmail: email }),
+      sendWelcomeEmail({ name: newUser.name, recipientEmail: email, user: newUser._id }),
     ]);
 
     return { user: newUser, authKey };

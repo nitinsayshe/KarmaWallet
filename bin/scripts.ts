@@ -2,7 +2,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { storeTotals } from '../src/services/transaction/totals';
 
 (async () => {
   try {
@@ -13,8 +12,6 @@ import { storeTotals } from '../src/services/transaction/totals';
     await MongoClient.init();
 
     // add mappers here...
-    // await storeTotals();
-    await storeTotals();
 
     await MongoClient.disconnect();
   } catch (err) {

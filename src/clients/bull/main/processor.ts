@@ -46,7 +46,7 @@ export default async (job: SandboxedJob) => {
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();
       break;
-    case JobNames.GenerageUserTransactionTotals:
+    case JobNames.GenerateUserTransactionTotals:
       result = await GenerateUserTransactionTotals.exec();
       break;
     default:

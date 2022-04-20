@@ -48,14 +48,14 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.GenerateGroupOffsetStatements, null, { jobId: `${JobNames.GenerateGroupOffsetStatements}-monthly`, repeat: { cron: '0 3 1 * *' } });
 
     this.createFlow(
-      JobNames.GenerageUserTransactionTotals,
+      JobNames.GenerateUserTransactionTotals,
       [
         {
           name: JobNames.GlobalPlaidTransactionMapper,
           opts: { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly` },
         },
       ],
-      { jobId: `${JobNames.GenerageUserTransactionTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } },
+      { jobId: `${JobNames.GenerateUserTransactionTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } },
     );
   };
 

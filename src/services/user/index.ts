@@ -15,7 +15,7 @@ import * as TokenService from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
-import { LegacyUserModel } from '../../models/legacyUser';
+import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { sendWelcomeEmail } from '../email';
@@ -39,12 +39,21 @@ export interface IUserData extends ILoginData {
   zipcode: string;
   subscribedUpdates: boolean;
   role?: UserRoles;
+  pw?: string;
 }
 
 export interface IEmailVerificationData {
   email: string;
   code: string;
   tokenValue: string;
+}
+
+export interface IUpdateUserEmailParams {
+  user: IUserDocument;
+  email: string;
+  legacyUser: ILegacyUserDocument;
+  req: IRequest;
+  pw: string;
 }
 
 type UserKeys = keyof IUserData;
@@ -210,32 +219,38 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   return updatedUser;
 };
 
+export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpdateUserEmailParams) => {
+  if (!pw) throw new CustomError('Your password is required when updating your email.', ErrorTypes.INVALID_ARG);
+  const passwordMatch = await argon2.verify(req.requestor.password, pw);
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
+  if (email && isValidEmailFormat(email)) {
+    const existingEmail = user.emails.find(userEmail => userEmail.email === email);
+    if (!existingEmail) {
+      // check if another user has this email
+      const isEmailInUse = await UserModel.findOne({ 'emails.email': email });
+      if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
+      user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+      user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+      // TODO: remove when legacy user is removed
+      legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+      legacyUser.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+      // updating requestor for access to new email
+      resendEmailVerification({ ...req, requestor: user });
+    } else {
+      user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+      legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+    }
+  }
+};
+
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const uid = req.requestor._id;
   const user = await UserModel.findOne({ _id: uid });
   const updates = req.body;
   if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
   const legacyUser = await LegacyUserModel.findOne({ _id: user.legacyId });
-  if (updates?.email && isValidEmailFormat(updates.email)) {
-    const existingEmail = user.emails.find(email => email.email === updates.email);
-    if (!existingEmail) {
-      // check if another user has this email
-      const isEmailInUse = await UserModel.findOne({ 'emails.email': updates.email });
-      if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
-      const userWithEmail = await UserModel.findOne({ 'emails.email': updates.email });
-      if (!userWithEmail) {
-        user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
-        user.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
-        // TODO: remove when legacy user is removed
-        legacyUser.emails = legacyUser.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
-        legacyUser.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
-        // updating requestor for access to new email
-        resendEmailVerification({ ...req, requestor: user });
-      }
-    } else {
-      user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: updates.email === email.email }));
-      legacyUser.emails = legacyUser.emails.map(email => ({ email: email.email, status: email.status, primary: updates.email === email.email }));
-    }
+  if (updates?.email) {
+    await updateUserEmail({ user, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
   // TODO: find solution to allow dynamic setting of fields

@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -13,6 +14,15 @@ import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
 import { getShareableDataSource } from '../dataSources';
 import { getShareableSector } from '../sectors';
+
+export interface ICompanyRequestParams {
+  companyId: string;
+}
+
+export interface IUpdateCompanyRequestBody {
+  companyName: string;
+  url: string;
+}
 
 const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
   .find(query)
@@ -178,6 +188,7 @@ export const getShareableCompany = ({
   sectors,
   slug,
   url,
+  lastModified,
 }: ICompanyDocument) => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -205,5 +216,34 @@ export const getShareableCompany = ({
     sectors: _sectors,
     slug,
     url,
+    lastModified,
   };
+};
+
+export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
+  try {
+    const { companyId } = req.params;
+    const { companyName, url } = req.body;
+
+    if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
+    if (!companyName && !url) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
+
+    const updatedData: Partial<ICompany> = {
+      lastModified: dayjs().utc().toDate(),
+    };
+
+    // TODO: add name sterilization
+    if (companyName) updatedData.companyName = companyName.trim();
+    if (url) updatedData.url = url.trim();
+
+    // TODO: add change log for record keeping.
+
+    const company = await CompanyModel.findOneAndUpdate({ _id: companyId }, updatedData, { new: true });
+
+    if (!company) throw new CustomError(`Company with id: ${companyId} could not be found.`, ErrorTypes.NOT_FOUND);
+
+    return company;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

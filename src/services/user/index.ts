@@ -204,7 +204,10 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
     throw new CustomError(`Invalid new password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   }
   const hash = await argon2.hash(newPassword);
-  return updateUser(req, user, { password: hash });
+  const updatedUser = await updateUser(req, user, { password: hash });
+  // TODO: remove when legacy users are removed
+  await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
+  return updatedUser;
 };
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
@@ -212,17 +215,25 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const user = await UserModel.findOne({ _id: uid });
   const updates = req.body;
   if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+  const legacyUser = await LegacyUserModel.findOne({ _id: user.legacyId });
   if (updates?.email && isValidEmailFormat(updates.email)) {
     const existingEmail = user.emails.find(email => email.email === updates.email);
     if (!existingEmail) {
+      // check if another user has this email
+      const isEmailInUse = await UserModel.findOne({ 'emails.email': updates.email });
+      if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
       const userWithEmail = await UserModel.findOne({ 'emails.email': updates.email });
       if (!userWithEmail) {
         user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
         user.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
-      // TODO: Send verification email
+        resendEmailVerification(req);
+        // TODO: remove when legacy user is removed
+        legacyUser.emails = legacyUser.emails.map(email => ({ email: email.email, status: email.status, primary: false }));
+        legacyUser.emails.push({ email: updates.email, status: UserEmailStatus.Unverified, primary: true });
       }
     } else {
       user.emails = user.emails.map(email => ({ email: email.email, status: email.status, primary: updates.email === email.email }));
+      legacyUser.emails = legacyUser.emails.map(email => ({ email: email.email, status: email.status, primary: updates.email === email.email }));
     }
   }
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
@@ -232,18 +243,22 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     switch (key) {
       case 'name':
         user.name = updates.name;
+        legacyUser.name = updates.name;
         break;
       case 'zipcode':
         user.zipcode = updates.zipcode;
+        legacyUser.zipcode = updates.zipcode;
         break;
       case 'subscribedUpdates':
         user.subscribedUpdates = updates.subscribedUpdates;
+        legacyUser.subscribedUpdates = updates.subscribedUpdates;
         break;
       default:
         break;
     }
   }
   await user.save();
+  await legacyUser.save();
   return user;
 };
 

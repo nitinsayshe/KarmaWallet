@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { updateCompanySectorsWithPrimaryStatus } from '../src/services/scripts/updateSectorsWithPrimary';
+import { getGroupmMembersWithCards } from '../src/services/scripts/group-members-with-cards';
 
 (async () => {
   try {
@@ -13,7 +13,7 @@ import { updateCompanySectorsWithPrimaryStatus } from '../src/services/scripts/u
     await MongoClient.init();
 
     // add mappers here...
-    await updateCompanySectorsWithPrimaryStatus();
+    await getGroupmMembersWithCards();
 
     await MongoClient.disconnect();
   } catch (err) {

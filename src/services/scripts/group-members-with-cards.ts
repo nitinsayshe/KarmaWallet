@@ -22,8 +22,6 @@ interface IReportData {
 
 export const getGroupmMembersWithCards = async () => {
   try {
-    // const userGroups = await UserGroupModel.find({ group: { $ne: '6233a60f1fc03e8853a64dc8' } }).lean();
-
     const userGroups = await UserGroupModel.aggregate([
       {
         $lookup: {
@@ -63,11 +61,7 @@ export const getGroupmMembersWithCards = async () => {
 
     const data: IData[] = [];
 
-    const groupsToExclude = ['Karma Krew', 'IAmGroop', 'Fleet'];
-
     for (const userGroup of userGroups) {
-      if (!!groupsToExclude.find(ex => ex === userGroup.group.name)) continue;
-
       // get the first card linked (sorted by date in query above);
       const card: ICardDocument = cards.find(c => c.userId.toString() === userGroup.user._id.toString() && dayjs(userGroup.joinedOn).isBefore(c.createdOn));
 

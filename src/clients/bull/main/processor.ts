@@ -9,7 +9,7 @@ import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
-import * as GenerateUserTransactionTotals from '../../../jobs/generageUserTransactionTotals';
+import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
 
 const MongoClient = new _MongoClient();
 

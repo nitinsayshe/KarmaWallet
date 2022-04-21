@@ -214,6 +214,7 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   }
   const hash = await argon2.hash(newPassword);
   const updatedUser = await updateUser(req, user, { password: hash });
+  // TODO: email user to notify them that their password has been changed.
   // TODO: remove when legacy users are removed
   await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
   return updatedUser;
@@ -223,34 +224,34 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
   if (!pw) throw new CustomError('Your password is required when updating your email.', ErrorTypes.INVALID_ARG);
   const passwordMatch = await argon2.verify(req.requestor.password, pw);
   if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
-  if (email && isValidEmailFormat(email)) {
-    const existingEmail = user.emails.find(userEmail => userEmail.email === email);
-    if (!existingEmail) {
-      // check if another user has this email
-      const isEmailInUse = await UserModel.findOne({ 'emails.email': email });
-      if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
-      user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
-      user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
-      // TODO: remove when legacy user is removed
-      legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
-      legacyUser.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
-      // updating requestor for access to new email
-      resendEmailVerification({ ...req, requestor: user });
-    } else {
-      user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
-      legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
-    }
+  if (!email) throw new CustomError('A new email address is required.', ErrorTypes.INVALID_ARG);
+  if (!isValidEmailFormat(email)) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+
+  const existingEmail = user.emails.find(userEmail => userEmail.email === email);
+
+  if (!existingEmail) {
+    // check if another user has this email
+    const isEmailInUse = await UserModel.findOne({ 'emails.email': email });
+    if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
+    user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+    user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+    // TODO: remove when legacy user is removed
+    legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+    legacyUser.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+    // updating requestor for access to new email
+    resendEmailVerification({ ...req, requestor: user });
+  } else {
+    user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+    legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
   }
 };
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
-  const uid = req.requestor._id;
-  const user = await UserModel.findOne({ _id: uid });
+  const { requestor } = req;
   const updates = req.body;
-  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
-  const legacyUser = await LegacyUserModel.findOne({ _id: user.legacyId });
+  const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
   if (updates?.email) {
-    await updateUserEmail({ user, legacyUser, email: updates.email, req, pw: updates?.pw });
+    await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
   // TODO: find solution to allow dynamic setting of fields
@@ -258,24 +259,28 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     if (typeof updates?.[key] === 'undefined') continue;
     switch (key) {
       case 'name':
-        user.name = updates.name;
+        requestor.name = updates.name;
         legacyUser.name = updates.name;
         break;
       case 'zipcode':
-        user.zipcode = updates.zipcode;
+        requestor.zipcode = updates.zipcode;
         legacyUser.zipcode = updates.zipcode;
         break;
       case 'subscribedUpdates':
-        user.subscribedUpdates = updates.subscribedUpdates;
+        requestor.subscribedUpdates = updates.subscribedUpdates;
         legacyUser.subscribedUpdates = updates.subscribedUpdates;
         break;
       default:
         break;
     }
   }
-  await user.save();
-  await legacyUser.save();
-  return user;
+
+  await Promise.all([
+    requestor.save(),
+    legacyUser.save(),
+  ]);
+
+  return requestor;
 };
 
 // used as endpoint for UI to update password
@@ -284,8 +289,7 @@ export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>)
   if (!newPassword || !password) throw new CustomError('New and current passwords required.', ErrorTypes.INVALID_ARG);
   const passwordMatch = await argon2.verify(req.requestor.password, password);
   if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
-  const user = await changePassword(req, req.requestor._id, newPassword);
-  return user;
+  return changePassword(req, req.requestor._id, newPassword);
 };
 
 export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>) => {
@@ -312,6 +316,5 @@ export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData &
   if (!user) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   const existingToken = await TokenService.getTokenAndConsume(user, token, TokenTypes.Password);
   if (!existingToken) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
-  const _user = await changePassword(req, user, newPassword);
-  return _user;
+  return changePassword(req, user, newPassword);
 };

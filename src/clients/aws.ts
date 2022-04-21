@@ -7,7 +7,8 @@ import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants'
 
 interface IAwsClient {
   s3: aws.S3,
-  ses: aws.SES
+  ses: aws.SES,
+  sesV2: aws.SESV2
 }
 
 interface ISendEmailRequest {
@@ -43,6 +44,7 @@ export class AwsClient extends SdkClient {
 
     this._client = {
       ses: new aws.SES(),
+      sesV2: new aws.SESV2({ apiVersion: '2019-09-27' }),
       s3: new aws.S3(),
     };
   }
@@ -78,6 +80,22 @@ export class AwsClient extends SdkClient {
     };
     return this._client.ses.sendEmail(params).promise();
   };
+
+  getSuppressedDestinations = (): Promise<aws.SESV2.SuppressedDestinationSummaries> => new Promise((res, rej) => {
+    const params: aws.SESV2.ListSuppressedDestinationsRequest = {
+      EndDate: new Date(),
+      // startDate going back five years
+      StartDate: new Date(new Date().setDate(new Date().getDate() - (365 * 5))),
+      PageSize: 1000,
+    };
+    this._client.sesV2.listSuppressedDestinations(params, (err, data) => {
+      if (err) {
+        rej(asCustomError(err));
+      } else {
+        res(data.SuppressedDestinationSummaries);
+      }
+    });
+  });
 
   uploadToS3 = async ({
     acl = 'public-read',

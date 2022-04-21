@@ -10,6 +10,7 @@ import * as SendEmail from '../../../jobs/sendEmail';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
+import * as UpdateBouncedEmails from '../../../jobs/updateBouncedEmails';
 
 const MongoClient = new _MongoClient();
 
@@ -48,6 +49,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();
+      break;
+    case JobNames.UpdateBouncedEmails:
+      result = await UpdateBouncedEmails.exec();
       break;
     default:
       console.log('>>>>> invalid job name found');

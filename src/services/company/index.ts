@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -13,6 +14,15 @@ import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
 import { getShareableDataSource } from '../dataSources';
 import { getShareableSector } from '../sectors';
+
+export interface ICompanyRequestParams {
+  companyId: string;
+}
+
+export interface IUpdateCompanyRequestBody {
+  companyName: string;
+  url: string;
+}
 
 const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
   .find(query)
@@ -40,7 +50,7 @@ export const getCompanyById = async (__: IRequest, _id: string, includeHidden = 
         model: CompanyModel,
         populate: [
           {
-            path: 'sectors',
+            path: 'sectors.sector',
             model: SectorModel,
           },
           {
@@ -50,7 +60,7 @@ export const getCompanyById = async (__: IRequest, _id: string, includeHidden = 
         ],
       })
       .populate({
-        path: 'sectors',
+        path: 'sectors.sector',
         model: SectorModel,
       })
       .populate({
@@ -75,7 +85,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
         model: CompanyModel,
         populate: [
           {
-            path: 'sectors',
+            path: 'sectors.sector',
             model: SectorModel,
           },
           {
@@ -85,7 +95,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
         ],
       },
       {
-        path: 'sectors',
+        path: 'sectors.sector',
         model: SectorModel,
       },
       {
@@ -111,7 +121,7 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)
     .populate({
-      path: 'sectors',
+      path: 'sectors.sector',
       model: SectorModel,
     })
     .lean();
@@ -178,6 +188,7 @@ export const getShareableCompany = ({
   sectors,
   slug,
   url,
+  lastModified,
 }: ICompanyDocument) => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -188,8 +199,11 @@ export const getShareableCompany = ({
   const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
-  const _sectors = (!!sectors && !!(sectors as ISectorModel[]).filter(s => !!Object.keys(s).length).length)
-    ? sectors.map(s => getShareableSector(s as ISectorModel))
+  const _sectors = (!!sectors && !!sectors.filter(s => !!Object.keys(s.sector).length).length)
+    ? sectors.map(s => ({
+      sector: getShareableSector(s.sector as ISectorModel),
+      primary: s.primary,
+    }))
     : sectors;
 
   return {
@@ -205,5 +219,34 @@ export const getShareableCompany = ({
     sectors: _sectors,
     slug,
     url,
+    lastModified,
   };
+};
+
+export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
+  try {
+    const { companyId } = req.params;
+    const { companyName, url } = req.body;
+
+    if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
+    if (!companyName && !url) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
+
+    const updatedData: Partial<ICompany> = {
+      lastModified: dayjs().utc().toDate(),
+    };
+
+    // TODO: add name sterilization
+    if (companyName) updatedData.companyName = companyName.trim();
+    if (url) updatedData.url = url.trim();
+
+    // TODO: add change log for record keeping.
+
+    const company = await CompanyModel.findOneAndUpdate({ _id: companyId }, updatedData, { new: true });
+
+    if (!company) throw new CustomError(`Company with id: ${companyId} could not be found.`, ErrorTypes.NOT_FOUND);
+
+    return company;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

@@ -17,6 +17,12 @@ export enum EquivalencyKey {
   SmartPhone = 'smartPhone',
 }
 
+export enum EquivalencyObjectType {
+  Monthly = 'monthly',
+  Offsets = 'offsets',
+  Total = 'total',
+}
+
 export enum EquivalencyType {
   Pos = 'positive',
   Neg = 'negative',
@@ -30,6 +36,19 @@ export interface IEquivalency {
   'EPA calculation': string;
   type: EquivalencyType,
   key: EquivalencyKey,
+}
+
+export interface IEquivalencyObject {
+  text: string;
+  icon: string;
+  textNoQuantity: string;
+  quantity: number;
+  type?: EquivalencyObjectType;
+}
+
+export interface IEquivalencies {
+  negative: IEquivalencyObject[];
+  positive: IEquivalencyObject[];
 }
 
 // TODO: this should probably be stored in DB, but hard coding for now.
@@ -139,7 +158,8 @@ export const buildCarbonMultiplierPipeline = (uid: string) => {
     amount: 1,
     date: 1,
   };
-  const pipeline = TransactionModel.aggregate()
+
+  return TransactionModel.aggregate()
     .match({ userId: new Types.ObjectId(uid), carbonMultiplier: { $ne: null } })
     .lookup({
       from: 'plaid_category_mappings',
@@ -160,10 +180,7 @@ export const buildCarbonMultiplierPipeline = (uid: string) => {
       },
     })
     .unwind('carbonMultiplier')
-    .project({
-      ...defaultProjection, carbonMultiplier: '$carbonMultiplier.carbonMultiplier',
-    });
-  return pipeline;
+    .project({ ...defaultProjection, carbonMultiplier: '$carbonMultiplier.carbonMultiplier' });
 };
 
 export const getTotalEmissions = async (uid: string) => {
@@ -211,17 +228,11 @@ export const getMonthlyEmissionsAverage = async (uid: string) => {
     emissions.kg = monthlyAverage;
     emissions.mt = convertKgToMT(monthlyAverage);
   }
+
   return emissions;
 };
 
-export interface IEquivalencyObject {
-  text: string;
-  icon: string;
-  textNoQuantity: string;
-  quantity: number;
-}
-
-export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKey) => equivalenciesData.reduce((acc, eq) => {
+export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKey): IEquivalencies => equivalenciesData.reduce((acc, eq) => {
   const {
     perMt, phrase, type, key,
   } = eq;
@@ -261,14 +272,11 @@ export const getRareOffsetAmount = async (query: FilterQuery<ITransaction>): Pro
   const aggResult = await TransactionModel.aggregate()
     .match({ ...RareTransactionQuery, ...query })
     .group({ _id: 'total', total: { $sum: '$integrations.rare.tonnes_amt' } });
-  const sumTotal = aggResult?.length ? aggResult[0].total : 0;
-  return sumTotal;
+  return aggResult?.length ? aggResult[0].total : 0;
 };
 
 export const getRareDonationSuggestion = async (mtCarbon: number) => {
   const rareAverage = await MiscModel.findOne({ key: 'rare-project-average' }); // 13.81;
-  let offsetAmount = mtCarbon * parseFloat(rareAverage.value);
-  offsetAmount *= 100;
-  offsetAmount = Math.ceil(offsetAmount) / 100;
-  return offsetAmount;
+  const offsetAmount = mtCarbon * parseFloat(rareAverage.value);
+  return Math.ceil(offsetAmount * 100) / 100;
 };

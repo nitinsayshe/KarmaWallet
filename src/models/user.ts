@@ -11,6 +11,8 @@ import { UserRoles } from '../lib/constants';
 export enum UserEmailStatus {
   Unverified = 'unverified',
   Verified = 'verified',
+  Bounced = 'bounced',
+  Complained = 'complained',
 }
 
 // TODO: remove alt emails after mapping

@@ -81,21 +81,19 @@ export class AwsClient extends SdkClient {
     return this._client.ses.sendEmail(params).promise();
   };
 
-  getSuppressedDestinations = (): Promise<aws.SESV2.SuppressedDestinationSummaries> => new Promise((res, rej) => {
-    const params: aws.SESV2.ListSuppressedDestinationsRequest = {
-      EndDate: new Date(),
-      // startDate going back five years
-      StartDate: new Date(new Date().setDate(new Date().getDate() - (365 * 5))),
-      PageSize: 1000,
-    };
-    this._client.sesV2.listSuppressedDestinations(params, (err, data) => {
-      if (err) {
-        rej(asCustomError(err));
-      } else {
-        res(data.SuppressedDestinationSummaries);
-      }
-    });
-  });
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SESV2.html#listSuppressedDestinations-property
+  getSuppressedDestinations = ({
+    EndDate = new Date(),
+    // startDate going back five years by default
+    StartDate = new Date(new Date().setDate(new Date().getDate() - (365 * 5))),
+    NextToken = null,
+    PageSize = 100,
+  }: aws.SESV2.ListSuppressedDestinationsRequest): Promise<aws.SESV2.ListSuppressedDestinationsResponse> => this._client.sesV2.listSuppressedDestinations({
+    EndDate,
+    StartDate,
+    PageSize,
+    NextToken,
+  }).promise();
 
   uploadToS3 = async ({
     acl = 'public-read',

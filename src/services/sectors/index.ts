@@ -1,5 +1,5 @@
 import { isValidObjectId, Schema } from 'mongoose';
-import { ISector, ISectorModel } from '../../models/sector';
+import { ISector, ISectorDocument, ISectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 
 export const getShareableSector = ({
@@ -8,7 +8,7 @@ export const getShareableSector = ({
   tier,
   carbonMultiplier,
   parentSectors,
-}: ISectorModel) => {
+}: ISectorDocument) => {
   const _parentSectors: IRef<Schema.Types.ObjectId, ISector>[] = parentSectors.filter(p => isValidObjectId(p)).length
     ? parentSectors
     : parentSectors.map(p => getShareableSector(p as ISectorModel));

@@ -1,9 +1,21 @@
-import { Types } from 'mongoose';
+import { ObjectId, Types } from 'mongoose';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
+import { getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { ErrorTypes } from '../../lib/constants';
+import { SectorModel } from '../../models/sector';
+
+enum TopSectorsConfig {
+  ShopBy = 'shop-by',
+}
+
+interface ITopSectorsRequestQuery {
+  config?: TopSectorsConfig;
+}
 
 interface IShowUserAmericanAverageParams {
   userId: string;
@@ -159,4 +171,54 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
   }
 
   return suggestions;
+};
+
+const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>) => {
+  try {
+    const config = {
+      // get users and all users in same request...if user
+      // does not have enough top sectors, all users will
+      // be used as fallback
+      uids: [req.requestor._id.toString(), process.env.APP_USER_ID],
+      tiers: [1],
+      // exclude financial services (staging, prod)
+      sectorsToExclude: ['62192ef2f022c9e3fbff0b0c', '621b9ada5f87e75f53666f98'],
+      count: 4,
+    };
+
+    const topSectors = await getTopSectorsFromTransactionTotals(config);
+    const totalSectorsCount = await SectorModel
+      .find({
+        _id: { $nin: config.sectorsToExclude },
+        tier: { $in: config.tiers },
+      })
+      .count();
+
+    const requestorsTopSectors = topSectors.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
+
+    const sectorTransactionTotals = !!requestorsTopSectors && requestorsTopSectors.sectorTransactionTotals.length >= config.count
+      ? requestorsTopSectors.sectorTransactionTotals
+      : topSectors.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).sectorTransactionTotals;
+
+    return {
+      sectors: sectorTransactionTotals.map(s => s.sector),
+      remainCategoriesCount: totalSectorsCount - sectorTransactionTotals.length,
+    };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) => {
+  try {
+    const { config } = req.query;
+    if (!config) throw new CustomError('No configuration found. Please specify a configuration for top sectors.', ErrorTypes.INVALID_ARG);
+
+    switch (config) {
+      case TopSectorsConfig.ShopBy: return getTopSectorsToShopBy(req);
+      default: throw new CustomError(`Invalid configuration for getting top sectors: ${config}`, ErrorTypes.INVALID_ARG);
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

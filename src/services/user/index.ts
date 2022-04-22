@@ -121,7 +121,7 @@ export const register = async (req: IRequest, {
 };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
-  const user = await UserModel.findOne({ 'emails.email': email });
+  const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }

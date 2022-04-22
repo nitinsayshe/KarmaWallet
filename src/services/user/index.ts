@@ -1,25 +1,25 @@
 import argon2 from 'argon2';
 import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
-import isemail from 'isemail';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  IUser, IUserDocument, UserModel,
-  UserEmailStatus,
+  IUser, IUserDocument, UserEmailStatus, UserModel,
 } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
 import {
-  TokenTypes, passwordResetTokenMinutes, emailVerificationDays, ErrorTypes, UserRoles,
+  TokenTypes, passwordResetTokenMinutes, ErrorTypes, UserRoles,
 } from '../../lib/constants';
 import * as TokenService from '../token';
 import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
-import { LegacyUserModel } from '../../models/legacyUser';
+import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
-import { sendAltEmailVerification } from '../email';
+import { resendEmailVerification } from './verification';
+import { sendWelcomeEmail } from '../email';
+import { verifyRequiredFields } from '../../lib/requestData';
 
 dayjs.extend(utc);
 
@@ -29,11 +29,17 @@ export interface ILoginData {
   token?: string;
 }
 
+export interface IUpdatePasswordBody {
+  newPassword: string;
+  password: string;
+}
+
 export interface IUserData extends ILoginData {
   name: string;
   zipcode: string;
   subscribedUpdates: boolean;
   role?: UserRoles;
+  pw?: string;
 }
 
 export interface IEmailVerificationData {
@@ -41,6 +47,16 @@ export interface IEmailVerificationData {
   code: string;
   tokenValue: string;
 }
+
+export interface IUpdateUserEmailParams {
+  user: IUserDocument;
+  email: string;
+  legacyUser: ILegacyUserDocument;
+  req: IRequest;
+  pw: string;
+}
+
+type UserKeys = keyof IUserData;
 
 export const register = async (req: IRequest, {
   password,
@@ -59,7 +75,7 @@ export const register = async (req: IRequest, {
       throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
     }
     const hash = await argon2.hash(password);
-    const emailExists = await UserModel.findOne({ email });
+    const emailExists = await UserModel.findOne({ 'emails.email': email });
     if (emailExists) {
       throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
     }
@@ -82,6 +98,7 @@ export const register = async (req: IRequest, {
     // map new legacy user to new user
     const rawUser = {
       ...legacyUser.toObject(),
+      emails: [{ email, verified: false, primary: true }],
       legacyId: legacyUser._id,
     };
 
@@ -91,6 +108,12 @@ export const register = async (req: IRequest, {
 
     const authKey = await Session.createSession(newUser._id.toString());
 
+    const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
+    await Promise.all([
+      resendEmailVerification(verificationEmailRequest),
+      sendWelcomeEmail({ name: newUser.name, recipientEmail: email }),
+    ]);
+
     return { user: newUser, authKey };
   } catch (err) {
     throw asCustomError(err);
@@ -98,7 +121,7 @@ export const register = async (req: IRequest, {
 };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
-  const user = await UserModel.findOne({ email });
+  const user = await UserModel.findOne({ 'emails.email': email });
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
@@ -152,6 +175,7 @@ export const getUserById = async (_: IRequest, uid: string) => {
 export const getShareableUser = ({
   _id,
   email,
+  emails,
   name,
   dateJoined,
   zipcode,
@@ -161,6 +185,7 @@ export const getShareableUser = ({
 }: IUserDocument) => ({
   _id,
   email,
+  emails,
   name,
   dateJoined,
   zipcode,
@@ -181,40 +206,97 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
   }
 };
 
+// used internally in multiple services to update a user's password
 const changePassword = async (req: IRequest, user: IUserDocument, newPassword: string) => {
   const passwordValidation = validatePassword(newPassword);
   if (!passwordValidation.valid) {
     throw new CustomError(`Invalid new password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   }
   const hash = await argon2.hash(newPassword);
-  return updateUser(req, user, { password: hash });
+  const updatedUser = await updateUser(req, user, { password: hash });
+  // TODO: email user to notify them that their password has been changed.
+  // TODO: remove when legacy users are removed
+  await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
+  return updatedUser;
 };
 
-export const updateProfile = async (req: IRequest, uid: string, updates: Partial<IUser>) => {
+export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpdateUserEmailParams) => {
+  if (!pw) throw new CustomError('Your password is required when updating your email.', ErrorTypes.INVALID_ARG);
+  const passwordMatch = await argon2.verify(req.requestor.password, pw);
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
+  if (!email) throw new CustomError('A new email address is required.', ErrorTypes.INVALID_ARG);
+  if (!isValidEmailFormat(email)) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+
+  const existingEmail = user.emails.find(userEmail => userEmail.email === email);
+
+  if (!existingEmail) {
+    // check if another user has this email
+    const isEmailInUse = await UserModel.findOne({ 'emails.email': email });
+    if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
+    user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+    user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+    // TODO: remove when legacy user is removed
+    legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+    legacyUser.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+    // updating requestor for access to new email
+    resendEmailVerification({ ...req, requestor: user });
+  } else {
+    user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+    legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+  }
+};
+
+export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
+  const { requestor } = req;
+  const updates = req.body;
+  const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
   if (updates?.email) {
-    if (!isValidEmailFormat(updates.email)) {
-      throw new CustomError('Invalid email', ErrorTypes.INVALID_ARG);
+    await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
+  }
+  const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
+  // TODO: find solution to allow dynamic setting of fields
+  for (const key of allowedFields) {
+    if (typeof updates?.[key] === 'undefined') continue;
+    switch (key) {
+      case 'name':
+        requestor.name = updates.name;
+        legacyUser.name = updates.name;
+        break;
+      case 'zipcode':
+        requestor.zipcode = updates.zipcode;
+        legacyUser.zipcode = updates.zipcode;
+        break;
+      case 'subscribedUpdates':
+        requestor.subscribedUpdates = updates.subscribedUpdates;
+        legacyUser.subscribedUpdates = updates.subscribedUpdates;
+        break;
+      default:
+        break;
     }
-    updates.emailVerified = false;
   }
-  const user = await UserModel.findById(uid);
-  if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
-  return updateUser(req, user, updates);
+  await Promise.all([
+    requestor.save(),
+    legacyUser.save(),
+  ]);
+
+  return requestor;
 };
 
-export const updatePassword = async (req: IRequest, newPassword: string, currentPassword: string) => {
-  const passwordMatch = await argon2.verify(req.requestor.password, currentPassword);
-  if (!passwordMatch) {
-    throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
-  }
-  const user = await changePassword(req, req.requestor._id, newPassword);
-  return user;
+// used as endpoint for UI to update password
+export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>) => {
+  const { newPassword, password } = req.body;
+  if (!newPassword || !password) throw new CustomError('New and current passwords required.', ErrorTypes.INVALID_ARG);
+  const passwordMatch = await argon2.verify(req.requestor.password, password);
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
+  return changePassword(req, req.requestor._id, newPassword);
 };
 
-export const createPasswordResetToken = async (_: IRequest, email: string) => {
+export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>) => {
   const minutes = passwordResetTokenMinutes;
-  const user = await UserModel.findOne({ email });
+  const { email } = req.body;
+  if (!email || !isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
+  const user = await UserModel.findOne({ 'emails.email': email });
   if (user) {
     await TokenService.createToken({ user, minutes, type: TokenTypes.Password });
   }
@@ -223,70 +305,16 @@ export const createPasswordResetToken = async (_: IRequest, email: string) => {
   return { message };
 };
 
-export const resetPasswordFromToken = async (req: IRequest, email: string, value: string, password: string) => {
+export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData & IUpdatePasswordBody)>) => {
+  const { newPassword, token, email } = req.body;
+  const requiredFields = ['newPassword', 'token', 'email'];
+  const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
+  if (!isValid) throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
+  if (!isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const errMsg = 'Token not found. Please request password reset again.';
-  const user = await UserModel.findOne({ email }, '_id');
-  if (!user) {
-    throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
-  }
-  const token = await TokenService.getTokenAndConsume(user, value, TokenTypes.Password);
-  if (!token) {
-    throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
-  }
-  const _user = await changePassword(req, user, password);
-  return _user;
-};
-
-export const altEmailChecks = (user: IUserDocument, email: string) => {
-  console.log(user.altEmails);
-  if (!isemail.validate(email, { minDomainAtoms: 2 })) {
-    throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
-  }
-  if (!user?.altEmails?.length) {
-    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
-  }
-  const altEmail = user.altEmails.find(alt => alt.email === email);
-  if (!altEmail) {
-    throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
-  }
-  if (altEmail.status === UserEmailStatus.Verified) {
-    throw new CustomError(`Email: ${email} already verified.`, ErrorTypes.INVALID_ARG);
-  }
-};
-
-export const resendAltEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
-  const { requestor } = req;
-  // this request doesn't necessarily need to be coupled to a group.
-  // we may want to add a more generic alt email verification template for
-  // this request and avoid group name usage here
-  const { email } = req.body;
-  const days = emailVerificationDays;
-  const msg = `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
-  altEmailChecks(requestor, email);
-  const token = await TokenService.createToken({
-    user: requestor, days, type: TokenTypes.AltEmail, resource: { altEmail: email },
-  });
-  await sendAltEmailVerification({
-    name: requestor.name, domain: 'https://karmawallet.io', token: token.value, recipientEmail: email,
-  });
-  return msg;
-};
-
-export const verifyAltEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
-  const errMsg = 'Token not found. Please request email verification again.';
-  const { requestor } = req;
-  const { tokenValue } = req.body;
-  if (!tokenValue) {
-    throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
-  }
-  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.AltEmail);
-  if (!token) {
-    throw new CustomError(errMsg, ErrorTypes.INVALID_ARG);
-  }
-  const email = token?.resource?.altEmail;
-  if (!email) {
-    throw new CustomError('This token is not associated with an email address.', ErrorTypes.INVALID_ARG);
-  }
-  await UserModel.findOneAndUpdate({ _id: requestor._id, 'altEmails.email': email }, { 'altEmails.$.status': UserEmailStatus.Verified, lastModified: dayjs().utc().toDate() }, { new: true });
-  return `Email: ${email} has been successfuly verified.`;
+  const user = await UserModel.findOne({ 'emails.email': email });
+  if (!user) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  const existingToken = await TokenService.getTokenAndConsume(user, token, TokenTypes.Password);
+  if (!existingToken) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  return changePassword(req, user, newPassword);
 };

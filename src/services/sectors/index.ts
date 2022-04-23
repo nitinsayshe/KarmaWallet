@@ -70,6 +70,46 @@ export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>, query:
   }
 };
 
+interface ISectorFilterOption {
+  tier: number;
+  count: number;
+}
+
+export const getSectorsFilterOptions = async (_: IRequest) => {
+  try {
+    const sectors = await SectorModel.find({}).lean();
+
+    const sectorOptions: { [key: string]: ISectorFilterOption } = {};
+    let minCM = 0;
+    let maxCM = 0;
+
+    for (const sector of sectors) {
+      if (sector.carbonMultiplier < minCM) minCM = sector.carbonMultiplier;
+      if (sector.carbonMultiplier > maxCM) maxCM = sector.carbonMultiplier;
+
+      const tierStr = `s${sector.tier}`;
+      if (!sectorOptions[tierStr]) {
+        sectorOptions[tierStr] = {
+          tier: sector.tier,
+          count: 0,
+        };
+      }
+
+      sectorOptions[tierStr].count += 1;
+    }
+
+    return {
+      tiers: Object.values(sectorOptions).sort((x, y) => x.tier - y.tier),
+      carbonMultiplierRange: {
+        min: minCM,
+        max: maxCM,
+      },
+    };
+  } catch (err) {
+    console.log(err);
+  }
+};
+
 export const getShareableSector = ({
   _id,
   name,

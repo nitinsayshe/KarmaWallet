@@ -4,6 +4,8 @@ import * as ImpactService from '../services/impact';
 import { IRequestHandler } from '../types/request';
 import { getShareableSector } from '../services/sectors';
 import { ISectorDocument } from '../models/sector';
+import { getShareableCompany } from '../services/company';
+import { ICompanyDocument } from '../models/company';
 
 export const getCarbonOffsetsAndEmissions: IRequestHandler = async (req, res) => {
   try {
@@ -23,7 +25,19 @@ export const getCarbonOffsetDonationSuggestions: IRequestHandler = async (req, r
   }
 };
 
-export const getTopSectors: IRequestHandler = async (req, res) => {
+export const getTopCompanies: IRequestHandler<{}, ImpactService.ITopCompaniesRequestQuery> = async (req, res) => {
+  try {
+    const companies = await ImpactService.getTopCompanies(req);
+
+    output.api(req, res, {
+      companies: companies.map(c => getShareableCompany(c as ICompanyDocument)),
+    });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getTopSectors: IRequestHandler<{}, ImpactService.ITopSectorsRequestQuery> = async (req, res) => {
   try {
     const topSectors = await ImpactService.getTopSectors(req);
     output.api(req, res, {

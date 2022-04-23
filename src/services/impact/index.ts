@@ -1,19 +1,31 @@
-import { ObjectId, Types } from 'mongoose';
+import { isValidObjectId, ObjectId, Types } from 'mongoose';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
-import { getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
+import { getTopCompaniesOfSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { SectorModel } from '../../models/sector';
+import { ICompanyDocument } from '../../models/company';
+import { _getCompanies } from '../company';
+import { getSample } from '../../lib/misc';
 
-enum TopSectorsConfig {
+export enum TopCompaniesConfig {
   ShopBy = 'shop-by',
 }
 
-interface ITopSectorsRequestQuery {
+export enum TopSectorsConfig {
+  ShopBy = 'shop-by',
+}
+
+export interface ITopCompaniesRequestQuery {
+  config?: TopCompaniesConfig;
+  sector?: string;
+}
+
+export interface ITopSectorsRequestQuery {
   config?: TopSectorsConfig;
 }
 
@@ -173,6 +185,65 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
   return suggestions;
 };
 
+const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
+  try {
+    const { sector } = req.query;
+    if (!sector) throw new CustomError('No sector found. Please provide a sector id to retrieve top companies to shop by.', ErrorTypes.INVALID_ARG);
+    if (!isValidObjectId(sector)) throw new CustomError(`Invalid sector id found: ${sector}`, ErrorTypes.INVALID_ARG);
+
+    const config = {
+      // get users and all users in same request...if user
+      // does not have enough top companies, all users will
+      // be used as fallback
+      uids: [req.requestor._id.toString(), process.env.APP_USER_ID],
+      sectors: [sector],
+      count: 11,
+      validator: (company: ICompanyDocument) => company.combinedScore > 60,
+    };
+
+    const topCompanyTransactionTotals = await getTopCompaniesOfSectorsFromTransactionTotals(config);
+
+    const requestorsTopCompanies = topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
+
+    let companies = !!requestorsTopCompanies
+      ? requestorsTopCompanies.companies
+      : topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).companies;
+
+    if (companies.length < config.count) {
+      // fill with relevant companies
+      const relevantCompanies = await _getCompanies({
+        'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
+        combinedScore: { $gt: 60 },
+        parentCompany: { $ne: null },
+      });
+
+      console.log('>>>>> relevantCompanies', relevantCompanies);
+
+      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - companies.length);
+
+      companies = [...companies, ...relevantCompanySamples];
+    }
+
+    return companies;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getTopCompanies = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
+  try {
+    const { config } = req.query;
+    if (!config) throw new CustomError('No configuration found. Please specify a configuration for top companies.', ErrorTypes.INVALID_ARG);
+
+    switch (config) {
+      case TopCompaniesConfig.ShopBy: return getTopCompaniesToShopBy(req);
+      default: throw new CustomError(`Invalid configuration for getting top companies: ${config}`, ErrorTypes.INVALID_ARG);
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>) => {
   try {
     const config = {
@@ -186,7 +257,7 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
       count: 4,
     };
 
-    const topSectors = await getTopSectorsFromTransactionTotals(config);
+    const topSectorsTransactionTotals = await getTopSectorsFromTransactionTotals(config);
     const totalSectorsCount = await SectorModel
       .find({
         _id: { $nin: config.sectorsToExclude },
@@ -194,15 +265,15 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
       })
       .count();
 
-    const requestorsTopSectors = topSectors.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
+    const requestorsTopSectors = topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
 
     const sectorTransactionTotals = !!requestorsTopSectors && requestorsTopSectors.sectorTransactionTotals.length >= config.count
       ? requestorsTopSectors.sectorTransactionTotals
-      : topSectors.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).sectorTransactionTotals;
+      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).sectorTransactionTotals;
 
     return {
       sectors: sectorTransactionTotals.map(s => s.sector),
-      remainCategoriesCount: totalSectorsCount - sectorTransactionTotals.length,
+      remainingCategoriesCount: totalSectorsCount - sectorTransactionTotals.length,
     };
   } catch (err) {
     throw asCustomError(err);

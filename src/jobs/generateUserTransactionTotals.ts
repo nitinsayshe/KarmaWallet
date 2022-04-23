@@ -21,9 +21,6 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
     {
       $match: {
         userId,
-        companyId: {
-          $ne: null,
-        },
       },
     },
     {
@@ -146,29 +143,33 @@ export const exec = async () => {
         userTotalDollars += transaction.amount;
         userTotalTransactions += 1;
 
-        if (!grandCompanyTotals[transaction.companyId._id.toString()]) {
-          grandCompanyTotals[transaction.companyId._id.toString()] = {
-            company: transaction.company,
-            totalSpent: 0,
-            transactionCount: 0,
-          };
-        }
+        const companyIdentifier = transaction.companyId?._id?.toString() ?? 'unknown';
 
-        if (!userCompanyTotals[transaction.companyId._id.toString()]) {
-          userCompanyTotals[transaction.companyId._id.toString()] = {
+        if (!grandCompanyTotals[companyIdentifier]) {
+          grandCompanyTotals[companyIdentifier] = {
             company: transaction.companyId,
             totalSpent: 0,
             transactionCount: 0,
           };
         }
 
-        grandCompanyTotals[transaction.companyId._id.toString()].totalSpent += transaction.amount;
-        grandCompanyTotals[transaction.companyId._id.toString()].transactionCount += 1;
+        if (!userCompanyTotals[companyIdentifier]) {
+          userCompanyTotals[companyIdentifier] = {
+            company: transaction.companyId,
+            totalSpent: 0,
+            transactionCount: 0,
+          };
+        }
 
-        userCompanyTotals[transaction.companyId._id.toString()].totalSpent += transaction.amount;
-        userCompanyTotals[transaction.companyId._id.toString()].transactionCount += 1;
+        grandCompanyTotals[companyIdentifier].totalSpent += transaction.amount;
+        grandCompanyTotals[companyIdentifier].transactionCount += 1;
+        if (companyIdentifier !== 'unknown') grandCompanyTotals[companyIdentifier].company = transaction.companyId;
 
-        if (!!transaction.companyId.sectors?.length) {
+        userCompanyTotals[companyIdentifier].totalSpent += transaction.amount;
+        userCompanyTotals[companyIdentifier].transactionCount += 1;
+        if (companyIdentifier !== 'unknown') userCompanyTotals[companyIdentifier].company = transaction.companyId;
+
+        if (!!transaction.companyId?.sectors?.length) {
           const primarySector: ICompanySector = transaction.companyId.sectors.find((companySector: ICompanySector) => companySector.primary);
           const popPrimarySector: ISectorDocument = transaction.popSectors.find((s: ISectorDocument) => s._id.toString() === primarySector.sector.toString());
 
@@ -194,11 +195,11 @@ export const exec = async () => {
 
           grandSectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
           grandSectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
-          grandSectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
+          if (companyIdentifier !== 'unknown') grandSectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
 
           userSectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
           userSectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
-          userSectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
+          if (companyIdentifier !== 'unknown') userSectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
         }
       }
 

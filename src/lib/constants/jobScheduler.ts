@@ -9,6 +9,7 @@ export enum JobNames {
   GenerateUserTransactionTotals = 'generate-user-transaction-totals',
   GlobalPlaidTransactionMapper = 'global-plaid-transaction-mapper',
   SendEmail = 'send-email',
+  TotalOffsetsForAllUsers = 'total-offsets-for-all-users',
   TransactionsMonitor = 'transactions-monitor',
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
 }

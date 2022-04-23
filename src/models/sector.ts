@@ -2,8 +2,9 @@ import {
   Schema,
   model,
   Document,
-  Model,
+  PaginateModel,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 
 export interface ISector {
@@ -34,5 +35,6 @@ const sectorSchema = new Schema({
     ref: 'sector',
   }],
 });
+sectorSchema.plugin(mongoosePaginate);
 
-export const SectorModel = model<ISectorDocument, Model<ISector>>('sector', sectorSchema);
+export const SectorModel = model<ISectorDocument, PaginateModel<ISector>>('sector', sectorSchema);

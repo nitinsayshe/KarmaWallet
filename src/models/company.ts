@@ -36,6 +36,7 @@ export interface IShareableCompany {
   sectors: ICompanySector[];
   slug: string;
   url: string;
+  lastModified: Date;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -101,6 +102,7 @@ const companySchema = new Schema(
       },
       required: true,
     },
+    lastModified: { type: Date },
   },
   {
     toJSON: { virtuals: true },

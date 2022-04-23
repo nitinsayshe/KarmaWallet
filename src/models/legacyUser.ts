@@ -7,11 +7,12 @@ import {
 import { UserRoles } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IPlaidItemDocument } from './plaidItem';
-import { IUserIntegrations } from './user';
+import { IUserIntegrations, IEmail, UserEmailStatus } from './user';
 
 export interface ILegacyUser {
   _id: string;
   email: string;
+  emails: IEmail[];
   name: string;
   password: string;
   plaidItems: IRef<string, IPlaidItemDocument>;
@@ -31,6 +32,17 @@ export type ILegacyUserModel = IModel<ILegacyUser>;
 const legacyUserSchema = new Schema({
   _id: { type: String, required: true },
   email: { type: String, required: true },
+  emails: [{
+    type: {
+      email: { type: String },
+      status: {
+        type: String,
+        enum: Object.values(UserEmailStatus),
+        default: UserEmailStatus.Unverified,
+      },
+      primary: { type: Boolean, default: false },
+    },
+  }],
   name: { type: String, required: true },
   password: { type: String, required: true },
   plaidItems: { type: [String], ref: 'plaidItem', default: [] },

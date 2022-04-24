@@ -17,5 +17,6 @@ import { Logger } from '../src/services/logger';
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');
     Logger.error(asCustomError(err));
+    await MongoClient.disconnect();
   }
 })();

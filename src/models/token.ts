@@ -15,7 +15,7 @@ export interface IToken {
   expires: Date;
   user: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
   resource: {
-    altEmail: string,
+    email: string,
   },
   consumed: boolean;
 }
@@ -30,7 +30,7 @@ const tokenSchema = new Schema({
   expires: { type: Date, required: true },
   user: { type: Schema.Types.ObjectId, ref: 'user' },
   resource: {
-    altEmail: { type: String },
+    email: { type: String },
   },
   consumed: { type: Boolean, default: false },
 });

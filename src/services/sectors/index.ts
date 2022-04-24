@@ -2,6 +2,7 @@ import {
   FilterQuery, isValidObjectId, Schema,
 } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
+import { mockRequest } from '../../lib/constants/request';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
   ISector,
@@ -15,8 +16,18 @@ export enum SectorConfigType {
   BrowseBy = 'browse-by',
 }
 
+export interface ISectorRequestParams {
+  sectorId: string;
+}
+
 export interface ISectorsRequestQuery extends FilterQuery<ISector> {
   config: SectorConfigType;
+}
+
+export interface IUpdateSectorRequestBody {
+  name: string;
+  carbonMultiplier: number;
+  tier: number;
 }
 
 export interface ICheckSectorNameQuery {
@@ -135,7 +146,7 @@ export const getSectorsFilterOptions = async (_: IRequest) => {
       },
     };
   } catch (err) {
-    console.log(err);
+    throw asCustomError(err);
   }
 };
 
@@ -156,4 +167,48 @@ export const getShareableSector = ({
     carbonMultiplier,
     parentSectors: _parentSectors,
   };
+};
+
+export const updateSector = async (req: IRequest<ISectorRequestParams, {}, IUpdateSectorRequestBody>) => {
+  try {
+    const { sectorId } = req.params;
+    const { name, carbonMultiplier, tier } = req.body;
+
+    if (!sectorId) throw new CustomError('A sector id is required.', ErrorTypes.INVALID_ARG);
+
+    if (!name && typeof carbonMultiplier === 'undefined' && !tier) {
+      throw new CustomError('No updatable sector data found.', ErrorTypes.INVALID_ARG);
+    }
+
+    const sector = await SectorModel.findOne({ _id: sectorId });
+
+    if (!sector) throw new CustomError(`Sector with id: ${sectorId} not found.`, ErrorTypes.NOT_FOUND);
+
+    if (!!name && name !== sector.name) {
+      const { isValid, available } = await checkSectorName({ ...mockRequest, query: { name } });
+      if (!isValid) throw new CustomError(`Invalid sector name found. Must be ${MAX_SECTOR_NAME_LENGTH} characters or less.`, ErrorTypes.INVALID_ARG);
+      if (!available) throw new CustomError(`Sector name: ${name} is already in use.`, ErrorTypes.INVALID_ARG);
+
+      sector.name = name;
+    }
+
+    console.log('\n>>>>> carbonMultiplier', carbonMultiplier, '\n');
+
+    if (typeof carbonMultiplier !== 'undefined') {
+      if (typeof carbonMultiplier !== 'number') throw new CustomError('Invalid cabon multiplier found. Must be a number.', ErrorTypes.INVALID_ARG);
+      sector.carbonMultiplier = carbonMultiplier;
+    }
+
+    // TODO: add support for updating tier
+    //   - will require updating companies that use this
+    // sector, transactions that were mapped to this sector,
+    // any cached values that calculate carbon offsets will
+    // need to be updated, and any other sectors that had
+    // this sector as a parent sector may need to be updated
+    // as well, depending on the update.
+
+    return await sector.save();
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

@@ -6,6 +6,9 @@ const router = Router();
 router.route('/')
   .get(SectorsController.getSectors);
 
+router.route('/check-name')
+  .get(SectorsController.checkName);
+
 router.route('/filter')
   .get(SectorsController.getSectorsFilterOptions);
 

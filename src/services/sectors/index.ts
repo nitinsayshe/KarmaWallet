@@ -19,6 +19,12 @@ export interface ISectorsRequestQuery extends FilterQuery<ISector> {
   config: SectorConfigType;
 }
 
+export interface ICheckSectorNameQuery {
+  name: string;
+}
+
+const MAX_SECTOR_NAME_LENGTH = 60;
+
 const browseByQuery = {
   _id: {
     $in: [
@@ -30,6 +36,29 @@ const browseByQuery = {
       '62192ef3f022c9e3fbff0ba4',
     ],
   },
+};
+
+export const checkSectorName = async (req: IRequest<{}, ICheckSectorNameQuery>) => {
+  try {
+    const { name } = req.query;
+    if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
+
+    if (name.length > MAX_SECTOR_NAME_LENGTH) {
+      return {
+        isValid: false,
+        available: false,
+      };
+    }
+
+    const existingSector = await SectorModel.findOne({ name }).lean();
+
+    return {
+      isValid: true,
+      available: !existingSector,
+    };
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const getSectors = async (req: IRequest<{}, ISectorsRequestQuery>, query: FilterQuery<ISector>, config?: SectorConfigType) => {

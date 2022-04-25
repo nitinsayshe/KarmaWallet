@@ -31,7 +31,6 @@ export type ILegacyUserModel = IModel<ILegacyUser>;
 
 const legacyUserSchema = new Schema({
   _id: { type: String, required: true },
-  email: { type: String },
   emails: [{
     type: {
       email: { type: String },

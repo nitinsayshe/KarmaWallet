@@ -96,11 +96,10 @@ export const createSector = async (req: IRequest<{}, {}, ISectorRequestBody>) =>
       }
     }
 
-    let ps: ISectorDocument;
     let parentSectors: ISectorDocument[] = [];
 
     if (tier > 1) {
-      ps = await SectorModel.findOne({ _id: parentSector }).lean();
+      const ps: ISectorDocument = await SectorModel.findOne({ _id: parentSector }).lean();
       if (!ps) throw new CustomError(`Parent sector with id: ${parentSector} could not be found.`, ErrorTypes.NOT_FOUND);
 
       if (tier - 1 !== ps.tier) {
@@ -251,8 +250,6 @@ export const updateSector = async (req: IRequest<ISectorRequestParams, {}, ISect
 
       sector.name = name;
     }
-
-    console.log('\n>>>>> carbonMultiplier', carbonMultiplier, '\n');
 
     if (typeof carbonMultiplier !== 'undefined') {
       if (typeof carbonMultiplier !== 'number') throw new CustomError('Invalid cabon multiplier found. Must be a number.', ErrorTypes.INVALID_ARG);

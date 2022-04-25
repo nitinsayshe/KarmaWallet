@@ -259,16 +259,28 @@ export const updateSector = async (req: IRequest<ISectorRequestParams, {}, ISect
       sector.carbonMultiplier = carbonMultiplier;
     }
 
-    // TODO: add support for updating tier
-    //   - will require updating companies that use this
-    // sector, transactions that were mapped to this sector,
-    // any cached values that calculate carbon offsets will
-    // need to be updated, and any other sectors that had
-    // this sector as a parent sector may need to be updated
-    // as well, depending on the update.
+    if (!!tier) {
+      throw new CustomError('Updating sector tiers is not currently supported.', ErrorTypes.UNPROCESSABLE);
+
+      // TODO: add support for updating tier
+      //   - will require updating companies that use this
+      // sector, transactions that were mapped to this sector,
+      // any cached values that calculate carbon offsets will
+      // need to be updated, and any other sectors that had
+      // this sector as a parent sector may need to be updated
+      // as well, depending on the update.
+    }
 
     return await sector.save();
   } catch (err) {
     throw asCustomError(err);
   }
 };
+
+// TODO: add support for deleting sectors.
+//   - will require updating companies that use this
+// sector, transactions that were mapped to this sector,
+// any cached values that calculate carbon offsets will
+// need to be updated, and any other sectors that had
+// this sector as a parent sector may need to be updated
+// as well, depending on the update.

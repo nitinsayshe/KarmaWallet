@@ -12,7 +12,16 @@ export const checkName: IRequestHandler<{}, SectorService.ICheckSectorNameQuery>
   }
 };
 
-export const updateSector: IRequestHandler<SectorService.ISectorRequestParams, {}, SectorService.IUpdateSectorRequestBody> = async (req, res) => {
+export const createSector: IRequestHandler<{}, {}, SectorService.ISectorRequestBody> = async (req, res) => {
+  try {
+    const sector = await SectorService.createSector(req);
+    api(req, res, SectorService.getShareableSector(sector));
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const updateSector: IRequestHandler<SectorService.ISectorRequestParams, {}, SectorService.ISectorRequestBody> = async (req, res) => {
   try {
     const sector = await SectorService.updateSector(req);
     api(req, res, SectorService.getShareableSector(sector));

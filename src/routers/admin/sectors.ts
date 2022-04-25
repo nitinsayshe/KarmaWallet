@@ -6,6 +6,9 @@ import protectedRequirements from '../../middleware/protected';
 
 const router = Router();
 
+router.route('/')
+  .post(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminSectorsController.createSector);
+
 router.route('/check-name')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminSectorsController.checkName);
 

@@ -10,7 +10,9 @@ import { EmailAddresses, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
-import { EmailTemplates, SentEmailModel } from '../../models/sentEmail';
+import { SentEmailModel } from '../../models/sentEmail';
+import { EmailTemplates } from '../../lib/constants/email';
+import { IRequest } from '../../types/request';
 
 dayjs.extend(utc);
 
@@ -29,12 +31,20 @@ interface IEmailTemplateParams {
   domain?: string;
 }
 
+interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
+  groupName: string;
+}
+
 interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
 }
 
 interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
   groupName: string;
+}
+
+export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplateParams {
+  template: EmailTemplates;
 }
 
 export const buildTemplate = (templateName: string, data: any) => {
@@ -134,6 +144,80 @@ export const sendWelcomeEmail = async ({
   return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
+export const sendWelcomeGroupEmail = async ({
+  user,
+  name,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  groupName,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IWelcomeGroupTemplateParams) => {
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  const subject = 'Welcome to KarmaWallet!';
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.WelcomeGroup, user, groupName };
+  // tries 3 times, after 4 sec, 16 sec, and 64 sec
+  const jobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 4000,
+    },
+  };
+  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+};
+
+export const sendWelcomeCC1Email = async ({
+  user,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IEmailTemplateParams) => {
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  // TODO: Update Subject
+  const subject = 'Welcome to KarmaWallet!';
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.WelcomeCC1, user };
+  // tries 3 times, after 4 sec, 16 sec, and 64 sec
+  const jobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 4000,
+    },
+  };
+  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+};
+
+export const sendWelcomeCCG1Email = async ({
+  user,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  groupName,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IWelcomeGroupTemplateParams) => {
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  // TODO: Update Subject
+  const subject = 'Welcome to KarmaWallet!';
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.WelcomeCCG1, groupName, user };
+  // tries 3 times, after 4 sec, 16 sec, and 64 sec
+  const jobOptions = {
+    attempts: 3,
+    backoff: {
+      type: 'exponential',
+      delay: 4000,
+    },
+  };
+  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+};
+
 export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {
   if (!user || !key || !email) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   const sentEmailDocument = new SentEmailModel({
@@ -144,3 +228,5 @@ export const createSentEmailDocument = async ({ user, key, email }: ICreateSentE
   });
   return sentEmailDocument.save();
 };
+
+export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopulateEmailTemplateRequest>>) => buildTemplate(req?.body?.template, req.body);

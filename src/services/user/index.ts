@@ -18,7 +18,6 @@ import { validatePassword } from './utils/validate';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
-import { sendWelcomeEmail } from '../email';
 import { verifyRequiredFields } from '../../lib/requestData';
 
 dayjs.extend(utc);
@@ -109,10 +108,7 @@ export const register = async (req: IRequest, {
     const authKey = await Session.createSession(newUser._id.toString());
 
     const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-    await Promise.all([
-      resendEmailVerification(verificationEmailRequest),
-      sendWelcomeEmail({ name: newUser.name, recipientEmail: email, user: newUser._id }),
-    ]);
+    await resendEmailVerification(verificationEmailRequest);
 
     return { user: newUser, authKey };
   } catch (err) {

@@ -43,6 +43,8 @@ export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) 
   return 'Job added to queue';
 };
 
+export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailService.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
+
 export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
   const { name, data } = req.body;
   MainBullClient.createJob(name, data);

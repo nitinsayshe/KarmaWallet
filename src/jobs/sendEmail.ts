@@ -2,7 +2,7 @@ import { SandboxedJob } from 'bullmq';
 import { SendEmailResponse } from 'aws-sdk/clients/ses';
 import { AWSError } from 'aws-sdk';
 import { Types } from 'mongoose';
-import { EmailTemplates } from '../models/sentEmail';
+import { EmailTemplates } from '../lib/constants/email';
 
 import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';

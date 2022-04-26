@@ -52,6 +52,12 @@ export const getDateFrom = ({
   return date;
 };
 
+export const getDaysFromPreviousDate = (date: Date) => {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  return Math.ceil(diff / (1000 * 3600 * 24));
+};
+
 export const toUTC = (date: Date) => new Date(
   date.getUTCFullYear(),
   date.getUTCMonth(),

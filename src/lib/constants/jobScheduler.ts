@@ -13,4 +13,5 @@ export enum JobNames {
   TransactionsMonitor = 'transactions-monitor',
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
   UpdateBouncedEmails = 'update-bounced-emails',
+  SendWelcomeFlowEmails = 'send-welcome-flow-emails',
 }

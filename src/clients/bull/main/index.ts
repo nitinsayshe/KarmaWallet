@@ -47,6 +47,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.GenerateGroupOffsetStatements, null, { jobId: `${JobNames.GenerateGroupOffsetStatements}-monthly`, repeat: { cron: '0 3 1 * *' } });
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 3 * * *' } });
+    // this.createJob('print-two', null, { jobId: 'print-test', repeat: { cron: '*/5 * * * * *' } });
 
     this.createFlow(
       JobNames.GenerateUserTransactionTotals,
@@ -57,6 +58,17 @@ export class _MainBullClient extends _BullClient {
         },
       ],
       { jobId: `${JobNames.GenerateUserTransactionTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } },
+    );
+
+    this.createFlow(
+      'print',
+      [
+        {
+          name: 'print-two',
+          opts: { jobId: 'print-two-every-five-seconds' },
+        },
+      ],
+      { jobId: 'print-every-five-seconds', repeat: { cron: '*/5 * * * * *' } },
     );
   };
 

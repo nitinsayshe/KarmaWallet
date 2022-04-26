@@ -4,15 +4,9 @@ import { ObjectId,
   Document,
   Model,
 } from 'mongoose';
+import { EmailTemplates } from '../lib/constants/email';
 import { IModel, IRef } from '../types/model';
 import { IUserDocument } from './user';
-
-// values for EmailTemplates should map to the directory names in /src/templates/email/
-export enum EmailTemplates {
-  GroupVerification = 'groupVerification',
-  EmailVerification = 'emailVerification',
-  Welcome = 'welcome'
-}
 
 export interface ISentEmail {
   key: EmailTemplates;

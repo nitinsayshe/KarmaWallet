@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { generateUserEmailList } from '../src/services/scripts/generateUserEmailList';
 
 (async () => {
   try {
@@ -10,6 +11,8 @@ import { Logger } from '../src/services/logger';
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
+
+    await generateUserEmailList();
 
     // add mappers here...
 

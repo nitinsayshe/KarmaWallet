@@ -45,42 +45,54 @@ export const mapSectorsToTransactions = async () => {
         ]);
 
       for (const transaction of transactions) {
-        if (!transaction.integrations?.plaid) continue;
+        if (transaction.integrations?.rare) {
+          const sectorMapping = sectorMappings.find(sm => (sm.sector as ISectorDocument)._id.toString() === '62192ef2f022c9e3fbff0b52' || (sm.sector as ISectorDocument)._id.toString() === '621b9adb5f87e75f53666fde');
 
-        try {
-          // TODO: get sector from transaction
-        // if has company, use company's primary sector
-        // else find sector based on plaid category mapping
-          if (!!(transaction.company as ICompanyDocument)?.sectors?.length) {
-            const primarySector = (transaction.company as ICompanyDocument).sectors.find(s => s.primary);
-            if (!primarySector) {
-              console.log(transaction.company);
-              console.log(primarySector);
-              throw new CustomError('Failed to find primary sector for company:', (transaction.company as ICompanyDocument).companyName);
-            }
-
-            transaction.sector = ((primarySector as ICompanySector).sector as ISectorDocument);
-          } else {
-            let plaidCategoriesId: string;
-            if (transaction.integrations?.plaid?.category) {
-              plaidCategoriesId = transaction.integrations.plaid.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
-            }
-
-            if (!!plaidCategoriesId) {
-              transaction.sector = sectorMappings.find(pcm => pcm.plaidCategoriesId === plaidCategoriesId)?.sector as ISectorDocument;
-            }
-          }
-
-          if (!transaction.sector) {
-            console.log('[-] failed to map transaction: ', transaction._id);
+          if (!sectorMapping) {
             failedCount += 1;
+            console.log('[-] failed to find sector for rare transaction');
             continue;
           }
 
+          transaction.sector = sectorMapping.sector as ISectorDocument;
           await transaction.save();
           count += 1;
-        } catch (err) {
-          console.log(err);
+        } else if (transaction.integrations?.plaid) {
+          try {
+            // TODO: get sector from transaction
+            // if has company, use company's primary sector
+            // else find sector based on plaid category mapping
+            if (!!(transaction.company as ICompanyDocument)?.sectors?.length) {
+              const primarySector = (transaction.company as ICompanyDocument).sectors.find(s => s.primary);
+              if (!primarySector) {
+                console.log(transaction.company);
+                console.log(primarySector);
+                throw new CustomError('Failed to find primary sector for company:', (transaction.company as ICompanyDocument).companyName);
+              }
+
+              transaction.sector = ((primarySector as ICompanySector).sector as ISectorDocument);
+            } else {
+              let plaidCategoriesId: string;
+              if (transaction.integrations?.plaid?.category) {
+                plaidCategoriesId = transaction.integrations.plaid.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
+              }
+
+              if (!!plaidCategoriesId) {
+                transaction.sector = sectorMappings.find(pcm => pcm.plaidCategoriesId === plaidCategoriesId)?.sector as ISectorDocument;
+              }
+            }
+
+            if (!transaction.sector) {
+              console.log('[-] failed to map transaction: ', transaction._id);
+              failedCount += 1;
+              continue;
+            }
+
+            await transaction.save();
+            count += 1;
+          } catch (err) {
+            console.log(err);
+          }
         }
       }
     } catch (err) {

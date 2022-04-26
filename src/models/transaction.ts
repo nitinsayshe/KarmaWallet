@@ -103,15 +103,9 @@ export interface IShareableTransaction {
   user: IRef<ObjectId, IShareableUser>;
   company: IRef<ObjectId, IShareableCompany>;
   card: IRef<ObjectId, IShareableCard>;
-  // userId: IRef<ObjectId, IShareableUser>;
-  // companyId: IRef<ObjectId, IShareableCompany>;
-  // cardId: IRef<ObjectId, IShareableCard>;
   sector: IRef<ObjectId, ISector>;
-  // carbonMultiplier: IRef<ObjectId, IPlaidCategoryMapping>;
   amount: number;
   date: Date;
-  // category: number;
-  // subCategory: number;
   integrations?: ITransactionIntegrations;
   createdOn: Date;
   lastModified: Date;
@@ -122,11 +116,7 @@ export interface ITransaction extends IShareableTransaction {
   user: IRef<ObjectId, IUserDocument>;
   company: IRef<ObjectId, ICompanyDocument>;
   card: IRef<ObjectId, ICardDocument>;
-  // userId: IRef<ObjectId, IUserDocument>;
-  // companyId: IRef<ObjectId, ICompanyDocument>;
-  // cardId: IRef<ObjectId, ICardDocument>;
   sector: IRef<ObjectId, ISectorDocument>;
-  // carbonMultiplier: IRef<ObjectId, IPlaidCategoryMappingDocument>;
   onBehalfOf?: IUserOrGroup;
   matched?: ITransactionMatch;
   association?: IUserOrGroup;
@@ -138,6 +128,15 @@ export interface ITransactionAggregate extends ITransaction {
 
 export interface ITransactionDocument extends ITransaction, Document {}
 export type ITransactionModel = IModel<ITransaction>;
+
+// TODO: remove the following after tongass is launched and
+// transactions have been cleaned:
+//   - userId
+//   - companyId
+//   - cardId
+//   - category
+//   - subCategory
+//   - carbonMultiplier
 
 const transactionSchema = new Schema({
   user: {
@@ -165,16 +164,16 @@ const transactionSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'card',
   },
-  // category: { type: Number },
-  // subCategory: { type: Number },
+  category: { type: Number },
+  subCategory: { type: Number },
   sector: {
     type: Schema.Types.ObjectId,
     ref: 'sector',
   },
-  // carbonMultiplier: {
-  //   type: Schema.Types.ObjectId,
-  //   ref: 'plaid_category_mapping',
-  // },
+  carbonMultiplier: {
+    type: Schema.Types.ObjectId,
+    ref: 'plaid_category_mapping',
+  },
   amount: { type: Number },
   date: { type: Date },
   integrations: {

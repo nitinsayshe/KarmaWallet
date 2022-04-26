@@ -1,6 +1,5 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { TransactionModel } from '../../models/transaction';
 import { IUserDocument, UserModel } from '../../models/user';
@@ -13,10 +12,8 @@ export const cleanTransactions = async () => {
   let users: IUserDocument[];
 
   try {
-    // using users for batching transactions.
     users = await UserModel.find({});
-
-    if (!users.length) throw new CustomError('Failed to load users.', ErrorTypes.SERVER);
+    if (!users.length) throw new CustomError('Failed to load users');
   } catch (err) {
     console.log(err);
   }
@@ -28,8 +25,11 @@ export const cleanTransactions = async () => {
 
   for (const user of users) {
     try {
-      const transactions = await TransactionModel.find({ userId: user });
+      const transactions = await TransactionModel
+        .find({ userId: user._id })
+        .sort({ _id: 1 });
 
+      // eslint-disable-next-line no-unreachable-loop
       for (const transaction of transactions) {
         transaction.user = (transaction as any).userId;
         transaction.company = (transaction as any).companyId;
@@ -53,16 +53,17 @@ export const cleanTransactions = async () => {
 
   console.log('\nremoving legacy properties from transactions...');
   try {
-    // clean transactions of fields: category, subCategory, and carbonMultiplier
+    // clean transactions of legacy fields
     await TransactionModel.updateMany(
       {},
       {
         $unset: {
-          category: '',
-          subCategory: '',
-          carbonMultiplier: '',
-          companyId: '',
-          userId: '',
+          category: 1,
+          subCategory: 1,
+          carbonMultiplier: 1,
+          companyId: 1,
+          userId: 1,
+          cardId: 1,
         },
       },
       { multi: true },

@@ -20,7 +20,7 @@ const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...query, ...excludePaymentQuery })
-    .group({ _id: '$userId', total: { $sum: '$amount' } });
+    .group({ _id: '$user', total: { $sum: '$amount' } });
 
   return aggResult?.length ? aggResult[0].total : 0;
 };

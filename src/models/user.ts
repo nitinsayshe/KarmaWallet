@@ -58,7 +58,6 @@ export interface IUserDocument extends IUser, Document {}
 export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
-  email: { type: String, required: true, unique: true },
   emails: [{
     type: {
       email: { type: String },

@@ -5,6 +5,7 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
   ISector,
+  ISectorDocument,
   ISectorModel,
   SectorModel,
 } from '../../models/sector';
@@ -76,7 +77,7 @@ export const getShareableSector = ({
   tier,
   carbonMultiplier,
   parentSectors,
-}: ISectorModel) => {
+}: ISectorDocument) => {
   const _parentSectors: IRef<Schema.Types.ObjectId, ISector>[] = parentSectors.filter(p => isValidObjectId(p)).length
     ? parentSectors
     : parentSectors.map(p => getShareableSector(p as ISectorModel));

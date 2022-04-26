@@ -31,9 +31,9 @@ export const cleanTransactions = async () => {
       const transactions = await TransactionModel.find({ userId: user });
 
       for (const transaction of transactions) {
-        transaction.user = transaction.userId;
-        transaction.company = transaction.companyId;
-        transaction.card = transaction.cardId;
+        transaction.user = (transaction as any).userId;
+        transaction.company = (transaction as any).companyId;
+        transaction.card = (transaction as any).cardId;
         transaction.lastModified = dayjs().utc().toDate();
 
         await transaction.save();

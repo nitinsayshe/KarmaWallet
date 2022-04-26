@@ -6,6 +6,7 @@ import { _MongoClient } from '../../mongo';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
+import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
 import * as SendEmail from '../../../jobs/sendEmail';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
@@ -53,8 +54,11 @@ export default async (job: SandboxedJob) => {
     case JobNames.UpdateBouncedEmails:
       result = await UpdateBouncedEmails.exec();
       break;
+    case JobNames.GenerateUserTransactionTotals:
+      result = await GenerateUserTransactionTotals.exec();
+      break;
     default:
-      console.log('>>>>> invalid job name found');
+      console.log('>>>>> invalid job name found: ', name);
       break;
   }
   return result;

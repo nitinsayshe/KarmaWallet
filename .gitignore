@@ -7,3 +7,4 @@ dbExport
 .scratch*
 .build*
 z_envs
+dump.rdb

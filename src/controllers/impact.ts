@@ -3,7 +3,7 @@ import * as output from '../services/output';
 import * as ImpactService from '../services/impact';
 import { IRequestHandler } from '../types/request';
 
-export const getCarbonOffsetsAndEmissions: IRequestHandler = async (req, res) => {
+export const getCarbonOffsetsAndEmissions: IRequestHandler<{}, ImpactService.ICarbonOffsetRequestQuery> = async (req, res) => {
   try {
     const carbonOffsetsAndEmissionsData = await ImpactService.getCarbonOffsetsAndEmissions(req);
     output.api(req, res, carbonOffsetsAndEmissionsData);
@@ -12,7 +12,7 @@ export const getCarbonOffsetsAndEmissions: IRequestHandler = async (req, res) =>
   }
 };
 
-export const getCarbonOffsetDonationSuggestions: IRequestHandler = async (req, res) => {
+export const getCarbonOffsetDonationSuggestions: IRequestHandler<{}, ImpactService.ICarbonOffsetRequestQuery> = async (req, res) => {
   try {
     const offsetDonationSuggestions = await ImpactService.getCarbonOffsetDonationSuggestions(req);
     output.api(req, res, offsetDonationSuggestions);

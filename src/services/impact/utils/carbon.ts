@@ -143,17 +143,20 @@ const equivalenciesData: IEquivalency[] = [
   },
 ];
 
-export const buildCarbonMultiplierPipeline = (uid: string) => TransactionModel.aggregate()
-  .match({ user: new Types.ObjectId(uid), sector: { $ne: null } })
-  .lookup({
-    from: 'sectors',
-    localField: 'sector',
-    foreignField: '_id',
-    as: 'sector',
-  })
-  .unwind('sector');
+export const buildCarbonMultiplierPipeline = (uid: string | Types.ObjectId) => {
+  const _uid = typeof uid === 'string' ? new Types.ObjectId(uid) : uid;
+  return TransactionModel.aggregate()
+    .match({ user: _uid, sector: { $ne: null } })
+    .lookup({
+      from: 'sectors',
+      localField: 'sector',
+      foreignField: '_id',
+      as: 'sector',
+    })
+    .unwind('sector');
+};
 
-export const getTotalEmissions = async (uid: string) => {
+export const getTotalEmissions = async (uid: string | Types.ObjectId) => {
   // TODO: rewrite w/ new reference to plaid mapping
   const emissions = { kg: 0, mt: 0 };
   const sumTotal = await buildCarbonMultiplierPipeline(uid)
@@ -169,7 +172,7 @@ export const getTotalEmissions = async (uid: string) => {
   return emissions;
 };
 
-export const getMonthlyEmissionsAverage = async (uid: string) => {
+export const getMonthlyEmissionsAverage = async (uid: string | Types.ObjectId) => {
   // TODO: rewrite w/ new reference to plaid mapping
   const emissions = { kg: 0, mt: 0 };
   const aggResult = await buildCarbonMultiplierPipeline(uid)

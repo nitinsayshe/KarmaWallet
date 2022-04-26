@@ -148,7 +148,7 @@ export class PlaidMapper {
 
   mapSectorsToTransactions = async () => {
     console.log(`\nmapping categories to ${this.transactions.length} transactions...`);
-    this._plaidSectorMappings = await PlaidCategoriesToSectorMappingModel.find().lean();
+    this._plaidSectorMappings = await PlaidCategoriesToSectorMappingModel.find();
 
     for (const transaction of this.transactions) {
       let plaidCategoriesId: string;

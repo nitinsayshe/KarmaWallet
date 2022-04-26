@@ -103,6 +103,7 @@ export class Transaction {
         // this transaction  already exists in the karma db
         // only need to save if diff is found
       } else {
+        console.log('\n>>>>> this.toKarmaFormat()', this.toKarmaFormat(), '\n');
         const transaction = new TransactionModel(this.toKarmaFormat());
         const now = dayjs().utc().toDate();
         transaction.createdOn = now;

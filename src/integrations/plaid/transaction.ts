@@ -1,8 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { Schema } from 'mongoose';
+import { ObjectId, Schema } from 'mongoose';
 import { Transaction as IPlaidTransaction } from 'plaid';
-import { IPlaidCategoryMappingDocument } from '../../models/plaidCategoryMapping';
 import {
   ITransaction, ITransactionIntegrations, ITransactionModel, TransactionModel,
 } from '../../models/transaction';
@@ -12,19 +11,17 @@ dayjs.extend(utc);
 // TODO: add new sectors property
 
 class Transaction {
-  _userId: Schema.Types.ObjectId = null;
-  _companyId: Schema.Types.ObjectId = null;
-  _cardId: Schema.Types.ObjectId = null;
+  _user: Schema.Types.ObjectId = null;
+  _company: Schema.Types.ObjectId = null;
+  _card: Schema.Types.ObjectId = null;
   _transaction: ITransactionModel = null;
   _plaidTransaction: IPlaidTransaction;
-  _category: number = null;
-  _subCategory: number = null;
-  _carbonMultiplier: IPlaidCategoryMappingDocument = null;
+  _sector: Schema.Types.ObjectId = null;
   _date: Dayjs = null;
 
   constructor(userId: Schema.Types.ObjectId, cardId: Schema.Types.ObjectId, plaidTransaction: IPlaidTransaction) {
-    this._userId = userId;
-    this._cardId = cardId;
+    this._user = userId;
+    this._card = cardId;
     this._plaidTransaction = plaidTransaction;
     // this._transaction = transaction;
 
@@ -35,20 +32,7 @@ class Transaction {
     return this._transaction?.amount
     || this._plaidTransaction.amount;
   }
-  get companyId() { return this._companyId; }
-  get isValid() {
-    return !!this._userId
-      && !!this._cardId
-      && !!this._plaidTransaction;
-  }
-  get merchant_name() {
-    return this._transaction?.integrations?.plaid?.merchant_name
-      || this._plaidTransaction.merchant_name;
-  }
-  get name() {
-    return this._transaction?.integrations?.plaid?.name
-      || this._plaidTransaction.name;
-  }
+  get company() { return this._company; }
   get date() {
     if (!this._date) {
       this._date = dayjs('1 Jan, 1970');
@@ -60,10 +44,23 @@ class Transaction {
 
     return this._date;
   }
+  get isValid() {
+    return !!this._user
+      && !!this._card
+      && !!this._plaidTransaction;
+  }
+  get merchant_name() {
+    return this._transaction?.integrations?.plaid?.merchant_name
+      || this._plaidTransaction.merchant_name;
+  }
+  get name() {
+    return this._transaction?.integrations?.plaid?.name
+      || this._plaidTransaction.name;
+  }
   get plaidTransaction() {
     return this._plaidTransaction;
   }
-
+  get sector() { return this._sector; }
   get transactionId() {
     return this._transaction?.integrations?.plaid?.transaction_id
       || this._plaidTransaction.transaction_id;
@@ -73,17 +70,15 @@ class Transaction {
    * @returns transaction structure to be saved in the karma db
    */
   toKarmaFormat = (): Partial<ITransaction> => ({
-    userId: this._userId,
-    cardId: this._cardId,
-    companyId: this.companyId,
+    user: this._user,
+    card: this._card,
+    company: this.company,
     amount: this.amount,
     date: this.date.toDate(),
     integrations: this._transaction?.integrations || {
       plaid: this._plaidTransaction,
     },
-    category: this._category,
-    subCategory: this._subCategory,
-    carbonMultiplier: this._carbonMultiplier,
+    sector: this._sector,
   });
 
   /**
@@ -97,20 +92,12 @@ class Transaction {
       && transaction.name === this._plaidTransaction.name
       && transaction.amount === this._plaidTransaction.amount;
 
-  setCarbonMultiplier = (carbonMultiplier: IPlaidCategoryMappingDocument) => {
-    this._carbonMultiplier = carbonMultiplier;
+  setSector = (sector: ObjectId) => {
+    this._sector = sector;
   };
 
-  setCategory = (category: number) => {
-    this._category = category;
-  };
-
-  setCompanyId = (id: Schema.Types.ObjectId) => {
-    this._companyId = id;
-  };
-
-  setSubCategory = (subcategory: number) => {
-    this._subCategory = subcategory;
+  setCompany = (id: Schema.Types.ObjectId) => {
+    this._company = id;
   };
 
   steralize = () => {
@@ -123,9 +110,9 @@ class Transaction {
 
     if (this.isValid) {
       this._transaction = await TransactionModel.findOne({
-        userId: this._userId,
-        cardId: this._cardId,
-        companyId: this.companyId,
+        user: this._user,
+        card: this._card,
+        company: this.company,
         amount: this._plaidTransaction.amount,
         date: this.date.toDate(),
         'integrations.plaid.merchant_name': this._plaidTransaction.merchant_name,
@@ -151,10 +138,7 @@ class Transaction {
           }
         });
 
-        // add category and carbonMultiplier mapping if found
-        if (!!this._category) this._transaction.category = this._category;
-        if (!!this._subCategory) this._transaction.subCategory = this._subCategory;
-        if (!!this._carbonMultiplier) this._transaction.carbonMultiplier = this._carbonMultiplier;
+        if (!!this._sector) this._transaction.sector = this._sector;
 
         this._transaction.lastModified = dayjs().utc().toDate();
         onComplete?.(actionType);

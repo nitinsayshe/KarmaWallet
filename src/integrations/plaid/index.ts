@@ -14,7 +14,7 @@ export const mapExistingItems = async (_: IRequest) => {
 
     const mapper = new PlaidMapper(plaidItems);
     await mapper.mapItems();
-    await mapper.mapCategoriesToTransactions();
+    await mapper.mapSectorsToTransactions();
     await mapper.mapTransactionsToCompanies();
     await mapper.saveTransactions();
     await mapper.saveSummary();
@@ -37,7 +37,7 @@ export const mapTransactionsFromPlaid = async (_: IRequest, acs: string[] = [], 
       return { message };
     }
 
-    await mapper.mapCategoriesToTransactions();
+    await mapper.mapSectorsToTransactions();
     await mapper.mapTransactionsToCompanies();
     await mapper.saveTransactions();
     await mapper.saveSummary();

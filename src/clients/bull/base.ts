@@ -12,8 +12,12 @@ import {
   Worker,
   WorkerOptions,
 } from 'bullmq';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { ConnectionClient } from '../connectionClient';
 import { _RedisClient, RedisClient } from '../redis';
+
+dayjs.extend(utc);
 
 export const MAX_WORKERS = 4;
 
@@ -130,8 +134,6 @@ export abstract class _BullClient extends ConnectionClient {
   };
 
   protected abstract _initWorkers (): void;
-  protected abstract _onJobComplete (job: Job | SandboxedJob, result: any): Promise<void>;
-  protected abstract _onJobFailed (job: Job | SandboxedJob, error: Error): Promise<void>;
   protected _processJob?(job: Job | SandboxedJob): Promise<any>;
 
   initCronJobs?(): void;
@@ -158,5 +160,33 @@ export abstract class _BullClient extends ConnectionClient {
   createJob = (name: string, data: any, opts: JobsOptions = {}, altOpts: IJobDictionary = {}) => {
     this._jobsDictionary[name] = altOpts;
     this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...opts });
+  };
+
+  protected _onJobComplete = async (job: Job | SandboxedJob, result: IJobResult) => {
+    console.log('\n\n+-------------------------------------------+');
+    if (this._jobsDictionary[job.name]?.onComplete) {
+      this._jobsDictionary[job.name]?.onComplete(job, result);
+    } else {
+      console.log(`\n[+] Job: ${job.name} completed successfully`);
+      console.log(result, '\n');
+    }
+    console.log(`timestamp: ${dayjs().utc().format('MMM DD, YYYY @ hh:mmA UTC')}`);
+    console.log('+-------------------------------------------+\n\n');
+
+    if (!!result?.nextJobs?.length) {
+      result.nextJobs.map(({ name, data }) => this.createJob(name, data));
+    }
+  };
+
+  protected _onJobFailed = async (job: Job | SandboxedJob, err: Error) => {
+    console.log('\n\n+-------------------------------------------+');
+    if (!!this._jobsDictionary[job.name]?.onFailure) {
+      this._jobsDictionary[job.name]?.onFailure(job, err);
+    } else {
+      console.log(`\n[-] Job: ${job.name} failed`);
+      console.log(err, '\n');
+    }
+    console.log(`\ntimestamp: ${dayjs().utc().format('MMM DD, YYYY @ hh:mmA UTC')}`);
+    console.log('+-------------------------------------------+\n\n');
   };
 }

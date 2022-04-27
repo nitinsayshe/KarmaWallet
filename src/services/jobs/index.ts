@@ -2,6 +2,10 @@ import { Types } from 'mongoose';
 import { IRequest } from '../../types/request';
 import * as EmailService from '../email';
 import { MainBullClient } from '../../clients/bull/main';
+import { EmailBullClient } from '../../clients/bull/email';
+import CustomError from '../../lib/customError';
+import { ErrorTypes } from '../../lib/constants';
+import { QueueNames } from '../../lib/constants/jobScheduler';
 
 export interface ISendEmailParams {
   name: string;
@@ -20,7 +24,8 @@ export interface ISendGroupVerificationEmailParams extends ISendVerificationEmai
 
 export interface ICreateJobParams {
   name: string,
-  data?: any
+  data?: any,
+  queue: QueueNames
 }
 
 export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmailParams>) => {
@@ -44,8 +49,17 @@ export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) 
 export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailService.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
 
 export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
-  const { name, data } = req.body;
-  MainBullClient.createJob(name, data);
+  const { name, data, queue } = req.body;
+  switch (queue) {
+    case QueueNames.Main:
+      await MainBullClient.createJob(name, data);
+      break;
+    case QueueNames.Email:
+      await EmailBullClient.createJob(name, data);
+      break;
+    default:
+      throw new CustomError('Invalid queue name', ErrorTypes.INVALID_ARG);
+  }
   return 'Job added to queue';
 };
 

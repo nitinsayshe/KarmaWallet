@@ -3,18 +3,19 @@ import { IUserDocument, UserModel } from '../models/user';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { CardModel } from '../models/card';
 import { getDaysFromPreviousDate } from '../lib/date';
-import CustomError, { asCustomError } from '../lib/customError';
+import CustomError from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
 import { UserGroupModel } from '../models/userGroup';
 import * as EmailService from '../services/email';
 import { SentEmailModel } from '../models/sentEmail';
-import { EmailTemplateConfigs, AWS_SES_LIMIT_PER_SECOND, EmailTemplateKeys } from '../lib/constants/email';
-import { sleep } from '../lib/misc';
+import { EmailTemplateConfigs, EmailTemplateKeys } from '../lib/constants/email';
+import { INextJob } from '../clients/bull/base';
 
 interface IHandleSendEmailParams {
   daysSinceJoined: number;
   user: IUserDocument;
   groupName?: string;
+  recipientEmail: string;
 }
 
 const ensureLastSentEmailIsNotTheSameAsCurrentTemplate = async (user: IUserDocument, templateName: EmailTemplateKeys) => {
@@ -22,28 +23,29 @@ const ensureLastSentEmailIsNotTheSameAsCurrentTemplate = async (user: IUserDocum
   if (lastSentEmail) throw new CustomError(`Email ${templateName} has already been sent for user: ${user?.name} | ${user._id}`, ErrorTypes.INVALID_ARG);
 };
 
-const handleSendEmail = async ({ daysSinceJoined, groupName, user }: IHandleSendEmailParams) => {
+const handleSendEmail = async ({ daysSinceJoined, groupName, user, recipientEmail }: IHandleSendEmailParams) => {
   // keeping these flat for readability
   if (daysSinceJoined < 5 && !!groupName) {
     const templateName = EmailTemplateConfigs.WelcomeGroup.name;
     ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
-    await EmailService.sendWelcomeGroupEmail({ user: user._id, name: user.name, groupName, recipientEmail: user.email });
+    return EmailService.sendWelcomeGroupEmail({ user: user._id, name: user.name, groupName, recipientEmail, sendEmail: false });
   }
   if (daysSinceJoined < 5 && !groupName) {
     const templateName = EmailTemplateConfigs.Welcome.name;
     ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
-    await EmailService.sendWelcomeEmail({ user: user._id, name: user.name, recipientEmail: user.email });
+    return EmailService.sendWelcomeEmail({ user: user._id, name: user.name, recipientEmail, sendEmail: false });
   }
   if (daysSinceJoined >= 5 && !!groupName) {
     const templateName = EmailTemplateConfigs.WelcomeCCG1.name;
     ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
-    await EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail: user.email });
+    return EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail, sendEmail: false });
   }
   if (daysSinceJoined >= 5 && !!groupName) {
     const templateName = EmailTemplateConfigs.WelcomeCCG1.name;
     ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
-    await EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail: user.email });
+    return EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail, sendEmail: false });
   }
+  return null;
 };
 
 const getGroupWithMatchingEnabled = async (user: IUserDocument) => UserGroupModel.aggregate([{
@@ -64,15 +66,10 @@ const getGroupWithMatchingEnabled = async (user: IUserDocument) => UserGroupMode
 }]);
 
 export const exec = async () => {
-  /**
-   * AWS SES limits the number of emails that can be sent per second.
-   * We need to throttle the number of emails sent per second to avoid exceeding the limit.
-   * A basic implementation of throttle is to wait for a certain amount of time between each email.
-   */
   const appUser = await UserModel.findOne({ _id: process.env?.APP_USER_ID });
   if (!appUser) throw new CustomError('App user not found', ErrorTypes.NOT_FOUND);
   const users = await UserModel.find({});
-  let sentEmailsCount = 0;
+  const nextJobs: INextJob[] = [];
   for (const user of users) {
     try {
       if (!user.subscribedUpdates) continue;
@@ -83,13 +80,16 @@ export const exec = async () => {
       const userGroupsWithMatchingEnabled = await getGroupWithMatchingEnabled(user);
       const groupName = userGroupsWithMatchingEnabled[0]?.group?.[0]?.name;
       const daysSinceJoined = await getDaysFromPreviousDate(user.dateJoined);
-      await handleSendEmail({ daysSinceJoined, groupName, user });
-      sentEmailsCount += 1;
-      if (sentEmailsCount % AWS_SES_LIMIT_PER_SECOND === 0) await sleep(1000);
+      const nextJob = await handleSendEmail({ daysSinceJoined, groupName, user, recipientEmail: verifiedEmail?.email });
+      if (!nextJob) continue;
+      nextJobs.push({ name: JobNames.SendEmail, data: nextJob.jobData, options: nextJob.jobOptions });
     } catch (e) {
-      throw asCustomError(e);
+      console.log(`Error sending welcome flow email for user: ${user?.name} | ${user?._id}`);
+      console.log(e.message);
+      console.log('\n');
     }
   }
+  return { data: `Scheduling ${nextJobs.length} emails.`, nextJobs };
 };
 
 export const onComplete = () => {

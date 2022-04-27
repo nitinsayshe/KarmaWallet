@@ -41,6 +41,7 @@ interface IFlowJob {
 export interface INextJob {
   name: string;
   data?: any;
+  options?: JobsOptions;
 }
 
 export interface IJobResult {
@@ -174,7 +175,7 @@ export abstract class _BullClient extends ConnectionClient {
     console.log('+-------------------------------------------+\n\n');
 
     if (!!result?.nextJobs?.length) {
-      result.nextJobs.map(({ name, data }) => this.createJob(name, data));
+      result.nextJobs.map(({ name, data, options }) => this.createJob(name, data, options));
     }
   };
 

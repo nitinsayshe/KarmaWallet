@@ -29,6 +29,7 @@ interface IEmailTemplateParams {
   senderEmail?: string;
   replyToAddresses?: string[];
   domain?: string;
+  sendEmail?: boolean;
 }
 
 interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
@@ -73,6 +74,7 @@ export const sendGroupVerificationEmail = async ({
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
 }: IGroupVerificationTemplateParams) => {
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'groupName', 'recipientEmail'], {
     name, domain, token, groupName, recipientEmail,
@@ -91,7 +93,8 @@ export const sendGroupVerificationEmail = async ({
       delay: 4000,
     },
   };
-  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return { jobData, jobOptions };
 };
 
 export const sendEmailVerification = async ({
@@ -102,6 +105,7 @@ export const sendEmailVerification = async ({
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.EmailVerification;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
@@ -119,7 +123,8 @@ export const sendEmailVerification = async ({
       delay: 4000,
     },
   };
-  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return { jobData, jobOptions };
 };
 
 export const sendWelcomeEmail = async ({
@@ -129,6 +134,7 @@ export const sendWelcomeEmail = async ({
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
 }: IEmailTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.Welcome;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
@@ -144,7 +150,8 @@ export const sendWelcomeEmail = async ({
       delay: 4000,
     },
   };
-  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return { jobData, jobOptions };
 };
 
 export const sendWelcomeGroupEmail = async ({
@@ -155,6 +162,7 @@ export const sendWelcomeGroupEmail = async ({
   groupName,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
 }: IWelcomeGroupTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeGroup;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
@@ -170,7 +178,8 @@ export const sendWelcomeGroupEmail = async ({
       delay: 4000,
     },
   };
-  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return { jobData, jobOptions };
 };
 
 export const sendWelcomeCC1Email = async ({
@@ -179,11 +188,12 @@ export const sendWelcomeCC1Email = async ({
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
 }: IEmailTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
+  const template = buildTemplate(emailTemplateConfig.name, { domain });
   // TODO: Update Subject
   const subject = 'Welcome to KarmaWallet!';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
@@ -195,7 +205,8 @@ export const sendWelcomeCC1Email = async ({
       delay: 4000,
     },
   };
-  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return { jobData, jobOptions };
 };
 
 export const sendWelcomeCCG1Email = async ({
@@ -205,11 +216,12 @@ export const sendWelcomeCCG1Email = async ({
   groupName,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
 }: IWelcomeGroupTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
+  const template = buildTemplate(emailTemplateConfig.name, { groupName, domain });
   // TODO: Update Subject
   const subject = 'Welcome to KarmaWallet!';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
@@ -221,7 +233,8 @@ export const sendWelcomeCCG1Email = async ({
       delay: 4000,
     },
   };
-  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return { jobData, jobOptions };
 };
 
 export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {

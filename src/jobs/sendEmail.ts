@@ -9,6 +9,7 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import { createSentEmailDocument } from '../services/email';
 import { UserEmailStatus, UserModel } from '../models/user';
 
+const DEV_TEST = true;
 interface ISesEmailResult {
   SendEmailResponse: SendEmailResponse,
   AWSError: AWSError,
@@ -52,18 +53,30 @@ export const exec = async ({
     if (type !== EmailTemplateTypes.Verification && userEmailObject.status !== UserEmailStatus.Verified) return;
   }
 
+  if (DEV_TEST) {
+    console.log({
+      subject,
+      recipientEmail,
+      templateName: emailTemplateConfig.name,
+      templateType: emailTemplateConfig.type,
+    });
+    createSentEmailDocument({ user, key: name, email: recipientEmail });
+    return `\nMock email sent to ${recipientEmail}`;
+  }
+
   const awsClient = new AwsClient();
-  const emailResponse = await awsClient.sendMail({
-    senderEmail,
-    template,
-    subject,
-    replyToAddresses,
-    recipientEmail,
-  });
+
+  // const emailResponse = await awsClient.sendMail({
+  //   senderEmail,
+  //   template,
+  //   subject,
+  //   replyToAddresses,
+  //   recipientEmail,
+  // });
 
   createSentEmailDocument({ user, key: name, email: recipientEmail });
 
-  return emailResponse;
+  return 'emailResponse';
 };
 
 export const onComplete = async (_: SandboxedJob, result: ISesEmailResult) => {

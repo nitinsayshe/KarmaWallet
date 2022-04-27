@@ -1,8 +1,13 @@
 import 'dotenv/config';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { getGroupmMembersWithCards } from '../src/services/scripts/group-members-with-cards';
+import { getGroupMembersWithCardWithOffsets } from '../src/services/scripts/getGroupMembersWithCardWithOffsets';
+
+dayjs.extend(utc);
 
 (async () => {
   try {
@@ -14,10 +19,12 @@ import { getGroupmMembersWithCards } from '../src/services/scripts/group-members
 
     // add mappers here...
     await getGroupmMembersWithCards();
+    await getGroupMembersWithCardWithOffsets(dayjs('Mar 28, 2022').toDate());
 
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');
     Logger.error(asCustomError(err));
+    await MongoClient.disconnect();
   }
 })();

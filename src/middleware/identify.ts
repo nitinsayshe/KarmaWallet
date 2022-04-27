@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express-serve-static-core';
-import { isValidObjectId } from 'mongoose';
 import { LegacySessionModel } from '../models/legacySession';
 import { IUserDocument, UserModel } from '../models/user';
 import * as UserService from '../services/user';
@@ -16,21 +15,21 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
   if (!authKey) return next();
 
   try {
-    const isUserId = isValidObjectId(authKey);
-    if (isUserId) {
-      const uid = await Session.verifySession(authKey);
-      if (uid) {
-        const user = await UserService.getUserById(req, uid);
-        (req as IRequest).requestor = (user as IUserDocument);
-        (req as IRequest).authKey = authKey;
-      }
-    } else {
-      const session = await LegacySessionModel.findOne({ authKey }).lean();
-      if (session?.uid) {
-        const user = await UserModel.findOne({ legacyId: session?.uid });
-        (req as IRequest).requestor = user;
-        (req as IRequest).authKey = authKey;
-      }
+    const uid = await Session.verifySession(authKey);
+    const session = await LegacySessionModel.findOne({ authKey }).lean();
+
+    if (!uid && !session) return next();
+
+    if (session?.uid) {
+      const user = await UserModel.findOne({ legacyId: session?.uid });
+      (req as IRequest).requestor = user;
+      (req as IRequest).authKey = authKey;
+    }
+
+    if (uid) {
+      const user = await UserService.getUserById(req, uid);
+      (req as IRequest).requestor = (user as IUserDocument);
+      (req as IRequest).authKey = authKey;
     }
   } catch (e) {
     return next();

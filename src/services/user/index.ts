@@ -81,11 +81,14 @@ export const register = async (req: IRequest, {
 
     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
 
+    const emails = [{ email, verified: false, primary: true }];
+
     // TODO: delete creating a new legacy user when able.
     const legacyUser = new LegacyUserModel({
       _id: nanoid(),
       name,
       email,
+      emails,
       password: hash,
       subscribedUpdates,
       zipcode,
@@ -97,7 +100,7 @@ export const register = async (req: IRequest, {
     // map new legacy user to new user
     const rawUser = {
       ...legacyUser.toObject(),
-      emails: [{ email, verified: false, primary: true }],
+      emails,
       legacyId: legacyUser._id,
     };
 
@@ -232,13 +235,12 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
     user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
     // TODO: remove when legacy user is removed
-    legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
-    legacyUser.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
+    legacyUser.emails = user.emails;
     // updating requestor for access to new email
     resendEmailVerification({ ...req, requestor: user });
   } else {
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
-    legacyUser.emails = legacyUser.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+    legacyUser.emails = user.emails;
   }
 };
 

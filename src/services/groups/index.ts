@@ -865,38 +865,37 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       validEmail = _validEmail;
     }
 
-    const emailAlreadyUsed = !!existingUserGroups.find(g => g.email === email);
-
-    if (emailAlreadyUsed) throw new CustomError('This email is already in use.', ErrorTypes.INVALID_ARG);
-
-    const existingAltEmail = user?.altEmails?.find(altEmail => altEmail.email === validEmail);
-
-    // add groupEmail to user's list of altEmails if doesnt already exist and
+    const existingEmail = user?.emails?.find(e => e.email === validEmail);
+    // add groupEmail to user's list of emails
+    // if doesnt already exist and
     // is not their primary email
-    if (!existingAltEmail && user.email !== validEmail) {
-      user.altEmails.push({
+    if (!existingEmail) {
+      // check if any other user has email
+      const usersWithEmail = await UserModel.find({ 'emails.email': validEmail });
+      if (usersWithEmail?.length > 0) throw new CustomError('This email is already in use.', ErrorTypes.UNPROCESSABLE);
+      user.emails.push({
         email: validEmail,
         status: UserEmailStatus.Unverified,
+        primary: false,
       });
     }
 
     // send verification email if
     // group has domain restriction AND
-    // altEmail exists and is unverified or
-    // doesnt already exist and is not their primary email
-    if (hasDomainRestrictions && ((existingAltEmail?.status === UserEmailStatus.Unverified) || (!existingAltEmail && user.email !== validEmail))) {
+    // email exists and is unverified or
+    // doesnt already exist
+    if (hasDomainRestrictions && ((existingEmail?.status === UserEmailStatus.Unverified) || !existingEmail)) {
       const token = await TokenService.createToken({
-        user, days: emailVerificationDays, type: TokenTypes.AltEmail, resource: { altEmail: validEmail },
+        user, days: emailVerificationDays, type: TokenTypes.Email, resource: { email: validEmail },
       });
       await sendGroupVerificationEmail({
         name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
       });
     }
 
-    // if the email used is the user's primary email OR
-    // is an alt email that has already been verified, set
+    // if the email used already exists and has been verified
     // the role to Verified.
-    const defaultStatus = validEmail === user.email || user.altEmails?.find(e => e.email === validEmail)?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
+    const defaultStatus = existingEmail?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
       ? UserGroupStatus.Verified
       : UserGroupStatus.Unverified;
 

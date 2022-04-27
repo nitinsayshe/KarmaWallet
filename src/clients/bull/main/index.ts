@@ -2,9 +2,10 @@ import path from 'path';
 import { Job, SandboxedJob, Worker } from 'bullmq';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { QueueNames, JobNames } from '../../../lib/constants/jobScheduler';
-import { _BullClient } from '../base';
+import { JobNames, QueueNames } from '../../../lib/constants/jobScheduler';
+import { IJobResult, _BullClient } from '../base';
 import { RedisClient } from '../../redis';
+// eslint-disable-next-line import/no-cycle
 
 dayjs.extend(utc);
 
@@ -45,22 +46,12 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.CachedDataCleanup, null, { jobId: `${JobNames.CachedDataCleanup}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.CacheGroupOffsetData, null, { jobId: `${JobNames.CacheGroupOffsetData}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.GenerateGroupOffsetStatements, null, { jobId: `${JobNames.GenerateGroupOffsetStatements}-monthly`, repeat: { cron: '0 3 1 * *' } });
+    this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 3 * * *' } });
-
-    this.createFlow(
-      JobNames.GenerateUserTransactionTotals,
-      [
-        {
-          name: JobNames.GlobalPlaidTransactionMapper,
-          opts: { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly` },
-        },
-      ],
-      { jobId: `${JobNames.GenerateUserTransactionTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } },
-    );
   };
 
-  _onJobComplete = async (job: Job | SandboxedJob, result: any) => {
+  _onJobComplete = async (job: Job | SandboxedJob, result: IJobResult) => {
     console.log('\n\n+-------------------------------------------+');
     if (this._jobsDictionary[job.name]?.onComplete) {
       this._jobsDictionary[job.name]?.onComplete(job, result);
@@ -70,6 +61,10 @@ export class _MainBullClient extends _BullClient {
     }
     console.log(`timestamp: ${dayjs().utc().format('MMM DD, YYYY @ hh:mmA UTC')}`);
     console.log('+-------------------------------------------+\n\n');
+
+    if (!!result?.nextJobs?.length) {
+      result.nextJobs.map(({ name, data }) => this.createJob(name, data));
+    }
   };
 
   _onJobFailed = async (job: Job | SandboxedJob, err: Error) => {

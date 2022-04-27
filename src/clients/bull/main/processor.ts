@@ -25,9 +25,17 @@ export default async (job: SandboxedJob) => {
   const { name, data } = job;
   let result: any;
   await MongoClient.init();
+
   switch (name) {
     case JobNames.GlobalPlaidTransactionMapper:
-      result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+
+      result = {
+        nextJobs: [
+          { name: JobNames.GenerateUserTransactionTotals },
+        ],
+      };
+
       break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);

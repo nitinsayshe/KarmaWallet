@@ -34,6 +34,15 @@ interface IFlowJob {
   altOpts?: IJobDictionary;
 }
 
+export interface INextJob {
+  name: string;
+  data?: any;
+}
+
+export interface IJobResult {
+  nextJobs?: INextJob[];
+}
+
 export abstract class _BullClient extends ConnectionClient {
   protected _queueName: string;
   protected _numWorkers: number;
@@ -132,16 +141,18 @@ export abstract class _BullClient extends ConnectionClient {
       if (c.altOpts) this._jobsDictionary[c.name] = altOpts;
     });
 
-    this._flow.add({
-      name,
-      queueName: this._queueName,
-      opts: { ..._BullClient.defaultFlowOpts, ...this._flowOptions, ...opts },
-      children: children.map(c => ({
-        ...c,
-        queueName: c.queueName || this._queueName,
-        opts: { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...(c.opts || {}) },
-      })),
-    });
+    this._flow.add(
+      {
+        name,
+        queueName: this._queueName,
+        opts: { ..._BullClient.defaultFlowOpts, ...this._flowOptions, ...opts },
+        children: children.map(c => ({
+          ...c,
+          queueName: c.queueName || this._queueName,
+          opts: { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...(c.opts || {}) },
+        })),
+      },
+    );
   };
 
   createJob = (name: string, data: any, opts: JobsOptions = {}, altOpts: IJobDictionary = {}) => {

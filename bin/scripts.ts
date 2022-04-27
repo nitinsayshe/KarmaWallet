@@ -4,6 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { getGroupmMembersWithCards } from '../src/services/scripts/group-members-with-cards';
 import { getGroupMembersWithCardWithOffsets } from '../src/services/scripts/getGroupMembersWithCardWithOffsets';
 
 dayjs.extend(utc);
@@ -17,6 +18,7 @@ dayjs.extend(utc);
     await MongoClient.init();
 
     // add mappers here...
+    await getGroupmMembersWithCards();
     await getGroupMembersWithCardWithOffsets(dayjs('Mar 28, 2022').toDate());
 
     await MongoClient.disconnect();

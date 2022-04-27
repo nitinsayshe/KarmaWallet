@@ -4,7 +4,7 @@ import fs from 'fs';
 import { Types } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { MainBullClient } from '../../clients/bull/main';
+import { EmailBullClient } from '../../clients/bull/email';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { EmailAddresses, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
@@ -91,7 +91,7 @@ export const sendGroupVerificationEmail = async ({
       delay: 4000,
     },
   };
-  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
 export const sendEmailVerification = async ({
@@ -119,7 +119,7 @@ export const sendEmailVerification = async ({
       delay: 4000,
     },
   };
-  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
 export const sendWelcomeEmail = async ({
@@ -144,7 +144,7 @@ export const sendWelcomeEmail = async ({
       delay: 4000,
     },
   };
-  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
 export const sendWelcomeGroupEmail = async ({
@@ -170,7 +170,7 @@ export const sendWelcomeGroupEmail = async ({
       delay: 4000,
     },
   };
-  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
 export const sendWelcomeCC1Email = async ({
@@ -195,7 +195,7 @@ export const sendWelcomeCC1Email = async ({
       delay: 4000,
     },
   };
-  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
 export const sendWelcomeCCG1Email = async ({
@@ -221,7 +221,7 @@ export const sendWelcomeCCG1Email = async ({
       delay: 4000,
     },
   };
-  return MainBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
+  return EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
 };
 
 export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {

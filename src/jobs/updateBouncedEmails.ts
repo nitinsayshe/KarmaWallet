@@ -35,22 +35,29 @@ export const exec = async () => {
   const suppressionListItems = await getAllSuppressionListItems({});
   for (const item of suppressionListItems) {
     const user = await UserModel.findOne({ 'emails.email': item.EmailAddress });
+    let userHasBeenUpdated = false;
     if (user) {
       user.emails.forEach(email => {
         if (email.email !== item.EmailAddress) return;
         switch (item.Reason) {
           case 'BOUNCE':
+            if (email.status === UserEmailStatus.Bounced) return;
             email.status = UserEmailStatus.Bounced;
+            userHasBeenUpdated = true;
             break;
           case 'COMPLAINT':
+            if (email.status === UserEmailStatus.Complained) return;
             email.status = UserEmailStatus.Complained;
+            userHasBeenUpdated = true;
             break;
           default:
             break;
         }
       });
-      user.lastModified = dayjs().utc().toDate();
-      await user.save();
+      if (userHasBeenUpdated) {
+        user.lastModified = dayjs().utc().toDate();
+        await user.save();
+      }
     }
   }
   return suppressionListItems;

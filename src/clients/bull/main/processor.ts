@@ -7,12 +7,9 @@ import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
-import * as SendEmail from '../../../jobs/sendEmail';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
-import * as UpdateBouncedEmails from '../../../jobs/updateBouncedEmails';
-import * as SendWelcomeFlowEmails from '../../../jobs/sendWelcomeFlowEmails';
 
 const MongoClient = new _MongoClient();
 
@@ -39,9 +36,6 @@ export default async (job: SandboxedJob) => {
       };
 
       break;
-    case JobNames.SendEmail:
-      result = await SendEmail.exec(data);
-      break;
     case JobNames.CacheGroupOffsetData:
       result = CacheGroupOffsetData.exec();
       break;
@@ -60,22 +54,8 @@ export default async (job: SandboxedJob) => {
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();
       break;
-    case JobNames.UpdateBouncedEmails:
-      result = await UpdateBouncedEmails.exec();
-      break;
     case JobNames.GenerateUserTransactionTotals:
       result = await GenerateUserTransactionTotals.exec();
-      break;
-    case JobNames.SendWelcomeFlowEmails:
-      result = await SendWelcomeFlowEmails.exec();
-      break;
-    case 'print':
-      console.log('print job');
-      result = 'print job';
-      break;
-    case 'print-two':
-      console.log('print job two');
-      result = 'print job two';
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

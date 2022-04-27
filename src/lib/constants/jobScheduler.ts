@@ -1,5 +1,6 @@
 export enum QueueNames {
   Main = 'main',
+  Email = 'email',
 }
 
 export enum JobNames {

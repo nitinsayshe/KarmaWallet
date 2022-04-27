@@ -2,11 +2,12 @@ import { SandboxedJob } from 'bullmq';
 import { SendEmailResponse } from 'aws-sdk/clients/ses';
 import { AWSError } from 'aws-sdk';
 import { Types } from 'mongoose';
-import { EmailTemplates } from '../lib/constants/email';
+import { IEmailTemplateConfig, EmailTemplateTypes } from '../lib/constants/email';
 
 import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { createSentEmailDocument } from '../services/email';
+import { UserEmailStatus, UserModel } from '../models/user';
 
 interface ISesEmailResult {
   SendEmailResponse: SendEmailResponse,
@@ -20,18 +21,37 @@ export interface ISendEmailParams {
   replyToAddresses: string[];
   recipientEmail: string;
   user: Types.ObjectId;
-  templateName: EmailTemplates
+  emailTemplateConfig: IEmailTemplateConfig;
 }
+
+// offloading email type check and user email status check to sendMail job
 
 export const exec = async ({
   user,
-  templateName,
+  emailTemplateConfig,
   template,
   senderEmail,
   subject,
   recipientEmail,
   replyToAddresses,
 }: ISendEmailParams) => {
+  const { name, type } = emailTemplateConfig;
+  const _user = await UserModel.findOne({ _id: user });
+  const userEmailObject = _user.emails.find(u => u.email === recipientEmail);
+
+  if (!userEmailObject) return;
+
+  // no emails should be sent with these statuses
+  if (userEmailObject.status === UserEmailStatus.Bounced || userEmailObject.status === UserEmailStatus.Complained) return;
+
+  if (type !== EmailTemplateTypes.Essential) {
+    // marketing check for subscribed updates
+    if (type === EmailTemplateTypes.Marketing && !_user.subscribedUpdates) return;
+
+    // any email other than verification or essential, check verification status
+    if (type !== EmailTemplateTypes.Verification && userEmailObject.status !== UserEmailStatus.Verified) return;
+  }
+
   const awsClient = new AwsClient();
   const emailResponse = await awsClient.sendMail({
     senderEmail,
@@ -40,7 +60,9 @@ export const exec = async ({
     replyToAddresses,
     recipientEmail,
   });
-  createSentEmailDocument({ user, key: templateName, email: recipientEmail });
+
+  createSentEmailDocument({ user, key: name, email: recipientEmail });
+
   return emailResponse;
 };
 

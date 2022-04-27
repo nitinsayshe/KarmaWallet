@@ -12,7 +12,7 @@ import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsFor
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateBouncedEmails from '../../../jobs/updateBouncedEmails';
-import * as SendWelcomeFlowEmails from '../../../jobs/SendWelcomeFlowEmails';
+import * as SendWelcomeFlowEmails from '../../../jobs/sendWelcomeFlowEmails';
 
 const MongoClient = new _MongoClient();
 

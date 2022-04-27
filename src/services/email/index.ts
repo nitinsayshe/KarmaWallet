@@ -11,13 +11,13 @@ import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
-import { EmailTemplates } from '../../lib/constants/email';
+import { EmailTemplateKeys, EmailTemplateConfigs } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 
 dayjs.extend(utc);
 
 interface ICreateSentEmailParams {
-  key: EmailTemplates;
+  key: EmailTemplateKeys;
   email: string;
   user: Types.ObjectId;
 }
@@ -44,7 +44,7 @@ interface IGroupVerificationTemplateParams extends IEmailVerificationTemplatePar
 }
 
 export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplateParams {
-  template: EmailTemplates;
+  template: EmailTemplateKeys;
 }
 
 export const buildTemplate = (templateName: string, data: any) => {
@@ -77,11 +77,12 @@ export const sendGroupVerificationEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'groupName', 'recipientEmail'], {
     name, domain, token, groupName, recipientEmail,
   });
+  const emailTemplateConfig = EmailTemplateConfigs.GroupVerification;
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const verificationLink = `${domain}/account?emailVerification=${token}`;
-  const template = buildTemplate(EmailTemplates.GroupVerification, { verificationLink, name, token, groupName });
+  const template = buildTemplate(emailTemplateConfig.name, { verificationLink, name, token, groupName });
   const subject = 'KarmaWallet Email Verification';
-  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.GroupVerification, user };
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
     attempts: 3,
@@ -102,13 +103,14 @@ export const sendEmailVerification = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.EmailVerification;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}/account?emailVerification=${token}`;
-  const template = buildTemplate(EmailTemplates.EmailVerification, { verificationLink, name, token });
+  const template = buildTemplate(emailTemplateConfig.name, { verificationLink, name, token });
   const subject = 'KarmaWallet Email Verification';
-  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.EmailVerification, user };
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
     attempts: 3,
@@ -128,11 +130,12 @@ export const sendWelcomeEmail = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IEmailTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.Welcome;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
   const subject = 'Welcome to KarmaWallet!';
-  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.Welcome, user };
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
     attempts: 3,
@@ -153,11 +156,12 @@ export const sendWelcomeGroupEmail = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IWelcomeGroupTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.WelcomeGroup;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
   const subject = 'Welcome to KarmaWallet!';
-  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.WelcomeGroup, user, groupName };
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
     attempts: 3,
@@ -176,12 +180,13 @@ export const sendWelcomeCC1Email = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IEmailTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
   // TODO: Update Subject
   const subject = 'Welcome to KarmaWallet!';
-  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.WelcomeCC1, user };
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
     attempts: 3,
@@ -201,12 +206,13 @@ export const sendWelcomeCCG1Email = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IWelcomeGroupTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(EmailTemplates.Welcome, { name, domain });
+  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
   // TODO: Update Subject
   const subject = 'Welcome to KarmaWallet!';
-  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, templateName: EmailTemplates.WelcomeCCG1, groupName, user };
+  const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
     attempts: 3,
@@ -229,4 +235,5 @@ export const createSentEmailDocument = async ({ user, key, email }: ICreateSentE
   return sentEmailDocument.save();
 };
 
+// for internal use only - used to generate HTML for dev purposes
 export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopulateEmailTemplateRequest>>) => buildTemplate(req?.body?.template, req.body);

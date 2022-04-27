@@ -8,7 +8,7 @@ import { ErrorTypes } from '../lib/constants';
 import { UserGroupModel } from '../models/userGroup';
 import * as EmailService from '../services/email';
 import { SentEmailModel } from '../models/sentEmail';
-import { EmailTemplates, AWS_SES_LIMIT_PER_SECOND } from '../lib/constants/email';
+import { EmailTemplateConfigs, AWS_SES_LIMIT_PER_SECOND, EmailTemplateKeys } from '../lib/constants/email';
 import { sleep } from '../lib/misc';
 
 interface IHandleSendEmailParams {
@@ -17,31 +17,31 @@ interface IHandleSendEmailParams {
   groupName?: string;
 }
 
-const ensureLastSentEmailIsNotTheSameAsCurrentTemplate = async (user: IUserDocument, template: EmailTemplates) => {
-  const lastSentEmail = await SentEmailModel.findOne({ user, key: template });
-  if (lastSentEmail) throw new CustomError(`Email ${template} has already been sent for user: ${user?.name} | ${user._id}`, ErrorTypes.INVALID_ARG);
+const ensureLastSentEmailIsNotTheSameAsCurrentTemplate = async (user: IUserDocument, templateName: EmailTemplateKeys) => {
+  const lastSentEmail = await SentEmailModel.findOne({ user, key: templateName });
+  if (lastSentEmail) throw new CustomError(`Email ${templateName} has already been sent for user: ${user?.name} | ${user._id}`, ErrorTypes.INVALID_ARG);
 };
 
 const handleSendEmail = async ({ daysSinceJoined, groupName, user }: IHandleSendEmailParams) => {
   // keeping these flat for readability
   if (daysSinceJoined < 5 && !!groupName) {
-    const template = EmailTemplates.WelcomeGroup;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, template);
+    const templateName = EmailTemplateConfigs.WelcomeGroup.name;
+    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     await EmailService.sendWelcomeGroupEmail({ user: user._id, name: user.name, groupName, recipientEmail: user.email });
   }
   if (daysSinceJoined < 5 && !groupName) {
-    const template = EmailTemplates.Welcome;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, template);
+    const templateName = EmailTemplateConfigs.Welcome.name;
+    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     await EmailService.sendWelcomeEmail({ user: user._id, name: user.name, recipientEmail: user.email });
   }
   if (daysSinceJoined >= 5 && !!groupName) {
-    const template = EmailTemplates.WelcomeCCG1;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, template);
+    const templateName = EmailTemplateConfigs.WelcomeCCG1.name;
+    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     await EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail: user.email });
   }
   if (daysSinceJoined >= 5 && !!groupName) {
-    const template = EmailTemplates.WelcomeCCG1;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, template);
+    const templateName = EmailTemplateConfigs.WelcomeCCG1.name;
+    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     await EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail: user.email });
   }
 };

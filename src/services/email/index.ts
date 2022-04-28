@@ -48,6 +48,13 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
   template: EmailTemplateKeys;
 }
 
+export interface IBuildTemplateParams {
+  templateName: EmailTemplateKeys;
+  data: any;
+  templatePath?: string;
+  stylePath?: string;
+}
+
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
   attempts: 3,
@@ -57,14 +64,14 @@ const defaultEmailJobOptions = {
   },
 };
 
-export const buildTemplate = (templateName: string, data: any) => {
-  const templatePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
-  const stylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
-  if (!fs.existsSync(templatePath)) {
+export const buildTemplate = ({ templateName, data, templatePath, stylePath }: IBuildTemplateParams) => {
+  const _templatePath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
+  const _stylePath = stylePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
+  if (!fs.existsSync(_templatePath)) {
     throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
   }
-  const templateString = fs.readFileSync(templatePath, 'utf8');
-  if (fs.existsSync(stylePath)) {
+  const templateString = fs.readFileSync(_templatePath, 'utf8');
+  if (fs.existsSync(_stylePath)) {
     const rawCss = fs.readFileSync(stylePath, 'utf8');
     const styleTemplateRaw = Handlebars.compile(rawCss);
     const styleTemplate = styleTemplateRaw({ colors });
@@ -91,7 +98,7 @@ export const sendGroupVerificationEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.GroupVerification;
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const verificationLink = `${domain}/account?emailVerification=${token}`;
-  const template = buildTemplate(emailTemplateConfig.name, { verificationLink, name, token, groupName });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token, groupName } });
   const subject = 'KarmaWallet Email Verification';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
@@ -121,7 +128,7 @@ export const sendEmailVerification = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}/account?emailVerification=${token}`;
-  const template = buildTemplate(emailTemplateConfig.name, { verificationLink, name, token });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'KarmaWallet Email Verification';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
@@ -141,7 +148,7 @@ export const sendWelcomeEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.Welcome;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
   const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
@@ -162,7 +169,7 @@ export const sendWelcomeGroupEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeGroup;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(emailTemplateConfig.name, { name, domain });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
   const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
@@ -181,7 +188,7 @@ export const sendWelcomeCC1Email = async ({
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
   const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(emailTemplateConfig.name, { domain });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain } });
   // TODO: Update Subject
   const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
@@ -202,7 +209,7 @@ export const sendWelcomeCCG1Email = async ({
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
   const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate(emailTemplateConfig.name, { groupName, domain });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { groupName, domain } });
   // TODO: Update Subject
   const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };

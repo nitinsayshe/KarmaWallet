@@ -5,7 +5,7 @@ import { IUser } from '../../models/user';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 
-export const getUsers = (req: IRequest, query: FilterQuery<IUser>) => {
+export const getUsersPaginated = (req: IRequest, query: FilterQuery<IUser>) => {
   const _query = {
     ...query,
     filter: {
@@ -16,11 +16,11 @@ export const getUsers = (req: IRequest, query: FilterQuery<IUser>) => {
     },
   };
 
-  return UserService.getUsers(req, _query);
+  return UserService.getUsersPaginated(req, _query);
 };
 
 export const getSummary = async (req: IRequest) => {
-  const allMembers = await UserService.getUsers(req, { filter: { $and: [{ role: { $exists: true } }, { role: { $ne: UserRoles.None } }] } });
+  const allMembers = await UserService.getUsersPaginated(req, { filter: { $and: [{ role: { $exists: true } }, { role: { $ne: UserRoles.None } }] } });
 
   const summary = {
     totalMembers: 0,

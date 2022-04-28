@@ -48,6 +48,15 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
   template: EmailTemplateKeys;
 }
 
+// tries 3 times, after 4 sec, 16 sec, and 64 sec
+const defaultEmailJobOptions = {
+  attempts: 3,
+  backoff: {
+    type: 'exponential',
+    delay: 4000,
+  },
+};
+
 export const buildTemplate = (templateName: string, data: any) => {
   const templatePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
   const stylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
@@ -115,18 +124,11 @@ export const sendEmailVerification = async ({
   const template = buildTemplate(emailTemplateConfig.name, { verificationLink, name, token });
   const subject = 'KarmaWallet Email Verification';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  // tries 3 times, after 4 sec, 16 sec, and 64 sec
-  const jobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 4000,
-    },
-  };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
-  return { jobData, jobOptions };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Welcome Flow: No Group
 export const sendWelcomeEmail = async ({
   user,
   name,
@@ -142,18 +144,11 @@ export const sendWelcomeEmail = async ({
   const template = buildTemplate(emailTemplateConfig.name, { name, domain });
   const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  // tries 3 times, after 4 sec, 16 sec, and 64 sec
-  const jobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 4000,
-    },
-  };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
-  return { jobData, jobOptions };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Welcome Flow: User Joined Group w/ Donation Matching
 export const sendWelcomeGroupEmail = async ({
   user,
   name,
@@ -170,18 +165,11 @@ export const sendWelcomeGroupEmail = async ({
   const template = buildTemplate(emailTemplateConfig.name, { name, domain });
   const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
-  // tries 3 times, after 4 sec, 16 sec, and 64 sec
-  const jobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 4000,
-    },
-  };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
-  return { jobData, jobOptions };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Welcome Flow: Credit Card Not Linked
 export const sendWelcomeCC1Email = async ({
   user,
   domain = process.env.FRONTEND_DOMAIN,
@@ -197,18 +185,11 @@ export const sendWelcomeCC1Email = async ({
   // TODO: Update Subject
   const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  // tries 3 times, after 4 sec, 16 sec, and 64 sec
-  const jobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 4000,
-    },
-  };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
-  return { jobData, jobOptions };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Welcome Flow: Credit Card Not Linked - User Joined Group w/ Donation Matching
 export const sendWelcomeCCG1Email = async ({
   user,
   domain = process.env.FRONTEND_DOMAIN,
@@ -225,16 +206,8 @@ export const sendWelcomeCCG1Email = async ({
   // TODO: Update Subject
   const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
-  // tries 3 times, after 4 sec, 16 sec, and 64 sec
-  const jobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 4000,
-    },
-  };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
-  return { jobData, jobOptions };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
 export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {

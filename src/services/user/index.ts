@@ -132,7 +132,7 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
   return { user, authKey };
 };
 
-export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
+export const getUsersPaginated = (_: IRequest, query: FilterQuery<IUser>) => {
   const options = {
     projection: query?.projection || '',
     populate: query.population || [],
@@ -141,9 +141,10 @@ export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
     sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
     limit: query?.limit || 10,
   };
-
   return UserModel.paginate(query.filter, options);
 };
+
+export const getUsers = async (_: IRequest, query = {}) => UserModel.find(query);
 
 export const getUser = async (_: IRequest, query = {}) => {
   try {

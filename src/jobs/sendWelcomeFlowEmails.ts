@@ -1,7 +1,7 @@
 import { SandboxedJob } from 'bullmq';
-import { IUserDocument, UserModel } from '../models/user';
+import { IUserDocument } from '../models/user';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { CardModel } from '../models/card';
+import { getCards } from '../services/card';
 import { getDaysFromPreviousDate } from '../lib/date';
 import CustomError from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
@@ -10,6 +10,8 @@ import * as EmailService from '../services/email';
 import { SentEmailModel } from '../models/sentEmail';
 import { EmailTemplateConfigs, EmailTemplateKeys } from '../lib/constants/email';
 import { INextJob } from '../clients/bull/base';
+import { getUsers, getUser } from '../services/user';
+import { IRequest } from '../types/request';
 
 interface IHandleSendEmailParams {
   daysSinceJoined: number;
@@ -66,16 +68,16 @@ const getGroupWithMatchingEnabled = async (user: IUserDocument) => UserGroupMode
 }]);
 
 export const exec = async () => {
-  const appUser = await UserModel.findOne({ _id: process.env?.APP_USER_ID });
+  const appUser = await getUser({} as IRequest, { _id: process.env?.APP_USER_ID });
   if (!appUser) throw new CustomError('App user not found', ErrorTypes.NOT_FOUND);
-  const users = await UserModel.find({});
+  const users = await getUsers({} as IRequest, {});
   const nextJobs: INextJob[] = [];
   for (const user of users) {
     try {
       if (!user.subscribedUpdates) continue;
       const verifiedEmail = user.emails.find(e => e.primary === true && e.status === 'verified');
       if (!verifiedEmail) continue;
-      const userCards = await CardModel.find({ userId: user._id });
+      const userCards = await getCards({} as IRequest, { userId: user._id });
       if (userCards.length) continue;
       const userGroupsWithMatchingEnabled = await getGroupWithMatchingEnabled(user);
       const groupName = userGroupsWithMatchingEnabled[0]?.group?.[0]?.name;

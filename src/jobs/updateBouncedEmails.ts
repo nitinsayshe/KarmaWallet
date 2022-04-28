@@ -18,7 +18,7 @@ const getAllSuppressionListItems = async ({
   suppressionListItems = [],
 }: IGetAllSuppresionListItemsParams): Promise<aws.SESV2.SuppressedDestinationSummaries> => {
   const awsClient = new AwsClient();
-  const suppressionListResponse = await awsClient.getSuppressedDestinations({ NextToken });
+  const suppressionListResponse = await awsClient.getSuppressedDestinations({ NextToken, PageSize: 1000 });
   for (const item of suppressionListResponse.SuppressedDestinationSummaries) {
     suppressionListItems.push(item);
   }

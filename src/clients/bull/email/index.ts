@@ -3,7 +3,6 @@ import { Worker } from 'bullmq';
 import { JobNames, QueueNames } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
-// eslint-disable-next-line import/no-cycle
 
 export class _EmailBullClient extends _BullClient {
   constructor() {

@@ -8,7 +8,10 @@ export const getSample = <T extends object & { _id: ObjectId }>(documents: T[], 
   do {
     const rand = getRandom(0, documents.length - 1);
     const doc = documents[rand];
-    if (!dups.has(doc._id.toString())) samples.push(doc);
+    if (!dups.has(doc._id.toString())) {
+      samples.push(doc);
+      dups.add(doc._id.toString());
+    }
   } while (samples.length < sampleSize);
 
   return samples;

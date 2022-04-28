@@ -140,7 +140,7 @@ export const sendWelcomeEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate(emailTemplateConfig.name, { name, domain });
-  const subject = 'Welcome to KarmaWallet!';
+  const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
@@ -168,7 +168,7 @@ export const sendWelcomeGroupEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate(emailTemplateConfig.name, { name, domain });
-  const subject = 'Welcome to KarmaWallet!';
+  const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
@@ -195,7 +195,7 @@ export const sendWelcomeCC1Email = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate(emailTemplateConfig.name, { domain });
   // TODO: Update Subject
-  const subject = 'Welcome to KarmaWallet!';
+  const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {
@@ -223,7 +223,7 @@ export const sendWelcomeCCG1Email = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate(emailTemplateConfig.name, { groupName, domain });
   // TODO: Update Subject
-  const subject = 'Welcome to KarmaWallet!';
+  const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
   // tries 3 times, after 4 sec, 16 sec, and 64 sec
   const jobOptions = {

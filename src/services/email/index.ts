@@ -60,7 +60,7 @@ export interface IEmailJobData {
   emailTemplateConfig?: IEmailTemplateConfig;
   groupName?: string;
   verificationLink?: string;
-  domain: string;
+  domain?: string;
   name?: string;
   style?: string;
   token?: string;

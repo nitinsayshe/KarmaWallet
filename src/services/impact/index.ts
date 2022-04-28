@@ -216,7 +216,7 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       const relevantCompanies = await _getCompanies({
         _id: { $nin: companies.map(c => c._id) },
         'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
-        // combinedScore: { $gt: 60 },
+        combinedScore: { $gt: 60 },
       });
 
       const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);

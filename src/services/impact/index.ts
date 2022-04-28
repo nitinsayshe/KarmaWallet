@@ -195,11 +195,13 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       // get users and all users in same request...if user
       // does not have enough top companies, all users will
       // be used as fallback
-      uids: [req.requestor._id.toString(), process.env.APP_USER_ID],
+      uids: [process.env.APP_USER_ID],
       sectors: [sector],
       count: 11,
       validator: (company: ICompanyDocument) => company.combinedScore > 60,
     };
+
+    if (req.requestor) config.uids.unshift(req.requestor._id.toString());
 
     const topCompanyTransactionTotals = await getTopCompaniesOfSectorsFromTransactionTotals(config);
 
@@ -209,7 +211,7 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       ? requestorsTopCompanies.companies
       : topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).companies;
 
-    if (companies.length < config.count) {
+    if ((companies || []).length < config.count) {
       // fill with relevant companies
       const relevantCompanies = await _getCompanies({
         'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
@@ -217,11 +219,9 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
         parentCompany: { $ne: null },
       });
 
-      console.log('>>>>> relevantCompanies', relevantCompanies);
+      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);
 
-      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - companies.length);
-
-      companies = [...companies, ...relevantCompanySamples];
+      companies = [...(companies || []), ...relevantCompanySamples];
     }
 
     return companies;

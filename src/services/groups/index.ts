@@ -861,11 +861,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       const _validEmail = [email].find(e => !!group.domains.find(domain => e.split('@')[1] === domain));
 
       if (!_validEmail) throw new CustomError(`A valid email from ${group.domains.length > 1 ? 'one of ' : ''}the following domain${group.domains.length > 1 ? 's' : ''} is required to join this group: ${group.domains.join(', ')}`);
-
       validEmail = _validEmail;
     }
 
-    const existingEmail = user?.emails?.find(e => e.email === validEmail);
+    const existingEmail = hasDomainRestrictions ? user?.emails?.find(e => e.email === validEmail) : user?.emails?.find(e => e.primary);
     // add groupEmail to user's list of emails
     // if doesnt already exist and
     // is not their primary email

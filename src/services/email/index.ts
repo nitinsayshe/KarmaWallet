@@ -246,4 +246,4 @@ export const createSentEmailDocument = async ({ user, key, email }: ICreateSentE
 };
 
 // for internal use only - used to generate HTML for dev purposes
-export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopulateEmailTemplateRequest>>) => buildTemplate(req?.body?.template, req.body);
+export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopulateEmailTemplateRequest>>) => buildTemplate({ templateName: req?.body?.template, data: req.body });

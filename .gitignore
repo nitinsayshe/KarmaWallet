@@ -9,3 +9,4 @@ dbExport
 z_envs
 dump.rdb
 */.tmp
+*.rdb

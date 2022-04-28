@@ -225,7 +225,7 @@ export const sendWelcomeCCG1Email = async ({
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
 }: IWelcomeGroupTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
+  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCCG1;
   const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // override to share welcomeCC1 template and styles

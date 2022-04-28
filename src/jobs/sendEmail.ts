@@ -25,8 +25,6 @@ export interface ISendEmailParams {
   emailTemplateConfig: IEmailTemplateConfig;
 }
 
-// offloading email type check and user email status check to sendMail job
-
 export const exec = async ({
   user,
   emailTemplateConfig,
@@ -64,19 +62,22 @@ export const exec = async ({
     return `\nMock email sent to ${recipientEmail}`;
   }
 
-  const awsClient = new AwsClient();
+  let emailResponse;
+  if (!DEV_TEST) {
+    const awsClient = new AwsClient();
 
-  // const emailResponse = await awsClient.sendMail({
-  //   senderEmail,
-  //   template,
-  //   subject,
-  //   replyToAddresses,
-  //   recipientEmail,
-  // });
+    emailResponse = await awsClient.sendMail({
+      senderEmail,
+      template,
+      subject,
+      replyToAddresses,
+      recipientEmail,
+    });
+  }
 
   createSentEmailDocument({ user, key: name, email: recipientEmail });
 
-  return 'emailResponse';
+  return emailResponse;
 };
 
 export const onComplete = async (_: SandboxedJob, result: ISesEmailResult) => {

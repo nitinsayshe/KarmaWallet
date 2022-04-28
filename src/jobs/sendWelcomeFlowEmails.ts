@@ -21,7 +21,7 @@ interface IHandleSendEmailParams {
 }
 
 const ensureLastSentEmailIsNotTheSameAsCurrentTemplate = async (user: IUserDocument, templateName: EmailTemplateKeys) => {
-  const lastSentEmail = await SentEmailModel.findOne({ user, key: templateName });
+  const lastSentEmail = await SentEmailModel.findOne({ user: user._id, key: templateName });
   if (lastSentEmail) throw new CustomError(`Email ${templateName} has already been sent for user: ${user?.name} | ${user._id}`, ErrorTypes.INVALID_ARG);
 };
 
@@ -29,23 +29,23 @@ const handleSendEmail = async ({ daysSinceJoined, groupName, user, recipientEmai
   // keeping these flat for readability
   if (daysSinceJoined < 5 && !!groupName) {
     const templateName = EmailTemplateConfigs.WelcomeGroup.name;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
+    await ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     return EmailService.sendWelcomeGroupEmail({ user: user._id, name: user.name, groupName, recipientEmail, sendEmail: false });
   }
   if (daysSinceJoined < 5 && !groupName) {
     const templateName = EmailTemplateConfigs.Welcome.name;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
+    await ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     return EmailService.sendWelcomeEmail({ user: user._id, name: user.name, recipientEmail, sendEmail: false });
   }
   if (daysSinceJoined >= 5 && !!groupName) {
     const templateName = EmailTemplateConfigs.WelcomeCCG1.name;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
+    await ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
     return EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail, sendEmail: false });
   }
-  if (daysSinceJoined >= 5 && !!groupName) {
-    const templateName = EmailTemplateConfigs.WelcomeCCG1.name;
-    ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
-    return EmailService.sendWelcomeCCG1Email({ user: user._id, name: user.name, groupName, recipientEmail, sendEmail: false });
+  if (daysSinceJoined >= 5 && !groupName) {
+    const templateName = EmailTemplateConfigs.WelcomeCC1.name;
+    await ensureLastSentEmailIsNotTheSameAsCurrentTemplate(user, templateName);
+    return EmailService.sendWelcomeCC1Email({ user: user._id, name: user.name, recipientEmail, sendEmail: false });
   }
   return null;
 };
@@ -75,23 +75,24 @@ export const exec = async () => {
   for (const user of users) {
     try {
       if (!user.subscribedUpdates) continue;
-      const verifiedEmail = user.emails.find(e => e.primary === true && e.status === 'verified');
-      if (!verifiedEmail) continue;
+      const recipientEmail = user.emails.find(e => e.primary === true && e.status === 'verified')?.email;
+      if (!recipientEmail) continue;
       const userCards = await getCards({} as IRequest, { userId: user._id });
       if (userCards.length) continue;
       const userGroupsWithMatchingEnabled = await getGroupWithMatchingEnabled(user);
       const groupName = userGroupsWithMatchingEnabled[0]?.group?.[0]?.name;
       const daysSinceJoined = await getDaysFromPreviousDate(user.dateJoined);
-      const nextJob = await handleSendEmail({ daysSinceJoined, groupName, user, recipientEmail: verifiedEmail?.email });
+      const nextJob = await handleSendEmail({ daysSinceJoined, groupName, user, recipientEmail });
       if (!nextJob) continue;
       nextJobs.push({ name: JobNames.SendEmail, data: nextJob.jobData, options: nextJob.jobOptions });
     } catch (e) {
       console.log(`Error sending welcome flow email for user: ${user?.name} | ${user?._id}`);
-      console.log(e.message);
       console.log('\n');
+      continue;
     }
   }
-  return { data: `Scheduling ${nextJobs.length} emails.`, nextJobs };
+  const message = `${nextJobs.length} welcome flow emails sent`;
+  return { message, nextJobs };
 };
 
 export const onComplete = () => {

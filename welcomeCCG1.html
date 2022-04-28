@@ -19,6 +19,10 @@ a {
   font-weight: 700;
 }
 
+.underline {
+  text-decoration: underline;
+}
+
 .email-wrapper {
   margin-left: auto;
   margin-right: auto;
@@ -60,9 +64,7 @@ p.email-body {
 
 .email-container a.cta-link {
   display: block;
-  margin-bottom: 20px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 auto 20px;
   padding: 11px 25px;
   border-radius: 70px;
   background-color: #00DE84;
@@ -109,19 +111,18 @@ p.email-body {
   <div class="email-wrapper">
     <div class="email-container">
       <img class="brand" src="https://s3.amazonaws.com/assets.karmawallet/karmawallet-logo-129x49.png" alt="KarmaWallet Logo" />
-      <h3>We Make Choosing Sustainable Brands Easy 💜</h3>
-      <p class="email-body">Hi John,</p>
-      <p class="email-body">Welcome to Karma Wallet! We leverage the power of data to make shopping more transparent so that you can easily choose the brands that align best with your values.</p>
-      <p class="email-body">Start tracking your personal impact and choosing more sustainable companies by linking your credit card in our secure portal!*
-      </p>
-      <div class="cta-container">
-        <a class="cta-link" href="https://ui.staging.karmawallet.io/account">Track your Impact</a>
-      </div>
-      <p class="email-body">
-        Thank you for your commitment to striving for a more conscious, sustainable future 🌎. We look forward to taking this journey with you!
+      <h3>When it Comes to Impact, we Make it <span class="underline">Personal</span> 💜</h3>
+      <p class="email-body">We hope you're enjoying your Karma Wallet!</p>
+      <p class="email-body">Did you know you can view your personal shopping impact and carbon footprint (as well as choose higher impact brands and offset your individual emissions)?</p>
+      <p class="email-body">To start tracking your shopping impact, head to your account and link your credit card in our secure portal*.
+          Testing123 will match the offsets you purchase!
       </p>
       <p class="subtext">*Karma Wallet never has access to your credit card number, and never shares your data with third parties.</p>
       <a class="subtext" href="https://ui.staging.karmawallet.io/privacy">(Our Privacy Policy)</a>
+      <div class="cta-container">
+        <a class="cta-link" href="https://ui.staging.karmawallet.io/account">Track your Impact</a>
+      </div>
+      <p class="email-body">Thank you for your commitment to striving for a more conscious, sustainable future 🌎.</p>
       <div class="email-signature">
         <p>Take care!</p>
         <p>Jayant Khadilkar</p>

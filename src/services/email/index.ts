@@ -224,8 +224,11 @@ export const sendWelcomeCCG1Email = async ({
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
   const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { groupName, domain } });
-  // TODO: Update Subject
+  // override to share welcomeCC1 template and styles
+  const template = buildTemplate({
+    templateName: EmailTemplateConfigs.WelcomeCC1.name,
+    data: { domain, groupName },
+  });
   const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);

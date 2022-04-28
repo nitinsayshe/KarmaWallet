@@ -14,7 +14,7 @@ import * as EmailService from '../src/services/email';
     // } as IRequest);
     await MongoClient.init();
 
-    const welcomeEmail = await EmailService.sendWelcomeEmail({
+    const welcomeCC1 = await EmailService.sendWelcomeCC1Email({
       name: 'John',
       domain: 'https://ui.staging.karmawallet.io',
       user: new Types.ObjectId('62192d3af022c9e3fbfe3c23'),
@@ -22,7 +22,7 @@ import * as EmailService from '../src/services/email';
       sendEmail: false,
     });
 
-    const welcomeGroupEmail = await EmailService.sendWelcomeGroupEmail({
+    const welcomeCCG1 = await EmailService.sendWelcomeCCG1Email({
       name: 'John',
       groupName: 'Testing123',
       domain: 'https://ui.staging.karmawallet.io',
@@ -31,8 +31,8 @@ import * as EmailService from '../src/services/email';
       sendEmail: false,
     });
 
-    fs.writeFileSync('./welcomeEmail.html', welcomeEmail.jobData.template);
-    fs.writeFileSync('./welcomeGroupEmail.html', welcomeGroupEmail.jobData.template);
+    fs.writeFileSync('./welcomeCC1.html', welcomeCC1.jobData.template);
+    fs.writeFileSync('./welcomeCCG1.html', welcomeCCG1.jobData.template);
 
     // add mappers here...
     await MongoClient.disconnect();

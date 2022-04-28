@@ -250,12 +250,14 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
       // get users and all users in same request...if user
       // does not have enough top sectors, all users will
       // be used as fallback
-      uids: [req.requestor._id.toString(), process.env.APP_USER_ID],
+      uids: [process.env.APP_USER_ID],
       tiers: [1],
       // exclude financial services (staging, prod)
       sectorsToExclude: ['62192ef2f022c9e3fbff0b0c', '621b9ada5f87e75f53666f98'],
       count: 4,
     };
+
+    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
 
     const topSectorsTransactionTotals = await getTopSectorsFromTransactionTotals(config);
     const totalSectorsCount = await SectorModel
@@ -269,11 +271,11 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
 
     const sectorTransactionTotals = !!requestorsTopSectors && requestorsTopSectors.sectorTransactionTotals.length >= config.count
       ? requestorsTopSectors.sectorTransactionTotals
-      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).sectorTransactionTotals;
+      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID)?.sectorTransactionTotals;
 
     return {
-      sectors: sectorTransactionTotals.map(s => s.sector),
-      remainingCategoriesCount: totalSectorsCount - sectorTransactionTotals.length,
+      sectors: (sectorTransactionTotals || []).map(s => s.sector),
+      remainingCategoriesCount: totalSectorsCount - (sectorTransactionTotals?.length ?? 0),
     };
   } catch (err) {
     throw asCustomError(err);

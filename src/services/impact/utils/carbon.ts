@@ -54,9 +54,9 @@ export interface IEquivalencies {
 // TODO: this should probably be stored in DB, but hard coding for now.
 const equivalenciesData: IEquivalency[] = [
   {
-    perMt: 2825,
+    perMt: 41.6667,
     phrase: (isPlural: boolean) => `airline mile${isPlural ? 's' : ''}`,
-    'EPA calculation': '0.471 mt for 1331 miles',
+    'EPA calculation': '0.024 metric tons for 1 mile',
     type: EquivalencyType.Neg,
     key: EquivalencyKey.Airplane,
   },

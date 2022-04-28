@@ -117,7 +117,11 @@ export const sendGroupVerificationEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.GroupVerification;
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const verificationLink = `${domain}/account?emailVerification=${token}`;
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token, groupName } });
+  // override to share email verification template and styles
+  const template = buildTemplate({
+    templateName: EmailTemplateConfigs.EmailVerification.name,
+    data: { verificationLink, name, token, groupName },
+  });
   const subject = 'KarmaWallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);

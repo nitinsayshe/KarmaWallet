@@ -16,6 +16,7 @@ export const mapUserEmailsToArray = async () => {
         emails.push({ email: altEmail.email, status: altEmail.status, primary: false });
       });
     }
+    user.email = null;
     user.emails = emails;
     await user.save();
   }
@@ -24,6 +25,7 @@ export const mapUserEmailsToArray = async () => {
     const emails = [];
     emails.push({ email: user.email, status: UserEmailStatus.Verified, primary: true });
     user.emails = emails;
+    user.email = null;
     await user.save();
   }
 };

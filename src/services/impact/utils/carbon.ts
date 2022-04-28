@@ -115,15 +115,6 @@ const equivalenciesData: IEquivalency[] = [
     key: EquivalencyKey.Sappling,
   },
   {
-    heading: 'Carbon sequestered by',
-    perMt: 1.219512195,
-    phrase: (isPlural) => `acre${isPlural ? 's' : ''} of U.S. forests in one year`,
-    source: 'EPA',
-    'EPA calculation': '-0.82 metric ton CO2/acre/year sequestered annually by one acre of average U.S. forest.',
-    type: EquivalencyType.Pos,
-    key: EquivalencyKey.Trees,
-  },
-  {
     heading: 'Greenhouse gas emissions avoided by',
     perMt: 0.048590865,
     phrase: (isPlural) => `garbage truck${isPlural ? 's' : ''} of waste recycled instead of landfilled`,

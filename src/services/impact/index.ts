@@ -4,7 +4,7 @@ import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
-import { getTopCompaniesOfSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
+import { getTopCompaniesOfAllSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { SectorModel } from '../../models/sector';
@@ -201,9 +201,9 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       validator: (company: ICompanyDocument) => company.combinedScore > 60,
     };
 
-    if (req.requestor) config.uids.unshift(req.requestor._id.toString());
+    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
 
-    const topCompanyTransactionTotals = await getTopCompaniesOfSectorsFromTransactionTotals(config);
+    const topCompanyTransactionTotals = await getTopCompaniesOfAllSectorsFromTransactionTotals(config);
 
     const requestorsTopCompanies = topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
 
@@ -214,9 +214,9 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
     if ((companies || []).length < config.count) {
       // fill with relevant companies
       const relevantCompanies = await _getCompanies({
+        _id: { $nin: companies.map(c => c._id) },
         'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
-        combinedScore: { $gt: 60 },
-        parentCompany: { $ne: null },
+        // combinedScore: { $gt: 60 },
       });
 
       const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);

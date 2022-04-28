@@ -28,7 +28,8 @@ export interface ISectorTransactionTotals extends ITransactionTotals {
 export interface IUserTransactionTotal {
   user: IRef<ObjectId, IUserDocument>;
   groupedByCompany: ICompanyTransactionTotals[];
-  groupedBySector: ISectorTransactionTotals[];
+  groupedByAllSectors: ISectorTransactionTotals[];
+  groupedByPrimarySectors: ISectorTransactionTotals[];
   totalSpent: number;
   totalTransactionCount: number;
   createdAt: Date;
@@ -64,7 +65,8 @@ const SectorDataSchema = new Schema({
 const userTransactionTotalSchema = new Schema({
   user: { type: Schema.Types.ObjectId, ref: 'user' },
   groupedByCompany: { type: [CompanyDataSchema], default: [] },
-  groupedBySector: { type: [SectorDataSchema], default: [] },
+  groupedByAllSectors: { type: [SectorDataSchema], default: [] },
+  groupedByPrimarySectors: { type: [SectorDataSchema], default: [] },
   totalSpent: { type: Number },
   totalTransactionCount: { type: Number },
   createdAt: { type: Date },

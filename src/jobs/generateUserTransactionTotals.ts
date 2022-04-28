@@ -70,7 +70,8 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
 const getTransactionTotal = (
   user: IUserDocument,
   companyTotals: ICompanyTransactionTotals[],
-  sectorTotals: ISectorTransactionTotals[],
+  allSectorTotals: ISectorTransactionTotals[],
+  primarySectorTotals: ISectorTransactionTotals[],
   totalDollars: number,
   totalTransactions: number,
   allTransactionTotals: IUserTransactionTotalDocument[],
@@ -80,7 +81,8 @@ const getTransactionTotal = (
 
   if (!!transactionTotal) {
     transactionTotal.groupedByCompany = companyTotals;
-    transactionTotal.groupedBySector = sectorTotals;
+    transactionTotal.groupedByAllSectors = allSectorTotals;
+    transactionTotal.groupedByPrimarySectors = primarySectorTotals;
     transactionTotal.totalSpent = totalDollars;
     transactionTotal.totalTransactionCount = totalTransactions;
     transactionTotal.lastModified = timestamp;
@@ -88,7 +90,8 @@ const getTransactionTotal = (
     transactionTotal = new UserTransactionTotalModel({
       user,
       groupedByCompany: companyTotals,
-      groupedBySector: sectorTotals,
+      groupedByAllSectors: allSectorTotals,
+      groupedByPrimarySectors: primarySectorTotals,
       totalSpent: totalDollars,
       totalTransactionCount: totalTransactions,
       createdAt: timestamp,
@@ -105,7 +108,8 @@ export const exec = async () => {
   let grandTotalTransactions = 0;
   let errorCount = 0;
   const grandCompanyTotals: { [key: string]: ICompanyTransactionTotals } = {};
-  const grandSectorTotals: { [key: string]: ISectorTransactionTotals } = {};
+  const grandAllSectorTotals: { [key: string]: ISectorTransactionTotals } = {};
+  const grandPrimarySectorTotals: { [key: string]: ISectorTransactionTotals } = {};
 
   let users: IUserDocument[];
   let allTransactionTotals: IUserTransactionTotalDocument[];
@@ -131,7 +135,8 @@ export const exec = async () => {
       let userTotalDollars = 0;
       let userTotalTransactions = 0;
       const userCompanyTotals: { [key: string]: ICompanyTransactionTotals } = {};
-      const userSectorTotals: { [key: string]: ISectorTransactionTotals } = {};
+      const userAllSectorTotals: { [key: string]: ISectorTransactionTotals } = {};
+      const userPrimarySectorTotals: { [key: string]: ISectorTransactionTotals } = {};
 
       const transactions = await getTransactions(user._id);
 
@@ -170,11 +175,43 @@ export const exec = async () => {
         if (companyIdentifier !== 'unknown') userCompanyTotals[companyIdentifier].company = transaction.companyId;
 
         if (!!transaction.companyId?.sectors?.length) {
+          // CALCULATE GROUP BY ALL SECTORS
+          for (const popSector of transaction.popSectors) {
+            if (!grandAllSectorTotals[popSector._id.toString()]) {
+              grandAllSectorTotals[popSector._id.toString()] = {
+                sector: popSector,
+                tier: popSector.tier,
+                totalSpent: 0,
+                transactionCount: 0,
+                companies: [],
+              };
+            }
+
+            if (!userAllSectorTotals[popSector._id.toString()]) {
+              userAllSectorTotals[popSector._id.toString()] = {
+                sector: popSector,
+                tier: popSector.tier,
+                totalSpent: 0,
+                transactionCount: 0,
+                companies: [],
+              };
+            }
+
+            grandAllSectorTotals[popSector._id.toString()].totalSpent += transaction.amount;
+            grandAllSectorTotals[popSector._id.toString()].transactionCount += 1;
+            if (companyIdentifier !== 'unknown') grandAllSectorTotals[popSector._id.toString()].companies.push(transaction.companyId);
+
+            userAllSectorTotals[popSector._id.toString()].totalSpent += transaction.amount;
+            userAllSectorTotals[popSector._id.toString()].transactionCount += 1;
+            if (companyIdentifier !== 'unknown') userAllSectorTotals[popSector._id.toString()].companies.push(transaction.companyId);
+          }
+
+          // CALCULATE GROUPED BY PRIMARY SECTOR ONLY
           const primarySector: ICompanySector = transaction.companyId.sectors.find((companySector: ICompanySector) => companySector.primary);
           const popPrimarySector: ISectorDocument = transaction.popSectors.find((s: ISectorDocument) => s._id.toString() === primarySector.sector.toString());
 
-          if (!grandSectorTotals[popPrimarySector._id.toString()]) {
-            grandSectorTotals[popPrimarySector._id.toString()] = {
+          if (!grandPrimarySectorTotals[popPrimarySector._id.toString()]) {
+            grandPrimarySectorTotals[popPrimarySector._id.toString()] = {
               sector: popPrimarySector,
               tier: popPrimarySector.tier,
               totalSpent: 0,
@@ -183,8 +220,8 @@ export const exec = async () => {
             };
           }
 
-          if (!userSectorTotals[popPrimarySector._id.toString()]) {
-            userSectorTotals[popPrimarySector._id.toString()] = {
+          if (!userPrimarySectorTotals[popPrimarySector._id.toString()]) {
+            userPrimarySectorTotals[popPrimarySector._id.toString()] = {
               sector: popPrimarySector,
               tier: popPrimarySector.tier,
               totalSpent: 0,
@@ -193,17 +230,17 @@ export const exec = async () => {
             };
           }
 
-          grandSectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
-          grandSectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
-          if (companyIdentifier !== 'unknown') grandSectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
+          grandPrimarySectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
+          grandPrimarySectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
+          if (companyIdentifier !== 'unknown') grandPrimarySectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
 
-          userSectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
-          userSectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
-          if (companyIdentifier !== 'unknown') userSectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
+          userPrimarySectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
+          userPrimarySectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
+          if (companyIdentifier !== 'unknown') userPrimarySectorTotals[popPrimarySector._id.toString()].companies.push(transaction.companyId);
         }
       }
 
-      const transactionTotal = getTransactionTotal(user, Object.values(userCompanyTotals), Object.values(userSectorTotals), userTotalDollars, userTotalTransactions, allTransactionTotals);
+      const transactionTotal = getTransactionTotal(user, Object.values(userCompanyTotals), Object.values(userAllSectorTotals), Object.values(userPrimarySectorTotals), userTotalDollars, userTotalTransactions, allTransactionTotals);
 
       await transactionTotal.save();
     } catch (err) {
@@ -218,7 +255,7 @@ export const exec = async () => {
     /**
      * transaction totals for all users stored as app user (for id, see: process.env.APP_USER_ID)
      */
-    const allUsersTransactionTotal = getTransactionTotal(appUser, Object.values(grandCompanyTotals), Object.values(grandSectorTotals), grandTotalDollars, grandTotalTransactions, allTransactionTotals);
+    const allUsersTransactionTotal = getTransactionTotal(appUser, Object.values(grandCompanyTotals), Object.values(grandAllSectorTotals), Object.values(grandPrimarySectorTotals), grandTotalDollars, grandTotalTransactions, allTransactionTotals);
     await allUsersTransactionTotal.save();
   } catch (err) {
     console.log('\n[-] error generating transaction total for all users');

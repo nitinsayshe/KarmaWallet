@@ -1,8 +1,10 @@
 import 'dotenv/config';
+import { Types } from 'mongoose';
+import fs from 'fs';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateUserEmailList } from '../src/services/scripts/generateUserEmailList';
+import * as EmailService from '../src/services/email';
 
 (async () => {
   try {
@@ -12,10 +14,27 @@ import { generateUserEmailList } from '../src/services/scripts/generateUserEmail
     // } as IRequest);
     await MongoClient.init();
 
-    await generateUserEmailList();
+    const welcomeEmail = await EmailService.sendWelcomeEmail({
+      name: 'John',
+      domain: 'https://ui.staging.karmawallet.io',
+      user: new Types.ObjectId('62192d3af022c9e3fbfe3c23'),
+      recipientEmail: 'john@theimpactkarma.com',
+      sendEmail: false,
+    });
+
+    const welcomeGroupEmail = await EmailService.sendWelcomeGroupEmail({
+      name: 'John',
+      groupName: 'Testing123',
+      domain: 'https://ui.staging.karmawallet.io',
+      user: new Types.ObjectId('62192d3af022c9e3fbfe3c23'),
+      recipientEmail: 'john@theimpactkarma.com',
+      sendEmail: false,
+    });
+
+    fs.writeFileSync('./welcomeEmail.html', welcomeEmail.jobData.template);
+    fs.writeFileSync('./welcomeGroupEmail.html', welcomeGroupEmail.jobData.template);
 
     // add mappers here...
-
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

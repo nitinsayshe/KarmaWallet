@@ -1,3 +1,4 @@
+/* eslint-disable prefer-rest-params */
 import Handlebars from 'handlebars';
 import path from 'path';
 import fs from 'fs';
@@ -13,6 +14,9 @@ import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
 import { EmailTemplateKeys, EmailTemplateConfigs, IEmailTemplateConfig } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
+import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
+
+registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
 
@@ -84,12 +88,10 @@ const defaultEmailJobOptions = {
 export const buildTemplate = ({ templateName, data, templatePath, stylePath }: IBuildTemplateParams) => {
   const _templatePath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
   const _stylePath = stylePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
-  if (!fs.existsSync(_templatePath)) {
-    throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
-  }
+  if (!fs.existsSync(_templatePath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
   const templateString = fs.readFileSync(_templatePath, 'utf8');
   if (fs.existsSync(_stylePath)) {
-    const rawCss = fs.readFileSync(stylePath, 'utf8');
+    const rawCss = fs.readFileSync(_stylePath, 'utf8');
     const styleTemplateRaw = Handlebars.compile(rawCss);
     const styleTemplate = styleTemplateRaw({ colors });
     data.style = styleTemplate;
@@ -118,16 +120,8 @@ export const sendGroupVerificationEmail = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token, groupName } });
   const subject = 'KarmaWallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  // tries 3 times, after 4 sec, 16 sec, and 64 sec
-  const jobOptions = {
-    attempts: 3,
-    backoff: {
-      type: 'exponential',
-      delay: 4000,
-    },
-  };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, jobOptions);
-  return { jobData, jobOptions };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
 export const sendEmailVerification = async ({
@@ -186,7 +180,11 @@ export const sendWelcomeGroupEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.WelcomeGroup;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
+  // override to share welcome template and styles
+  const template = buildTemplate({
+    templateName: EmailTemplateConfigs.Welcome.name,
+    data: { name, domain, groupName },
+  });
   const subject = `Welcome to your KarmaWallet, ${name} 💚`;
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);

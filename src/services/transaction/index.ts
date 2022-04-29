@@ -1,5 +1,6 @@
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, isValidObjectId, ObjectId } from 'mongoose';
 import {
+  IShareableTransaction,
   ITransaction,
   ITransactionDocument,
   TransactionModel,
@@ -7,6 +8,9 @@ import {
 import { RareTransactionQuery } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 import { RareClient } from '../../clients/rare';
+import { getShareableSector } from '../sectors';
+import { ISector, ISectorDocument } from '../../models/sector';
+import { IRef } from '../../types/model';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -16,7 +20,7 @@ const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...query, ...excludePaymentQuery })
-    .group({ _id: '$userId', total: { $sum: '$amount' } });
+    .group({ _id: '$user', total: { $sum: '$amount' } });
 
   return aggResult?.length ? aggResult[0].total : 0;
 };
@@ -48,23 +52,25 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
 };
 
 export const getShareableTransaction = ({
-  userId,
-  companyId,
-  cardId,
-  category,
-  subCategory,
+  user,
+  company,
+  card,
+  sector,
   amount,
   date,
   createdOn,
   lastModified,
   integrations,
 }: ITransactionDocument) => {
-  const shareableTransaction: Partial<ITransaction> = {
-    userId,
-    companyId,
-    cardId,
-    category,
-    subCategory,
+  const _sector: IRef<ObjectId, ISector> = isValidObjectId(sector)
+    ? sector
+    : getShareableSector(sector as ISectorDocument);
+
+  const shareableTransaction: Partial<IShareableTransaction> = {
+    user,
+    company,
+    card,
+    sector: _sector,
     amount,
     date,
     createdOn,

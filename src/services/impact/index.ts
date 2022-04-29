@@ -6,7 +6,7 @@ import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
 import { getTopCompaniesOfAllSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { ErrorTypes } from '../../lib/constants';
+import { ErrorTypes, UserRoles } from '../../lib/constants';
 import { SectorModel } from '../../models/sector';
 import { ICompanyDocument } from '../../models/company';
 import { _getCompanies } from '../company';
@@ -30,9 +30,13 @@ export interface ITopSectorsRequestQuery {
 }
 
 interface IShowUserAmericanAverageParams {
-  userId: string;
+  userId: string | Types.ObjectId;
   cachedTransactionTotal?: number;
   catchedTransactionCount?: number;
+}
+
+export interface ICarbonOffsetRequestQuery {
+  userId?: string;
 }
 
 // values provided by Anushka 2/2/22. these may need to change
@@ -72,16 +76,30 @@ const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: numb
 
 // TODO: split this up so offsets and emissions can be accessed
 //   and retrieved separately.
-export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
-  const _id = req?.requestor?._id;
+export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffsetRequestQuery>) => {
+  const { userId } = req.query;
+
+  let _id: Types.ObjectId;
+
+  if (!!userId) {
+    // eslint-disable-next-line no-undef
+    if (!req.requestor?._id || (req.requestor._id.toString() !== userId && req.requestor?.role === UserRoles.None)) {
+      throw new CustomError('You are not authorized to request this user\'s carbon data.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!isValidObjectId(userId)) throw new CustomError('Invalid user id found.', ErrorTypes.INVALID_ARG);
+    _id = new Types.ObjectId(userId);
+  } else {
+    _id = new Types.ObjectId(req.requestor?._id);
+  }
+
   let totalEmissions = 0;
   let monthlyEmissions = 0;
   let netEmissions = 0;
   let calculateMonthlyEquivalency = false;
 
-  const donationsCount = await CarbonService.getOffsetTransactionsCount({ userId: new Types.ObjectId(_id) });
-  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ userId: new Types.ObjectId(_id) });
-  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: new Types.ObjectId(_id) });
+  const donationsCount = await CarbonService.getOffsetTransactionsCount({ userId: _id });
+  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ userId: _id });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: _id });
 
   const useAmericanAverage = await shouldUseAmericanAverage({ userId: _id });
 
@@ -135,8 +153,21 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest) => {
   };
 };
 
-export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
-  const { _id } = req.requestor;
+export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarbonOffsetRequestQuery>) => {
+  const { userId } = req.query;
+
+  let _id: Types.ObjectId;
+
+  if (!!userId) {
+    if (!req.requestor?._id || (req.requestor._id.toString() !== userId && req.requestor?.role === UserRoles.None)) {
+      throw new CustomError('You are not authorized to request this user\'s carbon data.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!isValidObjectId(userId)) throw new CustomError('Invalid user id found.', ErrorTypes.INVALID_ARG);
+    _id = new Types.ObjectId(userId);
+  } else {
+    _id = new Types.ObjectId(req?.requestor?._id);
+  }
+
   const donationTypes = ['suggested', 'total', 'none'];
   const buildDonationAmount = (amount: number, description: string, type: string) => ({
     amount,

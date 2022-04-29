@@ -67,7 +67,7 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
     },
   ]);
 
-const getTransactionTotal = (
+const saveTransactionTotal = async (
   user: IUserDocument,
   companyTotals: ICompanyTransactionTotals[],
   allSectorTotals: ISectorTransactionTotals[],
@@ -80,25 +80,29 @@ const getTransactionTotal = (
   const timestamp = dayjs().utc().toDate();
 
   if (!!transactionTotal) {
-    transactionTotal.groupedByCompany = companyTotals;
-    transactionTotal.groupedByAllSectors = allSectorTotals;
-    transactionTotal.groupedByPrimarySectors = primarySectorTotals;
-    transactionTotal.totalSpent = totalDollars;
-    transactionTotal.totalTransactionCount = totalTransactions;
-    transactionTotal.lastModified = timestamp;
-  } else {
-    transactionTotal = new UserTransactionTotalModel({
-      user,
+    const updatedData = {
       groupedByCompany: companyTotals,
       groupedByAllSectors: allSectorTotals,
       groupedByPrimarySectors: primarySectorTotals,
       totalSpent: totalDollars,
       totalTransactionCount: totalTransactions,
-      createdAt: timestamp,
-    });
+      lastModified: timestamp,
+    };
+
+    return UserTransactionTotalModel.updateOne({ _id: transactionTotal._id }, updatedData);
   }
 
-  return transactionTotal;
+  transactionTotal = new UserTransactionTotalModel({
+    user,
+    groupedByCompany: companyTotals,
+    groupedByAllSectors: allSectorTotals,
+    groupedByPrimarySectors: primarySectorTotals,
+    totalSpent: totalDollars,
+    totalTransactionCount: totalTransactions,
+    createdAt: timestamp,
+  });
+
+  return transactionTotal.save();
 };
 
 export const exec = async () => {
@@ -240,9 +244,7 @@ export const exec = async () => {
         }
       }
 
-      const transactionTotal = getTransactionTotal(user, Object.values(userCompanyTotals), Object.values(userAllSectorTotals), Object.values(userPrimarySectorTotals), userTotalDollars, userTotalTransactions, allTransactionTotals);
-
-      await transactionTotal.save();
+      await saveTransactionTotal(user, Object.values(userCompanyTotals), Object.values(userAllSectorTotals), Object.values(userPrimarySectorTotals), userTotalDollars, userTotalTransactions, allTransactionTotals);
     } catch (err) {
       console.log(`\n[-] error generating transaction total for user: ${user._id}`);
       console.log(err, '\n');
@@ -255,8 +257,10 @@ export const exec = async () => {
     /**
      * transaction totals for all users stored as app user (for id, see: process.env.APP_USER_ID)
      */
-    const allUsersTransactionTotal = getTransactionTotal(appUser, Object.values(grandCompanyTotals), Object.values(grandAllSectorTotals), Object.values(grandPrimarySectorTotals), grandTotalDollars, grandTotalTransactions, allTransactionTotals);
-    await allUsersTransactionTotal.save();
+    console.log('>>>>> grandCompanyTotals', grandCompanyTotals);
+    console.log('>>>>> grandAllSectorTotals', grandAllSectorTotals);
+    console.log('>>>>> grandPrimarySectorTotals', grandPrimarySectorTotals);
+    await saveTransactionTotal(appUser, Object.values(grandCompanyTotals), Object.values(grandAllSectorTotals), Object.values(grandPrimarySectorTotals), grandTotalDollars, grandTotalTransactions, allTransactionTotals);
   } catch (err) {
     console.log('\n[-] error generating transaction total for all users');
     console.log(err, '\n');

@@ -82,6 +82,7 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffs
   let _id: Types.ObjectId;
 
   if (!!userId) {
+    // eslint-disable-next-line no-undef
     if (!req.requestor?._id || (req.requestor._id.toString() !== userId && req.requestor?.role === UserRoles.None)) {
       throw new CustomError('You are not authorized to request this user\'s carbon data.', ErrorTypes.UNAUTHORIZED);
     }

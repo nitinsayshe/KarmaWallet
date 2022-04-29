@@ -257,9 +257,6 @@ export const exec = async () => {
     /**
      * transaction totals for all users stored as app user (for id, see: process.env.APP_USER_ID)
      */
-    console.log('>>>>> grandCompanyTotals', grandCompanyTotals);
-    console.log('>>>>> grandAllSectorTotals', grandAllSectorTotals);
-    console.log('>>>>> grandPrimarySectorTotals', grandPrimarySectorTotals);
     await saveTransactionTotal(appUser, Object.values(grandCompanyTotals), Object.values(grandAllSectorTotals), Object.values(grandPrimarySectorTotals), grandTotalDollars, grandTotalTransactions, allTransactionTotals);
   } catch (err) {
     console.log('\n[-] error generating transaction total for all users');

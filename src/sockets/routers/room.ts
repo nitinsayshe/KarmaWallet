@@ -11,7 +11,6 @@ export const msgTest = (socket: ISocket) => {
 };
 
 export const joinUser = (socket: ISocket) => {
-  console.log('>>>>> joining user room');
   socket.on(`${path}/join/user`, RoomController.joinUser(socket));
 };
 

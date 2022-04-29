@@ -1,5 +1,5 @@
 import { SandboxedJob } from 'bullmq';
-import { IUserDocument } from '../models/user';
+import { IUserDocument, UserEmailStatus } from '../models/user';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { getCards } from '../services/card';
 import { getDaysFromPreviousDate } from '../lib/date';
@@ -75,7 +75,9 @@ export const exec = async () => {
   for (const user of users) {
     try {
       if (!user.subscribedUpdates) continue;
-      const recipientEmail = user.emails.find(e => e.primary === true && e.status === 'verified')?.email;
+      // This check is redundant as it's also handled in sendEmail job
+      // but this allows for accurate counting in the log below
+      const recipientEmail = user.emails.find(e => e.primary && ![UserEmailStatus.Bounced, UserEmailStatus.Complained].includes(e.status))?.email;
       if (!recipientEmail) continue;
       const userCards = await getCards({} as IRequest, { userId: user._id });
       if (userCards.length) continue;
@@ -86,8 +88,6 @@ export const exec = async () => {
       if (!nextJob) continue;
       nextJobs.push({ name: JobNames.SendEmail, data: nextJob.jobData, options: nextJob.jobOptions });
     } catch (e) {
-      console.log(`Error sending welcome flow email for user: ${user?.name} | ${user?._id}`);
-      console.log('\n');
       continue;
     }
   }

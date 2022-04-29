@@ -42,7 +42,8 @@ export class _EmailBullClient extends _BullClient {
 
   // https://crontab.cronhub.io/
   initCronJobs = () => {
-    this.createJob(JobNames.UpdateBouncedEmails, null, { jobId: `${JobNames.UpdateBouncedEmails}-bihourly`, repeat: { cron: '*/30 * * * *' } });
+    this.createJob(JobNames.UpdateBouncedEmails, null, { jobId: `${JobNames.UpdateBouncedEmails}-twice-per-hour`, repeat: { cron: '*/30 * * * *' } });
+    this.createJob(JobNames.SendWelcomeFlowEmails, null, { jobId: `${JobNames.UpdateBouncedEmails}-bihourly`, repeat: { cron: '0 */2 * * *' } });
   };
 }
 

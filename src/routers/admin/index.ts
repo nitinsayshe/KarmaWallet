@@ -7,6 +7,7 @@ import reportsRouter from './reports';
 import jobRouter from './job';
 import groupsRouter from './groups';
 import uploadRouter from './upload';
+import sectorsRouter from './sectors';
 
 const adminRouter = Router();
 
@@ -18,5 +19,6 @@ adminRouter.use('/reports', reportsRouter);
 adminRouter.use('/job', jobRouter);
 adminRouter.use('/groups', groupsRouter);
 adminRouter.use('/upload', uploadRouter);
+adminRouter.use('/sectors', sectorsRouter);
 
 export default (app: Express) => app.use('/admin', adminRouter);

@@ -119,6 +119,8 @@ export const AllowedOrigins = [
   'https://group.sandbox-1.karmawallet.io',
   'https://frontend.staging.karmawallet.io',
   'http://frontend.staging.karmawallet.io',
+  'https://frontend.karmawallet.io',
+  'http://frontend.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;
@@ -132,3 +134,12 @@ export const RareTransactionQuery: {
 };
 
 export const KarmaWalletCdnUrl = 'cdn.karmawallet.io';
+
+export const sectorsToExclude = [
+  '62192ef2f022c9e3fbff0b66', // staging Manufacturing
+  '621b9adb5f87e75f53666ff2', // prod Manufacturing
+  '62192ef2f022c9e3fbff0b06', // staging Educational Services
+  '621b9ada5f87e75f53666f92', // prod Eductional Services
+  '62192ef3f022c9e3fbff0ba2', // staging Nonprofits
+  '621b9adb5f87e75f5366702e', // prod Nonprofits
+];

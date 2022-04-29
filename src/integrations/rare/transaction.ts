@@ -9,8 +9,8 @@ import { ICompanyDocument } from '../../models/company';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { Card, IRareCard } from './card';
-import { IPlaidCategoryMappingDocument, PlaidCategoryMappingModel } from '../../models/plaidCategoryMapping';
 import { IGroup } from '../../models/group';
+import { ISectorDocument, SectorModel } from '../../models/sector';
 
 dayjs.extend(utc);
 
@@ -34,12 +34,12 @@ export interface IRareTransaction {
 }
 
 export class Transaction {
-  private _user: IUserDocument = null;
-  private _company: ICompanyDocument = null;
-  private _card: Card = null;
+  private __user: IUserDocument = null;
+  private __company: ICompanyDocument = null;
+  private __card: Card = null;
   private _rareTransaction: IRareTransaction = null;
   private _transaction: ITransactionDocument = null;
-  private _plaidCategoryMapping: IPlaidCategoryMappingDocument = null;
+  private __sector: ISectorDocument = null;
   private __group: IGroup = null;
   private __matchType: MatchTypes = null;
 
@@ -49,33 +49,33 @@ export class Transaction {
     if (!card) throw new CustomError('Rare Integration Transaction Error - no card provided');
     if (!rareTransaction) throw new CustomError('Rare Integration Transaction Error - no rare transaction provided', ErrorTypes.INVALID_ARG);
 
-    this._user = user;
-    this._company = company;
-    this._card = card;
+    this.__user = user;
+    this.__company = company;
+    this.__card = card;
     this._rareTransaction = rareTransaction;
   }
 
-  get _userId() { return this._transaction?.userId || this._user._id; }
-  get _cardId() { return this._transaction?.cardId || this._card._id; }
-  get _companyId() { return this._transaction?.companyId || this._company._id; }
+  get _user() { return this._transaction?.user || this.__user._id; }
+  get _card() { return this._transaction?.card || this.__card._id; }
+  get _company() { return this._transaction?.company || this.__company._id; }
   get _amount() { return this._transaction?.amount || this._rareTransaction.amt; }
   get _date() { return this._transaction?.date || new Date(this._rareTransaction.processed_ts); }
-  get _category() { return 10; } // hardcoding for now
-  get _subCategory() { return 100002; } // hard coding for now
+  get _sector() { return this.__sector; }
   get _matchType() { return this.__matchType; }
   set _matchType(matchType: MatchTypes) { this.__matchType = matchType; }
   get _group() { return this.__group; }
   set _group(group: IGroup) { this.__group = group; }
 
   load = async () => {
-    this._plaidCategoryMapping = await PlaidCategoryMappingModel.findOne({ _id: '61e96acb12e95f10dcdcf00e' });
+    // ................................................................staging........................prod
+    this.__sector = await SectorModel.findOne({ _id: { $in: ['62192ef2f022c9e3fbff0b52', '621b9adb5f87e75f53666fde'] } });
   };
 
   toKarmaFormat = () => {
     const transaction: Partial<ITransaction> = {
-      userId: this._userId,
-      cardId: this._cardId,
-      companyId: this._companyId,
+      user: this._user,
+      card: this._card,
+      company: this._company,
       amount: this._amount,
       date: this._date,
       integrations: this._transaction?.integrations || {
@@ -84,9 +84,7 @@ export class Transaction {
           projectName: 'Catch Carbon Project',
         },
       },
-      category: this._category,
-      subCategory: this._subCategory,
-      carbonMultiplier: this._plaidCategoryMapping,
+      sector: this._sector,
     };
     const matchType = this._matchType;
     if (matchType) transaction.matchType = matchType;
@@ -105,6 +103,7 @@ export class Transaction {
         // this transaction  already exists in the karma db
         // only need to save if diff is found
       } else {
+        console.log('\n>>>>> this.toKarmaFormat()', this.toKarmaFormat(), '\n');
         const transaction = new TransactionModel(this.toKarmaFormat());
         const now = dayjs().utc().toDate();
         transaction.createdOn = now;

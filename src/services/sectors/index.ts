@@ -1,15 +1,11 @@
 import {
   FilterQuery, isValidObjectId, Schema,
 } from 'mongoose';
+import { ISector, ISectorDocument, ISectorModel, SectorModel } from '../../models/sector';
+
 import { ErrorTypes } from '../../lib/constants';
 import { mockRequest } from '../../lib/constants/request';
 import CustomError, { asCustomError } from '../../lib/customError';
-import {
-  ISector,
-  ISectorDocument,
-  ISectorModel,
-  SectorModel,
-} from '../../models/sector';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 
@@ -216,7 +212,7 @@ export const getShareableSector = ({
   tier,
   carbonMultiplier,
   parentSectors,
-}: ISectorModel) => {
+}: ISectorDocument) => {
   const _parentSectors: IRef<Schema.Types.ObjectId, ISector>[] = parentSectors.filter(p => isValidObjectId(p)).length
     ? parentSectors
     : parentSectors.map(p => getShareableSector(p as ISectorModel));

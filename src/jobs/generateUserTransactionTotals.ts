@@ -130,8 +130,6 @@ export const exec = async () => {
   if (!users || !allTransactionTotals) return;
 
   for (const user of users) {
-    const uniqueCompanies = new Set<string>();
-
     if (user._id.toString() === process.env.APP_USER_ID) {
       appUser = user;
       continue;
@@ -205,13 +203,19 @@ export const exec = async () => {
 
             grandAllSectorTotals[popSector._id.toString()].totalSpent += transaction.amount;
             grandAllSectorTotals[popSector._id.toString()].transactionCount += 1;
-            if (companyIdentifier !== 'unknown' && !uniqueCompanies.has((transaction.company as ICompanyDocument)._id.toString())) {
+            if (
+              companyIdentifier !== 'unknown'
+              && !grandAllSectorTotals[popSector._id.toString()].companies.find(c => (c as ICompanyDocument)._id.toString() === transaction.company._id.toString())
+            ) {
               grandAllSectorTotals[popSector._id.toString()].companies.push(transaction.company);
             }
 
             userAllSectorTotals[popSector._id.toString()].totalSpent += transaction.amount;
             userAllSectorTotals[popSector._id.toString()].transactionCount += 1;
-            if (companyIdentifier !== 'unknown' && !uniqueCompanies.has((transaction.company as ICompanyDocument)._id.toString())) {
+            if (
+              companyIdentifier !== 'unknown'
+              && !userAllSectorTotals[popSector._id.toString()].companies.find(c => (c as ICompanyDocument)._id.toString() === transaction.company._id.toString())
+            ) {
               userAllSectorTotals[popSector._id.toString()].companies.push(transaction.company);
             }
           }
@@ -242,18 +246,22 @@ export const exec = async () => {
 
           grandPrimarySectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
           grandPrimarySectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
-          if (companyIdentifier !== 'unknown' && !uniqueCompanies.has((transaction.company as ICompanyDocument)._id.toString())) {
+          if (
+            companyIdentifier !== 'unknown'
+            && !grandPrimarySectorTotals[popPrimarySector._id.toString()].companies.find(c => (c as ICompanyDocument)._id.toString() === transaction.company._id.toString())
+          ) {
             grandPrimarySectorTotals[popPrimarySector._id.toString()].companies.push(transaction.company);
           }
 
           userPrimarySectorTotals[popPrimarySector._id.toString()].totalSpent += transaction.amount;
           userPrimarySectorTotals[popPrimarySector._id.toString()].transactionCount += 1;
-          if (companyIdentifier !== 'unknown' && !uniqueCompanies.has((transaction.company as ICompanyDocument)._id.toString())) {
+          if (
+            companyIdentifier !== 'unknown'
+            && !userPrimarySectorTotals[popPrimarySector._id.toString()].companies.find(c => (c as ICompanyDocument)._id.toString() === transaction.company._id.toString())
+          ) {
             userPrimarySectorTotals[popPrimarySector._id.toString()].companies.push(transaction.company);
           }
         }
-
-        if (companyIdentifier !== 'unknown') uniqueCompanies.add((transaction.company as ICompanyDocument)._id.toString());
       }
 
       await saveTransactionTotal(user, Object.values(userCompanyTotals), Object.values(userAllSectorTotals), Object.values(userPrimarySectorTotals), userTotalDollars, userTotalTransactions, allTransactionTotals);

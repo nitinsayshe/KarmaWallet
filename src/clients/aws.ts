@@ -7,14 +7,13 @@ import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants'
 
 interface IAwsClient {
   s3: aws.S3,
-  ses: aws.SES,
   sesV2: aws.SESV2
 }
 
 interface ISendEmailRequest {
-  senderEmail?: aws.SES.Address;
-  recipientEmail: aws.SES.Address;
-  replyToAddresses: aws.SES.AddressList;
+  senderEmail?: aws.SESV2.EmailAddress;
+  recipientEmail: aws.SESV2.EmailAddress;
+  replyToAddresses: aws.SESV2.EmailAddressList;
   template: string;
   subject: string;
   senderName?: string;
@@ -43,11 +42,32 @@ export class AwsClient extends SdkClient {
     });
 
     this._client = {
-      ses: new aws.SES(),
       sesV2: new aws.SESV2({ apiVersion: '2019-09-27' }),
       s3: new aws.S3(),
     };
   }
+
+  // const params: aws.SESV2.SendEmailRequest = {
+  //   Source: `${senderName} <${senderEmail}>`,
+  //   Destination: {
+  //     ToAddresses: [
+  //       recipientEmail,
+  //     ],
+  //   },
+  //   ReplyToAddresses: replyToAddresses,
+  //   Message: {
+  //     Body: {
+  //       Html: {
+  //         Charset: 'UTF-8',
+  //         Data: template,
+  //       },
+  //     },
+  //     Subject: {
+  //       Charset: 'UTF-8',
+  //       Data: subject,
+  //     },
+  //   },
+  // };
 
   sendMail = ({
     senderName = 'KarmaWallet',
@@ -57,28 +77,30 @@ export class AwsClient extends SdkClient {
     subject,
     replyToAddresses = [EmailAddresses.ReplyTo],
   }: ISendEmailRequest) => {
-    const params = {
-      Source: `${senderName} <${senderEmail}>`,
+    const params: aws.SESV2.SendEmailRequest = {
+      FromEmailAddress: `${senderName} <${senderEmail}>`,
+      ReplyToAddresses: replyToAddresses,
+      Content: {
+        Simple: {
+          Body: {
+            Html: {
+              Charset: 'UTF-8',
+              Data: template,
+            },
+          },
+          Subject: {
+            Charset: 'UTF-8',
+            Data: subject,
+          },
+        },
+      },
       Destination: {
         ToAddresses: [
           recipientEmail,
         ],
       },
-      ReplyToAddresses: replyToAddresses,
-      Message: {
-        Body: {
-          Html: {
-            Charset: 'UTF-8',
-            Data: template,
-          },
-        },
-        Subject: {
-          Charset: 'UTF-8',
-          Data: subject,
-        },
-      },
     };
-    return this._client.ses.sendEmail(params).promise();
+    return this._client.sesV2.sendEmail(params).promise();
   };
 
   // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SESV2.html#listSuppressedDestinations-property

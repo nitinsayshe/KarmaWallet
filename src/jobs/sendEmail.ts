@@ -9,6 +9,11 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import { createSentEmailDocument } from '../services/email';
 import { UserEmailStatus, UserModel } from '../models/user';
 
+/**
+ * !IMPORTANT!
+ * THIS FLAG IS FOR TESTING https://github.com/karmawallet/karmawallet/issues/356 ONLY
+ * THIS SHOULD BE REMOVED FOR PRODUCTION AS IT BLOCKS ALL EMAILS FROM BEING SENT
+ */
 const DEV_TEST = true;
 interface ISesEmailResult {
   SendEmailResponse: SendEmailResponse,

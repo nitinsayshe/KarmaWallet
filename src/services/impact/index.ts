@@ -4,7 +4,7 @@ import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
-import { getTopCompaniesOfSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
+import { getTopCompaniesOfAllSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { SectorModel } from '../../models/sector';
@@ -195,13 +195,15 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       // get users and all users in same request...if user
       // does not have enough top companies, all users will
       // be used as fallback
-      uids: [req.requestor._id.toString(), process.env.APP_USER_ID],
+      uids: [process.env.APP_USER_ID],
       sectors: [sector],
       count: 11,
       validator: (company: ICompanyDocument) => company.combinedScore > 60,
     };
 
-    const topCompanyTransactionTotals = await getTopCompaniesOfSectorsFromTransactionTotals(config);
+    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
+
+    const topCompanyTransactionTotals = await getTopCompaniesOfAllSectorsFromTransactionTotals(config);
 
     const requestorsTopCompanies = topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
 
@@ -209,19 +211,17 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       ? requestorsTopCompanies.companies
       : topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).companies;
 
-    if (companies.length < config.count) {
+    if ((companies || []).length < config.count) {
       // fill with relevant companies
       const relevantCompanies = await _getCompanies({
+        _id: { $nin: companies.map(c => c._id) },
         'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
         combinedScore: { $gt: 60 },
-        parentCompany: { $ne: null },
       });
 
-      console.log('>>>>> relevantCompanies', relevantCompanies);
+      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);
 
-      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - companies.length);
-
-      companies = [...companies, ...relevantCompanySamples];
+      companies = [...(companies || []), ...relevantCompanySamples];
     }
 
     return companies;
@@ -250,12 +250,14 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
       // get users and all users in same request...if user
       // does not have enough top sectors, all users will
       // be used as fallback
-      uids: [req.requestor._id.toString(), process.env.APP_USER_ID],
+      uids: [process.env.APP_USER_ID],
       tiers: [1],
       // exclude financial services (staging, prod)
       sectorsToExclude: ['62192ef2f022c9e3fbff0b0c', '621b9ada5f87e75f53666f98'],
       count: 4,
     };
+
+    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
 
     const topSectorsTransactionTotals = await getTopSectorsFromTransactionTotals(config);
     const totalSectorsCount = await SectorModel
@@ -269,11 +271,11 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
 
     const sectorTransactionTotals = !!requestorsTopSectors && requestorsTopSectors.sectorTransactionTotals.length >= config.count
       ? requestorsTopSectors.sectorTransactionTotals
-      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).sectorTransactionTotals;
+      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID)?.sectorTransactionTotals;
 
     return {
-      sectors: sectorTransactionTotals.map(s => s.sector),
-      remainingCategoriesCount: totalSectorsCount - sectorTransactionTotals.length,
+      sectors: (sectorTransactionTotals || []).map(s => s.sector),
+      remainingCategoriesCount: totalSectorsCount - (sectorTransactionTotals?.length ?? 0),
     };
   } catch (err) {
     throw asCustomError(err);

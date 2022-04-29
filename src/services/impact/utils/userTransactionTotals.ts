@@ -27,7 +27,11 @@ export interface ITopSectorsParams extends IBaseTopParams {
   validator?(sectorTransactionTotal: ISectorTransactionTotals): boolean;
 }
 
-export const getTopCompaniesOfSectorsFromTransactionTotals = async ({
+/**
+ * will retrieve the top companies for the provided uids from
+ * ALL SECTORS (userTransactionTotal.groupedByAllSectors)
+ */
+export const getTopCompaniesOfAllSectorsFromTransactionTotals = async ({
   uids,
   sectors,
   count,
@@ -45,7 +49,7 @@ export const getTopCompaniesOfSectorsFromTransactionTotals = async ({
     const data = await UserTransactionTotalModel
       .find(query)
       .populate({
-        path: 'groupedBySector.companies',
+        path: 'groupedByAllSectors.companies',
         model: CompanyModel,
         populate: [
           {
@@ -63,8 +67,8 @@ export const getTopCompaniesOfSectorsFromTransactionTotals = async ({
         ],
       });
 
-    return data.map(({ user, groupedBySector = [] }) => {
-      const gbs = (groupedBySector.length ? groupedBySector : []);
+    return data.map(({ user, groupedByAllSectors = [] }) => {
+      const gbs = (groupedByAllSectors.length ? groupedByAllSectors : []);
       const companies: ICompanyDocument[] = [];
 
       for (const sectorGroup of gbs) {
@@ -134,6 +138,10 @@ export const getTopCompaniesFromTransactionTotals = async ({
   }
 };
 
+/**
+ * will retrieve the top sectors for the provided uids from
+ * ALL SECTORS (userTransactionTotal.groupedByAllSectors)
+ */
 export const getTopSectorsFromTransactionTotals = async ({
   uids,
   tiers,
@@ -151,12 +159,12 @@ export const getTopSectorsFromTransactionTotals = async ({
     const data = await UserTransactionTotalModel
       .find(query)
       .populate({
-        path: 'groupedBySector.sector',
+        path: 'groupedByAllSectors.sector',
         model: SectorModel,
       });
 
-    return data.map(({ user, groupedBySector = [] }) => {
-      const gbs = (groupedBySector.length ? groupedBySector : []);
+    return data.map(({ user, groupedByAllSectors = [] }) => {
+      const gbs = (groupedByAllSectors.length ? groupedByAllSectors : []);
       const sectorTransactionTotals: ISectorTransactionTotals[] = [];
 
       for (const sectorGroup of gbs) {

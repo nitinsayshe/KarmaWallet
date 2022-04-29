@@ -20,3 +20,12 @@ export const getCarbonOffsetDonationSuggestions: IRequestHandler = async (req, r
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getUserImpactData: IRequestHandler = async (req, res) => {
+  try {
+    const impactData = await ImpactService.getUserImpactData(req);
+    output.api(req, res, impactData);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

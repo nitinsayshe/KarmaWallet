@@ -4,6 +4,12 @@ import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
 import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { ErrorTypes, UserRoles } from '../../lib/constants';
+
+interface IUserImpactRequestQuery {
+  userId?: string;
+}
 
 interface IShowUserAmericanAverageParams {
   userId: string;
@@ -159,4 +165,18 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest) => {
   }
 
   return suggestions;
+};
+
+export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>) => {
+  try {
+    const { userId } = req.query;
+
+    if (userId && req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+
+    const _id = userId ?? req.requestor._id;
+
+    const transactions = await TransactionService.get;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

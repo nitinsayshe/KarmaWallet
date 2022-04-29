@@ -13,6 +13,11 @@ const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Re
 const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
 const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
 
+export const _getTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.aggregate([
+  { $match: query },
+
+]);
+
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...query, ...excludePaymentQuery })

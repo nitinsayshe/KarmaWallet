@@ -6,7 +6,6 @@ import * as TransactionService from '../transaction';
 import { MiscModel } from '../../models/misc';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes, UserRoles } from '../../lib/constants';
-
 import { getTopCompaniesOfAllSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import { SectorModel } from '../../models/sector';
 import { ICompanyDocument } from '../../models/company';
@@ -88,6 +87,7 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffs
   let _id: Types.ObjectId;
 
   if (!!userId) {
+    // eslint-disable-next-line no-undef
     if (!req.requestor?._id || (req.requestor._id.toString() !== userId && req.requestor?.role === UserRoles.None)) {
       throw new CustomError('You are not authorized to request this user\'s carbon data.', ErrorTypes.UNAUTHORIZED);
     }

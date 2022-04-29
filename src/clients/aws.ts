@@ -1,9 +1,13 @@
 import aws from 'aws-sdk';
 import { Express } from 'express';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
+
+dayjs.extend(utc);
 
 interface IAwsClient {
   s3: aws.S3,
@@ -107,7 +111,7 @@ export class AwsClient extends SdkClient {
   getSuppressedDestinations = ({
     EndDate = new Date(),
     // startDate going back five years by default
-    StartDate = new Date(new Date().setDate(new Date().getDate() - (365 * 5))),
+    StartDate = dayjs().utc().subtract(5, 'years').toDate(),
     NextToken = null,
     PageSize = 100,
   }: aws.SESV2.ListSuppressedDestinationsRequest): Promise<aws.SESV2.ListSuppressedDestinationsResponse> => this._client.sesV2.listSuppressedDestinations({

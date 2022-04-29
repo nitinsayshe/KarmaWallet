@@ -1,4 +1,4 @@
-import { isValidObjectId, ObjectId, Types } from 'mongoose';
+import { isValidObjectId, ObjectId, Types, FilterQuery } from 'mongoose';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
@@ -12,6 +12,7 @@ import { SectorModel } from '../../models/sector';
 import { ICompanyDocument } from '../../models/company';
 import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
+import { ITransactionDocument } from '../../models/transaction';
 
 export enum TopCompaniesConfig {
   ShopBy = 'shop-by',
@@ -220,20 +221,6 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarb
   return suggestions;
 };
 
-export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>) => {
-  try {
-    const { userId } = req.query;
-
-    if (userId && req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
-
-    const _id = userId ?? req.requestor._id;
-
-    const transactions = await TransactionService.get;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
 const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
   try {
     const { sector } = req.query;
@@ -340,6 +327,36 @@ export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) 
       case TopSectorsConfig.ShopBy: return getTopSectorsToShopBy(req);
       default: throw new CustomError(`Invalid configuration for getting top sectors: ${config}`, ErrorTypes.INVALID_ARG);
     }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>) => {
+  try {
+    console.log('>>>>> inside ImpactService.getUserImpactData');
+
+    const { userId } = req.query;
+    if (userId && req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+
+    console.log('>>>>> 1');
+
+    const _id = userId ?? req.requestor._id;
+
+    console.log('>>>>> 2', _id);
+
+    const query: FilterQuery<ITransactionDocument> = {
+      user: new Types.ObjectId(_id),
+      company: { $ne: null },
+    };
+
+    console.log('>>>>> getting transactions');
+    const transactions = await TransactionService._getTransactions(query);
+    console.log('>>>>> transactions retrieved');
+
+    console.log('>>>>> ', transactions[0]);
+
+    return { message: 'woot woot' };
   } catch (err) {
     throw asCustomError(err);
   }

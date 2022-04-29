@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
-import { ErrorTypes } from '../../lib/constants';
+import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
   CompanyModel, ICompany, ICompanyDocument, ICompanyModel, IShareableCompany,
@@ -38,6 +38,34 @@ const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgMod
       },
     },
   });
+
+/**
+ * this function should only be used internally. for anything client
+ * facing, please use functions: getCompanies as it has pagination
+ * included...this one does not.
+ */
+export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
+  const _query = Object.entries(query).map(([key, value]) => ({ [key]: value }));
+  _query.push({ 'hidden.status': includeHidden });
+  _query.push({ 'sectors.sector': { $nin: sectorsToExclude } });
+
+  return CompanyModel
+    .find({ $and: _query })
+    .populate([
+      {
+        path: 'parentCompany',
+        model: CompanyModel,
+        populate: {
+          path: 'sectors.sector',
+          model: SectorModel,
+        },
+      },
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+    ]);
+};
 
 export const getCompanyById = async (__: IRequest, _id: string, includeHidden = false) => {
   try {

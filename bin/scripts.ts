@@ -4,8 +4,8 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { getGroupmMembersWithCards } from '../src/services/scripts/group-members-with-cards';
-import { getGroupMembersWithCardWithOffsets } from '../src/services/scripts/getGroupMembersWithCardWithOffsets';
+import { SectorModel } from '../src/models/sector';
+import { CompanyModel } from '../src/models/company';
 
 dayjs.extend(utc);
 
@@ -18,8 +18,13 @@ dayjs.extend(utc);
     await MongoClient.init();
 
     // add mappers here...
-    await getGroupmMembersWithCards();
-    await getGroupMembersWithCardWithOffsets(dayjs('Mar 28, 2022').toDate());
+    const sectors = await SectorModel.find({ tier: 1 });
+
+    for (const sector of sectors) {
+      const companies = await CompanyModel.find({ 'sectors.sector': sector._id });
+
+      console.log(`${sector.name} --- ${companies.length}`);
+    }
 
     await MongoClient.disconnect();
   } catch (err) {

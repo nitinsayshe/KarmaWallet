@@ -52,7 +52,7 @@ export const getTopSectors: IRequestHandler<{}, ImpactService.ITopSectorsRequest
 export const getUserImpactData: IRequestHandler = async (req, res) => {
   try {
     const impactData = await ImpactService.getUserImpactData(req);
-    output.api(req, res, impactData);
+    output.api(req, res, ImpactService.getShareableUserImpactData(impactData));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

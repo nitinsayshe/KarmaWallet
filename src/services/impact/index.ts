@@ -13,6 +13,7 @@ import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
 import { ITransactionDocument } from '../../models/transaction';
 import { getUserImpactRatings } from './utils';
+import { mockRequest } from '../../lib/constants/request';
 
 export enum TopCompaniesConfig {
   ShopBy = 'shop-by',
@@ -31,7 +32,37 @@ export interface ITopSectorsRequestQuery {
   config?: TopSectorsConfig;
 }
 
-interface IUserImpactRequestQuery {
+export interface IUserImpactMonthData {
+  date: Date;
+  month: number;
+  negative: number;
+  neutral: number;
+  positive: number;
+  score: number;
+  transactionCount: number;
+  year: number;
+}
+
+export interface IUserImpactRating {
+  min: number;
+  max: number;
+}
+
+export interface IUserImpactRatings {
+  negative: IUserImpactRating;
+  neutral: IUserImpactRating;
+  positive: IUserImpactRating;
+}
+
+export interface IUserImpactData {
+  monthData: IUserImpactMonthData[];
+  mostRecent: ITransactionDocument[];
+  ratings: IUserImpactRatings;
+  totalScore: number;
+  totalTransactions: number;
+}
+
+export interface IUserImpactRequestQuery {
   userId?: string;
 }
 
@@ -333,41 +364,14 @@ export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) 
   }
 };
 
-interface IUserImpactMonthData {
-  date: Date;
-  month: number;
-  negative: number;
-  neutral: number;
-  positive: number;
-  score: number;
-  transactionCount: number;
-  year: number;
-}
+export const getShareableUserImpactData = (userImpactData: IUserImpactData) => {
+  const mostRecent = userImpactData.mostRecent.map(t => TransactionService.getShareableTransaction(t));
 
-interface IUserImpactMostRecent {
-  amount: number;
-  date: Date;
-  company: ICompanyDocument,
-}
-
-interface IUserImpactRating {
-  min: number;
-  max: number;
-}
-
-interface IUserImpactRatings {
-  negative: IUserImpactRating;
-  neutral: IUserImpactRating;
-  positive: IUserImpactRating;
-}
-
-interface IUserImpactData {
-  monthData: IUserImpactMonthData[];
-  mostRecent: IUserImpactMostRecent[];
-  ratings: IUserImpactRatings;
-  totalScore: number;
-  totalTransactions: number;
-}
+  return {
+    ...userImpactData,
+    mostRecent,
+  };
+};
 
 export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>): Promise<IUserImpactData> => {
   try {
@@ -406,6 +410,12 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
     };
 
     if (!transactions.length) return userImpactData;
+
+    const _mockRequest: IRequest<{}, TransactionService.IGetRecentTransactionsRequestQuery> = {
+      ...mockRequest,
+      query: { limit: 3 },
+    };
+    userImpactData.mostRecent = await TransactionService.getRecentTransactions(_mockRequest, transactions);
 
     return userImpactData;
   } catch (err) {

@@ -1,4 +1,4 @@
-import { FilterQuery, isValidObjectId, ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId, Types } from 'mongoose';
 import {
   IShareableTransaction,
   ITransaction,
@@ -11,11 +11,24 @@ import { RareClient } from '../../clients/rare';
 import { getShareableSector } from '../sectors';
 import { ISector, ISectorDocument } from '../../models/sector';
 import { IRef } from '../../types/model';
+import { asCustomError } from '../../lib/customError';
+import { ICompanyDocument, IShareableCompany } from '../../models/company';
+import { getShareableCompany } from '../company';
+import { getShareableUser } from '../user';
+import { IShareableUser, IUserDocument } from '../../models/user';
+import { ICardDocument, IShareableCard } from '../../models/card';
+import { getShareableCard } from '../card';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
 const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
 const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
+
+export interface IGetRecentTransactionsRequestQuery {
+  limit?: number;
+  unique?: boolean;
+  userId?: string | ObjectId;
+}
 
 export const _getTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.aggregate([
   { $match: query },
@@ -59,7 +72,43 @@ export const _getTransactions = async (query: FilterQuery<ITransactionDocument>)
       preserveNullAndEmptyArrays: true,
     },
   },
+  {
+    $sort: {
+      date: -1,
+    },
+  },
 ]);
+
+export const getRecentTransactions = async (req: IRequest<{}, IGetRecentTransactionsRequestQuery>, transactions: ITransactionDocument[] = []) => {
+  try {
+    const { limit = 5, unique = true, userId } = req.query;
+
+    let _transactions = [...transactions];
+    if (!_transactions.length) {
+      const query: FilterQuery<ITransactionDocument> = { company: { $ne: null } };
+      if (!!userId) query.user = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+
+      _transactions = await _getTransactions(query);
+    }
+
+    const uniqueCompanies = new Set();
+    const recentTransactions: ITransactionDocument[] = [];
+
+    for (const transaction of _transactions) {
+      if (unique && uniqueCompanies.has((transaction.company as ICompanyDocument)._id.toString())) {
+        uniqueCompanies.add((transaction.company as ICompanyDocument)._id.toString());
+        continue;
+      }
+      recentTransactions.push(transaction);
+
+      if (recentTransactions.length === limit) break;
+    }
+
+    return recentTransactions;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
 
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
@@ -106,14 +155,26 @@ export const getShareableTransaction = ({
   lastModified,
   integrations,
 }: ITransactionDocument) => {
-  const _sector: IRef<ObjectId, ISector> = isValidObjectId(sector)
-    ? sector
-    : getShareableSector(sector as ISectorDocument);
+  const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name
+    ? getShareableUser(user as IUserDocument)
+    : user;
+
+  const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask
+    ? getShareableCard(card as ICardDocument)
+    : card;
+
+  const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
+    ? getShareableCompany(company as ICompanyDocument)
+    : company;
+
+  const _sector: IRef<ObjectId, ISector> = !!(sector as ISectorDocument)?.name
+    ? getShareableSector(sector as ISectorDocument)
+    : sector;
 
   const shareableTransaction: Partial<IShareableTransaction> = {
-    user,
-    company,
-    card,
+    user: _user,
+    company: _company,
+    card: _card,
     sector: _sector,
     amount,
     date,

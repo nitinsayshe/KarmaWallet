@@ -12,6 +12,7 @@ import { ICompanyDocument } from '../../models/company';
 import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
 import { ITransactionDocument } from '../../models/transaction';
+import { getUserImpactRatings } from './utils';
 
 export enum TopCompaniesConfig {
   ShopBy = 'shop-by',
@@ -332,31 +333,81 @@ export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) 
   }
 };
 
-export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>) => {
-  try {
-    console.log('>>>>> inside ImpactService.getUserImpactData');
+interface IUserImpactMonthData {
+  date: Date;
+  month: number;
+  negative: number;
+  neutral: number;
+  positive: number;
+  score: number;
+  transactionCount: number;
+  year: number;
+}
 
+interface IUserImpactMostRecent {
+  amount: number;
+  date: Date;
+  company: ICompanyDocument,
+}
+
+interface IUserImpactRating {
+  min: number;
+  max: number;
+}
+
+interface IUserImpactRatings {
+  negative: IUserImpactRating;
+  neutral: IUserImpactRating;
+  positive: IUserImpactRating;
+}
+
+interface IUserImpactData {
+  monthData: IUserImpactMonthData[];
+  mostRecent: IUserImpactMostRecent[];
+  ratings: IUserImpactRatings;
+  totalScore: number;
+  totalTransactions: number;
+}
+
+export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>): Promise<IUserImpactData> => {
+  try {
     const { userId } = req.query;
     if (userId && req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
-    console.log('>>>>> 1');
-
     const _id = userId ?? req.requestor._id;
-
-    console.log('>>>>> 2', _id);
 
     const query: FilterQuery<ITransactionDocument> = {
       user: new Types.ObjectId(_id),
       company: { $ne: null },
     };
 
-    console.log('>>>>> getting transactions');
     const transactions = await TransactionService._getTransactions(query);
-    console.log('>>>>> transactions retrieved');
+    const [neg, neut, pos] = await getUserImpactRatings();
 
-    console.log('>>>>> ', transactions[0]);
+    const userImpactData: IUserImpactData = {
+      monthData: [],
+      mostRecent: [],
+      totalScore: 0,
+      totalTransactions: 0,
+      ratings: {
+        negative: {
+          min: neg[0],
+          max: neg[1],
+        },
+        neutral: {
+          min: neut[0],
+          max: neut[1],
+        },
+        positive: {
+          min: pos[0],
+          max: pos[1],
+        },
+      },
+    };
 
-    return { message: 'woot woot' };
+    if (!transactions.length) return userImpactData;
+
+    return userImpactData;
   } catch (err) {
     throw asCustomError(err);
   }

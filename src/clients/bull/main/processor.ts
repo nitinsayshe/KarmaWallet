@@ -58,10 +58,10 @@ export default async (job: SandboxedJob) => {
       result = await SendEmail.exec(data);
       break;
     case JobNames.TotalOffsetsForAllUsers:
-      result = TotalOffsetsForAllUsers.exec();
+      result = await TotalOffsetsForAllUsers.exec();
       break;
     case JobNames.TransactionsMonitor:
-      result = TransactionsMonitor.exec();
+      result = await TransactionsMonitor.exec();
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);

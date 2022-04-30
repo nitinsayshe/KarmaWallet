@@ -10,13 +10,11 @@ import { IUserDocument } from './user';
 
 export interface IUserImpactMonthData {
   date: Date;
-  month: number;
   negative: number;
   neutral: number;
   positive: number;
   score: number;
   transactionCount: number;
-  year: number;
 }
 
 export interface IUserImpactRating {
@@ -44,13 +42,11 @@ export type IUserImpactTotalModel = IModel<IUserImpactData>;
 
 const monthlyBreakDown = {
   date: { type: Date },
-  month: { type: Number },
   negative: { type: Number },
   neutral: { type: Number },
   positive: { type: Number },
   score: { type: Number },
   transactionCount: { type: Number },
-  year: { type: Number },
 };
 
 const userImpactTotalSchema = new Schema({

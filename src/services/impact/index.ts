@@ -55,8 +55,8 @@ export interface IUserImpactRatings {
 }
 
 export interface IUserImpactData {
-  monthData: IUserImpactMonthData[];
-  mostRecent: ITransactionDocument[];
+  monthlyBreakdown: IUserImpactMonthData[];
+  mostRecentTransactions: ITransactionDocument[];
   ratings: IUserImpactRatings;
   totalScore: number;
   totalTransactions: number;
@@ -83,17 +83,6 @@ export const averageAmericanEmissions = {
   Lifetime: 1000,
 };
 
-const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catchedTransactionCount }: IShowUserAmericanAverageParams) => {
-  // if the UID and both no cached data, show averages
-  if (!userId && !(cachedTransactionTotal || catchedTransactionCount)) {
-    return true;
-  }
-  const transactionAmountTotal = cachedTransactionTotal || await TransactionService.getTransactionTotal({ userId, 'integrations.rare': null });
-  const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ userId, 'integrations.rare': null });
-  // might need to break this down more granular
-  return transactionCount <= 0 && transactionAmountTotal <= 0;
-};
-
 const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: number, totalOffset: number) => {
   /**
    * Logic to Determine Number used for Total Equivalency
@@ -109,6 +98,167 @@ const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: numb
   if (netEmissions < 0 && totalEmissions > 0) return totalOffset;
   if (netEmissions === 0 && totalEmissions > 0 && totalOffset > 0) return totalOffset;
   if (netEmissions === 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
+};
+
+const getMonthlyImpactBreakdown = async (transactions: ITransactionDocument) => {
+
+};
+
+const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
+  try {
+    const { sector } = req.query;
+    if (!sector) throw new CustomError('No sector found. Please provide a sector id to retrieve top companies to shop by.', ErrorTypes.INVALID_ARG);
+    if (!isValidObjectId(sector)) throw new CustomError(`Invalid sector id found: ${sector}`, ErrorTypes.INVALID_ARG);
+
+    const config = {
+      // get users and all users in same request...if user
+      // does not have enough top companies, all users will
+      // be used as fallback
+      uids: [process.env.APP_USER_ID],
+      sectors: [sector],
+      count: 11,
+      validator: (company: ICompanyDocument) => company.combinedScore > 60,
+    };
+
+    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
+
+    const topCompanyTransactionTotals = await getTopCompaniesOfAllSectorsFromTransactionTotals(config);
+
+    const requestorsTopCompanies = topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
+
+    let companies = !!requestorsTopCompanies
+      ? requestorsTopCompanies.companies
+      : topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).companies;
+
+    if ((companies || []).length < config.count) {
+      // fill with relevant companies
+      const relevantCompanies = await _getCompanies({
+        _id: { $nin: companies.map(c => c._id) },
+        'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
+        combinedScore: { $gt: 60 },
+      });
+
+      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);
+
+      companies = [...(companies || []), ...relevantCompanySamples];
+    }
+
+    return companies;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>) => {
+  try {
+    const config = {
+      // get users and all users in same request...if user
+      // does not have enough top sectors, all users will
+      // be used as fallback
+      uids: [process.env.APP_USER_ID],
+      tiers: [1],
+      // exclude financial services (staging, prod)
+      sectorsToExclude: ['62192ef2f022c9e3fbff0b0c', '621b9ada5f87e75f53666f98'],
+      count: 4,
+    };
+
+    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
+
+    const topSectorsTransactionTotals = await getTopSectorsFromTransactionTotals(config);
+    const totalSectorsCount = await SectorModel
+      .find({
+        _id: { $nin: config.sectorsToExclude },
+        tier: { $in: config.tiers },
+      })
+      .count();
+
+    const requestorsTopSectors = topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
+
+    const sectorTransactionTotals = !!requestorsTopSectors && requestorsTopSectors.sectorTransactionTotals.length >= config.count
+      ? requestorsTopSectors.sectorTransactionTotals
+      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID)?.sectorTransactionTotals;
+
+    return {
+      sectors: (sectorTransactionTotals || []).map(s => s.sector),
+      remainingCategoriesCount: totalSectorsCount - (sectorTransactionTotals?.length ?? 0),
+    };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catchedTransactionCount }: IShowUserAmericanAverageParams) => {
+  // if the UID and both no cached data, show averages
+  if (!userId && !(cachedTransactionTotal || catchedTransactionCount)) {
+    return true;
+  }
+  const transactionAmountTotal = cachedTransactionTotal || await TransactionService.getTransactionTotal({ userId, 'integrations.rare': null });
+  const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ userId, 'integrations.rare': null });
+  // might need to break this down more granular
+  return transactionCount <= 0 && transactionAmountTotal <= 0;
+};
+
+export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarbonOffsetRequestQuery>) => {
+  const { userId } = req.query;
+
+  let _id: Types.ObjectId;
+
+  if (!!userId) {
+    if (!req.requestor?._id || (req.requestor._id.toString() !== userId && req.requestor?.role === UserRoles.None)) {
+      throw new CustomError('You are not authorized to request this user\'s carbon data.', ErrorTypes.UNAUTHORIZED);
+    }
+    if (!isValidObjectId(userId)) throw new CustomError('Invalid user id found.', ErrorTypes.INVALID_ARG);
+    _id = new Types.ObjectId(userId);
+  } else {
+    _id = new Types.ObjectId(req?.requestor?._id);
+  }
+
+  const donationTypes = ['suggested', 'total', 'none'];
+  const buildDonationAmount = (amount: number, description: string, type: string) => ({
+    amount,
+    description,
+    type: donationTypes.find(dt => dt.toLowerCase() === type) || 'none',
+  });
+
+  const showAverage = await shouldUseAmericanAverage({ userId: _id });
+
+  const totalOffset = await CarbonService.getRareOffsetAmount({ _id });
+
+  const monthlyEmissions = showAverage
+    ? { mt: averageAmericanEmissions.Monthly }
+    : await CarbonService.getMonthlyEmissionsAverage(_id);
+
+  const totalEmissions = showAverage
+    ? { mt: averageAmericanEmissions.Annually }
+    : await CarbonService.getTotalEmissions(_id);
+
+  const totalUserEmissions = totalEmissions.mt || 0;
+
+  const monthlySuggestion = await CarbonService.getRareDonationSuggestion(monthlyEmissions.mt);
+  let totalSuggestion = await CarbonService.getRareDonationSuggestion((totalUserEmissions - totalOffset) || totalEmissions.mt);
+  if (showAverage) {
+    totalSuggestion *= 2;
+  }
+
+  const wrapInSpan = (str: string) => `<span>${str}</span>`;
+  const c02Sub = 'CO<sub>2</sub>';
+
+  const lowestAmount = 10;
+  const rareAverage = await MiscModel.findOne({ key: 'rare-project-average' }); // 13.81;
+  const lowestDescription = wrapInSpan(`Offsets ${(lowestAmount / parseFloat(rareAverage.value)).toFixed(2)} tonnes of ${c02Sub} emissions`);
+  const monthlyDescription = showAverage ? wrapInSpan(`The average American's monthly ${c02Sub} emissions`) : wrapInSpan(`Offsets your average monthly ${c02Sub} emissions`);
+  const totalDescription = showAverage ? wrapInSpan(`The average American's ${c02Sub} emissions over 2 years`) : wrapInSpan(`Offsets your ${totalOffset > 0 ? 'remaining' : 'total'} ${c02Sub} emissions`);
+
+  const suggestions = [
+    buildDonationAmount(lowestAmount, lowestDescription, 'none'),
+    buildDonationAmount(monthlySuggestion, monthlyDescription, 'suggested'),
+  ];
+
+  if (totalSuggestion > 0) {
+    suggestions.push(buildDonationAmount(totalSuggestion, totalDescription, 'total'));
+  }
+
+  return suggestions;
 };
 
 // TODO: split this up so offsets and emissions can be accessed
@@ -190,112 +340,13 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffs
   };
 };
 
-export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarbonOffsetRequestQuery>) => {
-  const { userId } = req.query;
+export const getShareableUserImpactData = (userImpactData: IUserImpactData) => {
+  const mostRecentTransactions = userImpactData.mostRecentTransactions.map(t => TransactionService.getShareableTransaction(t));
 
-  let _id: Types.ObjectId;
-
-  if (!!userId) {
-    if (!req.requestor?._id || (req.requestor._id.toString() !== userId && req.requestor?.role === UserRoles.None)) {
-      throw new CustomError('You are not authorized to request this user\'s carbon data.', ErrorTypes.UNAUTHORIZED);
-    }
-    if (!isValidObjectId(userId)) throw new CustomError('Invalid user id found.', ErrorTypes.INVALID_ARG);
-    _id = new Types.ObjectId(userId);
-  } else {
-    _id = new Types.ObjectId(req?.requestor?._id);
-  }
-
-  const donationTypes = ['suggested', 'total', 'none'];
-  const buildDonationAmount = (amount: number, description: string, type: string) => ({
-    amount,
-    description,
-    type: donationTypes.find(dt => dt.toLowerCase() === type) || 'none',
-  });
-
-  const showAverage = await shouldUseAmericanAverage({ userId: _id });
-
-  const totalOffset = await CarbonService.getRareOffsetAmount({ _id });
-
-  const monthlyEmissions = showAverage
-    ? { mt: averageAmericanEmissions.Monthly }
-    : await CarbonService.getMonthlyEmissionsAverage(_id);
-
-  const totalEmissions = showAverage
-    ? { mt: averageAmericanEmissions.Annually }
-    : await CarbonService.getTotalEmissions(_id);
-
-  const totalUserEmissions = totalEmissions.mt || 0;
-
-  const monthlySuggestion = await CarbonService.getRareDonationSuggestion(monthlyEmissions.mt);
-  let totalSuggestion = await CarbonService.getRareDonationSuggestion((totalUserEmissions - totalOffset) || totalEmissions.mt);
-  if (showAverage) {
-    totalSuggestion *= 2;
-  }
-
-  const wrapInSpan = (str: string) => `<span>${str}</span>`;
-  const c02Sub = 'CO<sub>2</sub>';
-
-  const lowestAmount = 10;
-  const rareAverage = await MiscModel.findOne({ key: 'rare-project-average' }); // 13.81;
-  const lowestDescription = wrapInSpan(`Offsets ${(lowestAmount / parseFloat(rareAverage.value)).toFixed(2)} tonnes of ${c02Sub} emissions`);
-  const monthlyDescription = showAverage ? wrapInSpan(`The average American's monthly ${c02Sub} emissions`) : wrapInSpan(`Offsets your average monthly ${c02Sub} emissions`);
-  const totalDescription = showAverage ? wrapInSpan(`The average American's ${c02Sub} emissions over 2 years`) : wrapInSpan(`Offsets your ${totalOffset > 0 ? 'remaining' : 'total'} ${c02Sub} emissions`);
-
-  const suggestions = [
-    buildDonationAmount(lowestAmount, lowestDescription, 'none'),
-    buildDonationAmount(monthlySuggestion, monthlyDescription, 'suggested'),
-  ];
-
-  if (totalSuggestion > 0) {
-    suggestions.push(buildDonationAmount(totalSuggestion, totalDescription, 'total'));
-  }
-
-  return suggestions;
-};
-
-const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
-  try {
-    const { sector } = req.query;
-    if (!sector) throw new CustomError('No sector found. Please provide a sector id to retrieve top companies to shop by.', ErrorTypes.INVALID_ARG);
-    if (!isValidObjectId(sector)) throw new CustomError(`Invalid sector id found: ${sector}`, ErrorTypes.INVALID_ARG);
-
-    const config = {
-      // get users and all users in same request...if user
-      // does not have enough top companies, all users will
-      // be used as fallback
-      uids: [process.env.APP_USER_ID],
-      sectors: [sector],
-      count: 11,
-      validator: (company: ICompanyDocument) => company.combinedScore > 60,
-    };
-
-    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
-
-    const topCompanyTransactionTotals = await getTopCompaniesOfAllSectorsFromTransactionTotals(config);
-
-    const requestorsTopCompanies = topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
-
-    let companies = !!requestorsTopCompanies
-      ? requestorsTopCompanies.companies
-      : topCompanyTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID).companies;
-
-    if ((companies || []).length < config.count) {
-      // fill with relevant companies
-      const relevantCompanies = await _getCompanies({
-        _id: { $nin: companies.map(c => c._id) },
-        'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
-        combinedScore: { $gt: 60 },
-      });
-
-      const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);
-
-      companies = [...(companies || []), ...relevantCompanySamples];
-    }
-
-    return companies;
-  } catch (err) {
-    throw asCustomError(err);
-  }
+  return {
+    ...userImpactData,
+    mostRecentTransactions,
+  };
 };
 
 export const getTopCompanies = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
@@ -307,44 +358,6 @@ export const getTopCompanies = async (req: IRequest<{}, ITopCompaniesRequestQuer
       case TopCompaniesConfig.ShopBy: return getTopCompaniesToShopBy(req);
       default: throw new CustomError(`Invalid configuration for getting top companies: ${config}`, ErrorTypes.INVALID_ARG);
     }
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>) => {
-  try {
-    const config = {
-      // get users and all users in same request...if user
-      // does not have enough top sectors, all users will
-      // be used as fallback
-      uids: [process.env.APP_USER_ID],
-      tiers: [1],
-      // exclude financial services (staging, prod)
-      sectorsToExclude: ['62192ef2f022c9e3fbff0b0c', '621b9ada5f87e75f53666f98'],
-      count: 4,
-    };
-
-    if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
-
-    const topSectorsTransactionTotals = await getTopSectorsFromTransactionTotals(config);
-    const totalSectorsCount = await SectorModel
-      .find({
-        _id: { $nin: config.sectorsToExclude },
-        tier: { $in: config.tiers },
-      })
-      .count();
-
-    const requestorsTopSectors = topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === (config.uids as string[])[0]);
-
-    const sectorTransactionTotals = !!requestorsTopSectors && requestorsTopSectors.sectorTransactionTotals.length >= config.count
-      ? requestorsTopSectors.sectorTransactionTotals
-      : topSectorsTransactionTotals.find(t => (t.user as ObjectId).toString() === process.env.APP_USER_ID)?.sectorTransactionTotals;
-
-    return {
-      sectors: (sectorTransactionTotals || []).map(s => s.sector),
-      remainingCategoriesCount: totalSectorsCount - (sectorTransactionTotals?.length ?? 0),
-    };
   } catch (err) {
     throw asCustomError(err);
   }
@@ -364,15 +377,6 @@ export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) 
   }
 };
 
-export const getShareableUserImpactData = (userImpactData: IUserImpactData) => {
-  const mostRecent = userImpactData.mostRecent.map(t => TransactionService.getShareableTransaction(t));
-
-  return {
-    ...userImpactData,
-    mostRecent,
-  };
-};
-
 export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>): Promise<IUserImpactData> => {
   try {
     const { userId } = req.query;
@@ -389,8 +393,8 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
     const [neg, neut, pos] = await getUserImpactRatings();
 
     const userImpactData: IUserImpactData = {
-      monthData: [],
-      mostRecent: [],
+      monthlyBreakdown: [],
+      mostRecentTransactions: [],
       totalScore: 0,
       totalTransactions: 0,
       ratings: {
@@ -415,7 +419,8 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
       ...mockRequest,
       query: { limit: 3 },
     };
-    userImpactData.mostRecent = await TransactionService.getRecentTransactions(_mockRequest, transactions);
+    userImpactData.mostRecentTransactions = await TransactionService.getRecentTransactions(_mockRequest, transactions);
+    userImpactData.monthlyBreakdown = await getMonthlyImpactBreakdown();
 
     return userImpactData;
   } catch (err) {

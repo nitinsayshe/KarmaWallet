@@ -28,10 +28,28 @@ export interface IUserImpactRatings {
   positive: IUserImpactRating;
 }
 
+export interface IUserImpactSummaryScore {
+  score: number;
+  amount: number;
+}
+
+export interface IUserImpactSummary {
+  scores: IUserImpactSummaryScore[];
+  total: number;
+}
+
+export interface IUserImpactTotalScores {
+  score: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
 export interface IUserImpactData {
   user: IRef<ObjectId, IUserDocument>;
+  summary: IUserImpactSummary;
+  totalScores: IUserImpactTotalScores;
   monthlyBreakdown: IUserImpactMonthData[];
-  totalScore: number;
   totalTransactions: number;
   createdAt: Date;
   lastModified: Date;
@@ -40,19 +58,37 @@ export interface IUserImpactData {
 export interface IUserImpactTotalDocument extends IUserImpactData, Document {}
 export type IUserImpactTotalModel = IModel<IUserImpactData>;
 
-const monthlyBreakDown = {
-  date: { type: Date },
-  negative: { type: Number },
-  neutral: { type: Number },
-  positive: { type: Number },
-  score: { type: Number },
-  transactionCount: { type: Number },
-};
-
 const userImpactTotalSchema = new Schema({
   user: { type: Schema.Types.ObjectId, ref: 'user' },
-  monthlyBreakDown,
-  totalScore: { type: Number },
+  summary: {
+    type: {
+      scores: [{
+        type: {
+          score: { type: Number },
+          amount: { type: Number },
+        },
+      }],
+      total: { type: Number },
+    },
+  },
+  totalScores: {
+    type: {
+      score: { type: Number },
+      positive: { type: Number },
+      neutral: { type: Number },
+      negative: { type: Number },
+    },
+  },
+  monthlyBreakdown: {
+    type: [{
+      date: { type: Date },
+      negative: { type: Number },
+      neutral: { type: Number },
+      positive: { type: Number },
+      score: { type: Number },
+      transactionCount: { type: Number },
+    }],
+  },
   totalTransactions: { type: Number },
   createdAt: { type: Date },
   lastModified: { type: Date },

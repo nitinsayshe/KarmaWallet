@@ -1,10 +1,11 @@
+import { count } from 'aws-sdk/clients/health';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
 import { ICompanyDocument } from '../models/company';
 import { ITransactionDocument, TransactionModel } from '../models/transaction';
 import { IUserDocument, UserModel } from '../models/user';
-import { IUserImpactMonthData, IUserImpactTotalDocument, UserImpactTotalModel } from '../models/userImpactTotals';
+import { IUserImpactMonthData, IUserImpactSummary, IUserImpactTotalDocument, IUserImpactTotalScores, UserImpactTotalModel } from '../models/userImpactTotals';
 import { getUserImpactRatings } from '../services/impact/utils';
 
 dayjs.extend(utc);
@@ -15,7 +16,7 @@ dayjs.extend(utc);
  */
 
 interface IImpactSummary {
-  summary: { [key: string]: number };
+  scores: { [key: string]: number };
   total: number;
 }
 
@@ -35,27 +36,26 @@ const getCompanyRating = ([neg, neut, pos]: [number, number][], score: number) =
   return null;
 };
 
-const getImpactScores = ({ summary, total }: IImpactSummary, ratings: [number, number][]) => {
+const getImpactScores = ({ scores, total }: IImpactSummary, ratings: [number, number][]) => {
   const impactScores = { score: 0, positive: 0, negative: 0, neutral: 0 };
 
-  const _scores = Object.keys(summary)
+  const _scores = Object.keys(scores)
     .map(s => parseFloat(s));
 
   for (const score of _scores) {
-    const amount = summary[`${score}`];
+    const amount = scores[`${score}`];
     const totalPercentage = amount / total;
     const rawImpact = totalPercentage * score;
     const rating = getCompanyRating(ratings, score);
     impactScores.score += rawImpact;
     impactScores[rating] += totalPercentage;
   }
-  if (impactScores.score === 0) impactScores.score = null;
 
   return impactScores;
 };
 
 const getImpactSummary = (transactions: ITransactionDocument[]): IImpactSummary => {
-  const summary: { [key: string]: number } = {};
+  const scores: { [key: string]: number } = {};
   let total = 0;
 
   for (const transaction of transactions) {
@@ -67,14 +67,14 @@ const getImpactSummary = (transactions: ITransactionDocument[]): IImpactSummary 
 
     const _combinedScore = `${combinedScore}`;
 
-    if (!summary[_combinedScore]) summary[_combinedScore] = 0;
+    if (!scores[_combinedScore]) scores[_combinedScore] = 0;
 
-    summary[_combinedScore] += amount;
+    scores[_combinedScore] += amount;
     total += amount;
   }
 
   return {
-    summary,
+    scores,
     total,
   };
 };
@@ -109,6 +109,7 @@ const getMonthlyImpactBreakdown = (transactions: ITransactionDocument[], ratings
   for (const monthlyTransactions of allMonthlyTransactions) {
     const summary = getImpactSummary(monthlyTransactions.transactions);
     const impactScores = getImpactScores(summary, ratings);
+
     monthlyBreakdown.push({
       ...impactScores,
       date: monthlyTransactions.month.toDate(),
@@ -117,6 +118,110 @@ const getMonthlyImpactBreakdown = (transactions: ITransactionDocument[], ratings
   }
 
   return monthlyBreakdown;
+};
+
+const saveUserImpactTotal = async (
+  user: IUserDocument,
+  transactions: number,
+  summary: IUserImpactSummary,
+  totalScores: IUserImpactTotalScores,
+  monthlyBreakdown: IUserImpactMonthData[],
+) => {
+  const timestamp = dayjs().utc().toDate();
+  let userImpactTotal: IUserImpactTotalDocument = await UserImpactTotalModel.findOne({ user });
+
+  if (!!userImpactTotal) {
+    const updatedData = {
+      summary,
+      totalScores,
+      monthlyBreakdown,
+      totalTransactions: transactions,
+      lastModified: timestamp,
+    };
+
+    return UserImpactTotalModel.findOneAndUpdate({ user }, updatedData, { new: true });
+  }
+
+  userImpactTotal = new UserImpactTotalModel({
+    summary,
+    totalScores,
+    monthlyBreakdown,
+    totalTransactions: transactions,
+    createdOn: timestamp,
+  });
+
+  return userImpactTotal.save();
+};
+
+const getImpactTotalsForAllUsers = (allUserImpactData: IUserImpactTotalDocument[], ratings: [number, number][]) => {
+  let _totalTransactions = 0;
+  let _scoresTotal = 0;
+  const _summaryScores: {[key: string]: number} = {};
+  const _monthlyBreakdown: IUserImpactMonthData[] = [];
+  const _monthlyBreakdownCounts: {[key: string]: count} = {};
+  const dateFormat = 'MM-YYYY';
+
+  for (const userImpactData of allUserImpactData) {
+    for (const monthBreakdown of userImpactData.monthlyBreakdown) {
+      let existing = _monthlyBreakdown.find(mb => dayjs(mb.date).format(dateFormat) === dayjs(monthBreakdown.date).format(dateFormat));
+
+      if (!existing) {
+        existing = {
+          date: monthBreakdown.date,
+          negative: 0,
+          neutral: 0,
+          positive: 0,
+          score: 0,
+          transactionCount: 0,
+        };
+        _monthlyBreakdown.push(existing);
+      }
+
+      if (!_monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)]) {
+        _monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)] = 0;
+      }
+
+      existing.negative += monthBreakdown.negative;
+      existing.neutral += monthBreakdown.neutral;
+      existing.positive += monthBreakdown.positive;
+
+      existing.score += monthBreakdown.score;
+      existing.transactionCount += monthBreakdown.transactionCount;
+
+      _monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)] += 1;
+    }
+
+    for (const score of userImpactData.summary.scores) {
+      const scoreStr = `${score.score}`;
+      if (!_summaryScores[scoreStr]) _summaryScores[scoreStr] = 0;
+      _summaryScores[scoreStr] += score.amount;
+      _scoresTotal += score.amount;
+    }
+
+    _totalTransactions += userImpactData.totalTransactions;
+  }
+
+  for (const monthBreakdown of _monthlyBreakdown) {
+    const _count = _monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)];
+    if (!_count) continue;
+
+    monthBreakdown.negative /= _count;
+    monthBreakdown.neutral /= _count;
+    monthBreakdown.positive /= _count;
+    monthBreakdown.score /= _count;
+  }
+
+  const impactScores = getImpactScores({ scores: _summaryScores, total: _scoresTotal }, ratings);
+
+  return {
+    summary: {
+      scores: Object.entries(_summaryScores).map(([score, amount]) => ({ score: parseFloat(score), amount })),
+      total: _scoresTotal,
+    },
+    totalScores: impactScores,
+    monthlyBreakdown: _monthlyBreakdown,
+    totalTransactions: _totalTransactions,
+  };
 };
 
 const getTransactions = (userId: Types.ObjectId) => TransactionModel
@@ -185,6 +290,7 @@ export const exec = async () => {
   let allImpactTotals: IUserImpactTotalDocument[];
   let ratings: [number, number][];
   let appUser: IUserDocument;
+  let totalTransactionsCount = 0;
 
   try {
     users = await UserModel.find({});
@@ -197,6 +303,8 @@ export const exec = async () => {
 
   if (!users || !allImpactTotals) return;
 
+  const allUserImpactData: IUserImpactTotalDocument[] = [];
+
   for (const user of users) {
     if (user._id.toString() === process.env.APP_USER_ID) {
       appUser = user;
@@ -206,20 +314,21 @@ export const exec = async () => {
     try {
       const transactions = await getTransactions(user._id);
 
-      if (!transactions.length) continue;
+      if (!transactions?.length) continue;
+
+      totalTransactionsCount += transactions.length;
 
       const monthData = getMonthlyImpactBreakdown(transactions, ratings);
 
       const summary = getImpactSummary(transactions);
       const impactScores = getImpactScores(summary, ratings);
 
-      console.log(summary);
-      console.log(impactScores);
-      console.log(monthData);
+      const parsedSummary = {
+        ...summary,
+        scores: Object.entries(summary.scores).map(([score, amount]) => ({ score: parseFloat(score), amount })),
+      };
 
-      // TODO: calculate all users impact score
-      // save or update userImpactTotal
-      // do we want snapshots of all this data? or will the monthly breakdown suffice?
+      allUserImpactData.push(await saveUserImpactTotal(user, transactions.length, parsedSummary, impactScores, monthData));
     } catch (err) {
       console.log(`\n[-] error generating impact total for user: ${user._id}`);
       console.log(err, '\n');
@@ -228,7 +337,8 @@ export const exec = async () => {
     }
   }
 
-  // TODO: add grand totals to appUser
+  const { summary, totalScores, monthlyBreakdown } = getImpactTotalsForAllUsers(allUserImpactData, ratings);
+  await saveUserImpactTotal(appUser, totalTransactionsCount, summary, totalScores, monthlyBreakdown);
 
   const completeMessage = !!errorCount
     ? `[!] generating user impact totals completed with ${errorCount} errors.`

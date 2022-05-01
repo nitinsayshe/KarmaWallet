@@ -4,8 +4,8 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { SectorModel } from '../src/models/sector';
-import { CompanyModel } from '../src/models/company';
+import { mapSectorsToTransactions } from '../src/services/scripts/map_sectors_to_transactions';
+import { cleanTransactions } from '../src/services/scripts/clean_transactions';
 
 dayjs.extend(utc);
 
@@ -18,13 +18,8 @@ dayjs.extend(utc);
     await MongoClient.init();
 
     // add mappers here...
-    const sectors = await SectorModel.find({ tier: 1 });
-
-    for (const sector of sectors) {
-      const companies = await CompanyModel.find({ 'sectors.sector': sector._id });
-
-      console.log(`${sector.name} --- ${companies.length}`);
-    }
+    const allTransactionsCleaned = await cleanTransactions();
+    if (allTransactionsCleaned) await mapSectorsToTransactions();
 
     await MongoClient.disconnect();
   } catch (err) {

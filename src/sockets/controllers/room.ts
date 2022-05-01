@@ -5,7 +5,6 @@ interface ISocketRequestData {
 }
 
 export const joinUser = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
-  console.log('>>>>> controller:joinUser', room, socket?.request?.requestor?._id);
   const roomPrefix = 'user';
   const uid = socket?.request?.requestor?._id;
   if (!!uid && room === uid.toString()) {

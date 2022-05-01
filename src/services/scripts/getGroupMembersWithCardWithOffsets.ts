@@ -26,7 +26,7 @@ export const getGroupMembersWithCardWithOffsets = async (date: Date) => {
         $group: {
           _id: 'something',
           ids: {
-            $addToSet: '$userId',
+            $addToSet: '$user',
           },
         },
       }, {

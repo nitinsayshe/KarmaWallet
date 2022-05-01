@@ -16,7 +16,7 @@ import { CompanyModel } from '../../models/company';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IMatchedCompanyNameDocument, MatchedCompanyNameModel } from '../../models/matchedCompanyName';
 import { IUnmatchedCompanyNameDocument, UnmatchedCompanyNameModel } from '../../models/unmatchedCompanyName';
-import { IPlaidCategoryMappingDocument, PlaidCategoryMappingModel } from '../../models/plaidCategoryMapping';
+import { PlaidCategoryMappingModel } from '../../models/plaidCategoryMapping';
 import { IntegrationMappingSummaryModel } from '../../models/integrationMappingSummary';
 import Transaction from './transaction';
 import { CardStatus } from '../../lib/constants';
@@ -24,6 +24,7 @@ import { PlaidClient } from '../../clients/plaid';
 import { TransactionModel } from '../../models/transaction';
 import { CategoryModel } from '../../models/category';
 import { SubcategoryModel } from '../../models/subcategory';
+import { IPlaidCategoriesToSectorMappingDocument, PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
 
 const pythonScriptPath = path.join(__dirname, '..', '..', 'lib', 'companyTextMatch.py');
 
@@ -50,7 +51,7 @@ export class PlaidMapper {
   _transactionsNotMappedAtAll = 0;
   _newMatchedToCompany = 0;
   _unmatchedToCompany = 0;
-  _plaidCategoryMappings: IPlaidCategoryMappingDocument[] = [];
+  _plaidSectorMappings: IPlaidCategoriesToSectorMappingDocument[] = [];
   _startTimestamp: Date = null;
   constructor(plaidItems: TransactionsGetResponse[] = [], transactions: Transaction[] = []) {
     this._startTimestamp = dayjs().toDate();
@@ -145,9 +146,9 @@ export class PlaidMapper {
     }
   };
 
-  mapCategoriesToTransactions = async () => {
+  mapSectorsToTransactions = async () => {
     console.log(`\nmapping categories to ${this.transactions.length} transactions...`);
-    this._plaidCategoryMappings = await PlaidCategoryMappingModel.find().lean();
+    this._plaidSectorMappings = await PlaidCategoriesToSectorMappingModel.find();
 
     for (const transaction of this.transactions) {
       let plaidCategoriesId: string;
@@ -155,20 +156,12 @@ export class PlaidMapper {
         plaidCategoriesId = transaction._plaidTransaction?.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
       }
 
-      let mapping: IPlaidCategoryMappingDocument;
+      let mapping: IPlaidCategoriesToSectorMappingDocument;
 
-      if (!!plaidCategoriesId) mapping = this._plaidCategoryMappings.find(pcm => pcm.plaidCategoriesId === plaidCategoriesId);
+      if (!!plaidCategoriesId) mapping = this._plaidSectorMappings.find(psm => psm.plaidCategoriesId === plaidCategoriesId);
 
-      if (!!mapping) {
-        /**
-         * not all mappings have a category.
-         * some have intentionally been set to null...
-         *
-         * this is expected, dont panic
-         */
-        transaction.setCategory(mapping.category);
-        transaction.setSubCategory(mapping.subCategory);
-        transaction.setCarbonMultiplier(mapping);
+      if (!!mapping && !transaction.sector) {
+        transaction.setSector(mapping.sector as ObjectId);
       }
     }
 
@@ -413,8 +406,8 @@ export class PlaidMapper {
       }
 
       if (!!match) {
-        if (!match.manualMatch || !transaction.companyId) {
-          transaction.setCompanyId(match.companyId || null);
+        if (!match.manualMatch || !transaction.company) {
+          transaction.setCompany(match.companyId || null);
         }
 
         existingMatchedTransactions.push(transaction);
@@ -498,7 +491,7 @@ export class PlaidMapper {
       await Promise.all(existingUnmatchedTransactions.map(async (transaction) => {
         const match = matches.find(m => m.original === transaction.name || m.original === transaction.merchant_name);
         if (!!match) {
-          transaction.setCompanyId(match._id);
+          transaction.setCompany(match._id);
         } else {
           this._transactionsNotMappedAtAll += 1;
         }

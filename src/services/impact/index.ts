@@ -1,4 +1,6 @@
-import { isValidObjectId, ObjectId, Types, FilterQuery } from 'mongoose';
+import { isValidObjectId, ObjectId, Types } from 'mongoose';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
@@ -11,9 +13,10 @@ import { SectorModel } from '../../models/sector';
 import { ICompanyDocument } from '../../models/company';
 import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
-import { ITransactionDocument } from '../../models/transaction';
 import { getUserImpactRatings } from './utils';
-import { mockRequest } from '../../lib/constants/request';
+import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
+
+dayjs.extend(utc);
 
 export enum TopCompaniesConfig {
   ShopBy = 'shop-by',
@@ -32,15 +35,18 @@ export interface ITopSectorsRequestQuery {
   config?: TopSectorsConfig;
 }
 
-export interface IUserImpactMonthData {
-  date: Date;
-  month: number;
-  negative: number;
-  neutral: number;
-  positive: number;
-  score: number;
-  transactionCount: number;
-  year: number;
+export interface IUserImpactRequestQuery {
+  userId?: string;
+}
+
+interface IShowUserAmericanAverageParams {
+  userId: string | Types.ObjectId;
+  cachedTransactionTotal?: number;
+  catchedTransactionCount?: number;
+}
+
+export interface ICarbonOffsetRequestQuery {
+  userId?: string;
 }
 
 export interface IUserImpactRating {
@@ -54,26 +60,11 @@ export interface IUserImpactRatings {
   positive: IUserImpactRating;
 }
 
-export interface IUserImpactData {
+export interface IUserImpactDataResponse {
+  totalScores: IUserImpactTotalScores;
   monthlyBreakdown: IUserImpactMonthData[];
-  mostRecentTransactions: ITransactionDocument[];
-  ratings: IUserImpactRatings;
-  totalScore: number;
   totalTransactions: number;
-}
-
-export interface IUserImpactRequestQuery {
-  userId?: string;
-}
-
-interface IShowUserAmericanAverageParams {
-  userId: string | Types.ObjectId;
-  cachedTransactionTotal?: number;
-  catchedTransactionCount?: number;
-}
-
-export interface ICarbonOffsetRequestQuery {
-  userId?: string;
+  ratings: IUserImpactRatings;
 }
 
 // values provided by Anushka 2/2/22. these may need to change
@@ -98,10 +89,6 @@ const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: numb
   if (netEmissions < 0 && totalEmissions > 0) return totalOffset;
   if (netEmissions === 0 && totalEmissions > 0 && totalOffset > 0) return totalOffset;
   if (netEmissions === 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
-};
-
-const getMonthlyImpactBreakdown = async (transactions: ITransactionDocument) => {
-
 };
 
 const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
@@ -340,15 +327,6 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffs
   };
 };
 
-export const getShareableUserImpactData = (userImpactData: IUserImpactData) => {
-  const mostRecentTransactions = userImpactData.mostRecentTransactions.map(t => TransactionService.getShareableTransaction(t));
-
-  return {
-    ...userImpactData,
-    mostRecentTransactions,
-  };
-};
-
 export const getTopCompanies = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
   try {
     const { config } = req.query;
@@ -377,26 +355,29 @@ export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) 
   }
 };
 
-export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>): Promise<IUserImpactData> => {
+export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuery>): Promise<IUserImpactDataResponse> => {
   try {
     const { userId } = req.query;
     if (userId && req.requestor.role === UserRoles.None) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
-
     const _id = userId ?? req.requestor._id;
 
-    const query: FilterQuery<ITransactionDocument> = {
-      user: new Types.ObjectId(_id),
-      company: { $ne: null },
-    };
-
-    const transactions = await TransactionService._getTransactions(query);
     const [neg, neut, pos] = await getUserImpactRatings();
+    const userImpactData = await UserImpactTotalModel.findOne({ user: new Types.ObjectId(_id) });
 
-    const userImpactData: IUserImpactData = {
-      monthlyBreakdown: [],
-      mostRecentTransactions: [],
-      totalScore: 0,
-      totalTransactions: 0,
+    if (!userImpactData) throw new CustomError('No impact data found.', ErrorTypes.NOT_FOUND);
+
+    const { monthlyBreakdown, totalScores, totalTransactions } = userImpactData;
+
+    const lastTwelveMonths: IUserImpactMonthData[] = [];
+    for (const month of monthlyBreakdown) {
+      lastTwelveMonths.push(month);
+      if (lastTwelveMonths.length === 12) break;
+    }
+
+    return {
+      monthlyBreakdown: lastTwelveMonths,
+      totalScores,
+      totalTransactions,
       ratings: {
         negative: {
           min: neg[0],
@@ -412,17 +393,6 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
         },
       },
     };
-
-    if (!transactions.length) return userImpactData;
-
-    const _mockRequest: IRequest<{}, TransactionService.IGetRecentTransactionsRequestQuery> = {
-      ...mockRequest,
-      query: { limit: 3 },
-    };
-    userImpactData.mostRecentTransactions = await TransactionService.getRecentTransactions(_mockRequest, transactions);
-    userImpactData.monthlyBreakdown = await getMonthlyImpactBreakdown();
-
-    return userImpactData;
   } catch (err) {
     throw asCustomError(err);
   }

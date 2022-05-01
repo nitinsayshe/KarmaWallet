@@ -143,6 +143,7 @@ const saveUserImpactTotal = async (
   }
 
   userImpactTotal = new UserImpactTotalModel({
+    user,
     summary,
     totalScores,
     monthlyBreakdown,
@@ -188,7 +189,9 @@ const getImpactTotalsForAllUsers = (allUserImpactData: IUserImpactTotalDocument[
       existing.score += monthBreakdown.score;
       existing.transactionCount += monthBreakdown.transactionCount;
 
-      _monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)] += 1;
+      if (!!monthBreakdown.transactionCount) {
+        _monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)] += 1;
+      }
     }
 
     for (const score of userImpactData.summary.scores) {
@@ -213,13 +216,19 @@ const getImpactTotalsForAllUsers = (allUserImpactData: IUserImpactTotalDocument[
 
   const impactScores = getImpactScores({ scores: _summaryScores, total: _scoresTotal }, ratings);
 
+  const sortedMonths = _monthlyBreakdown.sort((x, y) => {
+    if (x.date.getTime() < y.date.getTime()) return 1;
+    if (x.date.getTime() > y.date.getTime()) return -1;
+    return 0;
+  });
+
   return {
     summary: {
       scores: Object.entries(_summaryScores).map(([score, amount]) => ({ score: parseFloat(score), amount })),
       total: _scoresTotal,
     },
     totalScores: impactScores,
-    monthlyBreakdown: _monthlyBreakdown,
+    monthlyBreakdown: sortedMonths,
     totalTransactions: _totalTransactions,
   };
 };
@@ -228,8 +237,10 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
   .aggregate([
     {
       $match: {
-        user: userId,
-        company: { $ne: null },
+        $and: [
+          { user: userId },
+          { company: { $ne: null } },
+        ],
       },
     },
     {
@@ -267,6 +278,11 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
       $unwind: {
         path: '$company',
         preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $match: {
+        'company.combinedScore': { $ne: null },
       },
     },
     {

@@ -10,11 +10,6 @@ import { IDataSourceDocument } from './dataSource';
 import { IUnsdgDocument } from './unsdg';
 import { IUnsdgTargetDocument } from './unsdgTarget';
 
-interface IDateRange {
-  start: Date;
-  end: Date;
-}
-
 export interface IUnsdgTargetMapItem {
   target: IRef<ObjectId, IUnsdgTargetDocument>;
   value: number;
@@ -31,11 +26,6 @@ export interface IUnsdgMapItem {
 export interface IDataSourceMapping {
   source: IRef<Object, IDataSourceDocument>;
   unsdgs: IUnsdgMapItem[];
-  /**
-   * the date range that we (KW) used
-   * this mapping
-   */
-  dateRange: IDateRange;
 }
 
 export interface IDataSourceMappingDocument extends IDataSourceMapping, Document {}
@@ -67,10 +57,6 @@ const dataSourceMappingSchema = new Schema({
       },
     }],
   }],
-  dateRange: {
-    start: { type: Date },
-    end: { type: Date },
-  },
 });
 
 export const DataSourceMappingModel = model<IDataSourceMappingDocument, Model<IDataSourceMapping>>('data_source_mapping', dataSourceMappingSchema);

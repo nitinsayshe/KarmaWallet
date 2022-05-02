@@ -12,7 +12,7 @@ interface IRawCompany2DataSourcesMapping {
   companyName: string;
   primaryDataSource: string;
   parentCompanyId: string;
-  'Safer Choice': string;
+  'SaferChoice': string;
   'Expiration: Safer Choice': string;
   'A List CDP - Climate Change': string;
   'Expiration: A List CDP - Climate Change': string;
@@ -22,8 +22,8 @@ interface IRawCompany2DataSourcesMapping {
   'Expiration: A List CDP - Forests': string;
   'Green Seal': string;
   'Expiration: Green Seal': string;
-  '1% for the planet': string;
-  'Expiration: 1% for the planet': string;
+  '1% For The Planet': string;
+  'Expiration: 1% For The Planet': string;
   'Fair Labor Association': string;
   'Expiration: Fair Labor Association': string;
   'Leaping Bunny Certified': string;
@@ -36,12 +36,12 @@ interface IRawCompany2DataSourcesMapping {
   'Expiration: Responsible Jewellery Council': string;
   'Fairtrade Federation': string;
   'Expiration: Fairtrade Federation': string;
-  'World Fairtrade Organization': string;
-  'Expiration: World Fairtrade Organization': string;
+  'World Fair Trade Organization': string;
+  'Expiration: World Fair Trade Organization': string;
   'Fairtrade International': string;
   'Expiration: Fairtrade International': string;
-  'Goodweave': string;
-  'Expiration: Goodweave': string;
+  'GoodWeave': string;
+  'Expiration: GoodWeave': string;
   'OCS (Organic Content Standard)': string;
   'Expiration: OCS (Organic Content Standard)': string;
   'Women Owned Directory': string;
@@ -64,22 +64,24 @@ interface IRawCompany2DataSourcesMapping {
   'Expiration: American Humane Certified': string;
 }
 
-const dataSourceNames = [
-  'Safer Choice',
+type DataSourceKeys = keyof IRawCompany2DataSourcesMapping;
+
+const dataSourceNames: DataSourceKeys[] = [
+  'SaferChoice',
   'A List CDP - Climate Change',
   'A List CDP - Water Security',
   'A List CDP - Forests',
   'Green Seal',
-  '1% for the planet',
+  '1% For The Planet',
   'Fair Labor Association',
   'Leaping Bunny Certified',
   'GOTS (Global Organic Textile Standard)',
   'BCI - Better Cotton Initiative',
   'Responsible Jewellery Council',
   'Fairtrade Federation',
-  'World Fairtrade Organization',
+  'World Fair Trade Organization',
   'Fairtrade International',
-  'Goodweave',
+  'GoodWeave',
   'OCS (Organic Content Standard)',
   'Women Owned Directory',
   'Plant Based Foods Association',
@@ -111,7 +113,7 @@ export const mapCompanies2DataSources = async () => {
   let rawData: IRawCompany2DataSourcesMapping[];
 
   try {
-    rawData = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'data_source_mappings.csv'));
+    rawData = await csvtojson().fromFile(path.resolve(__dirname, '.tmp', 'company_data_source_mappings.csv'));
   } catch (err) {
     console.log('\n[-] error retrieving raw data source mapping data from csv');
     console.log(err, '\n');
@@ -119,14 +121,51 @@ export const mapCompanies2DataSources = async () => {
 
   if (!rawData) return;
 
-  let count = 0;
+  const count = 0;
+  let missingCount = 0;
+  const errorCount = 0;
+
+  for (const dataSourceName of dataSourceNames) {
+    const dataSourceNameMatch = dataSources.find(ds => ds.name === dataSourceName);
+
+    if (dataSourceNameMatch) console.log('data source name not found:', dataSourceName);
+  }
+
+  const missingPrimaryDataSources = new Set<string>();
 
   for (const row of rawData) {
     const company = companies.find(c => c.legacyId.toString() === row.legacyId);
 
-    if (!company) {
-      count += 1;
-      console.log('>>>>> failed to find company: ', row.legacyId);
+    const primaryDataSourceMatch = dataSources.find(ds => ds.name === row.primaryDataSource);
+
+    if (!primaryDataSourceMatch) {
+      missingPrimaryDataSources.add(row.primaryDataSource);
     }
+
+    if (!company) {
+      missingCount += 1;
+      // console.log('>>>>> failed to find company: ', row.legacyId);
+
+      if (!row.legacyId) console.log('>>>>> no legacyId: ', row.companyName);
+      continue;
+    }
+
+    // for (const dataSourceName of dataSourceNames) {
+    //   if (!row[dataSourceName]) continue;
+
+    //   const dataSource = dataSources.find(ds => ds.name === dataSourceName);
+
+    //   const companyDataSourceMapping = new CompanyDataSourceModel({
+    //     company,
+    //     source: dataSource,
+    //     isPrimary: dataSource.name === row.primaryDataSource,
+    //   })
+    // }
   }
+
+  console.log('>>>>> missing primary data sources: ', missingPrimaryDataSources);
+
+  console.log(`${missingCount} companies were not found`);
+  console.log(`${errorCount} errors were thrown`);
+  console.log(`${count} companies were mapped to data sources`);
 };

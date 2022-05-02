@@ -39,9 +39,6 @@ const companyDataSourceSchema = new Schema({
     ref: 'data_source',
     required: true,
   },
-  url: {
-    type: String,
-  },
   dateRange: {
     type: {
       start: { type: Date },

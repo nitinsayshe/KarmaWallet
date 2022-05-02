@@ -4,7 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { mapDataSourcesToUNSDGs } from '../src/services/scripts/map_data_sources_to_unsdgs';
+import { mapCompanies2DataSources } from '../src/services/scripts/map_companies_2_data_sources';
 
 dayjs.extend(utc);
 
@@ -18,7 +18,8 @@ dayjs.extend(utc);
 
     // add mappers here...
     // await createDataSources();
-    await mapDataSourcesToUNSDGs();
+    // await mapDataSourcesToUNSDGs();
+    await mapCompanies2DataSources();
 
     await MongoClient.disconnect();
   } catch (err) {

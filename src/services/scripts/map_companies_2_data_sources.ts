@@ -436,7 +436,7 @@ const createCompanyBCorpDataSourceMappings = async (
   let primaryDataSourceFound = false;
 
   for (const dataSourceName of bCorpDataSourceNames) {
-    if (!!row[dataSourceName] && row[dataSourceName] === '1') {
+    if (!!row[dataSourceName]) {
       const dataSource = dataSources.find(d => d.name === dataSourceName);
 
       if (!dataSource) continue;
@@ -459,7 +459,7 @@ const createCompanyBCorpDataSourceMappings = async (
     }
   }
 
-  return Promise.all(Object.values(newCompanyDataSources).map(d => /** d.save() */ d));
+  return Promise.all(Object.values(newCompanyDataSources).map(d => d.save()));
 };
 
 const createCompanyJustCapitalDataSourceMappings = async (
@@ -483,7 +483,7 @@ const createCompanyJustCapitalDataSourceMappings = async (
   let primaryDataSourceFound = false;
 
   for (const dataSourceName of justCapitalDataSourceNames) {
-    if (!!row[dataSourceName] && row[dataSourceName] === '1') {
+    if (!!row[dataSourceName]) {
       const dataSource = dataSources.find(d => d.name === dataSourceName);
 
       if (!dataSource) console.log(`[-] failed to find just capital data source: ${dataSourceName}`);

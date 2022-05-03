@@ -6,6 +6,7 @@ import { _MongoClient } from '../../mongo';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
+import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
 import * as SendEmail from '../../../jobs/sendEmail';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
@@ -24,9 +25,17 @@ export default async (job: SandboxedJob) => {
   const { name, data } = job;
   let result: any;
   await MongoClient.init();
+
   switch (name) {
     case JobNames.GlobalPlaidTransactionMapper:
-      result = await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
+
+      result = {
+        nextJobs: [
+          { name: JobNames.GenerateUserTransactionTotals },
+        ],
+      };
+
       break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
@@ -49,8 +58,11 @@ export default async (job: SandboxedJob) => {
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();
       break;
+    case JobNames.GenerateUserTransactionTotals:
+      result = await GenerateUserTransactionTotals.exec();
+      break;
     default:
-      console.log('>>>>> invalid job name found');
+      console.log('>>>>> invalid job name found: ', name);
       break;
   }
   return result;

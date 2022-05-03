@@ -9,7 +9,7 @@ import { IModel, IRef } from '../types/model';
 import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
-import { IPlaidCategoryMapping, IPlaidCategoryMappingDocument } from './plaidCategoryMapping';
+import { ISector, ISectorDocument } from './sector';
 import { IShareableUser, IUserDocument } from './user';
 
 export enum MatchTypes {
@@ -100,25 +100,23 @@ export interface ITransactionMatch {
 }
 
 export interface IShareableTransaction {
-  userId: IRef<ObjectId, IShareableUser>;
-  companyId: IRef<ObjectId, IShareableCompany>;
-  cardId: IRef<ObjectId, IShareableCard>;
-  carbonMultiplier: IRef<ObjectId, IPlaidCategoryMapping>;
+  user: IRef<ObjectId, IShareableUser>;
+  company: IRef<ObjectId, IShareableCompany>;
+  card: IRef<ObjectId, IShareableCard>;
+  sector: IRef<ObjectId, ISector>;
   amount: number;
   date: Date;
-  category: number;
-  subCategory: number;
+  integrations?: ITransactionIntegrations;
   createdOn: Date;
   lastModified: Date;
   matchType: MatchTypes;
 }
 
 export interface ITransaction extends IShareableTransaction {
-  userId: IRef<ObjectId, IUserDocument>;
-  companyId: IRef<ObjectId, ICompanyDocument>;
-  cardId: IRef<ObjectId, ICardDocument>;
-  carbonMultiplier: IRef<ObjectId, IPlaidCategoryMappingDocument>;
-  integrations?: ITransactionIntegrations;
+  user: IRef<ObjectId, IUserDocument>;
+  company: IRef<ObjectId, ICompanyDocument>;
+  card: IRef<ObjectId, ICardDocument>;
+  sector: IRef<ObjectId, ISectorDocument>;
   onBehalfOf?: IUserOrGroup;
   matched?: ITransactionMatch;
   association?: IUserOrGroup;
@@ -131,15 +129,36 @@ export interface ITransactionAggregate extends ITransaction {
 export interface ITransactionDocument extends ITransaction, Document {}
 export type ITransactionModel = IModel<ITransaction>;
 
+// TODO: remove the following after tongass is launched and
+// transactions have been cleaned:
+//   - userId
+//   - companyId
+//   - cardId
+//   - category
+//   - subCategory
+//   - carbonMultiplier
+
 const transactionSchema = new Schema({
-  userId: {
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,
   },
+  userId: {
+    type: Schema.Types.ObjectId,
+    ref: 'user',
+  },
+  company: {
+    type: Schema.Types.ObjectId,
+    ref: 'company',
+  },
   companyId: {
     type: Schema.Types.ObjectId,
     ref: 'company',
+  },
+  card: {
+    type: Schema.Types.ObjectId,
+    ref: 'card',
   },
   cardId: {
     type: Schema.Types.ObjectId,
@@ -147,6 +166,10 @@ const transactionSchema = new Schema({
   },
   category: { type: Number },
   subCategory: { type: Number },
+  sector: {
+    type: Schema.Types.ObjectId,
+    ref: 'sector',
+  },
   carbonMultiplier: {
     type: Schema.Types.ObjectId,
     ref: 'plaid_category_mapping',

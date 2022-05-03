@@ -51,28 +51,6 @@ export class AwsClient extends SdkClient {
     };
   }
 
-  // const params: aws.SESV2.SendEmailRequest = {
-  //   Source: `${senderName} <${senderEmail}>`,
-  //   Destination: {
-  //     ToAddresses: [
-  //       recipientEmail,
-  //     ],
-  //   },
-  //   ReplyToAddresses: replyToAddresses,
-  //   Message: {
-  //     Body: {
-  //       Html: {
-  //         Charset: 'UTF-8',
-  //         Data: template,
-  //       },
-  //     },
-  //     Subject: {
-  //       Charset: 'UTF-8',
-  //       Data: subject,
-  //     },
-  //   },
-  // };
-
   sendMail = ({
     senderName = 'KarmaWallet',
     senderEmail = EmailAddresses.NoReply,

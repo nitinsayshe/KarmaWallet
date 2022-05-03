@@ -888,7 +888,11 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         user, days: emailVerificationDays, type: TokenTypes.Email, resource: { email: validEmail },
       });
       await sendGroupVerificationEmail({
-        name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
+        name: user.name,
+        token: token.value,
+        groupName: group.name,
+        recipientEmail: validEmail,
+        user: user._id,
       });
     }
 

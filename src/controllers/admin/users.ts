@@ -4,7 +4,7 @@ import * as output from '../../services/output';
 import * as UserService from '../../services/user';
 import { asCustomError } from '../../lib/customError';
 
-export const getUsers: IRequestHandler = async (req, res) => {
+export const getUsersPaginated: IRequestHandler = async (req, res) => {
   try {
     const reqQuery = aqp(req.query, { skipKey: 'page' });
     const query = {
@@ -19,7 +19,7 @@ export const getUsers: IRequestHandler = async (req, res) => {
       };
     }
 
-    const results = await UserService.getUsers(req, query);
+    const results = await UserService.getUsersPaginated(req, query);
 
     output.api(req, res, {
       ...results,

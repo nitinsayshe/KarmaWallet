@@ -7,7 +7,6 @@ import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
-import * as SendEmail from '../../../jobs/sendEmail';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
@@ -36,9 +35,6 @@ export default async (job: SandboxedJob) => {
         ],
       };
 
-      break;
-    case JobNames.SendEmail:
-      result = await SendEmail.exec(data);
       break;
     case JobNames.CacheGroupOffsetData:
       result = CacheGroupOffsetData.exec();

@@ -7,6 +7,7 @@ export enum JobNames {
   CacheGroupOffsetData = 'cache-group-offset-data',
   CachedDataCleanup = 'cached-data-cleanup',
   GenerateGroupOffsetStatements = 'generate-group-offset-statements',
+  GenerateUserImpactTotals = 'generate-user-impact-totals',
   GenerateUserTransactionTotals = 'generate-user-transaction-totals',
   GlobalPlaidTransactionMapper = 'global-plaid-transaction-mapper',
   SendEmail = 'send-email',

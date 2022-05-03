@@ -3,8 +3,9 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { ICompanyDocument } from './company';
 import { IDataSourceDocument } from './dataSource';
 
@@ -14,8 +15,8 @@ interface IDateRange {
 }
 
 export interface ICompanyDataSource {
-  company: ICompanyDocument['_id'];
-  sourceId: IDataSourceDocument['_id'];
+  company: IRef<ObjectId, ICompanyDocument>;
+  source: IRef<ObjectId, IDataSourceDocument>;
   url: string;
   /**
    * the date awarded this source

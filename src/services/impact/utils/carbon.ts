@@ -143,43 +143,25 @@ const equivalenciesData: IEquivalency[] = [
   },
 ];
 
-export const buildCarbonMultiplierPipeline = (uid: string) => {
-  const defaultProjection = {
-    userId: 1,
-    amount: 1,
-    date: 1,
-  };
-
+export const buildCarbonMultiplierPipeline = (uid: string | Types.ObjectId) => {
+  const _uid = typeof uid === 'string' ? new Types.ObjectId(uid) : uid;
   return TransactionModel.aggregate()
-    .match({ userId: new Types.ObjectId(uid), carbonMultiplier: { $ne: null } })
+    .match({ user: _uid, sector: { $ne: null } })
     .lookup({
-      from: 'plaid_category_mappings',
-      localField: 'carbonMultiplier',
+      from: 'sectors',
+      localField: 'sector',
       foreignField: '_id',
-      as: 'carbonMultiplier',
+      as: 'sector',
     })
-    .project({
-      ...defaultProjection,
-      carbonMultiplier: {
-        $map: {
-          input: '$carbonMultiplier',
-          as: 'multiplierObj',
-          in: {
-            carbonMultiplier: '$$multiplierObj.carbonMultiplier',
-          },
-        },
-      },
-    })
-    .unwind('carbonMultiplier')
-    .project({ ...defaultProjection, carbonMultiplier: '$carbonMultiplier.carbonMultiplier' });
+    .unwind('sector');
 };
 
-export const getTotalEmissions = async (uid: string) => {
+export const getTotalEmissions = async (uid: string | Types.ObjectId) => {
   // TODO: rewrite w/ new reference to plaid mapping
   const emissions = { kg: 0, mt: 0 };
   const sumTotal = await buildCarbonMultiplierPipeline(uid)
-    .project({ userId: 1, emissions: { $multiply: ['$amount', '$carbonMultiplier'] } })
-    .group({ _id: '$userId', amount: { $sum: '$emissions' } });
+    .project({ userId: 1, emissions: { $multiply: ['$amount', '$sector.carbonMultiplier'] } })
+    .group({ _id: '$user', amount: { $sum: '$emissions' } });
 
   if (sumTotal?.length) {
     const { amount } = sumTotal[0];
@@ -190,7 +172,7 @@ export const getTotalEmissions = async (uid: string) => {
   return emissions;
 };
 
-export const getMonthlyEmissionsAverage = async (uid: string) => {
+export const getMonthlyEmissionsAverage = async (uid: string | Types.ObjectId) => {
   // TODO: rewrite w/ new reference to plaid mapping
   const emissions = { kg: 0, mt: 0 };
   const aggResult = await buildCarbonMultiplierPipeline(uid)
@@ -199,7 +181,7 @@ export const getMonthlyEmissionsAverage = async (uid: string) => {
       month: { $month: '$date' },
       day: { $dayOfMonth: '$date' },
       _id: '$_id',
-      emissions: { $multiply: ['$amount', '$carbonMultiplier'] },
+      emissions: { $multiply: ['$amount', '$sector.carbonMultiplier'] },
     })
     .project({
       fingerprint: { $concat: [{ $toString: '$year' }, '-', { $toString: '$month' }] },
@@ -255,7 +237,7 @@ export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction
 export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
     .match({ ...RareTransactionQuery, ...query })
-    .group({ _id: '$userId', total: { $sum: 1 } });
+    .group({ _id: '$user', total: { $sum: 1 } });
   return aggResult.length;
 };
 

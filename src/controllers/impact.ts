@@ -7,7 +7,7 @@ import { ISectorDocument } from '../models/sector';
 import { getShareableCompany } from '../services/company';
 import { ICompanyDocument } from '../models/company';
 
-export const getCarbonOffsetsAndEmissions: IRequestHandler = async (req, res) => {
+export const getCarbonOffsetsAndEmissions: IRequestHandler<{}, ImpactService.ICarbonOffsetRequestQuery> = async (req, res) => {
   try {
     const carbonOffsetsAndEmissionsData = await ImpactService.getCarbonOffsetsAndEmissions(req);
     output.api(req, res, carbonOffsetsAndEmissionsData);
@@ -16,7 +16,7 @@ export const getCarbonOffsetsAndEmissions: IRequestHandler = async (req, res) =>
   }
 };
 
-export const getCarbonOffsetDonationSuggestions: IRequestHandler = async (req, res) => {
+export const getCarbonOffsetDonationSuggestions: IRequestHandler<{}, ImpactService.ICarbonOffsetRequestQuery> = async (req, res) => {
   try {
     const offsetDonationSuggestions = await ImpactService.getCarbonOffsetDonationSuggestions(req);
     output.api(req, res, offsetDonationSuggestions);
@@ -44,6 +44,15 @@ export const getTopSectors: IRequestHandler<{}, ImpactService.ITopSectorsRequest
       ...topSectors,
       sectors: topSectors.sectors.map(s => getShareableSector(s as ISectorDocument)),
     });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getUserImpactData: IRequestHandler = async (req, res) => {
+  try {
+    const impactData = await ImpactService.getUserImpactData(req);
+    output.api(req, res, impactData);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

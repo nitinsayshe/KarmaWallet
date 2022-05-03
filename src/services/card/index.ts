@@ -1,9 +1,9 @@
 import { ObjectId, FilterQuery } from 'mongoose';
 import { ICardDocument, CardModel, ICard } from '../../models/card';
+import { IRequest } from '../../types/request';
 import { IShareableUser, IUserDocument } from '../../models/user';
 import { IRef } from '../../types/model';
 import { getShareableUser } from '../user';
-import { IRequest } from '../../types/request';
 
 /*
   userId: IRef<ObjectId, IShareableUser>;
@@ -45,7 +45,4 @@ export const getShareableCard = ({
   };
 };
 
-export const _getCards = async (req: IRequest, query: FilterQuery<ICard>) => {
-  const cards = await CardModel.find(query);
-  return cards;
-};
+export const _getCards = async (req: IRequest, query: FilterQuery<ICard>) => CardModel.find(query);

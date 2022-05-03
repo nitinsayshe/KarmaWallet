@@ -1,7 +1,7 @@
 import { SandboxedJob } from 'bullmq';
 import { IUserDocument, UserEmailStatus } from '../models/user';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { getCards } from '../services/card';
+import { _getCards } from '../services/card';
 import { getDaysFromPreviousDate } from '../lib/date';
 import CustomError from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
@@ -79,7 +79,7 @@ export const exec = async () => {
       // but this allows for accurate counting in the log below
       const recipientEmail = user.emails.find(e => e.primary && ![UserEmailStatus.Bounced, UserEmailStatus.Complained].includes(e.status))?.email;
       if (!recipientEmail) continue;
-      const userCards = await getCards({} as IRequest, { userId: user._id });
+      const userCards = await _getCards({} as IRequest, { userId: user._id });
       if (userCards.length) continue;
       const userGroupsWithMatchingEnabled = await getGroupWithMatchingEnabled(user);
       const groupName = userGroupsWithMatchingEnabled[0]?.group?.[0]?.name;

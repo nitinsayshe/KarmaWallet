@@ -1,6 +1,13 @@
 /* eslint-disable camelcase */
 import {
-  Configuration, PlaidApi, PlaidEnvironments, LinkTokenCreateRequest, CountryCode, Products, TransactionsGetRequest, ItemPublicTokenExchangeRequest,
+  Configuration,
+  PlaidApi,
+  PlaidEnvironments,
+  LinkTokenCreateRequest,
+  CountryCode,
+  Products,
+  TransactionsGetRequest,
+  ItemPublicTokenExchangeRequest,
 } from 'plaid';
 import pino from 'pino';
 import { ErrorTypes, CardStatus } from '../lib/constants';
@@ -10,6 +17,32 @@ import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
 
 const logger = pino();
+
+// example of error object from Plaid API
+/**
+ * {
+    display_message: null,
+    documentation_url: 'https://plaid.com/docs/?ref=error#invalid-input-errors',
+    error_code: 'INVALID_ACCESS_TOKEN',
+    error_message: 'provided access token is in an invalid format. expected format: access-<environment>-<identifier>',
+    error_type: 'INVALID_INPUT',
+    request_id: 'mZIOF87AxqqJvKa',
+    suggested_action: null
+  }
+ */
+export interface IPlaidErrorResponse {
+  response: {
+    data: {
+      display_message: string;
+      documentation_url: string;
+      error_code: string;
+      error_message: string;
+      error_type: string;
+      request_id: string;
+      suggested_action: string;
+    }
+  }
+}
 
 export interface ICreateLinkTokenParams {
   userId: string;
@@ -39,6 +72,13 @@ export class PlaidClient extends SdkClient {
     this._client = new PlaidApi(configuration);
   }
 
+  handlePlaidError = (e: IPlaidErrorResponse | any) => {
+    if (e?.response?.data) {
+      const { error_code, error_message } = e.response.data;
+      throw new CustomError(error_message, { name: error_code, code: e?.response?.status || ErrorTypes.SERVICE.code });
+    }
+  };
+
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
     const configs: LinkTokenCreateRequest = {
@@ -63,6 +103,7 @@ export class PlaidClient extends SdkClient {
       const response = await this._client.linkTokenCreate(configs);
       return { userId, ...response.data };
     } catch (e) {
+      this.handlePlaidError(e);
       throw asCustomError(e);
     }
   };
@@ -75,6 +116,29 @@ export class PlaidClient extends SdkClient {
       const itemId = response.data.item_id;
       return { accessToken, itemId };
     } catch (e) {
+      throw asCustomError(e);
+    }
+  };
+
+  // used to invalidate an access token and retreive another one (essentially a token refresh/rotation)
+  invalidateAccessToken = async ({ access_token }: { access_token: string }) => {
+    if (!access_token) throw new CustomError('An access token is required.', ErrorTypes.INVALID_ARG);
+    try {
+      const response = await this._client.itemAccessTokenInvalidate({ access_token });
+      return response.data;
+    } catch (e) {
+      this.handlePlaidError(e);
+      throw asCustomError(e);
+    }
+  };
+
+  removeItem = async ({ access_token }: { access_token: string }) => {
+    if (!access_token) throw new CustomError('An access token is required.', ErrorTypes.INVALID_ARG);
+    try {
+      const response = await this._client.itemRemove({ access_token });
+      return response.data;
+    } catch (e) {
+      this.handlePlaidError(e);
       throw asCustomError(e);
     }
   };

@@ -1,7 +1,17 @@
+/* eslint-disable camelcase */
 import { asCustomError } from '../../lib/customError';
 import { PlaidItemModel } from '../../models/plaidItem';
 import { IRequest } from '../../types/request';
 import { PlaidMapper } from './mapper';
+import { PlaidClient } from '../../clients/plaid';
+
+export interface ICreateLinkTokenBody {
+  accessToken?: string;
+}
+
+export interface IExchangePublicTokenBody {
+  publicToken?: string;
+}
 
 export const mapExistingItems = async (_: IRequest) => {
   try {
@@ -62,4 +72,18 @@ export const mapPlaidCategoriesToKarmaCategoriesAndCarbonMultiplier = async (_: 
 export const reset = async (_: IRequest) => {
   const mapper = new PlaidMapper();
   await mapper.reset();
+};
+
+export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody>) => {
+  const userId = req.requestor._id.toString();
+  const { accessToken: access_token } = req.body;
+  const client = new PlaidClient();
+  return client.createLinkToken({ userId, access_token });
+};
+
+export const exchangePublicToken = async (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {
+  // const userId = req.requestor._id.toString();
+  const { publicToken: public_token } = req.body;
+  const client = new PlaidClient();
+  return client.exchangePublicTokenForAccessToken({ public_token });
 };

@@ -30,6 +30,8 @@ export interface IGetRecentTransactionsRequestQuery {
   userId?: string | ObjectId;
 }
 
+export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
+
 export const _getTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.aggregate([
   { $match: query },
   {

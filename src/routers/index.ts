@@ -4,6 +4,7 @@ import jobPostings from './jobPostings';
 import unsdgs from './unsdgs';
 import meta from './meta';
 import admin from './admin';
+import integrations from './integrations';
 import transaction from './transaction';
 import impact from './impact';
 import company from './company';
@@ -11,6 +12,7 @@ import sectors from './sectors';
 import webhook from './webhooks';
 import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
+import card from './card';
 import notFound from './404';
 import upload from './upload';
 
@@ -26,6 +28,8 @@ const routers = (app: Express) => {
   upload(app);
   sectors(app);
   webhook(app);
+  card(app);
+  integrations(app);
   comparisonGame(app);
   group(app);
   groups(app);

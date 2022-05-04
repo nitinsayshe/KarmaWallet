@@ -67,4 +67,14 @@ export const generateCompanyDataSourceMappingReport = async () => {
     };
   }));
   fs.writeFileSync(path.join(__dirname, '.tmp', 'all_data_source_unsdg_target_mappings.csv'), _dataSourceUnsdgMappings);
+
+  const companies = await CompanyModel.find({}).lean();
+
+  const _companies = parse(companies.map(c => ({
+    id: c._id,
+    name: c.companyName,
+    score: c.combinedScore,
+  })));
+
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'all_company_scores.csv'), _companies);
 };

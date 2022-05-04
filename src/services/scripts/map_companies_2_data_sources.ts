@@ -509,8 +509,13 @@ const createCompanyJustCapitalDataSourceMappings = async (
   return Promise.all(Object.values(newCompanyDataSources).map(d => d.save()));
 };
 
-const mapCompaniesToBCorpDataSources = async (companies: ICompanyDocument[], dataSources: IDataSourceDocument[]) => {
-  console.log('\nmapping bcorp data sources to companies...');
+const mapCompaniesToBCorpDataSources = async (
+  companies: ICompanyDocument[],
+  dataSources: IDataSourceDocument[],
+  parentCompanyDataSourceMappings: ICompanyDataSourceDocument[] = [],
+  nonParentCompanyDataSourceMappings: ICompanyDataSourceDocument[] = [],
+) => {
+  console.log(`\nmapping bcorp data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies...`);
 
   let rawData: IRawCompany2BCorpMapping[];
 
@@ -524,7 +529,6 @@ const mapCompaniesToBCorpDataSources = async (companies: ICompanyDocument[], dat
   if (!rawData) return;
 
   let count = 0;
-  let missingCount = 0;
   let errorCount = 0;
 
   const missingSourceNames = new Set<string>();
@@ -537,39 +541,31 @@ const mapCompaniesToBCorpDataSources = async (companies: ICompanyDocument[], dat
 
   let companyDataSourceMappings: ICompanyDataSourceDocument[] = [];
 
+  const parentsWithNoMappings = new Set<string>();
+
   for (const row of rawData) {
     if (!row.legacyId?.trim()) continue;
 
     try {
       const company = companies.find(c => c.legacyId.toString() === row.legacyId);
-      // any id over 18714 is a new company that has not been added db yet
-      if (!company) {
-        if (parseInt(row.legacyId) <= 18714 && row.legacyId !== '10460' && row.legacyId !== '10268') {
-          console.log(`${row.legacyId} - ${row.companyName}`);
-          missingCount += 1;
-        }
-        continue;
-      }
+      if (!company) continue;
 
       const parentCompany = company.parentCompany as ICompanyDocument;
       let parentDataSourceMappings: ICompanyDataSourceDocument[] = [];
-      let parentRow: IRawCompany2BCorpMapping;
 
       if (!!parentCompany) {
-        parentRow = rawData.find(rd => rd.legacyId === parentCompany.legacyId.toString());
+        if (!nonParentCompanyDataSourceMappings.find(npcdsm => (npcdsm.company as ICompanyDocument)._id.toString() === company._id.toString())) {
+          parentDataSourceMappings = parentCompanyDataSourceMappings.filter(pcdsm => (pcdsm.company as ICompanyDocument)._id.toString() === parentCompany._id.toString());
 
-        if (!!parentRow) {
-          parentDataSourceMappings = companyDataSourceMappings.filter(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === parentCompany._id.toString());
-          if (!parentDataSourceMappings.length) {
-            parentDataSourceMappings = await createCompanyBCorpDataSourceMappings(parentCompany, parentRow, dataSources);
-            companyDataSourceMappings = [...companyDataSourceMappings, ...parentDataSourceMappings];
-            count += parentDataSourceMappings.length;
+          if (!parentDataSourceMappings?.length) {
+            parentsWithNoMappings.add(parentCompany._id.toString());
+            continue;
           }
         }
       }
 
-      const companyAlreadyMapped = companyDataSourceMappings.find(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === company._id.toString());
-      if (!!companyAlreadyMapped) continue;
+      const companyAlreadyMapped = !!companyDataSourceMappings.find(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === company._id.toString());
+      if (companyAlreadyMapped) continue;
 
       const dataSourceMappings = await createCompanyBCorpDataSourceMappings(company, row, dataSources, parentDataSourceMappings);
       companyDataSourceMappings = [...companyDataSourceMappings, ...dataSourceMappings];
@@ -581,15 +577,20 @@ const mapCompaniesToBCorpDataSources = async (companies: ICompanyDocument[], dat
     }
   }
 
-  console.log(`\n${missingCount} companies not found`);
-  console.log(`${errorCount} errors occurred while mapping just capital data sources to companies`);
-  console.log(`${count} bcorp data source to company mappings were created\n`);
+  if (!!parentsWithNoMappings.size) console.log('[-] parent companies with no mappings: ', parentsWithNoMappings);
+  if (errorCount > 0) console.log(`\n${errorCount} errors occurred while mapping just capital data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies`);
+  console.log(`${count} bcorp data source to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}company mappings were created\n`);
 
   return companyDataSourceMappings;
 };
 
-const mapCompaniesToJustCapitalDataSources = async (companies: ICompanyDocument[], dataSources: IDataSourceDocument[]) => {
-  console.log('\nmapping just capital data sources to companies...');
+const mapCompaniesToJustCapitalDataSources = async (
+  companies: ICompanyDocument[],
+  dataSources: IDataSourceDocument[],
+  parentCompanyDataSourceMappings: ICompanyDataSourceDocument[] = [],
+  nonParentCompanyDataSourceMappings: ICompanyDataSourceDocument[] = [],
+) => {
+  console.log(`\nmapping just capital data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies...`);
 
   let rawData: IRawCompany2JustCapitalMapping[];
 
@@ -603,7 +604,6 @@ const mapCompaniesToJustCapitalDataSources = async (companies: ICompanyDocument[
   if (!rawData) return;
 
   let count = 0;
-  let missingCount = 0;
   let errorCount = 0;
 
   for (const dataSourceName of justCapitalDataSourceNames) {
@@ -614,36 +614,25 @@ const mapCompaniesToJustCapitalDataSources = async (companies: ICompanyDocument[
 
   let companyDataSourceMappings: ICompanyDataSourceDocument[] = [];
 
+  const parentsWithNoMappings = new Set<string>();
+
   for (const row of rawData) {
     if (!row.legacyId?.trim()) continue;
 
     try {
       const company = companies.find(c => c.legacyId.toString() === row.legacyId);
-      if (!company) {
-        // any id over 18714 is a new company that has not been added db yet
-        if (parseInt(row.legacyId) <= 18714) {
-          console.log('[-] failed to find company: ', row.legacyId, row.companyName);
-          missingCount += 1;
-        }
-
-        continue;
-      }
+      if (!company) continue;
 
       const parentCompany = company.parentCompany as ICompanyDocument;
       let parentDataSourceMappings: ICompanyDataSourceDocument[] = [];
-      let parentRow: IRawCompany2JustCapitalMapping;
 
       if (!!parentCompany) {
-        parentRow = rawData.find(rd => rd.legacyId === parentCompany.legacyId.toString());
+        if (!nonParentCompanyDataSourceMappings.find(npcdsm => (npcdsm.company as ICompanyDocument)._id.toString() === company._id.toString())) {
+          parentDataSourceMappings = parentCompanyDataSourceMappings.filter(pcdsm => (pcdsm.company as ICompanyDocument)._id.toString() === parentCompany._id.toString());
 
-        if (!parentRow) {
-          console.log(`${parentCompany.legacyId} ${parentCompany.companyName}`);
-        } else {
-          parentDataSourceMappings = companyDataSourceMappings.filter(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === parentCompany._id.toString());
-          if (!parentDataSourceMappings.length) {
-            parentDataSourceMappings = await createCompanyJustCapitalDataSourceMappings(parentCompany, parentRow, dataSources);
-            companyDataSourceMappings = [...companyDataSourceMappings, ...parentDataSourceMappings];
-            count += parentDataSourceMappings.length;
+          if (!parentDataSourceMappings?.length) {
+            parentsWithNoMappings.add(parentCompany._id.toString());
+            continue;
           }
         }
       }
@@ -661,15 +650,20 @@ const mapCompaniesToJustCapitalDataSources = async (companies: ICompanyDocument[
     }
   }
 
-  console.log(`\n${missingCount} companies not found`);
-  console.log(`${errorCount} errors occurred while mapping just capital data sources to companies`);
-  console.log(`${count} just capital data source to company mappings were created\n`);
+  if (!!parentsWithNoMappings.size) console.log('[-] parent companies with no mappings: ', parentsWithNoMappings);
+  if (errorCount > 0) console.log(`\n${errorCount} errors occurred while mapping just capital data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies`);
+  console.log(`${count} just capital data source to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}company mappings were created\n`);
 
   return companyDataSourceMappings;
 };
 
-const mapCompanies2OtherDataSources = async (companies: ICompanyDocument[], dataSources: IDataSourceDocument[]) => {
-  console.log('\nmapping "other" data sources to companies...');
+const mapCompanies2OtherDataSources = async (
+  companies: ICompanyDocument[],
+  dataSources: IDataSourceDocument[],
+  parentCompanyDataSourceMappings: ICompanyDataSourceDocument[] = [],
+  nonParentCompanyDataSourceMappings: ICompanyDataSourceDocument[] = [],
+) => {
+  console.log(`\nmapping "other" data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies...`);
 
   let rawData: IRawCompany2DataSourcesMapping[];
 
@@ -683,7 +677,6 @@ const mapCompanies2OtherDataSources = async (companies: ICompanyDocument[], data
   if (!rawData) return;
 
   let count = 0;
-  let missingCount = 0;
   let errorCount = 0;
 
   for (const dataSourceName of dataSourceNames) {
@@ -694,28 +687,24 @@ const mapCompanies2OtherDataSources = async (companies: ICompanyDocument[], data
 
   let companyDataSourceMappings: ICompanyDataSourceDocument[] = [];
 
+  const parentsWithNoMappings = new Set<string>();
+
   for (const row of rawData) {
     try {
       const company = companies.find(c => c.legacyId.toString() === row.legacyId);
-      if (!company) {
-        missingCount += 1;
-        continue;
-      }
+      if (!company) continue;
 
       const parentCompany = company.parentCompany as ICompanyDocument;
       let parentDataSourceMappings: ICompanyDataSourceDocument[] = [];
-      let parentRow: IRawCompany2DataSourcesMapping;
 
       if (!!parentCompany) {
-        parentRow = rawData.find(rd => rd.legacyId === parentCompany.legacyId.toString());
+        if (!nonParentCompanyDataSourceMappings.find(npcdsm => (npcdsm.company as ICompanyDocument)._id.toString() === company._id.toString())) {
+          parentDataSourceMappings = parentCompanyDataSourceMappings.filter(pcdsm => (pcdsm.company as ICompanyDocument)._id.toString() === parentCompany._id.toString());
 
-        if (!parentRow) console.log(`[-] failed to find parent company: ${parentCompany.legacyId} - ${parentCompany.companyName}`);
-
-        parentDataSourceMappings = companyDataSourceMappings.filter(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === parentCompany._id.toString());
-        if (!parentDataSourceMappings.length) {
-          parentDataSourceMappings = await createCompanyDataSourceMappings(parentCompany, parentRow, dataSources);
-          companyDataSourceMappings = [...companyDataSourceMappings, ...parentDataSourceMappings];
-          count += parentDataSourceMappings.length;
+          if (!parentDataSourceMappings?.length) {
+            parentsWithNoMappings.add(parentCompany._id.toString());
+            continue;
+          }
         }
       }
 
@@ -732,25 +721,39 @@ const mapCompanies2OtherDataSources = async (companies: ICompanyDocument[], data
     }
   }
 
-  console.log(`${missingCount} companies were not found`);
-  console.log(`${errorCount} errors occurred while mapping "other" data sources to companies`);
-  console.log(`${count} "other" data source to company mappings were created\n`);
+  if (!!parentsWithNoMappings.size) console.log('[-] parent companies with no mappings: ', parentsWithNoMappings);
+  if (errorCount > 0) console.log(`\n${errorCount} errors occurred while mapping "other" data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies`);
+  console.log(`${count} "other" data source to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}company mappings were created\n`);
 
   return companyDataSourceMappings;
 };
 
 export const mapCompanies2DataSources = async () => {
-  let companies: ICompanyDocument[];
+  let parentCompanies: ICompanyDocument[];
+  let nonParentCompanies: ICompanyDocument[];
+
   let dataSources: IDataSourceDocument[];
 
   try {
     console.log('\nretrieving all companies...');
-    companies = await CompanyModel
-      .find({})
-      .populate({
-        path: 'parentCompany',
-        model: CompanyModel,
-      });
+    const c = await CompanyModel.aggregate([
+      {
+        $match: { parentCompany: { $ne: null } },
+      },
+      {
+        $group: {
+          _id: 0,
+          parentCompanies: { $push: '$parentCompany' },
+        },
+      },
+      {
+        $project: { _id: 0, parentCompanies: 1 },
+      },
+    ]);
+
+    parentCompanies = await CompanyModel.find({ _id: { $in: c[0].parentCompanies } });
+    nonParentCompanies = await CompanyModel.find({ _id: { $nin: c[0].parentCompanies } });
+
     console.log('[+] all companies retrieved successfully\n');
 
     console.log('retrieving all data sources...');
@@ -761,16 +764,21 @@ export const mapCompanies2DataSources = async () => {
     console.log(err);
   }
 
-  if (!companies || !dataSources) return;
+  if (!parentCompanies || !nonParentCompanies || !dataSources) return;
 
-  const justCapitalCompanyMappings = await mapCompaniesToJustCapitalDataSources(companies, dataSources);
-  const bcorpCompanyMappings = await mapCompaniesToBCorpDataSources(companies, dataSources);
-  const otherDataSourceCompanyMappints = await mapCompanies2OtherDataSources(companies, dataSources);
+  // map data sources to parent companies first
+  let allParentCompanyMappings = await mapCompaniesToJustCapitalDataSources(parentCompanies, dataSources);
+  allParentCompanyMappings = [...allParentCompanyMappings, ...await mapCompaniesToBCorpDataSources(parentCompanies, dataSources)];
+  allParentCompanyMappings = [...allParentCompanyMappings, ...await mapCompanies2OtherDataSources(parentCompanies, dataSources)];
 
-  let totalCount = 0;
-  totalCount += justCapitalCompanyMappings.length;
-  totalCount += bcorpCompanyMappings.length;
-  totalCount += otherDataSourceCompanyMappints.length;
+  // then map data souces to non-parent companies so any
+  // child companies can inherit all of a parent's data
+  // sources
+  let allNonParentCompanyMappings: ICompanyDataSourceDocument[] = [];
+  allNonParentCompanyMappings = await mapCompaniesToJustCapitalDataSources(nonParentCompanies, dataSources, allParentCompanyMappings, allNonParentCompanyMappings);
+  allNonParentCompanyMappings = [...allNonParentCompanyMappings, ...await mapCompaniesToBCorpDataSources(nonParentCompanies, dataSources, allParentCompanyMappings, allNonParentCompanyMappings)];
+  allNonParentCompanyMappings = [...allNonParentCompanyMappings, ...await mapCompanies2OtherDataSources(nonParentCompanies, dataSources, allParentCompanyMappings, allNonParentCompanyMappings)];
 
-  console.log(`\n[+] ${totalCount} total data sources mapped to companies\n`);
+  const total = allParentCompanyMappings.length + allNonParentCompanyMappings.length;
+  console.log(`\n[+] ${total} total data sources mapped to companies\n`);
 };

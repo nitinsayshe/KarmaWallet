@@ -42,7 +42,7 @@ export const calculateAllCompanyScores = async () => {
 
   if (!companies) return;
 
-  const count = 0;
+  let count = 0;
   let errorCount = 0;
 
   for (const company of companies) {
@@ -98,7 +98,12 @@ export const calculateAllCompanyScores = async () => {
     const unsdgScores = allScores.map(scores => calculateUnsdgScore(scores));
     const combinedScore = unsdgScores.reduce((acc, curr) => acc + curr, 0);
 
-    console.log(combinedScore);
+    try {
+      await CompanyModel.updateOne({ _id: company._id }, { combinedScore });
+      count += 1;
+    } catch (err) {
+      console.log('[-] error updating score for company: ', company._id);
+    }
   }
 
   console.log(`${errorCount} errors thrown`);

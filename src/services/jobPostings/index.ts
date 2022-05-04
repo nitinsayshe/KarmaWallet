@@ -7,11 +7,27 @@ import {
 } from '../../models/jobPosting';
 import { IRequest } from '../../types/request';
 
-export const createJobPosting = (_: IRequest, title: string, instructions: string, description: string, department: string, location: string) => {
+export interface IJopPostingRequestParams {
+  jobPostingId: string;
+}
+
+export interface IJobPostingRequestBody {
+  title: string;
+  instructions: string;
+  description: string;
+  department: string;
+  jobLocation: string;
+  applicationUrl: string;
+}
+
+export const createJobPosting = (req: IRequest<{}, {}, IJobPostingRequestBody>) => {
+  const { title, instructions, description, department, jobLocation, applicationUrl } = req.body;
+
   if (!title) throw new CustomError('A job title is required.', ErrorTypes.INVALID_ARG);
   if (!description) throw new CustomError('A job description is required.', ErrorTypes.INVALID_ARG);
   if (!department) throw new CustomError('A job department is required.', ErrorTypes.INVALID_ARG);
-  if (!location) throw new CustomError('A job location is required.', ErrorTypes.INVALID_ARG);
+  if (!jobLocation) throw new CustomError('A job location is required.', ErrorTypes.INVALID_ARG);
+  if (!applicationUrl) throw new CustomError('An application url is required.', ErrorTypes.INVALID_ARG);
 
   try {
     const timestamp = toUTC(new Date());
@@ -21,6 +37,7 @@ export const createJobPosting = (_: IRequest, title: string, instructions: strin
       instructions,
       description,
       department,
+      applicationUrl,
       jobLocation: location,
       createdAt: timestamp,
       lastModified: timestamp,
@@ -44,10 +61,12 @@ export const getJobPostings = (_: IRequest, query: FilterQuery<IJobPosting> = {}
   return JobPostingModel.paginate(query.filter, options);
 };
 
-export const getJobPostingById = async (_: IRequest, id: string) => JobPostingModel.findById(id);
+export const getJobPostingById = async (req: IRequest<IJopPostingRequestParams>) => JobPostingModel.findById(req.params.jobPostingId);
 
-export const updateJobPosting = (_: IRequest, id: string, title: string, instructions: string, description: string, department: string, jobLocation: string) => {
-  if (!title && !description && !department && !jobLocation) throw new CustomError('No updatable data found for job posting.', ErrorTypes.INVALID_ARG);
+export const updateJobPosting = (req: IRequest<IJopPostingRequestParams, {}, IJobPostingRequestBody>) => {
+  const { title, instructions, description, department, jobLocation, applicationUrl } = req.body;
+
+  if (!title && !description && !department && !jobLocation && !applicationUrl) throw new CustomError('No updatable data found for job posting.', ErrorTypes.INVALID_ARG);
 
   const updates: Partial<IJobPosting> = {
     lastModified: toUTC(new Date()),
@@ -58,8 +77,9 @@ export const updateJobPosting = (_: IRequest, id: string, title: string, instruc
   if (description) updates.description = description;
   if (department) updates.department = department;
   if (jobLocation) updates.jobLocation = jobLocation;
+  if (applicationUrl) updates.applicationUrl = applicationUrl;
 
-  return JobPostingModel.findByIdAndUpdate(id, updates, { new: true });
+  return JobPostingModel.findByIdAndUpdate(req.params.jobPostingId, updates, { new: true });
 };
 
 export const getShareableJobPostingRef = (job: IJobPostingModel) => ({
@@ -67,6 +87,7 @@ export const getShareableJobPostingRef = (job: IJobPostingModel) => ({
   title: job.title,
   department: job.department,
   jobLocation: job.jobLocation,
+  applicationUrl: job.applicationUrl,
   createdAt: job.createdAt,
   lastModified: job.lastModified,
 });

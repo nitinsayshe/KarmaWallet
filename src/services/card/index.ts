@@ -8,9 +8,7 @@ import { getShareableUser } from '../user';
 import { PlaidClient } from '../../clients/plaid';
 import CustomError from '../../lib/customError';
 import { CardStatus, ErrorTypes } from '../../lib/constants';
-import { TransactionModel } from '../../models/transaction';
-import { MainBullClient } from '../../clients/bull/main';
-import { JobNames } from '../../lib/constants/jobScheduler';
+
 /*
   userId: IRef<ObjectId, IShareableUser>;
   name: string;
@@ -63,24 +61,27 @@ export const _getCard = async (query: FilterQuery<ICard>) => CardModel.findOne(q
 
 export const _getCards = async (query: FilterQuery<ICard>) => CardModel.find(query);
 
+// internal functions to handle cleanup for individual integrations
+// when a user removes a card
 const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   const client = new PlaidClient();
   await client.removeItem({ access_token: card.integrations.plaid.accessToken });
   if (removeData) {
-    await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
+    // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
     // TODO: these jobs should ideally be broken down into jobs for users and jobs to get totals
     // currently we have to process all users and cards to get the totals and will need to run
     // after any user removes a card + transactions
-    MainBullClient.createJob(JobNames.GenerateUserTransactionTotals, {});
-    MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
+    // MainBullClient.createJob(JobNames.GenerateUserTransactionTotals, {});
+    // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
   await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, { status: CardStatus.Unlinked });
 };
 
 const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   if (removeData) {
-    await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
+    // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
   }
+  await CardModel.updateMany({ 'integrations.rare.card_id': card.integrations.rare.card_id }, { status: CardStatus.Unlinked });
 };
 
 export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCardBody>) => {
@@ -92,6 +93,11 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
   const _card = await _getCard({ _id: card, user: requestor._id });
   if (!_card) throw new CustomError('A card with that id does not exist', ErrorTypes.NOT_FOUND);
 
+  /** IMPORTANT
+   * currently we will be taking remove data requests and handling them manually
+   * until we decide how to handle the data associated with a card.
+   * structure for handling the request will be left in for now as we decide how to move forward
+   */
   const { removeData } = req.body;
 
   // splitting up the logic for specific integrations for scaling
@@ -103,7 +109,7 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
   }
   if (removeData) {
     // for all integrations, remove the card
-    await _card.delete();
+    // await _card.delete();
   }
 
   // Todo: is there other data needed in the response?

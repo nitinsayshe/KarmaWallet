@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+import { SandboxItemFireWebhookRequestWebhookCodeEnum } from 'plaid';
 import { asCustomError } from '../../lib/customError';
 import { PlaidItemModel } from '../../models/plaidItem';
 import { IRequest } from '../../types/request';
@@ -8,9 +9,13 @@ import { PlaidClient } from '../../clients/plaid';
 export interface ICreateLinkTokenBody {
   accessToken?: string;
 }
-
 export interface IExchangePublicTokenBody {
   publicToken?: string;
+}
+
+export interface ISandboxItemFireWebhookBody {
+  webhookCode?: SandboxItemFireWebhookRequestWebhookCodeEnum;
+  accessToken?: string;
 }
 
 export const mapExistingItems = async (_: IRequest) => {
@@ -86,4 +91,10 @@ export const exchangePublicToken = async (req: IRequest<{}, {}, IExchangePublicT
   const { publicToken: public_token } = req.body;
   const client = new PlaidClient();
   return client.exchangePublicTokenForAccessToken({ public_token });
+};
+
+export const sandboxFireTestWebhook = async (req: IRequest<{}, {}, ISandboxItemFireWebhookBody>) => {
+  const { accessToken: access_token, webhookCode: webhook_code } = req.body;
+  const client = new PlaidClient();
+  return client.sandboxFireTestWebhook({ access_token, webhook_code });
 };

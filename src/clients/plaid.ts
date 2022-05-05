@@ -8,6 +8,8 @@ import {
   Products,
   TransactionsGetRequest,
   ItemPublicTokenExchangeRequest,
+  SandboxItemFireWebhookRequestWebhookCodeEnum,
+  SandboxPublicTokenCreateRequest,
 } from 'plaid';
 import pino from 'pino';
 import { ErrorTypes, CardStatus } from '../lib/constants';
@@ -47,6 +49,11 @@ export interface IPlaidErrorResponse {
 export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
+}
+
+export interface ISandboxItemFireWebhookRequest {
+  webhook_code: SandboxItemFireWebhookRequestWebhookCodeEnum;
+  access_token: string;
 }
 
 export class PlaidClient extends SdkClient {
@@ -210,6 +217,44 @@ export class PlaidClient extends SdkClient {
       } else {
         console.log(e);
       }
+    }
+  };
+
+  sandboxCreatePublicToken = async ({ userId }: { userId: string }) => {
+    if (!userId) throw new CustomError('A userId is required to create a sandbox public token', ErrorTypes.INVALID_ARG);
+    const configs: SandboxPublicTokenCreateRequest = {
+      institution_id: 'ins_3',
+      initial_products: [Products.Transactions],
+      options: {
+        override_username: userId,
+        override_password: 'karma_wallet_sandbox_password',
+        webhook: process.env.PLAID_WEBHOOK_URI,
+      },
+    };
+    try {
+      const publicTokenResponse = await this._client.sandboxPublicTokenCreate(configs);
+      const publicToken = publicTokenResponse.data.public_token;
+      const exchangeRequest: ItemPublicTokenExchangeRequest = {
+        public_token: publicToken,
+      };
+      const exchangeTokenResponse = await this._client.itemPublicTokenExchange(exchangeRequest);
+      return exchangeTokenResponse.data.access_token;
+    } catch (e) {
+      this.handlePlaidError(e);
+      throw asCustomError(e);
+    }
+  };
+
+  sandboxFireTestWebhook = async ({
+    access_token,
+    webhook_code = SandboxItemFireWebhookRequestWebhookCodeEnum.DefaultUpdate,
+  }: ISandboxItemFireWebhookRequest) => {
+    try {
+      if (!access_token) throw new CustomError('An access token is required.', ErrorTypes.INVALID_ARG);
+      return this._client.sandboxItemFireWebhook({ access_token, webhook_code });
+    } catch (e) {
+      this.handlePlaidError(e);
+      throw asCustomError(e);
     }
   };
 }

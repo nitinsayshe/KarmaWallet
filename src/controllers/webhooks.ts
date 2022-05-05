@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { mapTransactions } from '../integrations/rare';
 import { api, error } from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
@@ -30,6 +31,12 @@ interface IRareTransactionBody {
 interface IUserPlaidTransactionsMapBody {
   userId: String;
   accessToken: String
+}
+
+interface IPlaidWebhookBody {
+  webhook_type: string;
+  webhook_code: string;
+  item_id: string;
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -99,12 +106,32 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   }
 };
 
+// legacy API -> BETSI passthrough
+// remove when possible
 export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransactionsMapBody> = async (req, res) => {
   if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
   try {
     const { userId, accessToken } = req.body;
     MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
     api(req, res, { message: `${JobNames.UserPlaidTransactionMapper} added to queue` });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
+  try {
+    // verify webhook
+    const { webhook_type, webhook_code, item_id } = req.body;
+    if (process.env.NODE_ENV === 'development') {
+      return 'done';
+    }
+    // historical transactions ready
+    if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
+      // create job to map transactions
+      // send socket event to frontend
+    }
+    api(req, res, { message: 'Plaid webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
   }

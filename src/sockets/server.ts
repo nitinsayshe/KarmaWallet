@@ -1,12 +1,23 @@
 import { RedisAdapter } from '@socket.io/redis-adapter';
 import http from 'http';
-import { Namespace, Server } from 'socket.io';
-import { AllowedOrigins, UserRoles } from '../lib/constants';
+import { BroadcastOperator, Namespace, Server, Socket } from 'socket.io';
+import { AllowedOrigins, SocketEvents, SocketNamespaces, UserRoles } from '../lib/constants';
 import identify from './middleware/identify';
 import logger from './middleware/logger';
 import { ISocket } from './types/request';
 import router from './routers';
 import protectedRequirements from './middleware/protected';
+import { SocketEventTypes } from '../lib/constants/sockets';
+import { DefaultEventsMap } from 'socket.io/dist/typed-events';
+
+export interface ISocketEmitConfig {
+  namespace?: SocketNamespaces;
+  rooms?: string[];
+  except?: string[];
+  data?: any;
+  type: SocketEventTypes;
+  eventName?: SocketEvents,
+}
 
 export class SocketServer {
   private _httpServer: http.Server;
@@ -24,6 +35,8 @@ export class SocketServer {
         origin: AllowedOrigins,
       },
     });
+
+    this._socketServer.adapter(this._redisAdapter);
 
     this._main = this._socketServer.of('/');
     this._main.use(identify());
@@ -43,29 +56,27 @@ export class SocketServer {
     });
   }
 
-  // takes an event name, a array of rooms, data
-  // emit (msg: string) {
-  //   this._namespace.emit(msg);
-  // }
+  public emit({
+    namespace = SocketNamespaces.Main,
+    rooms,
+    except = [],
+    data,
+    type,
+    eventName = SocketEvents.Update,
+  }: ISocketEmitConfig) {
+    const _namespace = this._getNamespace(namespace);
+    let _broadcastOperator: BroadcastOperator<DefaultEventsMap, any>;
 
-  // EXAMPLE FROM JOHN
-  // emit({
-  //   namespace = 'io', rooms, exclude, data, type, eventName,
-  // }) {
-  //   const controlledNamespace = Object.values(this.namespaces).find(nmsp => nmsp === namespace) || 'io';
-  //   const controlledType = type || 'update';
-  //   const controlledEvent = Object.values(SocketEvents).find(e => e === eventName) || 'topic';
-  //   let io = this.get(controlledNamespace);
-  //   if (!!rooms?.length) {
-  //     for (let i = 0; i < rooms.length; i += 1) {
-  //       io = io.to(rooms[i]);
-  //     }
-  //   }
-  //   if (!!exclude?.length) {
-  //     for (let i = 0; i < exclude.length; i += 1) {
-  //       io = io.except(exclude[i]);
-  //     }
-  //   }
-  //   io.emit(controlledEvent, { type: controlledType, data });
-  // }
+    if (!!rooms?.length) _broadcastOperator = _namespace.to(rooms);
+    if (!!except?.length) _broadcastOperator = _namespace.except(except);
+
+    (_broadcastOperator || _namespace).emit(eventName, { type, data });
+  }
+
+  private _getNamespace = (namespace: string) => {
+    switch (namespace) {
+      case SocketNamespaces.Karma: return this._admin;
+      default: return this._main;
+    }
+  }
 }

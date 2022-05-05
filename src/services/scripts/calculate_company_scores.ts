@@ -1,7 +1,11 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceModel } from '../../models/companyDataSource';
 import { DataSourceMappingModel, IDataSourceMappingModel } from '../../models/dataSourceMapping';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
+
+dayjs.extend(utc);
 
 const UNSDG_MAX_SCORE = 1;
 const UNSDG_MIN_SCORE = -1;

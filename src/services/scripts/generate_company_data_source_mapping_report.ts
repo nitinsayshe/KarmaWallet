@@ -77,4 +77,36 @@ export const generateCompanyDataSourceMappingReport = async () => {
   })));
 
   fs.writeFileSync(path.join(__dirname, '.tmp', 'all_company_scores.csv'), _companies);
+
+  const companyDataSourceUnsdgMappings: { [key: string]: any }[] = [];
+
+  for (const company of companies) {
+    const companyDataSources = await CompanyDataSourceModel.find({ company });
+
+    for (const companyDataSource of companyDataSources) {
+      const source = dataSourceUnsdgMappings.find(d => (d.source as IDataSourceDocument)._id.toString() === companyDataSource.source.toString());
+
+      const vals: { [key: string]: any } = {};
+
+      for (let i = 0; i < source.unsdgs.length; i++) {
+        const unsdg = source.unsdgs[i].unsdg as IUnsdgDocument;
+        vals[unsdg.title] = source.unsdgs[i].value === null ? '' : source.unsdgs[i].value;
+
+        for (let t = 0; t < source.unsdgs[i].targets.length; t++) {
+          const target = (source.unsdgs[i].targets[t].target as IUnsdgTargetDocument);
+          vals[`target${target.title}`] = source.unsdgs[i].targets[t].value === null ? '' : source.unsdgs[i].targets[t].value;
+        }
+      }
+
+      companyDataSourceUnsdgMappings.push({
+        dataSource: (source.source as IDataSourceDocument).name,
+        companyName: company.companyName,
+        companyId: company._id.toString(),
+        ...vals,
+      });
+    }
+  }
+
+  const _companyDataSourceUnsdgMappings = parse(companyDataSourceUnsdgMappings);
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'all_company_data_source_unsdg_mappings.csv'), _companyDataSourceUnsdgMappings);
 };

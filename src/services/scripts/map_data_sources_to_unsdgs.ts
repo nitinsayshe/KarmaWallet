@@ -942,7 +942,7 @@ export const mapDataSourcesToUNSDGs = async () => {
       dataSourceMapping.unsdgs.push(unsdg5);
 
       const unsdg6: IUnsdgMapItem = {
-        unsdg: _unsdg5,
+        unsdg: _unsdg6,
         value: !!row['Clean Water and Sanitation'] ? parseFloat(row['Clean Water and Sanitation']) : null,
         exists: !!row['Clean Water and Sanitation'],
         targets: [

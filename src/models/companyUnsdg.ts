@@ -20,14 +20,9 @@ export interface ICompanyUnsdgDocument extends ICompanyUnsdg, Document {}
 export type ICompanyUnsdgModel = IModel<ICompanyUnsdg>;
 
 const companyUnsdgSchema = new Schema({
-  // TODO: update all companies to have ids if type ObjectId insteadof custom Number
-  // companyId: {
-  //   type: Schema.Types.ObjectId,
-  //   ref: 'company',
-  //   required: true,
-  // },
   company: {
-    type: Number,
+    type: Schema.Types.ObjectId,
+    ref: 'company',
     required: true,
   },
   unsdg: {

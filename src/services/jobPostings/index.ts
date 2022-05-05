@@ -38,7 +38,7 @@ export const createJobPosting = (req: IRequest<{}, {}, IJobPostingRequestBody>) 
       description,
       department,
       applicationUrl,
-      jobLocation: location,
+      jobLocation,
       createdAt: timestamp,
       lastModified: timestamp,
     });

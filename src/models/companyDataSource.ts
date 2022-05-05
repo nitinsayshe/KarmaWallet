@@ -17,6 +17,7 @@ interface IDateRange {
 export interface ICompanyDataSource {
   company: IRef<ObjectId, ICompanyDocument>;
   source: IRef<ObjectId, IDataSourceDocument>;
+  status: number;
   url: string;
   /**
    * the date awarded this source
@@ -40,6 +41,8 @@ const companyDataSourceSchema = new Schema({
     ref: 'data_source',
     required: true,
   },
+  // 1 === good, 0 or null === not applicable, -1 === bad
+  status: { type: Number },
   dateRange: {
     type: {
       start: { type: Date },

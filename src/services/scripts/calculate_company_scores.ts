@@ -91,6 +91,8 @@ export const calculateAllCompanyScores = async () => {
 
         if (value === null) {
           allScores[goalNum - 1].push(0);
+        } else if (companyDataSource.status === -1) {
+          allScores[goalNum - 1].push(-1);
         } else if (value === 0) {
           allScores[goalNum - 1].push(-1);
         } else {

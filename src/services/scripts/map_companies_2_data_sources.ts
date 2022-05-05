@@ -371,6 +371,7 @@ const createCompanyDataSourceMappings = async (
     newCompanyDataSources[(inheritedCompanyDataSource.source as IDataSourceDocument).name] = new CompanyDataSourceModel({
       company,
       source: inheritedCompanyDataSource.source,
+      status: inheritedCompanyDataSource.status,
       dateRange: inheritedCompanyDataSource.dateRange,
       isPrimary: inheritedCompanyDataSource.isPrimary,
     });
@@ -400,9 +401,17 @@ const createCompanyDataSourceMappings = async (
           .toDate();
       }
 
+      let status: number = null;
+      if (row[dataSourceName] === '0') {
+        status = -1;
+      } else if (row[dataSourceName] === '1') {
+        status = 1;
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
+        status,
         dateRange: {
           start: timestamp,
           end: expiration,
@@ -427,6 +436,7 @@ const createCompanyBCorpDataSourceMappings = async (
     newCompanyDataSources[(inheritedCompanyDataSource.source as IDataSourceDocument).name] = new CompanyDataSourceModel({
       company,
       source: inheritedCompanyDataSource.source,
+      status: inheritedCompanyDataSource.status,
       dateRange: inheritedCompanyDataSource.dateRange,
       isPrimary: inheritedCompanyDataSource.isPrimary,
     });
@@ -443,9 +453,17 @@ const createCompanyBCorpDataSourceMappings = async (
 
       const timestamp = dayjs().utc().toDate();
 
+      let status: number = null;
+      if (row[dataSourceName] === '0') {
+        status = -1;
+      } else if (row[dataSourceName] === '1') {
+        status = 1;
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
+        status,
         dateRange: {
           start: timestamp,
           end: expiration,
@@ -474,6 +492,7 @@ const createCompanyJustCapitalDataSourceMappings = async (
     newCompanyDataSources[(inheritedCompanyDataSource.source as IDataSourceDocument).name] = new CompanyDataSourceModel({
       company,
       source: inheritedCompanyDataSource.source,
+      status: inheritedCompanyDataSource.status,
       dateRange: inheritedCompanyDataSource.dateRange,
       isPrimary: inheritedCompanyDataSource.isPrimary,
     });
@@ -490,9 +509,17 @@ const createCompanyJustCapitalDataSourceMappings = async (
 
       const timestamp = dayjs().utc().toDate();
 
+      let status: number = null;
+      if (row[dataSourceName] === '0') {
+        status = -1;
+      } else if (row[dataSourceName] === '1') {
+        status = 1;
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
+        status,
         dateRange: {
           start: timestamp,
           end: expiration,
@@ -577,7 +604,6 @@ const mapCompaniesToBCorpDataSources = async (
     }
   }
 
-  if (!!parentsWithNoMappings.size) console.log('[-] parent companies with no mappings: ', parentsWithNoMappings);
   if (errorCount > 0) console.log(`\n${errorCount} errors occurred while mapping just capital data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies`);
   console.log(`${count} bcorp data source to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}company mappings were created\n`);
 
@@ -650,7 +676,6 @@ const mapCompaniesToJustCapitalDataSources = async (
     }
   }
 
-  if (!!parentsWithNoMappings.size) console.log('[-] parent companies with no mappings: ', parentsWithNoMappings);
   if (errorCount > 0) console.log(`\n${errorCount} errors occurred while mapping just capital data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies`);
   console.log(`${count} just capital data source to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}company mappings were created\n`);
 
@@ -721,7 +746,6 @@ const mapCompanies2OtherDataSources = async (
     }
   }
 
-  if (!!parentsWithNoMappings.size) console.log('[-] parent companies with no mappings: ', parentsWithNoMappings);
   if (errorCount > 0) console.log(`\n${errorCount} errors occurred while mapping "other" data sources to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}companies`);
   console.log(`${count} "other" data source to ${!!parentCompanyDataSourceMappings.length ? '' : 'parent '}company mappings were created\n`);
 

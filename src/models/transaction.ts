@@ -3,8 +3,9 @@ import {
   ObjectId,
   model,
   Document,
-  Model,
+  PaginateModel,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
@@ -280,5 +281,6 @@ const transactionSchema = new Schema({
     },
   },
 });
+transactionSchema.plugin(mongoosePaginate);
 
-export const TransactionModel = model<ITransactionDocument, Model<ITransaction>>('transaction', transactionSchema);
+export const TransactionModel = model<ITransactionDocument, PaginateModel<ITransaction>>('transaction', transactionSchema);

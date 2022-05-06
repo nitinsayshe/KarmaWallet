@@ -4,6 +4,13 @@ import authenticate from '../middleware/authenticate';
 
 const router = Router();
 
-router.get('/carbon-offsets', authenticate, TransactionController.getCarbonOffsetTransactions); // Get Transactions offset,count
+router.route('/')
+  .get(authenticate, TransactionController.getTransactions);
+
+router.route('/carbon-offsets')
+  .get(authenticate, TransactionController.getCarbonOffsetTransactions);
+
+router.route('/has-transactions')
+  .get(authenticate, TransactionController.hasTransactions);
 
 export default (app: Express) => app.use('/transaction', router);

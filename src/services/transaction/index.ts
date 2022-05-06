@@ -1,33 +1,50 @@
 import { FilterQuery, ObjectId, Types } from 'mongoose';
+import { AqpQuery } from 'api-query-params';
 import {
   IShareableTransaction,
   ITransaction,
   ITransactionDocument,
   TransactionModel,
 } from '../../models/transaction';
-import { RareTransactionQuery } from '../../lib/constants';
+import { ErrorTypes, RareTransactionQuery, UserRoles } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 import { RareClient } from '../../clients/rare';
 import { getShareableSector } from '../sectors';
-import { ISector, ISectorDocument } from '../../models/sector';
+import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
-import { asCustomError } from '../../lib/customError';
-import { ICompanyDocument, IShareableCompany } from '../../models/company';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { CompanyModel, ICompanyDocument, IShareableCompany } from '../../models/company';
 import { getShareableCompany } from '../company';
 import { getShareableUser } from '../user';
-import { IShareableUser, IUserDocument } from '../../models/user';
-import { ICardDocument, IShareableCard } from '../../models/card';
+import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
 import { getShareableCard } from '../card';
+import { GroupModel } from '../../models/group';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
 const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
 const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
 
+export enum ITransactionsConfig {
+  Recent = 'recent',
+}
+
 export interface IGetRecentTransactionsRequestQuery {
   limit?: number;
   unique?: boolean;
   userId?: string | ObjectId;
+}
+
+export interface ITransactionsRequestQuery extends AqpQuery {
+  userId?: string;
+  includeOffsets?: boolean;
+  includeNullCompanies?: boolean;
+}
+
+export interface ITransactionOptions {
+  includeOffsets?: boolean;
+  includeNullCompanies?: boolean;
 }
 
 export const _getTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.aggregate([
@@ -108,6 +125,71 @@ export const getRecentTransactions = async (req: IRequest<{}, IGetRecentTransact
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
+  const { userId, includeOffsets, includeNullCompanies } = req.query;
+
+  if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+
+  const paginationOptions = {
+    projection: query?.projection || '',
+    populate: query.population || [
+      {
+        path: 'user',
+        model: UserModel,
+      },
+      {
+        path: 'company',
+        model: CompanyModel,
+      },
+      {
+        path: 'card',
+        model: CardModel,
+      },
+      {
+        path: 'sector',
+        model: SectorModel,
+      },
+      {
+        path: 'association.user',
+        model: UserModel,
+      },
+      {
+        path: 'association.group',
+        model: GroupModel,
+      },
+    ],
+    page: query?.skip || 1,
+    sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
+    limit: query?.limit || 10,
+  };
+  const filter: FilterQuery<ITransaction> = { ...query.filter };
+
+  delete filter.userId;
+  delete filter.includeOffsets;
+  delete filter.includeNullCompanies;
+
+  if (!!userId) {
+    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+      throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    filter.$or = [
+      { user: userId },
+      { 'onBehalfOf.user': userId },
+    ];
+  } else {
+    filter.$or = [
+      { user: req.requestor },
+      { 'onBehalfOf.user': req.requestor },
+    ];
+  }
+
+  if (!includeOffsets) filter['integrations.rare'] = null;
+  if (!includeNullCompanies) filter.company = { $ne: null };
+
+  return TransactionModel.paginate(filter, paginationOptions);
 };
 
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
@@ -202,4 +284,31 @@ export const getShareableTransaction = ({
   }
 
   return shareableTransaction;
+};
+
+export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>) => {
+  try {
+    const { userId, includeOffsets, includeNullCompanies } = req.query;
+    const _userId = userId ?? req.requestor._id;
+
+    const query: FilterQuery<ITransaction> = {
+      $and: [
+        {
+          $or: [
+            { user: _userId },
+            { 'onBehalfOf.user': _userId },
+          ],
+        },
+      ],
+    };
+
+    if (!includeOffsets) query.$and.push({ 'integrations.rare': null });
+    if (!includeNullCompanies) query.$and.push({ company: { $ne: null } });
+
+    const count = await getTransactionCount(query);
+
+    return count > 0;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

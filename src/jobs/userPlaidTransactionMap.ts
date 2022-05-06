@@ -4,6 +4,8 @@ import { mockRequest } from '../lib/constants/request';
 import { mapTransactionsFromPlaid } from '../integrations/plaid';
 import KarmaApiClient from '../integrations/karmaApi';
 import { JobNames } from '../lib/constants/jobScheduler';
+import { SocketClient } from '../clients/socket';
+import { SocketEvents, SocketEventTypes } from '../lib/constants/sockets';
 
 interface IPlaidTransactionMapperResult {
   userId: string,
@@ -21,7 +23,10 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
+  // TODO: remove when TONGASS is launched
   const client = new KarmaApiClient();
   await client.sendPlaidTransactionsReadyWebhook(result.userId);
+
+  SocketClient.socket.emit({ rooms: [`user/${result.userId}`], eventName: SocketEvents.Update, type: SocketEventTypes.PlaidTransactionsReady });
   console.log(`${JobNames.UserPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
 };

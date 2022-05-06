@@ -10,8 +10,12 @@ import {
   ItemPublicTokenExchangeRequest,
   SandboxItemFireWebhookRequestWebhookCodeEnum,
   SandboxPublicTokenCreateRequest,
+  WebhookVerificationKeyGetRequest,
 } from 'plaid';
 import pino from 'pino';
+import jsonwebtoken from 'jsonwebtoken';
+import jwkToPem from 'jwk-to-pem';
+import crypto from 'crypto';
 import { ErrorTypes, CardStatus } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
@@ -46,6 +50,10 @@ export interface IPlaidErrorResponse {
   }
 }
 
+export interface IPlaidWebhookJWTPayload {
+  'iat': number;
+  'request_body_sha256': string;
+}
 export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
@@ -54,6 +62,11 @@ export interface ICreateLinkTokenParams {
 export interface ISandboxItemFireWebhookRequest {
   webhook_code: SandboxItemFireWebhookRequestWebhookCodeEnum;
   access_token: string;
+}
+
+export interface IVerifyWebhookParams {
+  signedJwt: string;
+  requestBody: any;
 }
 
 export class PlaidClient extends SdkClient {
@@ -252,6 +265,39 @@ export class PlaidClient extends SdkClient {
     try {
       if (!access_token) throw new CustomError('An access token is required.', ErrorTypes.INVALID_ARG);
       return this._client.sandboxItemFireWebhook({ access_token, webhook_code });
+    } catch (e) {
+      this.handlePlaidError(e);
+      throw asCustomError(e);
+    }
+  };
+
+  // https://plaid.com/docs/api/webhooks/webhook-verification/
+  verifyWebhook = async ({ signedJwt, requestBody }: IVerifyWebhookParams) => {
+    try {
+      const decodedToken = jsonwebtoken.decode(signedJwt, { complete: true });
+
+      const { kid: key_id, alg } = decodedToken.header;
+      if (alg !== 'ES256') throw new CustomError('Invalid algorithm', ErrorTypes.SERVICE);
+      const verificationKeyRequest: WebhookVerificationKeyGetRequest = {
+        key_id,
+      };
+      const verificationKeyResponse = await this._client.webhookVerificationKeyGet(verificationKeyRequest);
+      const { key } = verificationKeyResponse.data;
+      if (!key) throw new CustomError('Plaid webhook key not found', ErrorTypes.SERVICE);
+
+      // Reject expired keys
+      if (key.expired_at != null) throw new CustomError('Expired key', ErrorTypes.SERVICE);
+      const pem = jwkToPem(key as jwkToPem.EC);
+
+      // verification will throw error if the signature is invalid
+      jsonwebtoken.verify(signedJwt, pem, { algorithms: ['ES256'], maxAge: '5 minutes' });
+
+      // verify the request body
+      const bodyHash = crypto.createHash('sha256').update(requestBody).digest('hex');
+      const claimedBodyHash = (decodedToken.payload as IPlaidWebhookJWTPayload).request_body_sha256;
+      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(claimedBodyHash))) {
+        throw new CustomError('Invalid request body', ErrorTypes.SERVICE);
+      }
     } catch (e) {
       this.handlePlaidError(e);
       throw asCustomError(e);

@@ -15,6 +15,8 @@ import { validateStatementList } from '../services/statements';
 import { IStatementDocument } from '../models/statement';
 import { UserModel } from '../models/user';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
+import { _getCard } from '../services/card';
+import { PlaidClient } from '../clients/plaid';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -36,7 +38,10 @@ interface IUserPlaidTransactionsMapBody {
 interface IPlaidWebhookBody {
   webhook_type: string;
   webhook_code: string;
+  account_id: string;
   item_id: string;
+  new_transactions?: number;
+
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -119,17 +124,19 @@ export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransac
   }
 };
 
-export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
+export const handlePlaidWebhook: IRequestHandler<{}, {}, Partial<IPlaidWebhookBody>> = async (req, res) => {
   try {
-    // verify webhook
+    // TODO: verify webhook
+    // https://plaid.com/docs/api/webhooks/webhook-verification/
+    const signedJwt = req.headers?.['plaid-verification'];
+    const client = new PlaidClient();
+    await client.verifyWebhook({ signedJwt, requestBody: req.body });
     const { webhook_type, webhook_code, item_id } = req.body;
-    if (process.env.NODE_ENV === 'development') {
-      return 'done';
-    }
-    // historical transactions ready
+    // Historical Transactions Ready
     if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
-      // create job to map transactions
-      // send socket event to frontend
+      const card = await _getCard({ 'integrations.plaid.items': item_id });
+      if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
+      MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId: card.userId, accessToken: card.integrations.plaid.accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
     }
     api(req, res, { message: 'Plaid webhook processed successfully.' });
   } catch (e) {

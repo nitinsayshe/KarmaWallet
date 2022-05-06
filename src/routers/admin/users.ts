@@ -7,6 +7,6 @@ import protectedRequirements from '../../middleware/protected';
 const router = Router();
 
 router.route('/')
-  .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminUserController.getUsers);
+  .get(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminUserController.getUsersPaginated);
 
 export default router;

@@ -1,13 +1,10 @@
 import 'dotenv/config';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+import { Types } from 'mongoose';
+import fs from 'fs';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { mapSectorsToTransactions } from '../src/services/scripts/map_sectors_to_transactions';
-import { cleanTransactions } from '../src/services/scripts/clean_transactions';
-
-dayjs.extend(utc);
+import * as EmailService from '../src/services/email';
 
 (async () => {
   try {
@@ -17,10 +14,27 @@ dayjs.extend(utc);
     // } as IRequest);
     await MongoClient.init();
 
-    // add mappers here...
-    const allTransactionsCleaned = await cleanTransactions();
-    if (allTransactionsCleaned) await mapSectorsToTransactions();
+    const welcomeCC1 = await EmailService.sendWelcomeCC1Email({
+      name: 'John',
+      domain: 'https://ui.staging.karmawallet.io',
+      user: new Types.ObjectId('62192d3af022c9e3fbfe3c23'),
+      recipientEmail: 'john@theimpactkarma.com',
+      sendEmail: false,
+    });
 
+    const welcomeCCG1 = await EmailService.sendWelcomeCCG1Email({
+      name: 'John',
+      groupName: 'Testing123',
+      domain: 'https://ui.staging.karmawallet.io',
+      user: new Types.ObjectId('62192d3af022c9e3fbfe3c23'),
+      recipientEmail: 'john@theimpactkarma.com',
+      sendEmail: false,
+    });
+
+    fs.writeFileSync('./welcomeCC1.html', welcomeCC1.jobData.template);
+    fs.writeFileSync('./welcomeCCG1.html', welcomeCCG1.jobData.template);
+
+    // add mappers here...
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

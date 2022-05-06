@@ -1,5 +1,6 @@
-import { ObjectId } from 'mongoose';
-import { ICardDocument } from '../../models/card';
+import { FilterQuery, ObjectId } from 'mongoose';
+import { CardModel, ICard, ICardDocument } from '../../models/card';
+import { IRequest } from '../../types/request';
 import { IShareableUser, IUserDocument } from '../../models/user';
 import { IRef } from '../../types/model';
 import { getShareableUser } from '../user';
@@ -43,3 +44,5 @@ export const getShareableCard = ({
     lastModified,
   };
 };
+
+export const _getCards = async (req: IRequest, query: FilterQuery<ICard>) => CardModel.find(query);

@@ -33,6 +33,15 @@ export const getCarbonOffsetTransactions: IRequestHandler = async (req, res) => 
   }
 };
 
+export const getMostRecentTransactions: IRequestHandler = async (req, res) => {
+  try {
+    const mostRecentTransactions = await TransactionService.getMostRecentTransactions(req);
+    output.api(req, res, mostRecentTransactions.map(t => TransactionService.getShareableTransaction(t)));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const hasTransactions: IRequestHandler<{}, TransactionService.ITransactionsRequestQuery> = async (req, res) => {
   try {
     const userHasTransactions = await TransactionService.hasTransactions(req);

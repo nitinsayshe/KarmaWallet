@@ -13,4 +13,7 @@ router.route('/carbon-offsets')
 router.route('/has-transactions')
   .get(authenticate, TransactionController.hasTransactions);
 
+router.route('/most-recent')
+  .get(authenticate, TransactionController.getMostRecentTransactions);
+
 export default (app: Express) => app.use('/transaction', router);

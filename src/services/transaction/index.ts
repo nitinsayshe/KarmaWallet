@@ -41,6 +41,7 @@ export interface ITransactionsRequestQuery extends AqpQuery {
   userId?: string;
   includeOffsets?: boolean;
   includeNullCompanies?: boolean;
+  onlyOffsets?: boolean;
 }
 
 export interface ITransactionOptions {
@@ -49,7 +50,7 @@ export interface ITransactionOptions {
 }
 
 export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets } = req.query;
 
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
@@ -85,32 +86,35 @@ export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, qu
     sort: query?.sort ? { ...query.sort, _id: -1 } : { date: -1, _id: -1 },
     limit: query?.limit || 10,
   };
-  const filter: FilterQuery<ITransaction> = { ...query.filter };
-
-  delete filter.userId;
-  delete filter.includeOffsets;
-  delete filter.includeNullCompanies;
+  const filter: FilterQuery<ITransaction> = {
+    $and: Object.entries(query.filter)
+      .filter(([key]) => (key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets'))
+      .map(([key, value]) => ({ [key]: value })),
+  };
 
   if (!!userId) {
     if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
       throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
     }
 
-    filter.$or = [
-      { user: userId },
-      { 'onBehalfOf.user': userId },
-    ];
+    filter.$and.push({
+      $or: [
+        { user: userId },
+        { 'onBehalfOf.user': userId },
+      ],
+    });
   } else {
-    filter.$or = [
-      { user: req.requestor },
-      { 'onBehalfOf.user': req.requestor },
-    ];
+    filter.$and.push({
+      $or: [
+        { user: req.requestor },
+        { 'onBehalfOf.user': req.requestor },
+      ],
+    });
   }
 
-  if (!includeOffsets) filter['integrations.rare'] = null;
-  if (!includeNullCompanies) filter.company = { $ne: null };
-
-  console.log('>>>>> filter', filter.$or);
+  if (!!onlyOffsets) filter.$and.push({ 'integrations.rare': { $ne: null } });
+  if (!includeOffsets && !onlyOffsets) filter.$and.push({ 'integrations.rare': null });
+  if (!includeNullCompanies) filter.$and.push({ company: { $ne: null } });
 
   return TransactionModel.paginate(filter, paginationOptions);
 };
@@ -121,26 +125,30 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     const _limit = parseInt(limit.toString());
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
-    const query: FilterQuery<ITransactionDocument> = {};
+    const query: FilterQuery<ITransactionDocument> = { $and: [] };
 
     if (!!userId) {
       if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
         throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
       }
 
-      query.$or = [
-        { user: userId },
-        { 'onBehalfOf.user': userId },
-      ];
+      query.$and.push({
+        $or: [
+          { user: userId },
+          { 'onBehalfOf.user': userId },
+        ],
+      });
     } else {
-      query.$or = [
-        { user: req.requestor._id },
-        { 'onBehalfOf.user': req.requestor._id },
-      ];
+      query.$and.push({
+        $or: [
+          { user: req.requestor._id },
+          { 'onBehalfOf.user': req.requestor._id },
+        ],
+      });
     }
 
-    query['integrations.rare'] = null;
-    query.company = { $ne: null };
+    query.$and.push({ 'integrations.rare': null });
+    query.$and.push({ company: { $ne: null } });
 
     const transactions = await _getTransactions(query);
 

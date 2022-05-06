@@ -14,6 +14,7 @@ export interface IJobPosting {
   department: string;
   jobLocation: string;
   applicationUrl: string;
+  published: boolean;
   createdAt: Date;
   lastModified: Date;
 }
@@ -41,6 +42,10 @@ const jobPostingSchema = new Schema({
   },
   applicationUrl: {
     type: String,
+  },
+  published: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,

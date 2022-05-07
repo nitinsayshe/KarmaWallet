@@ -359,6 +359,8 @@ type DateSourceExpirationKeys = keyof IRawCompanyDataSourceExpirations;
 //   'Expiration: American Humane Certified',
 // ];
 
+const primariesFound: { [key: string]: boolean } = {};
+
 const createCompanyDataSourceMappings = async (
   company: ICompanyDocument,
   row: IRawCompany2DataSourcesMapping,
@@ -373,7 +375,7 @@ const createCompanyDataSourceMappings = async (
       source: inheritedCompanyDataSource.source,
       status: inheritedCompanyDataSource.status,
       dateRange: inheritedCompanyDataSource.dateRange,
-      isPrimary: inheritedCompanyDataSource.isPrimary,
+      isPrimary: inheritedCompanyDataSource.isPrimary && !primariesFound[company._id.toString()],
     });
   }
 
@@ -408,6 +410,16 @@ const createCompanyDataSourceMappings = async (
         status = 1;
       }
 
+      if (!primariesFound[company._id.toString()]) {
+        // a primary has already been set, need to unset it
+        // so this new mapping can be marked as the primary instead
+
+        // eslint-disable-next-line guard-for-in
+        for (const ncds in newCompanyDataSources) {
+          newCompanyDataSources[ncds].isPrimary = false;
+        }
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
@@ -416,8 +428,10 @@ const createCompanyDataSourceMappings = async (
           start: timestamp,
           end: expiration,
         },
-        isPrimary: row.primaryDataSource === dataSource.name,
+        isPrimary: row.primaryDataSource === dataSource.name && !primariesFound[company._id.toString()],
       });
+
+      primariesFound[company._id.toString()] = true;
     }
   }
 
@@ -438,12 +452,11 @@ const createCompanyBCorpDataSourceMappings = async (
       source: inheritedCompanyDataSource.source,
       status: inheritedCompanyDataSource.status,
       dateRange: inheritedCompanyDataSource.dateRange,
-      isPrimary: inheritedCompanyDataSource.isPrimary,
+      isPrimary: inheritedCompanyDataSource.isPrimary && primariesFound[company._id.toString()],
     });
   }
 
   const expiration = dayjs('Dec 31, 2023').utc().toDate();
-  let primaryDataSourceFound = false;
 
   for (const dataSourceName of bCorpDataSourceNames) {
     if (!!row[dataSourceName]) {
@@ -460,6 +473,16 @@ const createCompanyBCorpDataSourceMappings = async (
         status = 1;
       }
 
+      if (!primariesFound[company._id.toString()]) {
+        // a primary has already been set, need to unset it
+        // so this new mapping can be marked as the primary instead
+
+        // eslint-disable-next-line guard-for-in
+        for (const ncds in newCompanyDataSources) {
+          newCompanyDataSources[ncds].isPrimary = false;
+        }
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
@@ -470,10 +493,10 @@ const createCompanyBCorpDataSourceMappings = async (
         },
         // the first data source used for company is to be marked as
         // the primary
-        isPrimary: !primaryDataSourceFound,
+        isPrimary: !primariesFound[company._id.toString()],
       });
 
-      primaryDataSourceFound = true;
+      primariesFound[company._id.toString()] = true;
     }
   }
 
@@ -494,12 +517,11 @@ const createCompanyJustCapitalDataSourceMappings = async (
       source: inheritedCompanyDataSource.source,
       status: inheritedCompanyDataSource.status,
       dateRange: inheritedCompanyDataSource.dateRange,
-      isPrimary: inheritedCompanyDataSource.isPrimary,
+      isPrimary: inheritedCompanyDataSource.isPrimary && !primariesFound[company._id.toString()],
     });
   }
 
   const expiration = dayjs('Dec 31, 2023').utc().toDate();
-  let primaryDataSourceFound = false;
 
   for (const dataSourceName of justCapitalDataSourceNames) {
     if (!!row[dataSourceName]) {
@@ -516,6 +538,16 @@ const createCompanyJustCapitalDataSourceMappings = async (
         status = 1;
       }
 
+      if (!primariesFound[company._id.toString()]) {
+        // a primary has already been set, need to unset it
+        // so this new mapping can be marked as the primary instead
+
+        // eslint-disable-next-line guard-for-in
+        for (const ncds in newCompanyDataSources) {
+          newCompanyDataSources[ncds].isPrimary = false;
+        }
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
@@ -526,10 +558,10 @@ const createCompanyJustCapitalDataSourceMappings = async (
         },
         // the first data source used for company is to be marked as
         // the primary
-        isPrimary: !primaryDataSourceFound,
+        isPrimary: !primariesFound[company._id.toString()],
       });
 
-      primaryDataSourceFound = true;
+      primariesFound[company._id.toString()] = true;
     }
   }
 

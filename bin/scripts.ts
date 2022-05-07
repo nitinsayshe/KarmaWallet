@@ -4,9 +4,8 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { mapCompanies2DataSources } from '../src/services/scripts/map_companies_2_data_sources';
-import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
 import { generateCompanyDataSourceMappingReport } from '../src/services/scripts/generate_company_data_source_mapping_report';
+import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
 
 dayjs.extend(utc);
 
@@ -21,7 +20,7 @@ dayjs.extend(utc);
     // add mappers here...
     // await createDataSources();
     // await mapDataSourcesToUNSDGs();
-    await mapCompanies2DataSources();
+    // await mapCompanies2DataSources();
     await calculateAllCompanyScores();
     await generateCompanyDataSourceMappingReport();
 

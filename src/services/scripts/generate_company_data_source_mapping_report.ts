@@ -90,11 +90,29 @@ export const generateCompanyDataSourceMappingReport = async () => {
 
       for (let i = 0; i < source.unsdgs.length; i++) {
         const unsdg = source.unsdgs[i].unsdg as IUnsdgDocument;
-        vals[unsdg.title] = source.unsdgs[i].value === null ? '' : source.unsdgs[i].value;
+
+        if (unsdg.goalNum === 17) continue;
+
+        if (source.unsdgs[i].value === null) {
+          vals[unsdg.title] = 0;
+        } else if (source.unsdgs[i].value === 0) {
+          vals[unsdg.title] = -1;
+        } else {
+          vals[unsdg.title] = companyDataSource.status === -1 ? -1 : source.unsdgs[i].value;
+        }
 
         for (let t = 0; t < source.unsdgs[i].targets.length; t++) {
           const target = (source.unsdgs[i].targets[t].target as IUnsdgTargetDocument);
-          vals[`target${target.title}`] = source.unsdgs[i].targets[t].value === null ? '' : source.unsdgs[i].targets[t].value;
+          let val = null;
+          if (source.unsdgs[i].targets[t].value === null) {
+            val = 0;
+          } else if (source.unsdgs[i].targets[t].value === 0) {
+            val = -1;
+          } else {
+            val = companyDataSource.status === -1 ? -1 : source.unsdgs[i].targets[t].value;
+          }
+
+          vals[`target${target.title}`] = val;
         }
       }
 

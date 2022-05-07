@@ -41,6 +41,9 @@ const dataSourceMappingSchema = new Schema({
       type: Schema.Types.ObjectId,
       ref: 'unsdg',
     },
+    // value = null - no data
+    // value = 0    - negative
+    // value > 0    - positive
     value: { type: Number },
     exists: { type: Boolean },
     // IMPORTANT
@@ -52,6 +55,9 @@ const dataSourceMappingSchema = new Schema({
           type: Schema.Types.ObjectId,
           ref: 'unsdg_target',
         },
+        // value = null - no data
+        // value = 0    - negative
+        // value > 0    - positive
         value: { type: Number },
         exists: { type: Boolean },
       },

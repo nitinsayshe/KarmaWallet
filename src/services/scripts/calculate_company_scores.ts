@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceModel } from '../../models/companyDataSource';
+import { CompanyUnsdgModel } from '../../models/companyUnsdg';
 import { DataSourceMappingModel, IDataSourceMappingModel } from '../../models/dataSourceMapping';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 
@@ -72,6 +73,7 @@ export const calculateAllCompanyScores = async () => {
     if (!companyDataSources || !unsdgMappings) continue;
 
     const allScores: number[][] = [];
+    const promises: Promise<any>[] = [];
 
     for (const companyDataSource of companyDataSources) {
       const unsdgMapping = unsdgMappings.find(u => u.source.toString() === companyDataSource.source.toString());
@@ -83,7 +85,10 @@ export const calculateAllCompanyScores = async () => {
 
       for (let i = 0; i < unsdgMapping.unsdgs.length; i++) {
         const { goalNum } = unsdgMapping.unsdgs[i].unsdg as IUnsdgDocument;
+        if (goalNum === 17) continue;
+
         const { value } = unsdgMapping.unsdgs[i];
+        let unsdgScore: number;
 
         while (allScores.length < goalNum) {
           allScores.push([]);
@@ -91,13 +96,24 @@ export const calculateAllCompanyScores = async () => {
 
         if (value === null) {
           allScores[goalNum - 1].push(0);
-        } else if (companyDataSource.status === -1) {
-          allScores[goalNum - 1].push(-1);
+          unsdgScore = 0;
         } else if (value === 0) {
-          allScores[goalNum - 1].push(-1);
+          unsdgScore = -1;
         } else {
-          allScores[goalNum - 1].push(value);
+          allScores[goalNum - 1].push(companyDataSource.status === -1 ? -1 : value);
+          unsdgScore = companyDataSource.status === -1 ? -1 : value;
         }
+
+        allScores[goalNum - 1].push(value);
+
+        const companyUnsdg = new CompanyUnsdgModel({
+          company,
+          unsdg: unsdgMapping.unsdgs[i].unsdg,
+          value: unsdgScore,
+          createdAt: dayjs().utc().toDate(),
+        });
+
+        promises.push(companyUnsdg.save());
       }
     }
 
@@ -106,6 +122,7 @@ export const calculateAllCompanyScores = async () => {
 
     try {
       await CompanyModel.updateOne({ _id: company._id }, { combinedScore });
+      await Promise.all(promises);
       count += 1;
     } catch (err) {
       console.log('[-] error updating score for company: ', company._id);

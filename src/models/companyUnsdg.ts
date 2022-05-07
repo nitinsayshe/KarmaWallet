@@ -30,6 +30,9 @@ const companyUnsdgSchema = new Schema({
     ref: 'unsdg',
     require: true,
   },
+  // value < 0 = negative
+  // value = 0 = no data
+  // value > 0 = positive
   value: { type: Number },
   createdAt: { type: Date },
   lastModified: { type: Date },

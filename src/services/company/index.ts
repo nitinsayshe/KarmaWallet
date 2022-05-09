@@ -143,7 +143,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   let topPick: ICompanyDocument = null;
   let noClearPick = false;
-  let topPickScore = 30;
+  let topPickScore = -5;
 
   const _query: FilterQuery<ICompany> = { _id: { $in: query.companies } };
   if (!includeHidden) query['hidden.status'] = false;

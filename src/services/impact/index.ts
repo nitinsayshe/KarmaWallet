@@ -229,7 +229,7 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       uids: [process.env.APP_USER_ID],
       sectors: [sector],
       count: 11,
-      validator: (company: ICompanyDocument) => company.combinedScore > 60,
+      validator: (company: ICompanyDocument) => company.combinedScore > 2,
     };
 
     if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
@@ -247,7 +247,7 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       const relevantCompanies = await _getCompanies({
         _id: { $nin: companies.map(c => c._id) },
         'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
-        combinedScore: { $gt: 60 },
+        combinedScore: { $gt: 2 },
       });
 
       const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);

@@ -16,4 +16,5 @@ export enum JobNames {
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
   UpdateBouncedEmails = 'update-bounced-emails',
   SendWelcomeFlowEmails = 'send-welcome-flow-emails',
+  UpdateRareProjectAverage = 'update-rare-project-average',
 }

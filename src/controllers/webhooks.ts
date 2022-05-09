@@ -41,7 +41,6 @@ interface IPlaidWebhookBody {
   account_id: string;
   item_id: string;
   new_transactions?: number;
-
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -111,8 +110,6 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   }
 };
 
-// legacy API -> BETSI passthrough
-// remove when possible
 export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransactionsMapBody> = async (req, res) => {
   if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
   try {

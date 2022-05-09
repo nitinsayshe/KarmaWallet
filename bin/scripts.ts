@@ -4,8 +4,8 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateCompanyDataSourceMappingReport } from '../src/services/scripts/generate_company_data_source_mapping_report';
 import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
+import { generateCompanyDataSourceMappingReport } from '../src/services/scripts/generate_company_data_source_mapping_report';
 
 dayjs.extend(utc);
 

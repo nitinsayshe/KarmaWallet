@@ -7,7 +7,6 @@ import {
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
-import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
 
@@ -26,7 +25,6 @@ export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
   companyName: string;
-  dataSources: IRef<ObjectId, IDataSource>[];
   dataYear: number;
   grade: string;
   isBrand: boolean;
@@ -40,7 +38,6 @@ export interface IShareableCompany {
 }
 
 export interface ICompany extends IShareableCompany {
-  dataSources: IRef<ObjectId, IDataSourceDocument>[];
   hidden: IHiddenCompany;
   legacyId: number;
   // eslint-disable-next-line no-use-before-define

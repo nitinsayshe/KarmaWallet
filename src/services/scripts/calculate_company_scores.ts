@@ -95,16 +95,14 @@ export const calculateAllCompanyScores = async () => {
         }
 
         if (value === null) {
-          allScores[goalNum - 1].push(0);
           unsdgScore = 0;
         } else if (value === 0) {
           unsdgScore = -1;
         } else {
-          allScores[goalNum - 1].push(companyDataSource.status === -1 ? -1 : value);
           unsdgScore = companyDataSource.status === -1 ? -1 : value;
         }
 
-        allScores[goalNum - 1].push(value);
+        allScores[goalNum - 1].push(unsdgScore);
 
         const companyUnsdg = new CompanyUnsdgModel({
           company,
@@ -118,6 +116,7 @@ export const calculateAllCompanyScores = async () => {
     }
 
     const unsdgScores = allScores.map(scores => calculateUnsdgScore(scores));
+
     const combinedScore = unsdgScores.reduce((acc, curr) => acc + curr, 0);
 
     try {

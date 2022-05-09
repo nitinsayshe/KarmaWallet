@@ -6,13 +6,11 @@ import {
   CompanyModel, ICompany, ICompanyDocument, ICompanyModel, IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg } from '../../models/companyUnsdg';
-import { DataSourceModel, IDataSourceModel } from '../../models/dataSource';
 import { ISectorModel, SectorModel } from '../../models/sector';
 import { UnsdgModel } from '../../models/unsdg';
 import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
-import { getShareableDataSource } from '../dataSources';
 import { getShareableSector } from '../sectors';
 
 export interface ICompanyRequestParams {
@@ -81,19 +79,11 @@ export const getCompanyById = async (__: IRequest, _id: string, includeHidden = 
             path: 'sectors.sector',
             model: SectorModel,
           },
-          {
-            path: 'dataSources',
-            model: DataSourceModel,
-          },
         ],
       })
       .populate({
         path: 'sectors.sector',
         model: SectorModel,
-      })
-      .populate({
-        path: 'dataSources',
-        model: DataSourceModel,
       });
 
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
@@ -116,19 +106,11 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
             path: 'sectors.sector',
             model: SectorModel,
           },
-          {
-            path: 'dataSources',
-            model: DataSourceModel,
-          },
         ],
       },
       {
         path: 'sectors.sector',
         model: SectorModel,
-      },
-      {
-        path: 'dataSources',
-        model: DataSourceModel,
       },
     ],
     page: query?.skip || 1,
@@ -207,7 +189,6 @@ export const getShareableCompany = ({
   _id,
   combinedScore,
   companyName,
-  dataSources,
   dataYear,
   grade,
   isBrand,
@@ -221,9 +202,6 @@ export const getShareableCompany = ({
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
   // need to get the sharable version of each resource.
-  const _dataSources = (!!dataSources && !!(dataSources as IDataSourceModel[]).filter(d => !!Object.keys(d).length).length)
-    ? dataSources.map(d => getShareableDataSource(d as IDataSourceModel))
-    : dataSources;
   const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
@@ -238,7 +216,6 @@ export const getShareableCompany = ({
     _id,
     combinedScore,
     companyName,
-    dataSources: _dataSources,
     dataYear,
     grade,
     isBrand,

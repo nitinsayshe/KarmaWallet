@@ -57,7 +57,7 @@ interface IRawCompanyJustCapitalDataSources {
   'justCapital_metric_Sustainable Products and Services': string;
   'justCapital_metric_Local Community Engagement': string;
   'justCapital_metric_Scope 1 Plus 2 Greenhouse Gas Emissions': string;
-  'justCapital_metric_Renewable Energy Percentage_0.5': string;
+  'justCapital_metric_Renewable Energy Percentage_Half': string;
   'justCapital_metric_Renewable Energy Percentage_1': string;
   'justCapital_metric_Diversity, Equity, and Inclusion Policies': string;
   'justCapital_metric_Transparent Charitable Giving': string;
@@ -236,7 +236,7 @@ const justCapitalDataSourceNames: JustCapitalDataSourceKeys[] = [
   'justCapital_metric_Sustainable Products and Services',
   'justCapital_metric_Local Community Engagement',
   'justCapital_metric_Scope 1 Plus 2 Greenhouse Gas Emissions',
-  'justCapital_metric_Renewable Energy Percentage_0.5',
+  'justCapital_metric_Renewable Energy Percentage_Half',
   'justCapital_metric_Renewable Energy Percentage_1',
   'justCapital_metric_Diversity, Equity, and Inclusion Policies',
   'justCapital_metric_Transparent Charitable Giving',

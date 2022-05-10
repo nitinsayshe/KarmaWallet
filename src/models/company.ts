@@ -11,6 +11,27 @@ import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
 
+export enum CompanyRating {
+  Positive = 'positive',
+  Neutral = 'neutral',
+  Negative = 'negative',
+}
+
+export const CompanyRatingThresholds = {
+  [CompanyRating.Positive]: {
+    min: 6,
+    max: 16,
+  },
+  [CompanyRating.Neutral]: {
+    min: -11,
+    max: 5,
+  },
+  [CompanyRating.Negative]: {
+    min: -16,
+    max: -12,
+  },
+};
+
 export interface IHiddenCompany {
   status: boolean;
   reason: string;
@@ -33,6 +54,7 @@ export interface IShareableCompany {
   logo: string;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, IShareableCompany>;
+  rating: CompanyRating;
   sectors: ICompanySector[];
   slug: string;
   url: string;
@@ -114,6 +136,13 @@ companySchema.plugin(mongoosePaginate);
 // eslint-disable-next-line func-names
 companySchema.virtual('slug').get(function (this: ICompanyDocument) {
   return slugify(this.companyName);
+});
+
+// eslint-disable-next-line func-names
+companySchema.virtual('rating').get(function (this: ICompanyDocument) {
+  if (this.combinedScore > CompanyRatingThresholds[CompanyRating.Neutral].max) return CompanyRating.Positive;
+  if (this.combinedScore < CompanyRatingThresholds[CompanyRating.Neutral].min) return CompanyRating.Negative;
+  return CompanyRating.Neutral;
 });
 
 export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);

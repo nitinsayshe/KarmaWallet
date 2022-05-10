@@ -1,4 +1,4 @@
-import { FilterQuery, ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { AqpQuery } from 'api-query-params';
 import {
   IShareableTransaction,
@@ -13,7 +13,7 @@ import { getShareableSector } from '../sectors';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { CompanyModel, ICompanyDocument, IShareableCompany } from '../../models/company';
+import { CompanyModel, CompanyRating, CompanyRatingThresholds, ICompanyDocument, IShareableCompany } from '../../models/company';
 import { getShareableCompany } from '../company';
 import { getShareableUser } from '../user';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
@@ -44,10 +44,111 @@ export interface ITransactionsRequestQuery extends AqpQuery {
   onlyOffsets?: boolean;
 }
 
+export interface ITransactionsAggregationRequestQuery {
+  userId?: string;
+  ratings?: CompanyRating[];
+  page?: number;
+  limit?: number;
+}
+
 export interface ITransactionOptions {
   includeOffsets?: boolean;
   includeNullCompanies?: boolean;
 }
+
+export const getRatedTransactions = (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
+  try {
+    const { ratings, userId, page, limit } = req.query;
+
+    if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+
+    if (!ratings || !ratings.length) throw new CustomError('A company rating is required to get rated transactions.', ErrorTypes.INVALID_ARG);
+
+    const _ratings = Array.isArray(ratings) ? ratings : [...(ratings as string).split(',')];
+
+    const invalidRatings = _ratings.filter(rating => !Object.values(CompanyRating).find(r => r === rating));
+    if (invalidRatings.length) throw new CustomError('One or more of the ratings found are invalid.', ErrorTypes.INVALID_ARG);
+
+    const userQuery: FilterQuery<ITransaction> = {
+      $and: [
+        { company: { $ne: null } },
+      ],
+    };
+
+    if (!!userId) {
+      if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      const _userId = new Types.ObjectId(userId);
+
+      userQuery.$and.push({
+        $or: [
+          { user: _userId },
+          { 'onBehalfOf.user': _userId },
+        ],
+      });
+    } else {
+      userQuery.$and.push({
+        $or: [
+          { user: req.requestor._id },
+          { 'onBehalfOf.user': req.requestor._id },
+        ],
+      });
+    }
+
+    const companyQuery: FilterQuery<ITransaction> = {
+      $or: _ratings.map(rating => {
+        if (rating === CompanyRating.Positive) {
+          return { 'company.combinedScore': { $gte: CompanyRatingThresholds[CompanyRating.Positive].min } };
+        }
+
+        if (rating === CompanyRating.Negative) {
+          return { 'company.combinedScore': { $lte: CompanyRatingThresholds[CompanyRating.Negative].max } };
+        }
+
+        return {
+          $and: [
+            { 'company.combinedScore': { $gte: CompanyRatingThresholds[CompanyRating.Neutral].min } },
+            { 'company.combinedScore': { $lte: CompanyRatingThresholds[CompanyRating.Neutral].max } },
+          ],
+        };
+      }),
+    };
+
+    const transactionAggregate = TransactionModel.aggregate([
+      {
+        $match: userQuery,
+      },
+      {
+        $lookup: {
+          from: 'companies',
+          localField: 'company',
+          foreignField: '_id',
+          as: 'company',
+        },
+      },
+      {
+        $unwind: {
+          path: '$company',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: companyQuery,
+      },
+    ]);
+
+    const options = {
+      page: page ?? 1,
+      limit: limit ?? 10,
+    };
+
+    return TransactionModel.aggregatePaginate(transactionAggregate, options);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
 
 export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
   const { userId, includeOffsets, includeNullCompanies, onlyOffsets } = req.query;

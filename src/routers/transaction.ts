@@ -16,4 +16,7 @@ router.route('/has-transactions')
 router.route('/most-recent')
   .get(authenticate, TransactionController.getMostRecentTransactions);
 
+router.route('/rated')
+  .get(authenticate, TransactionController.getRatedTransactions);
+
 export default (app: Express) => app.use('/transaction', router);

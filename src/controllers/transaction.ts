@@ -42,6 +42,20 @@ export const getMostRecentTransactions: IRequestHandler = async (req, res) => {
   }
 };
 
+export const getRatedTransactions: IRequestHandler = async (req, res) => {
+  try {
+    const transactions = await TransactionService.getRatedTransactions(req as IRequest<{}, TransactionService.ITransactionsRequestQuery>);
+    const sharableTransactions = {
+      ...transactions,
+      docs: transactions.docs.map((t: ITransactionDocument) => TransactionService.getShareableTransaction(t)),
+    };
+
+    output.api(req, res, sharableTransactions);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const hasTransactions: IRequestHandler<{}, TransactionService.ITransactionsRequestQuery> = async (req, res) => {
   try {
     const userHasTransactions = await TransactionService.hasTransactions(req);

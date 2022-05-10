@@ -205,6 +205,7 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
 };
 
 export const getShareableTransaction = ({
+  _id,
   user,
   company,
   card,
@@ -231,7 +232,8 @@ export const getShareableTransaction = ({
     ? getShareableSector(sector as ISectorDocument)
     : sector;
 
-  const shareableTransaction: Partial<IShareableTransaction> = {
+  const shareableTransaction: Partial<IShareableTransaction & { _id: string }> = {
+    _id,
     user: _user,
     company: _company,
     card: _card,

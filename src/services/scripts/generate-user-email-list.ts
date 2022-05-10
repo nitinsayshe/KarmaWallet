@@ -20,6 +20,7 @@ interface IParsedUser {
   dateLinked?: Date;
   loginCount: number;
   lastLogin: Date;
+  dateCardLinked: Date;
 }
 
 const splitNameIntoFirstAndLast = (name: string): { firstName: string, lastName: string } => {
@@ -40,16 +41,17 @@ export const generateUserEmailList = async () => {
       const { firstName, lastName } = splitNameIntoFirstAndLast(user.name);
 
       const logins = await LegacySessionModel.find({ uid: user.legacyId }).sort({ sessionTime: -1 }).lean();
-      const cards = await CardModel.find({ userId: user._id, status: CardStatus.Linked }).lean();
+      const cards = await CardModel.find({ userId: user._id, status: CardStatus.Linked }).sort({ createdOn: 1 }).lean();
 
       parsedUsers.push({
         _id: user._id.toString(),
-        email: user?.email || user?.emails.find(e => e?.primary)?.email,
+        email: user?.emails.find(e => e?.primary)?.email,
         name: user.name,
         dateJoined: user.dateJoined,
         firstName,
         lastName,
         cardsLinked: cards.length,
+        dateCardLinked: cards.length ? cards[0].createdOn : null,
         loginCount: logins.length,
         lastLogin: logins[0]?.sessionTime || null,
       });

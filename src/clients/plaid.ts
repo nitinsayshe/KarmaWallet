@@ -38,6 +38,7 @@ const logger = pino();
  */
 export interface IPlaidErrorResponse {
   response: {
+    status?: number;
     data: {
       display_message: string;
       documentation_url: string;
@@ -92,11 +93,12 @@ export class PlaidClient extends SdkClient {
     this._client = new PlaidApi(configuration);
   }
 
-  handlePlaidError = (e: IPlaidErrorResponse | any) => {
+  handlePlaidError = (e: IPlaidErrorResponse) => {
     if (e?.response?.data) {
       const { error_code, error_message } = e.response.data;
       throw new CustomError(error_message, { name: error_code, code: e?.response?.status || ErrorTypes.SERVICE.code });
     }
+    throw asCustomError(e);
   };
 
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
@@ -123,8 +125,7 @@ export class PlaidClient extends SdkClient {
       const response = await this._client.linkTokenCreate(configs);
       return { userId, ...response.data };
     } catch (e) {
-      this.handlePlaidError(e);
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 
@@ -147,8 +148,7 @@ export class PlaidClient extends SdkClient {
       const response = await this._client.itemAccessTokenInvalidate({ access_token });
       return response.data;
     } catch (e) {
-      this.handlePlaidError(e);
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 
@@ -158,8 +158,7 @@ export class PlaidClient extends SdkClient {
       const response = await this._client.itemRemove({ access_token });
       return response.data;
     } catch (e) {
-      this.handlePlaidError(e);
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 
@@ -233,28 +232,28 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  sandboxCreatePublicToken = async ({ userId }: { userId: string }) => {
-    if (!userId) throw new CustomError('A userId is required to create a sandbox public token', ErrorTypes.INVALID_ARG);
+  sandboxCreatePublicToken = async (institutionId = 'ins_3') => {
     const configs: SandboxPublicTokenCreateRequest = {
-      institution_id: 'ins_3',
+      institution_id: institutionId,
       initial_products: [Products.Transactions],
-      options: {
-        override_username: userId,
-        override_password: 'karma_wallet_sandbox_password',
-        webhook: process.env.PLAID_WEBHOOK_URI,
-      },
     };
     try {
       const publicTokenResponse = await this._client.sandboxPublicTokenCreate(configs);
-      const publicToken = publicTokenResponse.data.public_token;
+      return publicTokenResponse.data.public_token;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
+  };
+
+  sandboxExchangePublicToken = async (publicToken: string) => {
+    try {
       const exchangeRequest: ItemPublicTokenExchangeRequest = {
         public_token: publicToken,
       };
       const exchangeTokenResponse = await this._client.itemPublicTokenExchange(exchangeRequest);
       return exchangeTokenResponse.data.access_token;
     } catch (e) {
-      this.handlePlaidError(e);
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 
@@ -266,8 +265,7 @@ export class PlaidClient extends SdkClient {
       if (!access_token) throw new CustomError('An access token is required.', ErrorTypes.INVALID_ARG);
       return this._client.sandboxItemFireWebhook({ access_token, webhook_code });
     } catch (e) {
-      this.handlePlaidError(e);
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 
@@ -299,8 +297,7 @@ export class PlaidClient extends SdkClient {
         throw new CustomError('Invalid request body', ErrorTypes.SERVICE);
       }
     } catch (e) {
-      this.handlePlaidError(e);
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 }

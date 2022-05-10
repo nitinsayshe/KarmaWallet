@@ -79,21 +79,20 @@ export const reset = async (_: IRequest) => {
   await mapper.reset();
 };
 
-export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody>) => {
+export const createLinkToken = (req: IRequest<{}, {}, ICreateLinkTokenBody>) => {
   const userId = req.requestor._id.toString();
   const { accessToken: access_token } = req.body;
   const client = new PlaidClient();
   return client.createLinkToken({ userId, access_token });
 };
 
-export const exchangePublicToken = async (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {
-  // const userId = req.requestor._id.toString();
+export const exchangePublicToken = (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {
   const { publicToken: public_token } = req.body;
   const client = new PlaidClient();
   return client.exchangePublicTokenForAccessToken({ public_token });
 };
 
-export const sandboxFireTestWebhook = async (req: IRequest<{}, {}, ISandboxItemFireWebhookBody>) => {
+export const sandboxFireTestWebhook = (req: IRequest<{}, {}, ISandboxItemFireWebhookBody>) => {
   const { accessToken: access_token, webhookCode: webhook_code } = req.body;
   const client = new PlaidClient();
   return client.sandboxFireTestWebhook({ access_token, webhook_code });

@@ -121,10 +121,8 @@ export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransac
   }
 };
 
-export const handlePlaidWebhook: IRequestHandler<{}, {}, Partial<IPlaidWebhookBody>> = async (req, res) => {
+export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
   try {
-    // TODO: verify webhook
-    // https://plaid.com/docs/api/webhooks/webhook-verification/
     const signedJwt = req.headers?.['plaid-verification'];
     const client = new PlaidClient();
     await client.verifyWebhook({ signedJwt, requestBody: req.body });

@@ -1,4 +1,4 @@
-import { Express, Router } from 'express';
+import { Router } from 'express';
 import * as PlaidController from '../../controllers/integrations/plaid';
 import authenticate from '../../middleware/authenticate';
 
@@ -10,4 +10,4 @@ router.route('/create-link-token')
 router.route('/exchange-public-token')
   .post(authenticate, PlaidController.exchangePublicToken);
 
-export default (app: Express) => app.use('/plaid', router);
+export default router;

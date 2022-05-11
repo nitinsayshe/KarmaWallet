@@ -47,8 +47,12 @@ class User {
 
   load = async () => {
     if (!this._user) {
-      this._user = await UserModel.findOne({ legacyId: this._userId });
-
+      this._user = await UserModel.findOne({
+        $or: [
+          { legacyId: this._userId },
+          { _id: this._userId },
+        ],
+      });
       if (!this._user) throw new Error(`User ${this._userId} not found.`);
     }
   };

@@ -54,12 +54,12 @@ class Card {
    */
   toKarmaFormat = () => ({
     userId: this._userId,
-    name: this._account.name,
+    name: this._account?.name,
     mask: this._account.mask,
     type: this._account.type,
     subtype: this._account.subtype,
     status: CardStatus.Linked,
-    institution: this._institution.name,
+    institution: this._institution?.name,
     integrations: {
       plaid: {
         accessToken: this._accessToken,
@@ -67,7 +67,7 @@ class Card {
         items: Array.from(this._plaid_items),
         publicToken: this._publicToken,
         linkSessionId: this._linkSessionId,
-        institutionId: this._institution.institution_id,
+        institutionId: this._institution?.institution_id,
       },
     },
   });
@@ -109,11 +109,11 @@ class Card {
     // returned from Plaid could change.
     let card = await CardModel.findOne({
       userId: this._userId,
-      name: this._account.name,
+      name: this._account?.name,
       mask: this._account.mask,
       type: this._account.type,
       subtype: this._account.subtype,
-      institution: this._institution.name,
+      institution: this._institution?.name,
     });
 
     if (!!card) {

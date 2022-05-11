@@ -161,7 +161,7 @@ export class PlaidClient extends SdkClient {
         itemId,
       };
     } catch (e) {
-      throw asCustomError(e);
+      this.handlePlaidError(e as IPlaidErrorResponse);
     }
   };
 

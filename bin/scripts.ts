@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateUserEmailList } from '../src/services/scripts/generate-user-email-list';
+import { PlaidClient } from '../src/clients/plaid';
 
 (async () => {
   try {
@@ -12,7 +12,9 @@ import { generateUserEmailList } from '../src/services/scripts/generate-user-ema
     // } as IRequest);
     await MongoClient.init();
 
-    await generateUserEmailList();
+    const client = new PlaidClient();
+    const publicToken = await client.sandboxCreatePublicToken();
+    console.log(publicToken);
 
     // add mappers here...
     await MongoClient.disconnect();

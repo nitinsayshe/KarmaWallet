@@ -25,3 +25,8 @@ export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMap
   SocketClient.socket.emit({ rooms: [`user/${result.userId}`], eventName: SocketEvents.Update, type: SocketEventTypes.PlaidTransactionsReady });
   console.log(`${JobNames.UserPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
 };
+
+export const onFailed = (_: SandboxedJob, err: Error) => {
+  console.log(`${JobNames.TotalOffsetsForAllUsers} failed`);
+  console.log(err);
+};

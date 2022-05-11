@@ -72,6 +72,11 @@ export interface IVerifyWebhookParams {
   requestBody: any;
 }
 
+export interface IExchangePublicTokenForAccessTokenParams {
+  public_token: string;
+  userId: string;
+}
+
 export class PlaidClient extends SdkClient {
   _client: PlaidApi;
 
@@ -131,7 +136,7 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  exchangePublicTokenForAccessToken = async ({ public_token }: ItemPublicTokenExchangeRequest) => {
+  exchangePublicTokenForAccessToken = async ({ public_token, userId }: IExchangePublicTokenForAccessTokenParams) => {
     if (!public_token) throw new CustomError('A public token is required.', ErrorTypes.INVALID_ARG);
     try {
       const response = await this._client.itemPublicTokenExchange({ public_token });
@@ -147,9 +152,10 @@ export class PlaidClient extends SdkClient {
         start_date: startDate.format('YYYY-MM-DD'),
         end_date: endDate.format('YYYY-MM-DD'),
       });
-      const plaidUserInstance = new PlaidUser(transactionDataResponse.data);
+      const plaidItem = { ...transactionDataResponse.data, userId };
+      const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
-      await plaidUserInstance.addCards(transactionDataResponse.data, true);
+      await plaidUserInstance.addCards(plaidItem, true);
       return {
         message: 'Successfully linked plaid account',
         itemId,

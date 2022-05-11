@@ -68,12 +68,17 @@ export interface IEmailJobData {
   name?: string;
   style?: string;
   token?: string;
+  isSuccess?: boolean;
 }
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
   data: Partial<IEmailJobData>;
   templatePath?: string;
   stylePath?: string;
+}
+
+export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
+  isSuccess: boolean;
 }
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
@@ -235,6 +240,25 @@ export const sendWelcomeCCG1Email = async ({
   });
   const subject = 'Make the Most of your Karma Wallet 💜';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendTransactionsProcessedEmail = async ({
+  user,
+  recipientEmail,
+  isSuccess,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  sendEmail = true,
+}: ISendTransactionsProcessedEmailParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.TrasactionsProcessed;
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain } });
+  const subject = 'Your KarmaWallet Impact';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

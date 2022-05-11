@@ -95,9 +95,10 @@ export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody
 };
 
 export const exchangePublicToken = (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {
+  const { requestor } = req;
   const { publicToken: public_token } = req.body;
   const client = new PlaidClient();
-  return client.exchangePublicTokenForAccessToken({ public_token });
+  return client.exchangePublicTokenForAccessToken({ public_token, userId: requestor._id.toString() });
 };
 
 export const sandboxFireTestWebhook = (req: IRequest<{}, {}, ISandboxItemFireWebhookBody>) => {

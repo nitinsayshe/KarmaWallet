@@ -1,13 +1,15 @@
 /* eslint-disable camelcase */
 import { SandboxItemFireWebhookRequestWebhookCodeEnum } from 'plaid';
-import { asCustomError } from '../../lib/customError';
+import CustomError, { asCustomError } from '../../lib/customError';
 import { PlaidItemModel } from '../../models/plaidItem';
 import { IRequest } from '../../types/request';
 import { PlaidMapper } from './mapper';
 import { PlaidClient } from '../../clients/plaid';
+import { _getCard } from '../../services/card';
+import { ErrorTypes } from '../../lib/constants';
 
 export interface ICreateLinkTokenBody {
-  accessToken?: string;
+  cardId?: string;
 }
 export interface IExchangePublicTokenBody {
   publicToken?: string;
@@ -79,9 +81,15 @@ export const reset = async (_: IRequest) => {
   await mapper.reset();
 };
 
-export const createLinkToken = (req: IRequest<{}, {}, ICreateLinkTokenBody>) => {
+export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody>) => {
   const userId = req.requestor._id.toString();
-  const { accessToken: access_token } = req.body;
+  const { cardId } = req.body;
+  let access_token;
+  if (cardId) {
+    const card = await _getCard({ _id: cardId, user: userId });
+    if (!card) throw new CustomError(`Card with id ${cardId} not found`, ErrorTypes.NOT_FOUND);
+    access_token = card?.integrations?.plaid?.accessToken;
+  }
   const client = new PlaidClient();
   return client.createLinkToken({ userId, access_token });
 };

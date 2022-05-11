@@ -57,7 +57,7 @@ export interface ITransactionOptions {
   includeNullCompanies?: boolean;
 }
 
-export const getRatedTransactions = (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
+export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
   try {
     const { ratings, userId, page, limit } = req.query;
 
@@ -145,13 +145,32 @@ export const getRatedTransactions = (req: IRequest<{}, ITransactionsAggregationR
       limit: limit ?? 10,
     };
 
-    return TransactionModel.aggregatePaginate(transactionAggregate, options);
+    const transactions = await TransactionModel.aggregatePaginate(transactionAggregate, options);
+
+    const pageIncludesOffsets = transactions.docs.filter(transaction => !!transaction.integrations?.rare).length;
+
+    if (!!pageIncludesOffsets) {
+      try {
+        const Rare = new RareClient();
+        const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
+
+        transactions.docs.forEach(transaction => {
+          const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+          transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
+        });
+      } catch (err) {
+        console.log('[-] Failed to retrieve Rare transactions');
+        console.log(err);
+      }
+    }
+
+    return transactions;
   } catch (err) {
     throw asCustomError(err);
   }
 };
 
-export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
+export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
   const { userId, includeOffsets, includeNullCompanies, onlyOffsets } = req.query;
 
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
@@ -221,7 +240,28 @@ export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, qu
   if (!includeOffsets && !onlyOffsets) filter.$and.push({ 'integrations.rare': null });
   if (!includeNullCompanies) filter.$and.push({ company: { $ne: null } });
 
-  return TransactionModel.paginate(filter, paginationOptions);
+  const transactions = await TransactionModel.paginate(filter, paginationOptions);
+
+  if (includeOffsets || onlyOffsets) {
+    const pageIncludesOffsets = transactions.docs.filter(transaction => !!transaction.integrations?.rare).length;
+
+    if (!!pageIncludesOffsets) {
+      try {
+        const Rare = new RareClient();
+        const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
+
+        transactions.docs.forEach(transaction => {
+          const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+          transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
+        });
+      } catch (err) {
+        console.log('[-] Failed to retrieve Rare transactions');
+        console.log(err);
+      }
+    }
+  }
+
+  return transactions;
 };
 
 export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTransactionsRequestQuery>) => {

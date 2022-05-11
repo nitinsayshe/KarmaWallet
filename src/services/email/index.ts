@@ -56,7 +56,7 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
 
 export interface IEmailJobData {
   template: string;
-  user: Types.ObjectId;
+  user: Types.ObjectId | string;
   subject: string;
   senderEmail: string;
   recipientEmail: string;

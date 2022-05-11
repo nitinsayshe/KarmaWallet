@@ -13,7 +13,7 @@ import { getShareableSector } from '../sectors';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { CompanyModel, CompanyRating, CompanyRatingThresholds, ICompanyDocument, IShareableCompany } from '../../models/company';
+import { CompanyModel, ICompanyDocument, IShareableCompany } from '../../models/company';
 import { getShareableCompany } from '../company';
 import { getShareableUser } from '../user';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
@@ -21,6 +21,7 @@ import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
 import { getShareableCard } from '../card';
 import { GroupModel } from '../../models/group';
 import { _getTransactions } from './utils';
+import { CompanyRating, CompanyRatingThresholds } from '../../lib/constants/company';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -165,6 +166,9 @@ export const getTransactions = (req: IRequest<{}, ITransactionsRequestQuery>, qu
       {
         path: 'company',
         model: CompanyModel,
+      },
+      {
+        path: 'company.rating',
       },
       {
         path: 'card',

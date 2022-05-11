@@ -10,27 +10,8 @@ import { IModel, IRef } from '../types/model';
 import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
-
-export enum CompanyRating {
-  Positive = 'positive',
-  Neutral = 'neutral',
-  Negative = 'negative',
-}
-
-export const CompanyRatingThresholds = {
-  [CompanyRating.Positive]: {
-    min: 6,
-    max: 16,
-  },
-  [CompanyRating.Neutral]: {
-    min: -11,
-    max: 5,
-  },
-  [CompanyRating.Negative]: {
-    min: -16,
-    max: -12,
-  },
-};
+import { CompanyRating } from '../lib/constants/company';
+import { getCompanyRating } from '../lib/company';
 
 export interface IHiddenCompany {
   status: boolean;
@@ -140,9 +121,7 @@ companySchema.virtual('slug').get(function (this: ICompanyDocument) {
 
 // eslint-disable-next-line func-names
 companySchema.virtual('rating').get(function (this: ICompanyDocument) {
-  if (this.combinedScore > CompanyRatingThresholds[CompanyRating.Neutral].max) return CompanyRating.Positive;
-  if (this.combinedScore < CompanyRatingThresholds[CompanyRating.Neutral].min) return CompanyRating.Negative;
-  return CompanyRating.Neutral;
+  return getCompanyRating(this.combinedScore);
 });
 
 export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);

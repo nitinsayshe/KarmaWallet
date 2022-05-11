@@ -21,7 +21,7 @@ class User {
    *
    * @param {Object} plaidAccounts - array of plaid account objects
    */
-  addCards = async (plaidItem: TransactionsGetResponse) => {
+  addCards = async (plaidItem: TransactionsGetResponse, skipTransactionMapping?: boolean) => {
     let unmappedTransactions = plaidItem.transactions;
     let duplicates: PlaidTransaction[] = [];
 
@@ -35,10 +35,11 @@ class User {
       }
 
       await this._cards[`${account.id}`].save();
-
-      const results = await this._cards[`${account.id}`].mapTransactions(unmappedTransactions);
-      duplicates = [...duplicates, ...results.duplicateTransactions];
-      unmappedTransactions = results.unmappedTransactions;
+      if (!skipTransactionMapping) {
+        const results = await this._cards[`${account.id}`].mapTransactions(unmappedTransactions);
+        duplicates = [...duplicates, ...results.duplicateTransactions];
+        unmappedTransactions = results.unmappedTransactions;
+      }
     }
 
     return { unmappedTransactions, duplicateTransactions: duplicates };
@@ -53,3 +54,7 @@ class User {
   };
 }
 export default User;
+
+// new User(plaidItem)
+// load()
+// addcards(plaidItem)

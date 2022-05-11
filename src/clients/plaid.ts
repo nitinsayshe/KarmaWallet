@@ -16,11 +16,13 @@ import pino from 'pino';
 import jsonwebtoken from 'jsonwebtoken';
 import jwkToPem from 'jwk-to-pem';
 import crypto from 'crypto';
+import dayjs from 'dayjs';
 import { ErrorTypes, CardStatus } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
+import PlaidUser from '../integrations/plaid/user';
 
 const logger = pino();
 
@@ -135,7 +137,23 @@ export class PlaidClient extends SdkClient {
       const response = await this._client.itemPublicTokenExchange({ public_token });
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
-      return { accessToken, itemId };
+      // transactions will not be available at this point
+      // account data should be available at this point
+      const endDate = dayjs();
+      // date in past is arbitrary
+      const startDate = endDate.subtract(90, 'day');
+      const transactionDataResponse = await this._client.transactionsGet({
+        access_token: accessToken,
+        start_date: startDate.format('YYYY-MM-DD'),
+        end_date: endDate.format('YYYY-MM-DD'),
+      });
+      const plaidUserInstance = new PlaidUser(transactionDataResponse.data);
+      await plaidUserInstance.load();
+      await plaidUserInstance.addCards(transactionDataResponse.data, true);
+      return {
+        message: 'Successfully linked plaid account',
+        itemId,
+      };
     } catch (e) {
       throw asCustomError(e);
     }
@@ -150,6 +168,11 @@ export class PlaidClient extends SdkClient {
     } catch (e) {
       this.handlePlaidError(e as IPlaidErrorResponse);
     }
+  };
+
+  getItem = async (accessToken: string) => {
+    const response = await this._client.itemGet({ access_token: accessToken });
+    return response.data.item;
   };
 
   removeItem = async ({ access_token }: { access_token: string }) => {

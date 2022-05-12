@@ -24,7 +24,7 @@ export interface IUnsdgMapItem {
 }
 
 export interface IDataSourceMapping {
-  source: IRef<Object, IDataSourceDocument>;
+  source: IRef<ObjectId, IDataSourceDocument>;
   unsdgs: IUnsdgMapItem[];
 }
 

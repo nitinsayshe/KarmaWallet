@@ -3,15 +3,16 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { IUnsdgCategoryDocument } from './unsdgCategory';
 
 export interface IUnsdgSubcategory {
   name: string;
-  category: IUnsdgCategoryDocument['_id'];
+  category: IRef<ObjectId, IUnsdgCategoryDocument>;
   categoryIndex: number;
-  createOn: Date;
+  createdOn: Date;
   lastModified: Date;
 }
 

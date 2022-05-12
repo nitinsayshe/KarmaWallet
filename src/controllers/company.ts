@@ -1,5 +1,4 @@
 import aqp from 'api-query-params';
-import { toUTC } from '../lib/date';
 import { IRequestHandler } from '../types/request';
 import * as CompanyService from '../services/company';
 import * as output from '../services/output';
@@ -30,9 +29,19 @@ export const getCompanies: IRequestHandler = async (req, res) => {
 
 export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req, res) => {
   try {
+    console.log('>>>>> ');
+    console.log('>>>>> getting company by id');
+
     const { companyId } = req.params;
     const company = await CompanyService.getCompanyById(req, companyId);
-    output.api(req, res, CompanyService.getShareableCompany(company));
+
+    console.log('>>>>> company', company);
+    console.log('>>>>> ');
+
+    output.api(req, res, {
+      company: CompanyService.getShareableCompany(company.company),
+      unsdgs: company.unsdgs.map(unsdg => CompanyService.getShareableCompanyUnsdg(unsdg)),
+    });
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -75,9 +84,7 @@ export const getPartners: IRequestHandler<{}, IGetPartnersQuery> = async (req, r
 export const getUNSDGs: IRequestHandler<{ _id: string }> = async (req, res) => {
   try {
     const { _id } = req.params;
-    const now = toUTC(new Date());
-
-    const result = await CompanyService.getCompanyUNSDGs(req, _id, now.getFullYear());
+    const result = await CompanyService.getCompanyUNSDGs(req, { company: _id });
     output.api(req, res, result);
   } catch (err) {
     output.error(req, res, asCustomError(err));

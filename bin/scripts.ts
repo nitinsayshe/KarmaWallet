@@ -5,7 +5,6 @@ import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
-import { generateCompanyDataSourceMappingReport } from '../src/services/scripts/generate_company_data_source_mapping_report';
 
 dayjs.extend(utc);
 
@@ -22,7 +21,7 @@ dayjs.extend(utc);
     // await mapDataSourcesToUNSDGs();
     // await mapCompanies2DataSources();
     await calculateAllCompanyScores();
-    await generateCompanyDataSourceMappingReport();
+    // await generateCompanyDataSourceMappingReport();
 
     await MongoClient.disconnect();
   } catch (err) {

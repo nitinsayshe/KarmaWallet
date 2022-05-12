@@ -3,15 +3,16 @@ import { FilterQuery } from 'mongoose';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import {
-  CompanyModel, ICompany, ICompanyDocument, ICompanyModel, IShareableCompany,
+  CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
 } from '../../models/company';
-import { CompanyUnsdgModel, ICompanyUnsdg } from '../../models/companyUnsdg';
+import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { ISectorModel, SectorModel } from '../../models/sector';
-import { UnsdgModel } from '../../models/unsdg';
+import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
 import { getShareableSector } from '../sectors';
+import { getShareableUnsdg } from '../unsdgs';
 
 export interface ICompanyRequestParams {
   companyId: string;
@@ -21,21 +22,6 @@ export interface IUpdateCompanyRequestBody {
   companyName: string;
   url: string;
 }
-
-const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
-  .find(query)
-  .populate({
-    path: 'unsdg',
-    model: UnsdgModel,
-    populate: {
-      path: 'subCategory',
-      model: UnsdgSubcategoryModel,
-      populate: {
-        path: 'category',
-        model: UnsdgCategoryModel,
-      },
-    },
-  });
 
 /**
  * this function should only be used internally. for anything client
@@ -65,7 +51,22 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
     ]);
 };
 
-export const getCompanyById = async (__: IRequest, _id: string, includeHidden = false) => {
+export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
+  .find(query)
+  .populate({
+    path: 'unsdg',
+    model: UnsdgModel,
+    populate: {
+      path: 'subCategory',
+      model: UnsdgSubcategoryModel,
+      populate: {
+        path: 'category',
+        model: UnsdgCategoryModel,
+      },
+    },
+  });
+
+export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
     const query: FilterQuery<ICompany> = { _id };
     if (!includeHidden) query['hidden.status'] = false;
@@ -88,7 +89,9 @@ export const getCompanyById = async (__: IRequest, _id: string, includeHidden = 
 
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
 
-    return (company as ICompanyModel);
+    const unsdgs = await getCompanyUNSDGs(req, { company });
+
+    return { company, unsdgs };
   } catch (err) {
     throw asCustomError(err);
   }
@@ -163,28 +166,6 @@ export const getPartners = (req: IRequest, companiesCount: number, includeHidden
     .limit(companiesCount);
 };
 
-export const getCompanyUNSDGs = async (__: IRequest, companyId: string, year: number) => {
-  try {
-    let unsdgs = await _getCompanyUNSDGs({
-      companyId,
-      year,
-    });
-
-    // if no unsdgs found, try to retrieve from previous year
-    if (!unsdgs.length) {
-      unsdgs = await _getCompanyUNSDGs({
-        companyId,
-        year: year - 1,
-      });
-    }
-
-    if (!unsdgs.length) throw new CustomError('No UNSDGs were found for this company.', ErrorTypes.NOT_FOUND);
-    return unsdgs;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
 export const getShareableCompany = ({
   _id,
   combinedScore,
@@ -227,6 +208,14 @@ export const getShareableCompany = ({
     lastModified,
   };
 };
+
+export const getShareableCompanyUnsdg = ({
+  unsdg,
+  value,
+}: ICompanyUnsdgDocument) => ({
+  unsdg: getShareableUnsdg(unsdg as IUnsdgDocument),
+  value,
+});
 
 export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
   try {

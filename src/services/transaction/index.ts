@@ -30,7 +30,7 @@ export interface IGetRecentTransactionsRequestQuery {
   userId?: string | ObjectId;
 }
 
-export const _getTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.aggregate([
+export const _getTransactions = async (query: FilterQuery<ITransactionDocument>): Promise<ITransactionDocument[]> => TransactionModel.aggregate([
   { $match: query },
   {
     $lookup: {

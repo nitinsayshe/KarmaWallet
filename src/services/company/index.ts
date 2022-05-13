@@ -8,11 +8,11 @@ import {
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { ISectorModel, SectorModel } from '../../models/sector';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
-import { UnsdgCategoryModel } from '../../models/unsdgCategory';
-import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
+import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
+import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
 import { getShareableSector } from '../sectors';
-import { getShareableUnsdg } from '../unsdgs';
+import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
 
 export interface ICompanyRequestParams {
   companyId: string;
@@ -169,6 +169,8 @@ export const getPartners = (req: IRequest, companiesCount: number, includeHidden
 export const getShareableCompany = ({
   _id,
   combinedScore,
+  categoryScores,
+  subcategoryScores,
   companyName,
   dataYear,
   grade,
@@ -186,6 +188,21 @@ export const getShareableCompany = ({
   const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
+
+  const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
+    ? {
+      category: getShareableCategory(cs.category as IUnsdgCategoryDocument),
+      score: cs.score,
+    }
+    : cs));
+
+  const _subcategoryScores = (subcategoryScores || []).map(scs => ((!!scs && !!Object.values(scs).length)
+    ? {
+      subcategory: getShareableSubCategory(scs.subcategory as IUnsdgSubcategoryDocument),
+      score: scs.score,
+    }
+    : scs));
+
   const _sectors = (!!sectors && !!sectors.filter(s => !!Object.keys(s.sector).length).length)
     ? sectors.map(s => ({
       sector: getShareableSector(s.sector as ISectorModel),
@@ -196,6 +213,8 @@ export const getShareableCompany = ({
   return {
     _id,
     combinedScore,
+    categoryScores: _categoryScores,
+    subcategoryScores: _subcategoryScores,
     companyName,
     dataYear,
     grade,

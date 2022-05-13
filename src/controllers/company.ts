@@ -29,14 +29,8 @@ export const getCompanies: IRequestHandler = async (req, res) => {
 
 export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req, res) => {
   try {
-    console.log('>>>>> ');
-    console.log('>>>>> getting company by id');
-
     const { companyId } = req.params;
     const company = await CompanyService.getCompanyById(req, companyId);
-
-    console.log('>>>>> company', company);
-    console.log('>>>>> ');
 
     output.api(req, res, {
       company: CompanyService.getShareableCompany(company.company),

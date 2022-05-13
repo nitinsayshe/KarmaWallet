@@ -1,10 +1,12 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { CompanyModel, ICompanyDocument } from '../../models/company';
+import { CompanyModel, ICategoryScore, ICompanyDocument, ISubcategoryScore } from '../../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceModel } from '../../models/companyDataSource';
 import { CompanyUnsdgModel, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { DataSourceMappingModel, IDataSourceMappingModel } from '../../models/dataSourceMapping';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
+import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
+import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 
 dayjs.extend(utc);
 
@@ -37,11 +39,19 @@ export const calculateAllCompanyScores = async () => {
   console.log('calculating scores for all companies...');
 
   let companies: ICompanyDocument[];
+  let categories: IUnsdgCategoryDocument[];
+  let subcategories: IUnsdgSubcategoryDocument[];
 
   try {
     companies = await CompanyModel.find({});
+    categories = await UnsdgCategoryModel.find({});
+    subcategories = await UnsdgSubcategoryModel.find({})
+      .populate([{
+        path: 'category',
+        model: UnsdgCategoryModel,
+      }]);
   } catch (err) {
-    console.log('[-] err retrieving companies');
+    console.log('[-] err retrieving companies, categories, and/or subcategories');
     console.log(err);
   }
 
@@ -72,7 +82,6 @@ export const calculateAllCompanyScores = async () => {
 
     if (!companyDataSources || !unsdgMappings) continue;
 
-    // const allScores: number[][] = [];
     const promises: Promise<any>[] = [];
 
     const companyUnsdgs: { [key: string]: ICompanyUnsdgDocument } = {};
@@ -101,10 +110,6 @@ export const calculateAllCompanyScores = async () => {
           });
         }
 
-        // while (allScores.length < goalNum) {
-        //   allScores.push([]);
-        // }
-
         if (value === null) {
           unsdgScore = 0;
         } else if (value === 0) {
@@ -113,37 +118,54 @@ export const calculateAllCompanyScores = async () => {
           unsdgScore = companyDataSource.status === -1 ? -1 : value;
         }
 
-        // allScores[goalNum - 1].push(unsdgScore);
-
-        // const companyUnsdg = new CompanyUnsdgModel({
-        //   company,
-        //   unsdg: unsdgMapping.unsdgs[i].unsdg,
-        //   value: unsdgScore,
-        //   createdAt: dayjs().utc().toDate(),
-        // });
-
         companyUnsdgs[title].allValues.push({
           value: unsdgScore,
           dataSource: unsdgMapping.source,
         });
-
-        // promises.push(companyUnsdg.save());
       }
     }
 
+    // TODO: calculate category scores and subcategory scores
+
     const unsdgScores: number[] = [];
+    const allCategoryScores: { [key: string]: number[] } = {};
+    const allSubcategoryScores: { [key: string]: number[] } = {};
 
     Object.values(companyUnsdgs).forEach(companyUnsdg => {
       const score = calculateUnsdgScore(companyUnsdg.allValues.map(a => a.value));
       unsdgScores.push(score);
       companyUnsdg.value = score;
+
+      const unsdgSubcategory = subcategories.find(s => s._id.toString() === (companyUnsdg.unsdg as IUnsdgDocument).subCategory.toString());
+      const unsdgCategory = categories.find(c => c._id.toString() === (unsdgSubcategory.category as IUnsdgCategoryDocument)._id.toString());
+
+      if (!allSubcategoryScores[unsdgSubcategory._id.toString()]) {
+        allSubcategoryScores[unsdgSubcategory._id.toString()] = [];
+      }
+
+      if (!allCategoryScores[unsdgCategory._id.toString()]) {
+        allCategoryScores[unsdgCategory._id.toString()] = [];
+      }
+
+      allSubcategoryScores[unsdgSubcategory._id.toString()].push(score);
+      allCategoryScores[unsdgCategory._id.toString()].push(score);
+
       promises.push(companyUnsdg.save());
     });
 
     const combinedScore = unsdgScores.reduce((acc, curr) => acc + curr, 0);
 
+    const subcategoryScores: ISubcategoryScore[] = Object.entries(allSubcategoryScores).map(([key, scores]) => ({
+      subcategory: subcategories.find(s => s._id.toString() === key),
+      score: scores.reduce((acc, curr) => acc + curr, 0),
+    }));
+    const categoryScores: ICategoryScore[] = Object.entries(allCategoryScores).map(([key, scores]) => ({
+      category: categories.find(c => c._id.toString() === key),
+      score: scores.reduce((acc, curr) => acc + curr, 0),
+    }));
+
     try {
-      await CompanyModel.updateOne({ _id: company._id }, { combinedScore });
+      await CompanyModel.updateOne({ _id: company._id }, { combinedScore, subcategoryScores, categoryScores });
       await Promise.all(promises);
       count += 1;
     } catch (err) {

@@ -1,6 +1,6 @@
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
-import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
-import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
+import { IUnsdgCategory, IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
+import { IUnsdgSubcategory, IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 
 export const getUnsdgs = async () => {
   try {
@@ -36,7 +36,7 @@ export const getShareableCategory = ({
   index,
   createdOn,
   lastModified,
-}: IUnsdgCategoryDocument) => ({
+}: IUnsdgCategoryDocument): IUnsdgCategory => ({
   name,
   index,
   createdOn,
@@ -49,7 +49,7 @@ export const getShareableSubCategory = ({
   categoryIndex,
   createdOn,
   lastModified,
-}: IUnsdgSubcategoryDocument) => {
+}: IUnsdgSubcategoryDocument): IUnsdgSubcategory => {
   const _category = (!!category && Object.values(category).length)
     ? getShareableCategory(category as IUnsdgCategoryDocument)
     : category;

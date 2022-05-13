@@ -6,11 +6,11 @@ import {
   ObjectId,
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
-import { IUnsdgCategoryDocument } from './unsdgCategory';
+import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 
 export interface IUnsdgSubcategory {
   name: string;
-  category: IRef<ObjectId, IUnsdgCategoryDocument>;
+  category: IRef<ObjectId, (IUnsdgCategory | IUnsdgCategoryDocument)>;
   categoryIndex: number;
   createdOn: Date;
   lastModified: Date;

@@ -1,12 +1,8 @@
 import 'dotenv/config';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
-
-dayjs.extend(utc);
 
 (async () => {
   try {
@@ -23,6 +19,7 @@ dayjs.extend(utc);
     await calculateAllCompanyScores();
     // await generateCompanyDataSourceMappingReport();
 
+    // add mappers here...
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

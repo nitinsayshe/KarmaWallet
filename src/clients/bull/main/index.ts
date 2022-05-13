@@ -3,7 +3,6 @@ import { Worker } from 'bullmq';
 import { JobNames, QueueNames } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
-// eslint-disable-next-line import/no-cycle
 
 export class _MainBullClient extends _BullClient {
   constructor() {
@@ -45,6 +44,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 3 * * *' } });
+    this.createJob(JobNames.UpdateRareProjectAverage, null, { jobId: `${JobNames.UpdateRareProjectAverage}-daily`, repeat: { cron: '0 17 * * *' } });
   };
 }
 

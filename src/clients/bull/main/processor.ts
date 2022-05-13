@@ -6,11 +6,12 @@ import { _MongoClient } from '../../mongo';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
+import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotals';
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
-import * as SendEmail from '../../../jobs/sendEmail';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
+import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
 
 const MongoClient = new _MongoClient();
 
@@ -27,39 +28,43 @@ export default async (job: SandboxedJob) => {
   await MongoClient.init();
 
   switch (name) {
+    case JobNames.CachedDataCleanup:
+      result = CachedDataCleanup.exec();
+      break;
+    case JobNames.CacheGroupOffsetData:
+      result = CacheGroupOffsetData.exec();
+      break;
+    case JobNames.GenerateGroupOffsetStatements:
+      result = await GenerateGroupStatements.exec();
+      break;
+    case JobNames.GenerateUserImpactTotals:
+      result = await GenerateUserImpactTotals.exec();
+      break;
+    case JobNames.GenerateUserTransactionTotals:
+      result = await GenerateUserTransactionTotals.exec();
+      break;
     case JobNames.GlobalPlaidTransactionMapper:
       await PlaidIntegration.mapTransactionsFromPlaid(mockRequest);
 
       result = {
         nextJobs: [
           { name: JobNames.GenerateUserTransactionTotals },
+          { name: JobNames.GenerateUserImpactTotals },
         ],
       };
 
       break;
-    case JobNames.SendEmail:
-      result = await SendEmail.exec(data);
-      break;
-    case JobNames.CacheGroupOffsetData:
-      result = CacheGroupOffsetData.exec();
-      break;
-    case JobNames.CachedDataCleanup:
-      result = CachedDataCleanup.exec();
-      break;
     case JobNames.TotalOffsetsForAllUsers:
-      result = TotalOffsetsForAllUsers.exec();
+      result = await TotalOffsetsForAllUsers.exec();
       break;
     case JobNames.TransactionsMonitor:
-      result = TransactionsMonitor.exec();
+      result = await TransactionsMonitor.exec();
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);
       break;
-    case JobNames.GenerateGroupOffsetStatements:
-      result = await GenerateGroupStatements.exec();
-      break;
-    case JobNames.GenerateUserTransactionTotals:
-      result = await GenerateUserTransactionTotals.exec();
+    case JobNames.UpdateRareProjectAverage:
+      result = await UpdateRareProjectAverage.exec();
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

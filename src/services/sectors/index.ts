@@ -2,7 +2,6 @@ import {
   FilterQuery, isValidObjectId, Schema,
 } from 'mongoose';
 import { ISector, ISectorDocument, ISectorModel, SectorModel } from '../../models/sector';
-
 import { ErrorTypes } from '../../lib/constants';
 import { mockRequest } from '../../lib/constants/request';
 import CustomError, { asCustomError } from '../../lib/customError';

@@ -55,7 +55,7 @@ export interface IPlaidTransactionIntegration {
   location?: IPlaidTransactionLocation;
   merchant_name?: string;
   name?: string;
-  payment_channet?: string;
+  payment_channel?: string;
   payment_meta?: IPlaidTransactionMeta;
   pending?: boolean;
   pending_transaction_id?: string;
@@ -114,8 +114,11 @@ export interface IShareableTransaction {
 
 export interface ITransaction extends IShareableTransaction {
   user: IRef<ObjectId, IUserDocument>;
+  userId: IRef<ObjectId, IUserDocument>;
   company: IRef<ObjectId, ICompanyDocument>;
+  companyId: IRef<ObjectId, ICompanyDocument>;
   card: IRef<ObjectId, ICardDocument>;
+  cardId: IRef<ObjectId, ICardDocument>;
   sector: IRef<ObjectId, ISectorDocument>;
   onBehalfOf?: IUserOrGroup;
   matched?: ITransactionMatch;

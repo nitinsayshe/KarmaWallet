@@ -3,14 +3,16 @@ import {
   ObjectId,
   model,
   Document,
-  Model,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
+import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
 import { IShareableUser, IUserDocument } from './user';
+import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 
 export enum MatchTypes {
   Offset = 'offset',
@@ -283,5 +285,7 @@ const transactionSchema = new Schema({
     },
   },
 });
+transactionSchema.plugin(mongoosePaginate);
+transactionSchema.plugin(mongooseAggregatePaginate);
 
-export const TransactionModel = model<ITransactionDocument, Model<ITransaction>>('transaction', transactionSchema);
+export const TransactionModel = model<ITransactionDocument, IAggregatePaginateModel<ITransactionDocument>>('transaction', transactionSchema);

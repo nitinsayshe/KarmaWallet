@@ -9,6 +9,8 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
+import { CompanyRating } from '../lib/constants/company';
+import { getCompanyRating } from '../lib/company';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
@@ -45,6 +47,7 @@ export interface IShareableCompany {
   logo: string;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, IShareableCompany>;
+  rating: CompanyRating;
   sectors: ICompanySector[];
   slug: string;
   url: string;
@@ -138,6 +141,11 @@ companySchema.plugin(mongoosePaginate);
 // eslint-disable-next-line func-names
 companySchema.virtual('slug').get(function (this: ICompanyDocument) {
   return slugify(this.companyName);
+});
+
+// eslint-disable-next-line func-names
+companySchema.virtual('rating').get(function (this: ICompanyDocument) {
+  return getCompanyRating(this.combinedScore);
 });
 
 export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);

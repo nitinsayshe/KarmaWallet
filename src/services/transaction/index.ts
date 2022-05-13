@@ -1,28 +1,36 @@
 import { FilterQuery, ObjectId, Types } from 'mongoose';
+import { AqpQuery } from 'api-query-params';
 import {
   IShareableTransaction,
   ITransaction,
   ITransactionDocument,
   TransactionModel,
 } from '../../models/transaction';
-import { RareTransactionQuery } from '../../lib/constants';
+import { ErrorTypes, RareTransactionQuery, UserRoles } from '../../lib/constants';
 import { IRequest } from '../../types/request';
 import { RareClient } from '../../clients/rare';
 import { getShareableSector } from '../sectors';
-import { ISector, ISectorDocument } from '../../models/sector';
+import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
-import { asCustomError } from '../../lib/customError';
-import { ICompanyDocument, IShareableCompany } from '../../models/company';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { CompanyModel, ICompanyDocument, IShareableCompany } from '../../models/company';
 import { getShareableCompany } from '../company';
 import { getShareableUser } from '../user';
-import { IShareableUser, IUserDocument } from '../../models/user';
-import { ICardDocument, IShareableCard } from '../../models/card';
+import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
 import { getShareableCard } from '../card';
+import { GroupModel } from '../../models/group';
+import { _getTransactions } from './utils';
+import { CompanyRating, CompanyRatingThresholds } from '../../lib/constants/company';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
 const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
 const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
+
+export enum ITransactionsConfig {
+  MostRecent = 'recent',
+}
 
 export interface IGetRecentTransactionsRequestQuery {
   limit?: number;
@@ -30,78 +38,275 @@ export interface IGetRecentTransactionsRequestQuery {
   userId?: string | ObjectId;
 }
 
-export const _getTransactions = async (query: FilterQuery<ITransactionDocument>): Promise<ITransactionDocument[]> => TransactionModel.aggregate([
-  { $match: query },
-  {
-    $lookup: {
-      from: 'cards',
-      localField: 'card',
-      foreignField: '_id',
-      as: 'card',
-    },
-  },
-  {
-    $unwind: {
-      path: '$card',
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
-    $lookup: {
-      from: 'companies',
-      localField: 'company',
-      foreignField: '_id',
-      as: 'company',
-    },
-  }, {
-    $unwind: {
-      path: '$company',
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
-    $lookup: {
-      from: 'sectors',
-      localField: 'sector',
-      foreignField: '_id',
-      as: 'sector',
-    },
-  }, {
-    $unwind: {
-      path: '$sector',
-      preserveNullAndEmptyArrays: true,
-    },
-  },
-  {
-    $sort: {
-      date: -1,
-    },
-  },
-]);
+export interface ITransactionsRequestQuery extends AqpQuery {
+  userId?: string;
+  includeOffsets?: boolean;
+  includeNullCompanies?: boolean;
+  onlyOffsets?: boolean;
+}
 
-export const getRecentTransactions = async (req: IRequest<{}, IGetRecentTransactionsRequestQuery>, transactions: ITransactionDocument[] = []) => {
+export interface ITransactionsAggregationRequestQuery {
+  userId?: string;
+  ratings?: CompanyRating[];
+  page?: number;
+  limit?: number;
+}
+
+export interface ITransactionOptions {
+  includeOffsets?: boolean;
+  includeNullCompanies?: boolean;
+}
+
+export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
+  try {
+    const { ratings, userId, page, limit } = req.query;
+
+    if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+
+    if (!ratings || !ratings.length) throw new CustomError('A company rating is required to get rated transactions.', ErrorTypes.INVALID_ARG);
+
+    const _ratings = Array.isArray(ratings) ? ratings : [...(ratings as string).split(',')];
+
+    const invalidRatings = _ratings.filter(rating => !Object.values(CompanyRating).find(r => r === rating));
+    if (invalidRatings.length) throw new CustomError('One or more of the ratings found are invalid.', ErrorTypes.INVALID_ARG);
+
+    const userQuery: FilterQuery<ITransaction> = {
+      $and: [
+        { company: { $ne: null } },
+      ],
+    };
+
+    if (!!userId) {
+      if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      const _userId = new Types.ObjectId(userId);
+
+      userQuery.$and.push({
+        $or: [
+          { user: _userId },
+          { 'onBehalfOf.user': _userId },
+        ],
+      });
+    } else {
+      userQuery.$and.push({
+        $or: [
+          { user: req.requestor._id },
+          { 'onBehalfOf.user': req.requestor._id },
+        ],
+      });
+    }
+
+    const companyQuery: FilterQuery<ITransaction> = {
+      $or: _ratings.map(rating => {
+        if (rating === CompanyRating.Positive) {
+          return { 'company.combinedScore': { $gte: CompanyRatingThresholds[CompanyRating.Positive].min } };
+        }
+
+        if (rating === CompanyRating.Negative) {
+          return { 'company.combinedScore': { $lte: CompanyRatingThresholds[CompanyRating.Negative].max } };
+        }
+
+        return {
+          $and: [
+            { 'company.combinedScore': { $gte: CompanyRatingThresholds[CompanyRating.Neutral].min } },
+            { 'company.combinedScore': { $lte: CompanyRatingThresholds[CompanyRating.Neutral].max } },
+          ],
+        };
+      }),
+    };
+
+    const transactionAggregate = TransactionModel.aggregate([
+      {
+        $match: userQuery,
+      },
+      {
+        $lookup: {
+          from: 'companies',
+          localField: 'company',
+          foreignField: '_id',
+          as: 'company',
+        },
+      },
+      {
+        $unwind: {
+          path: '$company',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $match: companyQuery,
+      },
+    ]);
+
+    const options = {
+      page: page ?? 1,
+      limit: limit ?? 10,
+    };
+
+    const transactions = await TransactionModel.aggregatePaginate(transactionAggregate, options);
+
+    const pageIncludesOffsets = transactions.docs.filter(transaction => !!transaction.integrations?.rare).length;
+
+    if (!!pageIncludesOffsets) {
+      try {
+        const Rare = new RareClient();
+        const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
+
+        transactions.docs.forEach(transaction => {
+          const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+          transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
+        });
+      } catch (err) {
+        console.log('[-] Failed to retrieve Rare transactions');
+        console.log(err);
+      }
+    }
+
+    return transactions;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets } = req.query;
+
+  if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+
+  const paginationOptions = {
+    projection: query?.projection || '',
+    populate: query.population || [
+      {
+        path: 'user',
+        model: UserModel,
+      },
+      {
+        path: 'company',
+        model: CompanyModel,
+      },
+      {
+        path: 'company.rating',
+      },
+      {
+        path: 'card',
+        model: CardModel,
+      },
+      {
+        path: 'sector',
+        model: SectorModel,
+      },
+      {
+        path: 'association.user',
+        model: UserModel,
+      },
+      {
+        path: 'association.group',
+        model: GroupModel,
+      },
+    ],
+    page: query?.skip || 1,
+    sort: query?.sort ? { ...query.sort, _id: -1 } : { date: -1, _id: -1 },
+    limit: query?.limit || 10,
+  };
+  const filter: FilterQuery<ITransaction> = {
+    $and: Object.entries(query.filter)
+      .filter(([key]) => (key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets'))
+      .map(([key, value]) => ({ [key]: value })),
+  };
+
+  if (!!userId) {
+    if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+      throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+    }
+
+    filter.$and.push({
+      $or: [
+        { user: userId },
+        { 'onBehalfOf.user': userId },
+      ],
+    });
+  } else {
+    filter.$and.push({
+      $or: [
+        { user: req.requestor },
+        { 'onBehalfOf.user': req.requestor },
+      ],
+    });
+  }
+
+  if (!!onlyOffsets) filter.$and.push({ 'integrations.rare': { $ne: null } });
+  if (!includeOffsets && !onlyOffsets) filter.$and.push({ 'integrations.rare': null });
+  if (!includeNullCompanies) filter.$and.push({ company: { $ne: null } });
+
+  const transactions = await TransactionModel.paginate(filter, paginationOptions);
+
+  if (includeOffsets || onlyOffsets) {
+    const pageIncludesOffsets = transactions.docs.filter(transaction => !!transaction.integrations?.rare).length;
+
+    if (!!pageIncludesOffsets) {
+      try {
+        const Rare = new RareClient();
+        const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
+
+        transactions.docs.forEach(transaction => {
+          const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+          transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
+        });
+      } catch (err) {
+        console.log('[-] Failed to retrieve Rare transactions');
+        console.log(err);
+      }
+    }
+  }
+
+  return transactions;
+};
+
+export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTransactionsRequestQuery>) => {
   try {
     const { limit = 5, unique = true, userId } = req.query;
+    const _limit = parseInt(limit.toString());
+    if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
-    let _transactions = [...transactions];
-    if (!_transactions.length) {
-      const query: FilterQuery<ITransactionDocument> = { company: { $ne: null } };
-      if (!!userId) query.user = typeof userId === 'string' ? new Types.ObjectId(userId) : userId;
+    const query: FilterQuery<ITransactionDocument> = { $and: [] };
 
-      _transactions = await _getTransactions(query);
+    if (!!userId) {
+      if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
+        throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      query.$and.push({
+        $or: [
+          { user: userId },
+          { 'onBehalfOf.user': userId },
+        ],
+      });
+    } else {
+      query.$and.push({
+        $or: [
+          { user: req.requestor._id },
+          { 'onBehalfOf.user': req.requestor._id },
+        ],
+      });
     }
+
+    query.$and.push({ 'integrations.rare': null });
+    query.$and.push({ company: { $ne: null } });
+
+    const transactions = await _getTransactions(query);
 
     const uniqueCompanies = new Set();
     const recentTransactions: ITransactionDocument[] = [];
 
-    for (const transaction of _transactions) {
-      if (unique && uniqueCompanies.has((transaction.company as ICompanyDocument)._id.toString())) {
-        uniqueCompanies.add((transaction.company as ICompanyDocument)._id.toString());
-        continue;
-      }
-      recentTransactions.push(transaction);
+    for (const transaction of transactions) {
+      if (unique && uniqueCompanies.has((transaction.company as ICompanyDocument)?._id.toString())) continue;
 
-      if (recentTransactions.length === limit) break;
+      recentTransactions.push(transaction);
+      uniqueCompanies.add((transaction.company as ICompanyDocument)?._id.toString());
+
+      if (recentTransactions.length === _limit) break;
     }
 
     return recentTransactions;
@@ -145,6 +350,7 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
 };
 
 export const getShareableTransaction = ({
+  _id,
   user,
   company,
   card,
@@ -171,7 +377,8 @@ export const getShareableTransaction = ({
     ? getShareableSector(sector as ISectorDocument)
     : sector;
 
-  const shareableTransaction: Partial<IShareableTransaction> = {
+  const shareableTransaction: Partial<IShareableTransaction & { _id: string }> = {
+    _id,
     user: _user,
     company: _company,
     card: _card,
@@ -202,4 +409,31 @@ export const getShareableTransaction = ({
   }
 
   return shareableTransaction;
+};
+
+export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>) => {
+  try {
+    const { userId, includeOffsets, includeNullCompanies } = req.query;
+    const _userId = userId ?? req.requestor._id;
+
+    const query: FilterQuery<ITransaction> = {
+      $and: [
+        {
+          $or: [
+            { user: _userId },
+            { 'onBehalfOf.user': _userId },
+          ],
+        },
+      ],
+    };
+
+    if (!includeOffsets) query.$and.push({ 'integrations.rare': null });
+    if (!includeNullCompanies) query.$and.push({ company: { $ne: null } });
+
+    const count = await getTransactionCount(query);
+
+    return count > 0;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

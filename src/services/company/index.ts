@@ -1,7 +1,9 @@
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
+import { getCompanyRating } from '../../lib/company';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
+import { slugify } from '../../lib/slugify';
 import {
   CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
 } from '../../models/company';
@@ -187,6 +189,7 @@ export const getShareableCompany = ({
   isBrand,
   logo,
   parentCompany,
+  rating,
   sectors,
   slug,
   url,
@@ -224,6 +227,12 @@ export const getShareableCompany = ({
     }))
     : sectors;
 
+  // required since virtuals are not populated
+  // from aggregates, so if rating has not been
+  // populated, need to add manually.
+  const _rating = rating ?? getCompanyRating(combinedScore);
+  const _slug = slug ?? slugify(companyName);
+
   return {
     _id,
     combinedScore,
@@ -235,8 +244,9 @@ export const getShareableCompany = ({
     isBrand,
     logo,
     parentCompany: _parentCompany,
+    rating: _rating,
     sectors: _sectors,
-    slug,
+    slug: _slug,
     url,
     lastModified,
   };

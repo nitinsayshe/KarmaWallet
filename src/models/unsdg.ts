@@ -3,13 +3,14 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
 export interface IUnsdg {
   title: string;
-  subCategory: IUnsdgSubcategoryDocument['_id'];
+  subCategory: IRef<ObjectId, IUnsdgSubcategoryDocument>;
   subCategoryIndex: number;
   goalNum: number;
   img: string;

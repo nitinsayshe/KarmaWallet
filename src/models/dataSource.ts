@@ -22,7 +22,8 @@ export interface IDataSourceIntegrations {
 export interface IDataSource {
   name: string;
   url: string;
-  integrations: IDataSourceIntegrations;
+  notes?: string;
+  integrations?: IDataSourceIntegrations;
 }
 
 export interface IDataSourceDocument extends IDataSource, Document {}
@@ -32,11 +33,10 @@ const dataSourceSchema = new Schema({
   name: {
     type: String,
     required: true,
+    unique: true,
   },
-  url: {
-    type: String,
-    required: true,
-  },
+  url: { type: String },
+  notes: { type: String },
   integrations: {
     type: {
       justCapital: {

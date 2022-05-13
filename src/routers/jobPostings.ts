@@ -5,7 +5,7 @@ import { UserRoles } from '../lib/constants';
 
 const router = Router();
 
-router.route('/:id')
+router.route('/:jobPostingId')
   .get(JobController.getJobPostingById)
   .put(protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.updateJobPosting);
 

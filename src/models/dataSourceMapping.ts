@@ -3,42 +3,29 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { IDataSourceDocument } from './dataSource';
 import { IUnsdgDocument } from './unsdg';
 import { IUnsdgTargetDocument } from './unsdgTarget';
 
-interface IDateRange {
-  start: Date;
-  end: Date;
+export interface IUnsdgTargetMapItem {
+  target: IRef<ObjectId, IUnsdgTargetDocument>;
+  value: number;
+  exists: boolean; // means exists or does not from the source
 }
 
 export interface IUnsdgMapItem {
-  unsdg: IUnsdgDocument['_id'],
-  value: boolean;
+  unsdg: IRef<ObjectId, IUnsdgDocument>,
+  value: number;
   exists: boolean; // means exists or does not from the source
-}
-
-export interface IUnsdgTargetMapItem {
-  unsdgTarget: IUnsdgTargetDocument['_id'];
-  value: boolean;
-  exists: boolean; // means exists or does not from the source
-}
-
-export interface IDataSourceUnsdgMapping {
-  unsdg: IUnsdgMapItem;
-  unsdgTargets: IUnsdgTargetMapItem[];
+  targets: IUnsdgTargetMapItem[];
 }
 
 export interface IDataSourceMapping {
-  source: IDataSourceDocument['_id'];
-  unsdgs: IDataSourceUnsdgMapping;
-  /**
-   * the date range that we (KW) used
-   * this mapping
-   */
-  dateRange: IDateRange;
+  source: IRef<ObjectId, IDataSourceDocument>;
+  unsdgs: IUnsdgMapItem[];
 }
 
 export interface IDataSourceMappingDocument extends IDataSourceMapping, Document {}
@@ -51,22 +38,27 @@ const dataSourceMappingSchema = new Schema({
   },
   unsdgs: [{
     unsdg: {
-      type: {
-        unsdg: {
-          type: Schema.Types.ObjectId,
-          ref: 'unsdg',
-        },
-        value: { type: Boolean },
-        exists: { type: Boolean },
-      },
+      type: Schema.Types.ObjectId,
+      ref: 'unsdg',
     },
-    unsdgTargets: [{
+    // value = null - no data
+    // value = 0    - negative
+    // value > 0    - positive
+    value: { type: Number },
+    exists: { type: Boolean },
+    // IMPORTANT
+    // a data source can be mapped to targets without being
+    // mapped to a unsdg.
+    targets: [{
       type: {
-        unsdgTarget: {
+        target: {
           type: Schema.Types.ObjectId,
           ref: 'unsdg_target',
         },
-        value: { type: Boolean },
+        // value = null - no data
+        // value = 0    - negative
+        // value > 0    - positive
+        value: { type: Number },
         exists: { type: Boolean },
       },
     }],

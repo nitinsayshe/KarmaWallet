@@ -5,17 +5,16 @@ import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { slugify } from '../../lib/slugify';
 import {
-  CompanyModel, ICompany, ICompanyDocument, ICompanyModel, IShareableCompany,
+  CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
 } from '../../models/company';
-import { CompanyUnsdgModel, ICompanyUnsdg } from '../../models/companyUnsdg';
-import { DataSourceModel, IDataSourceModel } from '../../models/dataSource';
+import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { ISectorModel, SectorModel } from '../../models/sector';
-import { UnsdgModel } from '../../models/unsdg';
-import { UnsdgCategoryModel } from '../../models/unsdgCategory';
-import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
+import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
+import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
+import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
-import { getShareableDataSource } from '../dataSources';
 import { getShareableSector } from '../sectors';
+import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
 
 export interface ICompanyRequestParams {
   companyId: string;
@@ -25,21 +24,6 @@ export interface IUpdateCompanyRequestBody {
   companyName: string;
   url: string;
 }
-
-const _getCompanyUNSDGs = (query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
-  .find(query)
-  .populate({
-    path: 'unsdg',
-    model: UnsdgModel,
-    populate: {
-      path: 'subCategory',
-      model: UnsdgSubcategoryModel,
-      populate: {
-        path: 'category',
-        model: UnsdgCategoryModel,
-      },
-    },
-  });
 
 /**
  * this function should only be used internally. for anything client
@@ -69,38 +53,57 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
     ]);
 };
 
-export const getCompanyById = async (__: IRequest, _id: string, includeHidden = false) => {
+export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
+  .find(query)
+  .populate({
+    path: 'unsdg',
+    model: UnsdgModel,
+    populate: {
+      path: 'subCategory',
+      model: UnsdgSubcategoryModel,
+      populate: {
+        path: 'category',
+        model: UnsdgCategoryModel,
+      },
+    },
+  });
+
+export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
     const query: FilterQuery<ICompany> = { _id };
     if (!includeHidden) query['hidden.status'] = false;
 
     const company = await CompanyModel.findOne(query)
-      .populate({
-        path: 'parentCompany',
-        model: CompanyModel,
-        populate: [
-          {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
-          {
-            path: 'dataSources',
-            model: DataSourceModel,
-          },
-        ],
-      })
-      .populate({
-        path: 'sectors.sector',
-        model: SectorModel,
-      })
-      .populate({
-        path: 'dataSources',
-        model: DataSourceModel,
-      });
+      .populate([
+        {
+          path: 'parentCompany',
+          model: CompanyModel,
+          populate: [
+            {
+              path: 'sectors.sector',
+              model: SectorModel,
+            },
+          ],
+        },
+        {
+          path: 'sectors.sector',
+          model: SectorModel,
+        },
+        {
+          path: 'categoryScores.category',
+          model: UnsdgCategoryModel,
+        },
+        {
+          path: 'subcategoryScores.subcategory',
+          model: UnsdgSubcategoryModel,
+        },
+      ]);
 
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
 
-    return (company as ICompanyModel);
+    const unsdgs = await getCompanyUNSDGs(req, { company });
+
+    return { company, unsdgs };
   } catch (err) {
     throw asCustomError(err);
   }
@@ -118,19 +121,11 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
             path: 'sectors.sector',
             model: SectorModel,
           },
-          {
-            path: 'dataSources',
-            model: DataSourceModel,
-          },
         ],
       },
       {
         path: 'sectors.sector',
         model: SectorModel,
-      },
-      {
-        path: 'dataSources',
-        model: DataSourceModel,
       },
     ],
     page: query?.skip || 1,
@@ -145,7 +140,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   let topPick: ICompanyDocument = null;
   let noClearPick = false;
-  let topPickScore = 30;
+  let topPickScore = -5;
 
   const _query: FilterQuery<ICompany> = { _id: { $in: query.companies } };
   if (!includeHidden) query['hidden.status'] = false;
@@ -183,33 +178,12 @@ export const getPartners = (req: IRequest, companiesCount: number, includeHidden
     .limit(companiesCount);
 };
 
-export const getCompanyUNSDGs = async (__: IRequest, companyId: string, year: number) => {
-  try {
-    let unsdgs = await _getCompanyUNSDGs({
-      companyId,
-      year,
-    });
-
-    // if no unsdgs found, try to retrieve from previous year
-    if (!unsdgs.length) {
-      unsdgs = await _getCompanyUNSDGs({
-        companyId,
-        year: year - 1,
-      });
-    }
-
-    if (!unsdgs.length) throw new CustomError('No UNSDGs were found for this company.', ErrorTypes.NOT_FOUND);
-    return unsdgs;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
 export const getShareableCompany = ({
   _id,
   combinedScore,
+  categoryScores,
+  subcategoryScores,
   companyName,
-  dataSources,
   dataYear,
   grade,
   isBrand,
@@ -224,12 +198,28 @@ export const getShareableCompany = ({
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
   // need to get the sharable version of each resource.
-  const _dataSources = (!!dataSources && !!(dataSources as IDataSourceModel[]).filter(d => !!Object.keys(d).length).length)
-    ? dataSources.map(d => getShareableDataSource(d as IDataSourceModel))
-    : dataSources;
   const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
+
+  const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
+    ? {
+      category: !!cs.category && !!Object.values(cs.category).length
+        ? getShareableCategory(cs.category as IUnsdgCategoryDocument)
+        : cs.category,
+      score: cs.score,
+    }
+    : cs));
+
+  const _subcategoryScores = (subcategoryScores || []).map(scs => ((!!scs && !!Object.values(scs).length)
+    ? {
+      subcategory: !!scs.subcategory && !!Object.values(scs.subcategory).length
+        ? getShareableSubCategory(scs.subcategory as IUnsdgSubcategoryDocument)
+        : scs.subcategory,
+      score: scs.score,
+    }
+    : scs));
+
   const _sectors = (!!sectors && !!sectors.filter(s => !!Object.keys(s.sector).length).length)
     ? sectors.map(s => ({
       sector: getShareableSector(s.sector as ISectorModel),
@@ -246,8 +236,9 @@ export const getShareableCompany = ({
   return {
     _id,
     combinedScore,
+    categoryScores: _categoryScores,
+    subcategoryScores: _subcategoryScores,
     companyName,
-    dataSources: _dataSources,
     dataYear,
     grade,
     isBrand,
@@ -260,6 +251,14 @@ export const getShareableCompany = ({
     lastModified,
   };
 };
+
+export const getShareableCompanyUnsdg = ({
+  unsdg,
+  value,
+}: ICompanyUnsdgDocument) => ({
+  unsdg: getShareableUnsdg(unsdg as IUnsdgDocument),
+  value,
+});
 
 export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
   try {

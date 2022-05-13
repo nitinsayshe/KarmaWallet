@@ -3,18 +3,10 @@ import * as JobPostingsService from '../services/jobPostings';
 import { api, error } from '../services/output';
 import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
-import { IJobPosting } from '../models/jobPosting';
 
-export const createJobPosting: IRequestHandler<{}, {}, Partial<IJobPosting>> = async (req, res) => {
+export const createJobPosting: IRequestHandler<{}, {}, JobPostingsService.IJobPostingRequestBody> = async (req, res) => {
   try {
-    const {
-      title,
-      instructions,
-      description,
-      department,
-      jobLocation,
-    } = req.body;
-    const job = await JobPostingsService.createJobPosting(req, title, instructions, description, department, jobLocation);
+    const job = await JobPostingsService.createJobPosting(req);
     api(req, res, JobPostingsService.getShareableJobPosting(job));
   } catch (err) {
     error(req, res, asCustomError(err));
@@ -32,28 +24,18 @@ export const getJobPostings: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getJobPostingById: IRequestHandler<{ id: string }> = async (req, res) => {
+export const getJobPostingById: IRequestHandler<JobPostingsService.IJopPostingRequestParams> = async (req, res) => {
   try {
-    const { id } = req.params;
-    const job = await JobPostingsService.getJobPostingById(req, id);
+    const job = await JobPostingsService.getJobPostingById(req);
     api(req, res, JobPostingsService.getShareableJobPosting(job));
   } catch (err) {
     error(req, res, asCustomError(err));
   }
 };
 
-export const updateJobPosting: IRequestHandler<{ id: string }, {}, Partial<IJobPosting>> = async (req, res) => {
+export const updateJobPosting: IRequestHandler<JobPostingsService.IJopPostingRequestParams, {}, JobPostingsService.IJobPostingRequestBody> = async (req, res) => {
   try {
-    const { id } = req.params;
-    const {
-      title,
-      instructions,
-      description,
-      department,
-      jobLocation,
-    } = req.body;
-
-    const job = await JobPostingsService.updateJobPosting(req, id, title, instructions, description, department, jobLocation);
+    const job = await JobPostingsService.updateJobPosting(req);
     api(req, res, JobPostingsService.getShareableJobPosting(job));
   } catch (err) {
     error(req, res, asCustomError(err));

@@ -72,20 +72,30 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
     if (!includeHidden) query['hidden.status'] = false;
 
     const company = await CompanyModel.findOne(query)
-      .populate({
-        path: 'parentCompany',
-        model: CompanyModel,
-        populate: [
-          {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
-        ],
-      })
-      .populate({
-        path: 'sectors.sector',
-        model: SectorModel,
-      });
+      .populate([
+        {
+          path: 'parentCompany',
+          model: CompanyModel,
+          populate: [
+            {
+              path: 'sectors.sector',
+              model: SectorModel,
+            },
+          ],
+        },
+        {
+          path: 'sectors.sector',
+          model: SectorModel,
+        },
+        {
+          path: 'categoryScores.category',
+          model: UnsdgCategoryModel,
+        },
+        {
+          path: 'subcategoryScores.subcategory',
+          model: UnsdgSubcategoryModel,
+        },
+      ]);
 
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
 
@@ -191,14 +201,18 @@ export const getShareableCompany = ({
 
   const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
     ? {
-      category: getShareableCategory(cs.category as IUnsdgCategoryDocument),
+      category: !!cs.category && !!Object.values(cs.category).length
+        ? getShareableCategory(cs.category as IUnsdgCategoryDocument)
+        : cs.category,
       score: cs.score,
     }
     : cs));
 
   const _subcategoryScores = (subcategoryScores || []).map(scs => ((!!scs && !!Object.values(scs).length)
     ? {
-      subcategory: getShareableSubCategory(scs.subcategory as IUnsdgSubcategoryDocument),
+      subcategory: !!scs.subcategory && !!Object.values(scs.subcategory).length
+        ? getShareableSubCategory(scs.subcategory as IUnsdgSubcategoryDocument)
+        : scs.subcategory,
       score: scs.score,
     }
     : scs));

@@ -2,7 +2,7 @@ import { FilterQuery } from 'mongoose';
 import { CompanyModel, ICompany } from '../../models/company';
 import { getRandom } from '../../lib/number';
 
-const threshold = 60; // the threshold between "high" and "low" grade companies
+const threshold = 2; // the threshold between "high" and "low" grade companies
 
 // split the companies into low and high graded companies
 const splitCompanies = (companies: ICompany[]) => {

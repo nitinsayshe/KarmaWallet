@@ -1,5 +1,6 @@
 import { Express, Router } from 'express';
 import plaidRouter from './plaid';
+import rareRouter from './rare';
 
 /**
  * this file is used for direct communication with the integration APIs
@@ -12,5 +13,6 @@ import plaidRouter from './plaid';
 const integrationsRouter = Router();
 
 integrationsRouter.use('/plaid', plaidRouter);
+integrationsRouter.use('/rare', rareRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

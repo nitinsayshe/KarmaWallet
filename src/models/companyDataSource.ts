@@ -3,8 +3,9 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { ICompanyDocument } from './company';
 import { IDataSourceDocument } from './dataSource';
 
@@ -14,8 +15,9 @@ interface IDateRange {
 }
 
 export interface ICompanyDataSource {
-  company: ICompanyDocument['_id'];
-  sourceId: IDataSourceDocument['_id'];
+  company: IRef<ObjectId, ICompanyDocument>;
+  source: IRef<ObjectId, IDataSourceDocument>;
+  status: number;
   url: string;
   /**
    * the date awarded this source
@@ -39,9 +41,8 @@ const companyDataSourceSchema = new Schema({
     ref: 'data_source',
     required: true,
   },
-  url: {
-    type: String,
-  },
+  // 1 === good, 0 or null === not applicable, -1 === bad
+  status: { type: Number },
   dateRange: {
     type: {
       start: { type: Date },

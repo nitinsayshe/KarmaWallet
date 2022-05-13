@@ -7,14 +7,25 @@ import {
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
-import { IDataSource, IDataSourceDocument } from './dataSource';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
+import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
+import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
 export interface IHiddenCompany {
   status: boolean;
   reason: string;
   lastModified: Date;
+}
+
+export interface ICategoryScore {
+  category: IRef<ObjectId, (IUnsdgCategory | IUnsdgCategoryDocument)>;
+  score: number;
+}
+
+export interface ISubcategoryScore {
+  subcategory: IRef<ObjectId, (IUnsdgSubcategory | IUnsdgSubcategoryDocument)>;
+  score: number;
 }
 
 export interface ICompanySector {
@@ -25,8 +36,9 @@ export interface ICompanySector {
 export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
+  categoryScores: ICategoryScore[];
+  subcategoryScores: ISubcategoryScore[];
   companyName: string;
-  dataSources: IRef<ObjectId, IDataSource>[];
   dataYear: number;
   grade: string;
   isBrand: boolean;
@@ -40,7 +52,6 @@ export interface IShareableCompany {
 }
 
 export interface ICompany extends IShareableCompany {
-  dataSources: IRef<ObjectId, IDataSourceDocument>[];
   hidden: IHiddenCompany;
   legacyId: number;
   // eslint-disable-next-line no-use-before-define
@@ -56,14 +67,27 @@ export type ICompanyModel = IModel<ICompany>;
 const companySchema = new Schema(
   {
     companyName: { type: String, required: true },
-    dataSources: [{
-      type: Schema.Types.ObjectId,
-      ref: 'data_source',
-    }],
     // TODO: update this field whenver unsdgs are updated.
     // too expensive to make virtual
     combinedScore: { type: Number },
-    dataYear: { type: Number }, // ??? do want to track this on the company?
+    categoryScores: [{
+      type: {
+        category: {
+          type: Schema.Types.ObjectId,
+          ref: 'unsdg_category',
+        },
+        score: { type: Number },
+      },
+    }],
+    subcategoryScores: [{
+      type: {
+        subcategory: {
+          type: Schema.Types.ObjectId,
+          ref: 'unsdg_subcategory',
+        },
+        score: { type: Number },
+      },
+    }],
     sectors: [{
       type: {
         sector: {

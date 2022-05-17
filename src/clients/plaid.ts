@@ -104,8 +104,9 @@ export class PlaidClient extends SdkClient {
     if (e?.response?.data) {
       const { error_code, error_message } = e.response.data;
       throw new CustomError(error_message, { name: error_code, code: e?.response?.status || ErrorTypes.SERVICE.code });
+    } else {
+      throw asCustomError(e);
     }
-    throw asCustomError(e);
   };
 
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {

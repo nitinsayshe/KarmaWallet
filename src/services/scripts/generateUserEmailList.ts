@@ -44,7 +44,7 @@ export const generateUserEmailList = async () => {
 
       parsedUsers.push({
         _id: user._id.toString(),
-        email: user.email,
+        email: user.emails.find(e => e.primary)?.email,
         name: user.name,
         dateJoined: user.dateJoined,
         firstName,

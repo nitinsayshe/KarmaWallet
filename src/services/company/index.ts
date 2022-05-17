@@ -199,7 +199,7 @@ export const getShareableCompany = ({
   const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
-  const _sectors = (!!sectors && !!sectors.filter(s => !!Object.keys(s.sector).length).length)
+  const _sectors = (!!sectors && !!sectors.filter(s => !!s.sector && !!Object.keys(s.sector).length).length)
     ? sectors.map(s => ({
       sector: getShareableSector(s.sector as ISectorModel),
       primary: s.primary,

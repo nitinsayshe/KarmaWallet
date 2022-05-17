@@ -33,7 +33,7 @@ export const calculateUnsdgScore = (unsdgPoints: number[]) => {
   if (!includesOne) return ensureUndsgScoreMaxAndMin(unsdgPointsSum, 0.5);
 };
 
-export const calulcateCompanyScore = (score: number) => (score + 16) / 32;
+export const calculateCompanyScore = (score: number) => ((score + 16) / 32) * 100;
 
 export const calculateAllCompanyScores = async () => {
   console.log('calculating scores for all companies...');

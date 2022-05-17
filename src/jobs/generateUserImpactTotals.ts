@@ -230,6 +230,10 @@ export const exec = async () => {
 
       const monthData = getMonthlyImpactBreakdown(transactions, ratings);
 
+      if (user._id.toString() === '62192d3af022c9e3fbfe3c6d') {
+        console.log('>>>>> monthData', monthData);
+      }
+
       const summary = getImpactSummary(transactions);
       const impactScores = getImpactScores(summary, ratings);
 

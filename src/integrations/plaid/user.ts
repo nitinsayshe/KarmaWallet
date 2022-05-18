@@ -1,4 +1,4 @@
-import { Transaction as PlaidTransaction } from 'plaid';
+import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
 import { UserModel, IUserDocument } from '../../models/user';
 import Card from './card';
 import { IPlaidItem } from './types';
@@ -10,7 +10,7 @@ class User {
   _userId: string = null;
   // all cards the user has linked
   _cards: {[key: string]: Card} = {};
-  constructor(plaidItem: IPlaidItem) {
+  constructor(plaidItem: IPlaidItem | TransactionsGetResponse) {
     this._userId = `${plaidItem.userId}`;
   }
 
@@ -22,7 +22,7 @@ class User {
    *
    * @param {Object} plaidAccounts - array of plaid account objects
    */
-  addCards = async (plaidItem: IPlaidItem, skipTransactionMapping?: boolean) => {
+  addCards = async (plaidItem: IPlaidItem | TransactionsGetResponse, skipTransactionMapping?: boolean) => {
     let unmappedTransactions = plaidItem.transactions;
     let duplicates: PlaidTransaction[] = [];
 

@@ -1,12 +1,13 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  AccountBase, Institution, Transaction as PlaidTransaction, TransactionsGetResponse,
+  AccountBase, Institution, Transaction as PlaidTransaction,
 } from 'plaid';
 import { Schema } from 'mongoose';
 import Transaction from './transaction';
 import { CardModel, ICardDocument } from '../../models/card';
 import { CardStatus } from '../../lib/constants';
+import { IPlaidInstitution, IPlaidItem } from './types';
 
 dayjs.extend(utc);
 
@@ -22,13 +23,13 @@ class Card {
   _accessToken: string = null;
   _publicToken: string = null;
   _linkSessionId: string = null;
-  _institution: Institution = null;
+  _institution: Institution | IPlaidInstitution = null;
   _transactionsIndex = new Set();
   // all transactions for this card
   _transactions: Transaction[] = [];
   _duplicateTransactions: Transaction[] = [];
   _isNew = false;
-  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: TransactionsGetResponse) {
+  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: IPlaidItem) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
@@ -140,7 +141,7 @@ class Card {
    *
    * @param {Object} account - the plaid account object to update this instance with
    */
-  update = (account: AccountBase, plaidItem: TransactionsGetResponse) => {
+  update = (account: AccountBase, plaidItem: IPlaidItem) => {
     this._plaid_items.add(`${plaidItem.item_id}`);
     this._account = account;
     this._accessToken = `${plaidItem.access_token}`;

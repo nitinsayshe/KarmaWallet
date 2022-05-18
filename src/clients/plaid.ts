@@ -16,13 +16,13 @@ import pino from 'pino';
 import jsonwebtoken from 'jsonwebtoken';
 import jwkToPem from 'jwk-to-pem';
 import crypto from 'crypto';
-import dayjs from 'dayjs';
 import { ErrorTypes, CardStatus } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
 import PlaidUser from '../integrations/plaid/user';
+import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
 
 const logger = pino();
 
@@ -75,6 +75,7 @@ export interface IVerifyWebhookParams {
 export interface IExchangePublicTokenForAccessTokenParams {
   public_token: string;
   userId: string;
+  metadata: IPlaidLinkOnSuccessMetadata;
 }
 
 export class PlaidClient extends SdkClient {
@@ -104,8 +105,9 @@ export class PlaidClient extends SdkClient {
     if (e?.response?.data) {
       const { error_code, error_message } = e.response.data;
       throw new CustomError(error_message, { name: error_code, code: e?.response?.status || ErrorTypes.SERVICE.code });
+    } else {
+      throw asCustomError(e);
     }
-    throw asCustomError(e);
   };
 
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
@@ -136,23 +138,13 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  exchangePublicTokenForAccessToken = async ({ public_token, userId }: IExchangePublicTokenForAccessTokenParams) => {
+  exchangePublicTokenForAccessToken = async ({ public_token, userId, metadata }: IExchangePublicTokenForAccessTokenParams) => {
     if (!public_token) throw new CustomError('A public token is required.', ErrorTypes.INVALID_ARG);
     try {
       const response = await this._client.itemPublicTokenExchange({ public_token });
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
-      // transactions will not be available at this point
-      // account data should be available at this point
-      const endDate = dayjs();
-      // date in past is arbitrary
-      const startDate = endDate.subtract(90, 'day');
-      const transactionDataResponse = await this._client.transactionsGet({
-        access_token: accessToken,
-        start_date: startDate.format('YYYY-MM-DD'),
-        end_date: endDate.format('YYYY-MM-DD'),
-      });
-      const plaidItem = { ...transactionDataResponse.data, userId };
+      const plaidItem = { ...metadata, public_token, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
       await plaidUserInstance.addCards(plaidItem, true);

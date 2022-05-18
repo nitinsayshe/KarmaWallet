@@ -7,12 +7,14 @@ import { PlaidMapper } from './mapper';
 import { PlaidClient } from '../../clients/plaid';
 import { _getCard } from '../../services/card';
 import { ErrorTypes } from '../../lib/constants';
+import { IPlaidLinkOnSuccessMetadata } from './types';
 
 export interface ICreateLinkTokenBody {
   cardId?: string;
 }
 export interface IExchangePublicTokenBody {
   publicToken?: string;
+  metadata: IPlaidLinkOnSuccessMetadata
 }
 
 export interface ISandboxItemFireWebhookBody {
@@ -96,9 +98,9 @@ export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody
 
 export const exchangePublicToken = (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {
   const { requestor } = req;
-  const { publicToken: public_token } = req.body;
+  const { publicToken: public_token, metadata } = req.body;
   const client = new PlaidClient();
-  return client.exchangePublicTokenForAccessToken({ public_token, userId: requestor._id.toString() });
+  return client.exchangePublicTokenForAccessToken({ public_token, userId: requestor._id.toString(), metadata });
 };
 
 export const sandboxFireTestWebhook = (req: IRequest<{}, {}, ISandboxItemFireWebhookBody>) => {

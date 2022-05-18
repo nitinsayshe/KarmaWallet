@@ -1,9 +1,9 @@
 /* eslint-disable camelcase */
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
-import { PlaidClient } from '../src/clients/plaid';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { generateUserEmailList } from '../src/services/scripts/generate-user-email-list';
 
 (async () => {
   try {
@@ -12,9 +12,16 @@ import { Logger } from '../src/services/logger';
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    const client = new PlaidClient();
-    const public_token = await client.sandboxCreatePublicToken();
-    console.log(public_token);
+
+    await generateUserEmailList();
+
+    // add mappers here...
+    // await createDataSources();
+    // await mapDataSourcesToUNSDGs();
+    // await mapCompanies2DataSources();
+    // await calculateAllCompanyScores();
+    // await generateCompanyDataSourceMappingReport();
+
     // add mappers here...
     await MongoClient.disconnect();
   } catch (err) {

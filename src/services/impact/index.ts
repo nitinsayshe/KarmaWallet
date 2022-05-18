@@ -209,7 +209,7 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarb
 
   const showAverage = await shouldUseAmericanAverage({ userId: _id });
 
-  const totalOffset = await CarbonService.getRareOffsetAmount({ _id });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: new Types.ObjectId(_id) });
 
   const monthlyEmissions = showAverage
     ? { mt: averageAmericanEmissions.Monthly }

@@ -5,6 +5,7 @@ import { MiscModel } from '../../../models/misc';
 import { ITransactionDocument } from '../../../models/transaction';
 import { IUserImpactMonthData } from '../../../models/userImpactTotals';
 import { getCompanyRating } from '../../company/utils';
+import { calculateCompanyScore } from '../../scripts/calculate_company_scores';
 
 dayjs.extend(utc);
 
@@ -42,7 +43,9 @@ export const getImpactSummary = (transactions: ITransactionDocument[]): IImpactS
     // exclude companies with a null combined score
     if (typeof combinedScore !== 'number') continue;
 
-    const _combinedScore = `${combinedScore}`;
+    const calculatedCombinedScore = calculateCompanyScore(combinedScore);
+
+    const _combinedScore = `${calculatedCombinedScore}`;
 
     if (!scores[_combinedScore]) scores[_combinedScore] = 0;
 

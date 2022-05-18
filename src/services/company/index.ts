@@ -198,7 +198,7 @@ export const getShareableCompany = ({
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
   // need to get the sharable version of each resource.
-  const _parentCompany: IShareableCompany = (!!parentCompany && Object.keys(parentCompany).length)
+  const _parentCompany: IShareableCompany = (!!parentCompany && !!Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : null;
 
@@ -220,7 +220,7 @@ export const getShareableCompany = ({
     }
     : scs));
 
-  const _sectors = (!!sectors && !!sectors.filter(s => !!Object.keys(s.sector).length).length)
+  const _sectors = (!!sectors && !!sectors.filter(s => !!s.sector && !!Object.keys(s.sector).length).length)
     ? sectors.map(s => ({
       sector: getShareableSector(s.sector as ISectorModel),
       primary: s.primary,

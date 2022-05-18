@@ -76,7 +76,11 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserTransactionTotals, {});
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
-  await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, { status: CardStatus.Unlinked });
+  await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, {
+    status: CardStatus.Unlinked,
+    'integrations.plaid.accessToken': null,
+    $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
+  });
 };
 
 const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
@@ -115,7 +119,7 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
   }
 
   // Todo: is there other data needed in the response?
-  return { message: `Card ${card} ${removeData && 'and associated data'} has been removed.` };
+  return { message: `Card ${card} ${removeData ? 'and associated data' : ''} has been removed.` };
 };
 
 export const getCards = async (req: IRequest) => {

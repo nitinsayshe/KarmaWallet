@@ -90,7 +90,9 @@ export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody
   if (cardId) {
     const card = await _getCard({ _id: cardId, user: userId });
     if (!card) throw new CustomError(`Card with id ${cardId} not found`, ErrorTypes.NOT_FOUND);
-    access_token = card?.integrations?.plaid?.accessToken;
+    access_token = card?.integrations?.plaid?.accessToken
+      ? card?.integrations?.plaid?.accessToken
+      : card?.integrations?.plaid?.unlinkedAccessTokens[card?.integrations?.plaid?.unlinkedAccessTokens.length];
   }
   const client = new PlaidClient();
   return client.createLinkToken({ userId, access_token });

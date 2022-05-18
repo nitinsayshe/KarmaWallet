@@ -30,6 +30,7 @@ export interface IRemoveCardBody {
 }
 
 export const getShareableCard = ({
+  _id,
   userId,
   name,
   mask,
@@ -45,6 +46,7 @@ export const getShareableCard = ({
     : userId;
 
   return {
+    _id,
     userId: _user,
     name,
     mask,

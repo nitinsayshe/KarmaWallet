@@ -144,7 +144,7 @@ export class PlaidClient extends SdkClient {
       const response = await this._client.itemPublicTokenExchange({ public_token });
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
-      const plaidItem = { ...metadata, public_token, access_token: accessToken, userId };
+      const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
       await plaidUserInstance.addCards(plaidItem, true);

@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  AccountBase, Institution, Transaction as PlaidTransaction,
+  AccountBase, Institution, Transaction as PlaidTransaction, TransactionsGetResponse,
 } from 'plaid';
 import { Schema } from 'mongoose';
 import Transaction from './transaction';
@@ -29,7 +29,7 @@ class Card {
   _transactions: Transaction[] = [];
   _duplicateTransactions: Transaction[] = [];
   _isNew = false;
-  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: IPlaidItem) {
+  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: IPlaidItem | TransactionsGetResponse) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
@@ -141,7 +141,7 @@ class Card {
    *
    * @param {Object} account - the plaid account object to update this instance with
    */
-  update = (account: AccountBase, plaidItem: IPlaidItem) => {
+  update = (account: AccountBase, plaidItem: IPlaidItem | TransactionsGetResponse) => {
     this._plaid_items.add(`${plaidItem.item_id}`);
     this._account = account;
     this._accessToken = `${plaidItem.access_token}`;

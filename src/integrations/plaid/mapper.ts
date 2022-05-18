@@ -8,7 +8,7 @@ import util from 'util';
 import { parse } from 'json2csv';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { Transaction as PlaidTransaction } from 'plaid';
+import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
 import { ObjectId } from 'mongoose';
 import { printTable } from '../logger';
 import User from './user';
@@ -34,7 +34,7 @@ dayjs.extend(utc);
 const execAsync = util.promisify(exec);
 
 export class PlaidMapper {
-  _plaidItems: IPlaidItem[] = [];
+  _plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [];
   _users: { [key: string]: User } = {};
 
   _totalTransactions = 0;
@@ -54,7 +54,7 @@ export class PlaidMapper {
   _unmatchedToCompany = 0;
   _plaidSectorMappings: IPlaidCategoriesToSectorMappingDocument[] = [];
   _startTimestamp: Date = null;
-  constructor(plaidItems: IPlaidItem[] = [], transactions: Transaction[] = []) {
+  constructor(plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [], transactions: Transaction[] = []) {
     this._startTimestamp = dayjs().toDate();
     this._plaidItems = plaidItems;
     this._transactions = transactions;

@@ -38,6 +38,7 @@ export const getShareableCard = ({
   subtype,
   status,
   institution,
+  integrations,
   createdOn,
   lastModified,
 }: ICardDocument) => {
@@ -54,6 +55,10 @@ export const getShareableCard = ({
     subtype,
     status,
     institution,
+    // TODO: remove this after instituation logos are hosted and
+    // logo property is added to cards.
+    institutionId: integrations?.plaid?.institutionId,
+    integrations,
     createdOn,
     lastModified,
   };
@@ -124,5 +129,5 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
 
 export const getCards = async (req: IRequest) => {
   const { requestor } = req;
-  return _getCards({ userId: requestor._id });
+  return _getCards({ $and: [{ userId: requestor._id }, { 'integrations.rare': null }] });
 };

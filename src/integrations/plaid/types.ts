@@ -15,17 +15,17 @@ export interface IPlaidAccount {
 }
 
 export interface IPlaidLinkOnSuccessMetadata {
-  institution: null | IPlaidInstitution;
-  accounts: Array<AccountBase>;
+  institution?: IPlaidInstitution;
+  accounts: AccountBase[];
   link_session_id: string;
 }
 
 export interface IPlaidItem {
-  accounts: Array<AccountBase>;
+  accounts: AccountBase[];
   userId: string;
   link_session_id?: string;
-  institution: null | IPlaidInstitution;
-  transactions?: Array<Transaction>;
+  institution?: IPlaidInstitution;
+  transactions?: Transaction[];
   total_transactions?: number;
   request_id?: string;
   item?: Item;

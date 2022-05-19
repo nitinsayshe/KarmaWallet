@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, ObjectId } from 'mongoose';
 import { getCompanyRating } from '../../lib/company';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -12,6 +12,7 @@ import { ISectorModel, SectorModel } from '../../models/sector';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
+import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
@@ -216,13 +217,13 @@ export const getShareableCompany = ({
   slug,
   url,
   lastModified,
-}: ICompanyDocument) => {
+}: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
   // need to get the sharable version of each resource.
-  const _parentCompany: IShareableCompany = (!!parentCompany && !!Object.keys(parentCompany).length)
+  const _parentCompany: IRef<ObjectId, IShareableCompany> = (!!parentCompany && !!Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
-    : null;
+    : parentCompany as ObjectId;
 
   const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
     ? {

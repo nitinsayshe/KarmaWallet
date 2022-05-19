@@ -187,9 +187,6 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
         model: CompanyModel,
       },
       {
-        path: 'company.rating',
-      },
-      {
         path: 'card',
         model: CardModel,
       },

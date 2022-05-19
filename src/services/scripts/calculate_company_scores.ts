@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { getCompanyRatingFromScore } from '../../lib/company';
 import { CompanyModel, ICategoryScore, ICompanyDocument, ISubcategoryScore } from '../../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceModel } from '../../models/companyDataSource';
 import { CompanyUnsdgModel, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
@@ -154,6 +155,7 @@ export const calculateAllCompanyScores = async () => {
     });
 
     const combinedScore = unsdgScores.reduce((acc, curr) => acc + curr, 0);
+    const rating = getCompanyRatingFromScore(combinedScore);
 
     const subcategoryScores: ISubcategoryScore[] = Object.entries(allSubcategoryScores).map(([key, scores]) => ({
       subcategory: subcategories.find(s => s._id.toString() === key),
@@ -165,7 +167,7 @@ export const calculateAllCompanyScores = async () => {
     }));
 
     try {
-      await CompanyModel.updateOne({ _id: company._id }, { combinedScore, subcategoryScores, categoryScores });
+      await CompanyModel.updateOne({ _id: company._id }, { combinedScore, rating, subcategoryScores, categoryScores });
       await Promise.all(promises);
       count += 1;
     } catch (err) {

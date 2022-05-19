@@ -58,7 +58,6 @@ export const getShareableCard = ({
     // TODO: remove this after instituation logos are hosted and
     // logo property is added to cards.
     institutionId: integrations?.plaid?.institutionId,
-    integrations,
     createdOn,
     lastModified,
   };

@@ -53,6 +53,27 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
     ]);
 };
 
+export const getCompaniesOwned = (_: IRequest, parentCompany: ICompanyDocument) => {
+  if (!parentCompany) throw new CustomError('A parent company is required.', ErrorTypes.INVALID_ARG);
+
+  return CompanyModel
+    .find({ parentCompany })
+    .populate([
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+      {
+        path: 'categoryScores.category',
+        model: UnsdgCategoryModel,
+      },
+      {
+        path: 'subcategoryScores.subcategory',
+        model: UnsdgSubcategoryModel,
+      },
+    ]);
+};
+
 export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>) => CompanyUnsdgModel
   .find(query)
   .populate({
@@ -102,8 +123,9 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
 
     const unsdgs = await getCompanyUNSDGs(req, { company });
+    const companiesOwned = await getCompaniesOwned(req, company);
 
-    return { company, unsdgs };
+    return { company, unsdgs, companiesOwned };
   } catch (err) {
     throw asCustomError(err);
   }

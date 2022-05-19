@@ -35,6 +35,7 @@ export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req
     output.api(req, res, {
       company: CompanyService.getShareableCompany(company.company),
       unsdgs: company.unsdgs.map(unsdg => CompanyService.getShareableCompanyUnsdg(unsdg)),
+      companiesOwned: company.companiesOwned.map(c => CompanyService.getShareableCompany(c)),
     });
   } catch (err) {
     output.error(req, res, asCustomError(err));

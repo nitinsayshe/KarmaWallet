@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { mapTransactions } from '../integrations/rare';
 import { api, error } from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
@@ -14,6 +15,8 @@ import { validateStatementList } from '../services/statements';
 import { IStatementDocument } from '../models/statement';
 import { UserModel } from '../models/user';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
+import { _getCard } from '../services/card';
+import { PlaidClient } from '../clients/plaid';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
@@ -30,6 +33,14 @@ interface IRareTransactionBody {
 interface IUserPlaidTransactionsMapBody {
   userId: String;
   accessToken: String
+}
+
+interface IPlaidWebhookBody {
+  webhook_type: string;
+  webhook_code: string;
+  account_id: string;
+  item_id: string;
+  new_transactions?: number;
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -105,6 +116,24 @@ export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransac
     const { userId, accessToken } = req.body;
     MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
     api(req, res, { message: `${JobNames.UserPlaidTransactionMapper} added to queue` });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
+  try {
+    const signedJwt = req.headers?.['plaid-verification'];
+    const client = new PlaidClient();
+    await client.verifyWebhook({ signedJwt, requestBody: req.body });
+    const { webhook_type, webhook_code, item_id } = req.body;
+    // Historical Transactions Ready
+    if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
+      const card = await _getCard({ 'integrations.plaid.items': item_id });
+      if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
+      MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId: card.userId, accessToken: card.integrations.plaid.accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
+    }
+    api(req, res, { message: 'Plaid webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
   }

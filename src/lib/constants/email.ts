@@ -6,6 +6,7 @@ export enum EmailTemplateKeys {
   WelcomeGroup = 'welcomeGroup',
   WelcomeCC1 = 'welcomeCC1',
   WelcomeCCG1 = 'welcomeCCG1',
+  TransactionsProcessed = 'transactionsProcessed',
 }
 
 export enum EmailTemplateTypes {
@@ -43,6 +44,10 @@ export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
   },
   WelcomeCCG1: {
     name: EmailTemplateKeys.WelcomeCCG1,
+    type: EmailTemplateTypes.Essential,
+  },
+  TransactionsProcessed: {
+    name: EmailTemplateKeys.TransactionsProcessed,
     type: EmailTemplateTypes.Essential,
   },
 };

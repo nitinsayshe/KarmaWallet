@@ -2,8 +2,13 @@ import { SandboxedJob } from 'bullmq';
 import { mockRequest } from '../lib/constants/request';
 
 import { mapTransactionsFromPlaid } from '../integrations/plaid';
-import KarmaApiClient from '../integrations/karmaApi';
 import { JobNames } from '../lib/constants/jobScheduler';
+import { SocketClient } from '../clients/socket';
+import { SocketEvents, SocketEventTypes } from '../lib/constants/sockets';
+import { INextJob } from '../clients/bull/base';
+import * as EmailService from '../services/email';
+import { getUser } from '../services/user';
+import { IRequest } from '../types/request';
 
 interface IPlaidTransactionMapperResult {
   userId: string,
@@ -16,12 +21,34 @@ interface IUserPlaidTransactionMapParams {
 
 export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
   // initial card linking for individual user
-  await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
-  return { userId, accessToken };
+  let isSuccess = false;
+  let result = '';
+  try {
+    await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
+    isSuccess = true;
+    result = `Successfully mapped transactions for user: ${userId}`;
+  } catch (e: any) {
+    result = `Error: ${e.message}`;
+  }
+  // setting up transacation processed email
+  const user = await getUser({} as IRequest, { _id: userId });
+  const jobData = EmailService.sendTransactionsProcessedEmail({
+    user: user._id,
+    name: user.name,
+    recipientEmail: user.emails.find(e => e.primary).email,
+    isSuccess,
+    sendEmail: false,
+  });
+  const nextJobs: INextJob[] = [
+    {
+      name: JobNames.SendEmail,
+      data: jobData,
+    },
+  ];
+  return { nextJobs, result };
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
-  const client = new KarmaApiClient();
-  await client.sendPlaidTransactionsReadyWebhook(result.userId);
+  SocketClient.socket.emit({ rooms: [`user/${result.userId}`], eventName: SocketEvents.Update, type: SocketEventTypes.PlaidTransactionsReady });
   console.log(`${JobNames.UserPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
 };

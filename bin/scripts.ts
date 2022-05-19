@@ -1,8 +1,9 @@
+/* eslint-disable camelcase */
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
+import { generateTransactionCsv } from '../src/services/scripts/generate-transaction-csv';
 
 (async () => {
   try {
@@ -12,11 +13,13 @@ import { calculateAllCompanyScores } from '../src/services/scripts/calculate_com
     // } as IRequest);
     await MongoClient.init();
 
+    await generateTransactionCsv();
+
     // add mappers here...
     // await createDataSources();
     // await mapDataSourcesToUNSDGs();
     // await mapCompanies2DataSources();
-    await calculateAllCompanyScores();
+    // await calculateAllCompanyScores();
     // await generateCompanyDataSourceMappingReport();
 
     // add mappers here...

@@ -1,6 +1,8 @@
+import { FilterQuery, isValidObjectId } from 'mongoose';
 import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
-import { UserModel, IUserDocument } from '../../models/user';
+import { UserModel, IUserDocument, IUser } from '../../models/user';
 import Card from './card';
+import { IPlaidItem } from './types';
 
 class User {
   // the user object from the database
@@ -9,7 +11,7 @@ class User {
   _userId: string = null;
   // all cards the user has linked
   _cards: {[key: string]: Card} = {};
-  constructor(plaidItem: TransactionsGetResponse) {
+  constructor(plaidItem: IPlaidItem | TransactionsGetResponse) {
     this._userId = `${plaidItem.userId}`;
   }
 
@@ -21,7 +23,7 @@ class User {
    *
    * @param {Object} plaidAccounts - array of plaid account objects
    */
-  addCards = async (plaidItem: TransactionsGetResponse) => {
+  addCards = async (plaidItem: IPlaidItem | TransactionsGetResponse, skipTransactionMapping?: boolean) => {
     let unmappedTransactions = plaidItem.transactions;
     let duplicates: PlaidTransaction[] = [];
 
@@ -35,10 +37,11 @@ class User {
       }
 
       await this._cards[`${account.id}`].save();
-
-      const results = await this._cards[`${account.id}`].mapTransactions(unmappedTransactions);
-      duplicates = [...duplicates, ...results.duplicateTransactions];
-      unmappedTransactions = results.unmappedTransactions;
+      if (!skipTransactionMapping) {
+        const results = await this._cards[`${account.id}`].mapTransactions(unmappedTransactions);
+        duplicates = [...duplicates, ...results.duplicateTransactions];
+        unmappedTransactions = results.unmappedTransactions;
+      }
     }
 
     return { unmappedTransactions, duplicateTransactions: duplicates };
@@ -46,8 +49,11 @@ class User {
 
   load = async () => {
     if (!this._user) {
-      this._user = await UserModel.findOne({ legacyId: this._userId });
+      const userQuery: FilterQuery<IUser> = isValidObjectId(this._userId)
+        ? { _id: this._userId }
+        : { legacyId: this._userId };
 
+      this._user = await UserModel.findOne(userQuery);
       if (!this._user) throw new Error(`User ${this._userId} not found.`);
     }
   };

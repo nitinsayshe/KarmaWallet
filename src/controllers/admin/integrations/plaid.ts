@@ -38,3 +38,12 @@ export const reset: IRequestHandler = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const sandboxFireTestWebhook: IRequestHandler = async (req, res) => {
+  try {
+    await PlaidIntegration.sandboxFireTestWebhook(req);
+    output.api(req, res, { message: 'plaid mapping reset' });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

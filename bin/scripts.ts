@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateUserEmailList } from '../src/services/scripts/generate-user-email-list';
+import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
 
 (async () => {
   try {
@@ -13,13 +13,11 @@ import { generateUserEmailList } from '../src/services/scripts/generate-user-ema
     // } as IRequest);
     await MongoClient.init();
 
-    await generateUserEmailList();
-
     // add mappers here...
     // await createDataSources();
     // await mapDataSourcesToUNSDGs();
     // await mapCompanies2DataSources();
-    // await calculateAllCompanyScores();
+    await calculateAllCompanyScores();
     // await generateCompanyDataSourceMappingReport();
 
     // add mappers here...

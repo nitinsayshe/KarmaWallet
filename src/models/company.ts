@@ -10,7 +10,6 @@ import { IModel, IRef } from '../types/model';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
 import { CompanyRating } from '../lib/constants/company';
-import { getCompanyRating } from '../lib/company';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
@@ -73,6 +72,10 @@ const companySchema = new Schema(
     // TODO: update this field whenver unsdgs are updated.
     // too expensive to make virtual
     combinedScore: { type: Number },
+    rating: {
+      type: String,
+      enum: Object.values(CompanyRating),
+    },
     categoryScores: [{
       type: {
         category: {
@@ -141,11 +144,6 @@ companySchema.plugin(mongoosePaginate);
 // eslint-disable-next-line func-names
 companySchema.virtual('slug').get(function (this: ICompanyDocument) {
   return slugify(this.companyName);
-});
-
-// eslint-disable-next-line func-names
-companySchema.virtual('rating').get(function (this: ICompanyDocument) {
-  return getCompanyRating(this.combinedScore);
 });
 
 export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);

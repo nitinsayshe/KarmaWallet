@@ -1,5 +1,6 @@
+import { FilterQuery, isValidObjectId } from 'mongoose';
 import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
-import { UserModel, IUserDocument } from '../../models/user';
+import { UserModel, IUserDocument, IUser } from '../../models/user';
 import Card from './card';
 import { IPlaidItem } from './types';
 
@@ -48,18 +49,13 @@ class User {
 
   load = async () => {
     if (!this._user) {
-      this._user = await UserModel.findOne({
-        $or: [
-          { legacyId: this._userId },
-          { _id: this._userId },
-        ],
-      });
+      const userQuery: FilterQuery<IUser> = isValidObjectId(this._userId)
+        ? { _id: this._userId }
+        : { legacyId: this._userId };
+
+      this._user = await UserModel.findOne(userQuery);
       if (!this._user) throw new Error(`User ${this._userId} not found.`);
     }
   };
 }
 export default User;
-
-// new User(plaidItem)
-// load()
-// addcards(plaidItem)

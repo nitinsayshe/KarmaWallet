@@ -25,6 +25,7 @@ import { TransactionModel } from '../../models/transaction';
 import { CategoryModel } from '../../models/category';
 import { SubcategoryModel } from '../../models/subcategory';
 import { IPlaidCategoriesToSectorMappingDocument, PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
+import { IPlaidItem } from './types';
 
 const pythonScriptPath = path.join(__dirname, '..', '..', 'lib', 'companyTextMatch.py');
 
@@ -33,7 +34,7 @@ dayjs.extend(utc);
 const execAsync = util.promisify(exec);
 
 export class PlaidMapper {
-  _plaidItems: TransactionsGetResponse[] = [];
+  _plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [];
   _users: { [key: string]: User } = {};
 
   _totalTransactions = 0;
@@ -53,7 +54,7 @@ export class PlaidMapper {
   _unmatchedToCompany = 0;
   _plaidSectorMappings: IPlaidCategoriesToSectorMappingDocument[] = [];
   _startTimestamp: Date = null;
-  constructor(plaidItems: TransactionsGetResponse[] = [], transactions: Transaction[] = []) {
+  constructor(plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [], transactions: Transaction[] = []) {
     this._startTimestamp = dayjs().toDate();
     this._plaidItems = plaidItems;
     this._transactions = transactions;

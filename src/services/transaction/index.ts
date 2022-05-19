@@ -38,6 +38,7 @@ export interface IGetRecentTransactionsRequestQuery {
   userId?: string | ObjectId;
 }
 
+export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 export interface ITransactionsRequestQuery extends AqpQuery {
   userId?: string;
   includeOffsets?: boolean;
@@ -185,9 +186,6 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
       {
         path: 'company',
         model: CompanyModel,
-      },
-      {
-        path: 'company.rating',
       },
       {
         path: 'card',

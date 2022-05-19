@@ -1,4 +1,5 @@
 import { Express, Router } from 'express';
+import plaidRouter from './plaid';
 import rareRouter from './rare';
 
 /**
@@ -11,6 +12,7 @@ import rareRouter from './rare';
 
 const integrationsRouter = Router();
 
+integrationsRouter.use('/plaid', plaidRouter);
 integrationsRouter.use('/rare', rareRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

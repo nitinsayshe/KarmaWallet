@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  {{{style}}}
+</head>
+
+  <body>
+      <div class="email-wrapper">
+          <div class="email-container">
+              <img class="brand" src="https://s3.amazonaws.com/assets.karmawallet/karmawallet-logo-129x49.png" alt="KarmaWallet Logo" />
+              <p class="email-body">Hi {{name}},</p>
+
+              {{#if (eq isSuccess true)}}
+                <p class="email-body">Good news! Your card is linked and your transactions are ready to view on Karma Wallet. View your impact for the month and dig into the scores of the companies you shop at.</p>
+                <div class="cta-container">
+                  <a class="cta-link" href="{{domain}}/transactions">View Impact</a>
+                </div>
+              {{/if}}
+
+              {{#if (ne isSuccess true)}}
+                <p class="email-body">We've had an issue linking your card and analyzing your transactions. Sign into your Karma Wallet account to re-link your card.</p>
+                <div class="cta-container">
+                  <a class="cta-link" href="{{domain}}/account">View Account</a>
+                </div>
+              {{/if}}
+
+          </div>
+          <div class="link-container">
+              <p class="link-first"><a href="https://karmawallet.io">Karma Wallet</a> | <a href="https://karmawallet.io/privacy">Privacy Policy</a></p>
+              <p class="link-second"><a href="mailto:info@karmawallet.io">info@karmawallet.io</a></p>
+          </div>
+      </div>+
+  </body>
+
+</html>

@@ -12,6 +12,7 @@ import sectors from './sectors';
 import webhook from './webhooks';
 import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
+import card from './card';
 import notFound from './404';
 import upload from './upload';
 
@@ -27,6 +28,7 @@ const routers = (app: Express) => {
   upload(app);
   sectors(app);
   webhook(app);
+  card(app);
   integrations(app);
   comparisonGame(app);
   group(app);

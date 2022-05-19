@@ -52,6 +52,7 @@ export enum CardStatus {
   Linked = 'linked',
   Unlinked = 'unlinked',
   Error = 'error',
+  Removed = 'removed',
 }
 
 export enum UnsdgNames {

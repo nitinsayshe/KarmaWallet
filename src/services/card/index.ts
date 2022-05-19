@@ -77,7 +77,7 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
   await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, {
-    status: CardStatus.Unlinked,
+    status: CardStatus.Removed,
     'integrations.plaid.accessToken': null,
     $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
   });
@@ -87,7 +87,7 @@ const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, re
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
   }
-  await CardModel.updateMany({ 'integrations.rare.card_id': card.integrations.rare.card_id }, { status: CardStatus.Unlinked });
+  await CardModel.updateMany({ 'integrations.rare.card_id': card.integrations.rare.card_id }, { status: CardStatus.Removed });
 };
 
 export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCardBody>) => {

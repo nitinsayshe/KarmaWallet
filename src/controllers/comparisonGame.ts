@@ -11,7 +11,7 @@ interface IGetSwapsQuery {
 
 export const getSwaps: IRequestHandler<{}, IGetSwapsQuery, {}> = async (req, res) => {
   try {
-    const previousSwaps = req.query?.prev ? req.query?.prev.split(',').map(val => parseInt(val, 10)) : [];
+    const previousSwaps = req.query?.prev ? req.query?.prev.split(',') : [];
 
     const _previousSwaps = [];
 

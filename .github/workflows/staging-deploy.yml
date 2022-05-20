@@ -47,7 +47,7 @@ jobs:
     - run: echo 'PLAID_CLIENT_ID=${{secrets.STAGING_PLAID_CLIENT_ID}}' >> .env
     - run: echo 'PLAID_SECRET=${{secrets.STAGING_PLAID_SECRET}}' >> .env
     - run: echo 'PLAID_ENV=${{secrets.STAGING_PLAID_ENV}}' >> .env
-    - run: echo 'PLAID_WEBHOOK_URI=https://api.karmawallet.io/plaid/fetchTransactions' >> .env
+    - run: echo 'PLAID_WEBHOOK_URI=https://backend.staging.karmawallet.io/webhook/plaid' >> .env
     - run: echo 'PLAID_REDIRECT_URI=https://ui.staging.karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
     - run: echo 'MAILCHIMP_KEY=' >> .env
@@ -57,6 +57,7 @@ jobs:
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
-    - run: echo 'BETSI_ENV=bigolbetsi' >> .env
+    - run: echo 'BETSI_ENV=lilbetsi' >> .env
     - run: npm i
     - run: pm2 restart all
+    

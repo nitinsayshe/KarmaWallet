@@ -42,7 +42,7 @@ jobs:
     - run: echo 'PLAID_CLIENT_ID=${{secrets.PRODUCTION_PLAID_CLIENT_ID}}' >> .env
     - run: echo 'PLAID_SECRET=${{secrets.PRODUCTION_PLAID_SECRET}}' >> .env
     - run: echo 'PLAID_ENV=${{secrets.PRODUCTION_PLAID_ENV}}' >> .env
-    - run: echo 'PLAID_WEBHOOK_URI=https://api.karmawallet.io/plaid/fetchTransactions' >> .env
+    - run: echo 'PLAID_WEBHOOK_URI=https://backend.karmawallet.io/webhook/plaid' >> .env
     - run: echo 'PLAID_REDIRECT_URI=https://karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
     - run: echo 'MAILCHIMP_KEY=' >> .env
@@ -55,3 +55,4 @@ jobs:
     - run: echo 'BETSI_ENV=lilbetsi' >> .env
     - run: npm i
     - run: pm2 restart all
+    

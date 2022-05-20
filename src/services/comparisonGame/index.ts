@@ -222,7 +222,7 @@ const staticSwaps = [
   ],
 ];
 
-export const getSwaps = async (previousSwaps: number[][] = [], reset = false, includeHidden = false) => {
+export const getSwaps = async (previousSwaps: string[][] = [], reset = false, includeHidden = false) => {
   let high;
   let low;
   let randomHighGradeCompany;

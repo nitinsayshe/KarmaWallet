@@ -15,6 +15,8 @@ import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
+import { TransactionModel } from '../../models/transaction';
+import { CompanyRatingThresholds } from '../../lib/constants/company';
 
 dayjs.extend(utc);
 
@@ -65,6 +67,18 @@ export interface IUserImpactDataResponse {
   monthlyBreakdown: IUserImpactMonthData[];
   totalTransactions: number;
   ratings: IUserImpactRatings;
+}
+
+export interface IUserLowerImpactPurchasesRequestQuery {
+  companies: string,
+  days: string,
+}
+
+export interface IUserLowerImpactPurchasesResponse {
+  _id: string,
+  totalSpent: number,
+  transactionCount: number,
+  companyName: string
 }
 
 // values provided by Anushka 2/2/22. these may need to change
@@ -405,4 +419,55 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerImpactPurchasesRequestQuery>) => {
+  const { companies, days } = req.query;
+  const { requestor } = req;
+
+  let _companies;
+  let _days;
+
+  if (!!companies) _companies = parseInt(companies, 10);
+  if (!!days) _days = parseInt(days, 10);
+  if (!_days || Number.isNaN(_days)) _days = 30;
+  if (!_companies || Number.isNaN(_companies)) _companies = 10;
+
+  return TransactionModel.aggregate([
+    { $match: {
+      user: requestor._id,
+      date: { $gte: dayjs().subtract(_days, 'day').toDate() },
+      company: { $ne: null },
+    } }, {
+      $group: {
+        _id: '$company',
+        totalSpent: {
+          $sum: '$amount',
+        },
+        transactionCount: {
+          $sum: 1,
+        },
+        company: {
+          $first: '$company',
+        },
+      } }, { $lookup: {
+      from: 'companies',
+      localField: 'company',
+      foreignField: '_id',
+      as: 'company',
+    } }, { $unwind: {
+      path: '$company',
+    } }, { $match: {
+      'company.combinedScore': {
+        $lte: CompanyRatingThresholds.neutral.max,
+      },
+    } }, { $project: {
+      totalSpent: 1,
+      transactionCount: 1,
+      companyName: '$company.companyName',
+    } },
+    { $sort: {
+      totalSpent: -1,
+    } },
+  ]);
 };

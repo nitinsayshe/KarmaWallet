@@ -6,15 +6,15 @@ export enum CompanyRating {
 
 export const CompanyRatingThresholds = {
   [CompanyRating.Positive]: {
-    min: 6,
+    min: 8,
     max: 16,
   },
   [CompanyRating.Neutral]: {
-    min: -11,
-    max: 5,
+    min: 0,
+    max: 7.99,
   },
   [CompanyRating.Negative]: {
     min: -16,
-    max: -12,
+    max: -0.01,
   },
 };

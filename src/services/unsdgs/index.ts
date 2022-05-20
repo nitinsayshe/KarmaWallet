@@ -6,6 +6,7 @@ export const getUnsdgs = async () => {
   try {
     const unsdgs = await UnsdgModel
       .find({})
+      .sort({ goalNum: 1 })
       .populate({
         path: 'subCategory',
         model: UnsdgSubcategoryModel,

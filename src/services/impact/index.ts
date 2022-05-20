@@ -364,7 +364,29 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
     const [neg, neut, pos] = await getUserImpactRatings();
     const userImpactData = await UserImpactTotalModel.findOne({ user: new Types.ObjectId(_id) });
 
-    if (!userImpactData) throw new CustomError('No impact data found.', ErrorTypes.NOT_FOUND);
+    const ratings = {
+      negative: {
+        min: neg[0],
+        max: neg[1],
+      },
+      neutral: {
+        min: neut[0],
+        max: neut[1],
+      },
+      positive: {
+        min: pos[0],
+        max: pos[1],
+      },
+    };
+
+    if (!userImpactData) {
+      return ({
+        monthlyBreakdown: null,
+        totalScores: null,
+        totalTransactions: null,
+        ratings,
+      });
+    }
 
     const { monthlyBreakdown, totalScores, totalTransactions } = userImpactData;
 
@@ -378,20 +400,7 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
       monthlyBreakdown: lastTwelveMonths,
       totalScores,
       totalTransactions,
-      ratings: {
-        negative: {
-          min: neg[0],
-          max: neg[1],
-        },
-        neutral: {
-          min: neut[0],
-          max: neut[1],
-        },
-        positive: {
-          min: pos[0],
-          max: pos[1],
-        },
-      },
+      ratings,
     };
   } catch (err) {
     throw asCustomError(err);

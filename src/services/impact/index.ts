@@ -16,7 +16,6 @@ import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
 import { TransactionModel } from '../../models/transaction';
-import { CompanyRatingThresholds } from '../../lib/constants/company';
 
 dayjs.extend(utc);
 
@@ -429,45 +428,71 @@ export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerIm
   let _days;
 
   if (!!companies) _companies = parseInt(companies, 10);
+  if (!_companies || Number.isNaN(_companies)) _companies = 10;
   if (!!days) _days = parseInt(days, 10);
   if (!_days || Number.isNaN(_days)) _days = 30;
-  if (!_companies || Number.isNaN(_companies)) _companies = 10;
+
+  const thresholds = await MiscModel.findOne({ key: 'company-ratings-thresholds' });
+  const neutralMax = JSON.parse(thresholds?.value)?.neutral?.max;
+
+  if (!neutralMax) throw new CustomError('The selected company ratings threshold value was not found.', ErrorTypes.INVALID_ARG);
 
   return TransactionModel.aggregate([
-    { $match: {
-      user: requestor._id,
-      date: { $gte: dayjs().subtract(_days, 'day').toDate() },
-      company: { $ne: null },
-    } }, { $group: {
-      _id: '$company',
-      totalSpent: {
-        $sum: '$amount',
+    {
+      $match: {
+        user: requestor._id,
+        date: { $gte: dayjs().subtract(_days, 'day').toDate() },
+        company: { $ne: null },
       },
-      transactionCount: {
-        $sum: 1,
+    },
+    {
+      $group: {
+        _id: '$company',
+        totalSpent: {
+          $sum: '$amount',
+        },
+        transactionCount: {
+          $sum: 1,
+        },
+        company: {
+          $first: '$company',
+        },
       },
-      company: {
-        $first: '$company',
+    },
+    {
+      $lookup: {
+        from: 'companies',
+        localField: 'company',
+        foreignField: '_id',
+        as: 'company',
       },
-    } }, { $lookup: {
-      from: 'companies',
-      localField: 'company',
-      foreignField: '_id',
-      as: 'company',
-    } }, { $unwind: {
-      path: '$company',
-    } }, { $match: {
-      'company.combinedScore': {
-        $lte: CompanyRatingThresholds.neutral.max,
+    },
+    {
+      $unwind: {
+        path: '$company',
       },
-    } }, { $project: {
-      totalSpent: 1,
-      transactionCount: 1,
-      company: 1,
-    } },
-    { $sort: {
-      totalSpent: -1,
-    } },
-    { $limit: _companies },
+    },
+    {
+      $match: {
+        'company.combinedScore': {
+          $lte: neutralMax,
+        },
+      },
+    },
+    {
+      $project: {
+        totalSpent: 1,
+        transactionCount: 1,
+        company: 1,
+      },
+    },
+    {
+      $sort: {
+        totalSpent: -1,
+      },
+    },
+    {
+      $limit: _companies,
+    },
   ]);
 };

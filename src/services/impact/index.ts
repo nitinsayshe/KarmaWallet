@@ -464,10 +464,12 @@ export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerIm
       totalSpent: 1,
       transactionCount: 1,
       companyName: '$company.companyName',
+      grade: '$company.grade',
+      score: '$company.combinedScore',
     } },
-    { $limit: _companies },
     { $sort: {
       totalSpent: -1,
     } },
+    { $limit: _companies },
   ]);
 };

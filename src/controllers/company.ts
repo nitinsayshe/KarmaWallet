@@ -42,6 +42,15 @@ export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req
   }
 };
 
+export const getSample: IRequestHandler = async (req, res) => {
+  try {
+    const companies = await CompanyService.getSample(req);
+    output.api(req, res, companies.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const compare: IRequestHandler<{}, ICompareQuery> = async (req, res) => {
   try {
     const query = {

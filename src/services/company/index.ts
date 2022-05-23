@@ -1,7 +1,8 @@
 import dayjs from 'dayjs';
-import { FilterQuery, ObjectId } from 'mongoose';
+import { FilterQuery, isValidObjectId, ObjectId, Types } from 'mongoose';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
+import { getRandomInt } from '../../lib/number';
 import { slugify } from '../../lib/slugify';
 import {
   CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
@@ -15,6 +16,9 @@ import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
+import { CompanyRatings } from './utils';
+
+const MAX_SAMPLE_SIZE = 25;
 
 export interface ICompanyRequestParams {
   companyId: string;
@@ -23,6 +27,13 @@ export interface ICompanyRequestParams {
 export interface IUpdateCompanyRequestBody {
   companyName: string;
   url: string;
+}
+
+export interface ICompanySampleRequest {
+  count?: number;
+  sectors?: string;
+  excludedCompanyIds?: string;
+  ratings?: string;
 }
 
 /**
@@ -198,6 +209,94 @@ export const getPartners = (req: IRequest, companiesCount: number, includeHidden
   return CompanyModel
     .find(query)
     .limit(companiesCount);
+};
+
+export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
+  try {
+    const { count = 10, sectors, excludedCompanyIds, ratings } = req.query;
+
+    const _count = parseInt(`${count}`);
+    if (isNaN(_count)) throw new CustomError('Invalid count. Must be a number', ErrorTypes.INVALID_ARG);
+    if (count < 1 || count > MAX_SAMPLE_SIZE) throw new CustomError('Sample size. must be a number 0-25.', ErrorTypes.INVALID_ARG);
+
+    let _sectors: string[] = [];
+
+    if (!!sectors) {
+      _sectors = (sectors || '').split(',');
+      const invalidSectors = _sectors.filter(s => !isValidObjectId(s));
+      if (!!invalidSectors.length) {
+        throw new CustomError(`${invalidSectors.length > 1 ? 'Some of' : 'One of'} the sector ids found ${invalidSectors.length > 1 ? 'are' : 'is'} invalid.`, ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    let _excludedCompanyIds: string[] = [];
+
+    if (excludedCompanyIds) {
+      _excludedCompanyIds = (excludedCompanyIds || '').split(',');
+      const invalidCompanyIds = _excludedCompanyIds.filter(c => !isValidObjectId(c));
+      if (!!invalidCompanyIds.length) {
+        throw new CustomError(`${invalidCompanyIds.length > 1 ? 'Some of' : 'One of'} the excluded company ids found ${invalidCompanyIds.length > 1 ? 'are' : 'is'} invalid.`, ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    let _ratings: string[] = [];
+
+    if (!!ratings) {
+      _ratings = (ratings || '').split(',');
+      const invalidRatings = _ratings.filter(r => !Object.values(CompanyRatings).find(cr => cr === r));
+      if (!!invalidRatings.length) {
+        throw new CustomError(`${invalidRatings.length > 1 ? 'Some of' : 'One of'} the ratings found ${invalidRatings.length > 1 ? 'are' : 'is'} invalid.`, ErrorTypes.INVALID_ARG);
+      }
+    }
+
+    const query: FilterQuery<ICompany> = { $and: [] };
+
+    if (!!_sectors.length) query.$and.push({ 'sectors.sector': { $in: _sectors.map(s => new Types.ObjectId(s)) } });
+    if (!!_excludedCompanyIds.length) query.$and.push({ _id: { $nin: _excludedCompanyIds.map(e => new Types.ObjectId(e)) } });
+    if (!!_ratings.length) query.$and.push({ rating: { $in: _ratings } });
+
+    const companies = await CompanyModel.find(query)
+      .populate([
+        {
+          path: 'parentCompany',
+          model: CompanyModel,
+          populate: [
+            {
+              path: 'sectors.sector',
+              model: SectorModel,
+            },
+          ],
+        },
+        {
+          path: 'sectors.sector',
+          model: SectorModel,
+        },
+        {
+          path: 'categoryScores.category',
+          model: UnsdgCategoryModel,
+        },
+        {
+          path: 'subcategoryScores.subcategory',
+          model: UnsdgSubcategoryModel,
+        },
+      ]);
+
+    if (companies.length < _count) throw new CustomError('There are not enough companies that meet the specified criteria to fill this sample size.', ErrorTypes.UNPROCESSABLE);
+
+    const sample: ICompanyDocument[] = [];
+    const uniqueIds = new Set<string>();
+
+    while (sample.length < _count) {
+      const randomCompany = companies[getRandomInt(0, (companies.length - 1))];
+      if (uniqueIds.has(randomCompany._id.toString())) continue;
+      uniqueIds.add(randomCompany._id.toString());
+      sample.push(randomCompany);
+    }
+
+    return sample;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const getShareableCompany = ({

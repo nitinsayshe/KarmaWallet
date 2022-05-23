@@ -61,7 +61,7 @@ export const getUserImpactData: IRequestHandler = async (req, res) => {
 export const getUserLowerImpactPurchases: IRequestHandler<{}, ImpactService.IUserLowerImpactPurchasesRequestQuery> = async (req, res) => {
   try {
     const lowerImpactPurchases = await ImpactService.getUserLowerImpactPurchases(req);
-    output.api(req, res, lowerImpactPurchases);
+    output.api(req, res, lowerImpactPurchases.map(t => ({ ...t, company: getShareableCompany(t.company) })));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

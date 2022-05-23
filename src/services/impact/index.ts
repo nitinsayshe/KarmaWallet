@@ -438,19 +438,18 @@ export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerIm
       user: requestor._id,
       date: { $gte: dayjs().subtract(_days, 'day').toDate() },
       company: { $ne: null },
-    } }, {
-      $group: {
-        _id: '$company',
-        totalSpent: {
-          $sum: '$amount',
-        },
-        transactionCount: {
-          $sum: 1,
-        },
-        company: {
-          $first: '$company',
-        },
-      } }, { $lookup: {
+    } }, { $group: {
+      _id: '$company',
+      totalSpent: {
+        $sum: '$amount',
+      },
+      transactionCount: {
+        $sum: 1,
+      },
+      company: {
+        $first: '$company',
+      },
+    } }, { $lookup: {
       from: 'companies',
       localField: 'company',
       foreignField: '_id',
@@ -466,6 +465,7 @@ export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerIm
       transactionCount: 1,
       companyName: '$company.companyName',
     } },
+    { $limit: _companies },
     { $sort: {
       totalSpent: -1,
     } },

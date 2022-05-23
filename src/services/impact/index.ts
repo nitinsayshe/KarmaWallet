@@ -179,8 +179,8 @@ const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catche
   if (!userId && !(cachedTransactionTotal || catchedTransactionCount)) {
     return true;
   }
-  const transactionAmountTotal = cachedTransactionTotal || await TransactionService.getTransactionTotal({ userId, 'integrations.rare': null });
-  const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ userId, 'integrations.rare': null });
+  const transactionAmountTotal = cachedTransactionTotal || await TransactionService.getTransactionTotal({ user: userId, 'integrations.rare': null });
+  const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ user: userId, 'integrations.rare': null });
   // might need to break this down more granular
   return transactionCount <= 0 && transactionAmountTotal <= 0;
 };
@@ -209,7 +209,7 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarb
 
   const showAverage = await shouldUseAmericanAverage({ userId: _id });
 
-  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: new Types.ObjectId(_id) });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ user: new Types.ObjectId(_id) });
 
   const monthlyEmissions = showAverage
     ? { mt: averageAmericanEmissions.Monthly }
@@ -271,9 +271,9 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffs
   let netEmissions = 0;
   let calculateMonthlyEquivalency = false;
 
-  const donationsCount = await CarbonService.getOffsetTransactionsCount({ userId: _id });
-  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ userId: _id });
-  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: _id });
+  const donationsCount = await CarbonService.getOffsetTransactionsCount({ user: _id });
+  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ user: _id });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ user: _id });
 
   const useAmericanAverage = await shouldUseAmericanAverage({ userId: _id });
 

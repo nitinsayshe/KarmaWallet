@@ -821,7 +821,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     if (!cachedData || bustCache) {
       for (const member of members) {
-        const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const query = { user: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
         const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
         const donationsTotalTonnesPromise = getRareOffsetAmount(query);
 

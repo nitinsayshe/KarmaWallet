@@ -125,11 +125,16 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
   try {
     console.log('>>>>> handle plaid webhook');
     const signedJwt = req.headers?.['plaid-verification'];
+    console.log('>>>>> 1');
     const client = new PlaidClient();
+    console.log('>>>>> 2');
     await client.verifyWebhook({ signedJwt, requestBody: req.body });
+    console.log('>>>>> 3');
     const { webhook_type, webhook_code, item_id } = req.body;
+    console.log('>>>>> 4');
     // Historical Transactions Ready
     if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
+      console.log('>>>>> 5');
       const card = await _getCard({ 'integrations.plaid.items': item_id });
       if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
       console.log('>>>>> creating UserPlaidTransactionMapper job');

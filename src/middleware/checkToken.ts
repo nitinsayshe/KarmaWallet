@@ -4,6 +4,7 @@ import { error } from '../services/output';
 import { IRequestHandler } from '../types/request';
 
 const checkToken: IRequestHandler = (req, res, next) => {
+  console.log('>>>>> req', req);
   if (req.headers['plaid-verification'] && req.route.path === '/webhook/plaid') {
     return next();
   }

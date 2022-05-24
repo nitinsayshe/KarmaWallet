@@ -293,36 +293,30 @@ export class PlaidClient extends SdkClient {
   // https://plaid.com/docs/api/webhooks/webhook-verification/
   verifyWebhook = async ({ signedJwt, requestBody }: IVerifyWebhookParams) => {
     try {
-      console.log('>>>>> verifyWebhook 1');
       const decodedToken = jsonwebtoken.decode(signedJwt, { complete: true });
-      console.log('>>>>> verifyWebhook 2');
       const { kid: key_id, alg } = decodedToken.header;
       if (alg !== 'ES256') throw new CustomError('Invalid algorithm', ErrorTypes.SERVICE);
       const verificationKeyRequest: WebhookVerificationKeyGetRequest = {
         key_id,
       };
       const verificationKeyResponse = await this._client.webhookVerificationKeyGet(verificationKeyRequest);
-      console.log('>>>>> verifyWebhook 3');
       const { key } = verificationKeyResponse.data;
       if (!key) throw new CustomError('Plaid webhook key not found', ErrorTypes.SERVICE);
 
       // Reject expired keys
       if (key.expired_at != null) throw new CustomError('Expired key', ErrorTypes.SERVICE);
       const pem = jwkToPem(key as jwkToPem.EC);
-      console.log('>>>>> verifyWebhook 4');
 
       // verification will throw error if the signature is invalid
       jsonwebtoken.verify(signedJwt, pem, { algorithms: ['ES256'], maxAge: '5 minutes' });
-      console.log('>>>>> verifyWebhook 5');
       // verify the request body
-      const bodyHash = crypto.createHash('sha256').update(requestBody).digest('hex');
-      console.log('>>>>> verifyWebhook 6');
+      console.log('\n>>>>> creating bodyHash\n');
+      const bodyHash = crypto.createHash('sha256').update(JSON.stringify(requestBody)).digest('hex');
+      console.log('\n>>>>> complete\n');
       const claimedBodyHash = (decodedToken.payload as IPlaidWebhookJWTPayload).request_body_sha256;
       if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(claimedBodyHash))) {
-        console.log('>>>>> verifyWebhook 7');
         throw new CustomError('Invalid request body', ErrorTypes.SERVICE);
       }
-      console.log('>>>>> verifyWebhook 8');
     } catch (e) {
       this.handlePlaidError(e as IPlaidErrorResponse);
     }

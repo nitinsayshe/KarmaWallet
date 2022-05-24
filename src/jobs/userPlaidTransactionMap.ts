@@ -20,6 +20,7 @@ interface IUserPlaidTransactionMapParams {
 }
 
 export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
+  console.log('\n>>>>> inside userPlaidTransaction job...');
   // initial card linking for individual user
   let isSuccess = false;
   let result = '';
@@ -45,10 +46,13 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
       data: jobData,
     },
   ];
+
+  console.log('\n>>>>> userPlaidTransactionMapper job complete');
   return { nextJobs, result };
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
+  console.log('\n>>>>> userPlaidTransactionMapper onComplete...sending socket event');
   SocketClient.socket.emit({ rooms: [`user/${result.userId}`], eventName: SocketEvents.Update, type: SocketEventTypes.PlaidTransactionsReady });
   console.log(`${JobNames.UserPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
 };

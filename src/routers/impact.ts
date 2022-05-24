@@ -19,4 +19,7 @@ router.route('/top-sectors')
 router.route('/user/data')
   .get(authenticate, ImpactController.getUserImpactData);
 
+router.route('/user/lower-impact-purchases')
+  .get(authenticate, ImpactController.getUserLowerImpactPurchases);
+
 export default (app: Express) => app.use('/impact', router);

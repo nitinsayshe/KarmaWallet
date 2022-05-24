@@ -21,7 +21,8 @@ import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
 import { getShareableCard } from '../card';
 import { GroupModel } from '../../models/group';
 import { _getTransactions } from './utils';
-import { CompanyRating, CompanyRatingThresholds } from '../../lib/constants/company';
+import { CompanyRating } from '../../lib/constants/company';
+import { getCompanyRatingsThresholds } from '../misc';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -99,20 +100,22 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       });
     }
 
+    const companyRatingThresholds = await getCompanyRatingsThresholds();
+
     const companyQuery: FilterQuery<ITransaction> = {
       $or: _ratings.map(rating => {
         if (rating === CompanyRating.Positive) {
-          return { 'company.combinedScore': { $gte: CompanyRatingThresholds[CompanyRating.Positive].min } };
+          return { 'company.combinedScore': { $gte: companyRatingThresholds[CompanyRating.Positive].min } };
         }
 
         if (rating === CompanyRating.Negative) {
-          return { 'company.combinedScore': { $lte: CompanyRatingThresholds[CompanyRating.Negative].max } };
+          return { 'company.combinedScore': { $lte: companyRatingThresholds[CompanyRating.Negative].max } };
         }
 
         return {
           $and: [
-            { 'company.combinedScore': { $gte: CompanyRatingThresholds[CompanyRating.Neutral].min } },
-            { 'company.combinedScore': { $lte: CompanyRatingThresholds[CompanyRating.Neutral].max } },
+            { 'company.combinedScore': { $gte: companyRatingThresholds[CompanyRating.Neutral].min } },
+            { 'company.combinedScore': { $lte: companyRatingThresholds[CompanyRating.Neutral].max } },
           ],
         };
       }),

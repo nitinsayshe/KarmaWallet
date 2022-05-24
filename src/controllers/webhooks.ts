@@ -123,7 +123,6 @@ export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransac
 
 export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
   try {
-    console.log('>>>>> handle plaid webhook');
     const signedJwt = req.headers?.['plaid-verification'];
     const client = new PlaidClient();
     await client.verifyWebhook({ signedJwt, requestBody: req.body });
@@ -132,14 +131,10 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
     if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
       const card = await _getCard({ 'integrations.plaid.items': item_id });
       if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
-      console.log('>>>>> creating UserPlaidTransactionMapper job');
       MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId: card.userId, accessToken: card.integrations.plaid.accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
-    } else {
-      console.log('>>>>> NOT creaging UserPlaidTransactionMapper job');
     }
     api(req, res, { message: 'Plaid webhook processed successfully.' });
   } catch (e) {
-    console.log('>>>>> UserPlaidTransactionMapper error');
     error(req, res, asCustomError(e));
   }
 };

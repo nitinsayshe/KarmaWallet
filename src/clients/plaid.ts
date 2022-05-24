@@ -311,7 +311,7 @@ export class PlaidClient extends SdkClient {
       jsonwebtoken.verify(signedJwt, pem, { algorithms: ['ES256'], maxAge: '5 minutes' });
       // verify the request body
       console.log('\n>>>>> creating bodyHash\n');
-      const bodyHash = crypto.createHash('sha256').update(JSON.stringify(requestBody)).digest('hex');
+      const bodyHash = crypto.createHash('sha256').update(Buffer.from(requestBody)).digest('hex');
       console.log('\n>>>>> complete\n');
       const claimedBodyHash = (decodedToken.payload as IPlaidWebhookJWTPayload).request_body_sha256;
       if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(claimedBodyHash))) {

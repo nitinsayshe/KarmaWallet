@@ -22,7 +22,7 @@ import { getShareableCard } from '../card';
 import { GroupModel } from '../../models/group';
 import { _getTransactions } from './utils';
 import { CompanyRating } from '../../lib/constants/company';
-import { MiscModel } from '../../models/misc';
+import { getCompanyRatingsThresholds } from '../misc';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -100,8 +100,7 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       });
     }
 
-    const _companyRatingThresholds = await MiscModel.findOne({ key: 'company-ratings-thresholds' });
-    const companyRatingThresholds = JSON.parse(_companyRatingThresholds?.value);
+    const companyRatingThresholds = await getCompanyRatingsThresholds();
 
     const companyQuery: FilterQuery<ITransaction> = {
       $or: _ratings.map(rating => {

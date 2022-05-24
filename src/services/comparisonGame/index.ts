@@ -222,7 +222,12 @@ const staticSwaps = [
   ],
 ];
 
-export const getSwaps = async (previousSwaps: string[][] = [], reset = false, includeHidden = false) => {
+export interface IGetSwapsResponse {
+  swaps: ICompany[],
+  reset: boolean,
+}
+
+export const getSwaps = async (previousSwaps: string[][] = [], reset = false, includeHidden = false): Promise<IGetSwapsResponse> => {
   let high;
   let low;
   let randomHighGradeCompany;

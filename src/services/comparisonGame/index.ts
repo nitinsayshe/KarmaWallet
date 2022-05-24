@@ -275,6 +275,6 @@ export const getSwaps = async (previousSwaps: string[][] = [], reset = false, in
   } if (!allAvailableSubGroupsForUser.length && !randomHighGradeCompany && !randomLowGradeCompany) {
     // all pairs have been exhausted
     // time to start recycling...
-    await getSwaps([], true);
+    return getSwaps([], true);
   }
 };

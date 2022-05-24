@@ -9,6 +9,7 @@ import { INextJob } from '../clients/bull/base';
 import * as EmailService from '../services/email';
 import { getUser } from '../services/user';
 import { IRequest } from '../types/request';
+import { _updateCards } from '../services/card';
 
 interface IPlaidTransactionMapperResult {
   userId: string,
@@ -23,6 +24,8 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
   // initial card linking for individual user
   let isSuccess = false;
   let result = '';
+  // regardless of result, the intial processing should be set to false
+  await _updateCards({ 'integrations.plaid.accessToken': accessToken }, { initialTransactionsProcessing: false });
   try {
     await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
     isSuccess = true;

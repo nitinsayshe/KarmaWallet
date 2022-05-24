@@ -16,6 +16,7 @@ import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
 import { TransactionModel } from '../../models/transaction';
+import { getCompanyRatingsThresholds } from '../misc';
 
 dayjs.extend(utc);
 
@@ -432,8 +433,8 @@ export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerIm
   if (!!days) _days = parseInt(days, 10);
   if (!_days || Number.isNaN(_days)) _days = 30;
 
-  const thresholds = await MiscModel.findOne({ key: 'company-ratings-thresholds' });
-  const neutralMax = JSON.parse(thresholds?.value)?.neutral?.max;
+  const thresholds = await getCompanyRatingsThresholds();
+  const neutralMax = thresholds?.neutral?.max;
 
   if (!neutralMax) throw new CustomError('The selected company ratings threshold value was not found.', ErrorTypes.INVALID_ARG);
 

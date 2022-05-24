@@ -1,5 +1,7 @@
 /* eslint-disable camelcase */
 import { FilterQuery, ObjectId } from 'mongoose';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { CardModel, ICard, ICardDocument } from '../../models/card';
 import { IRequest } from '../../types/request';
 import { IShareableUser, IUserDocument } from '../../models/user';
@@ -8,6 +10,8 @@ import { getShareableUser } from '../user';
 import { PlaidClient } from '../../clients/plaid';
 import CustomError from '../../lib/customError';
 import { CardStatus, ErrorTypes } from '../../lib/constants';
+
+dayjs.extend(utc);
 
 /*
   userId: IRef<ObjectId, IShareableUser>;
@@ -41,6 +45,7 @@ export const getShareableCard = ({
   integrations,
   createdOn,
   lastModified,
+  initialTransactionsProcessing,
 }: ICardDocument) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name
     ? getShareableUser(userId as IUserDocument)
@@ -60,12 +65,15 @@ export const getShareableCard = ({
     institutionId: integrations?.plaid?.institutionId,
     createdOn,
     lastModified,
+    initialTransactionsProcessing,
   };
 };
 
 export const _getCard = async (query: FilterQuery<ICard>) => CardModel.findOne(query);
 
 export const _getCards = async (query: FilterQuery<ICard>) => CardModel.find(query);
+
+export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<ICard>) => CardModel.updateMany(query, { ...updates, lastModified: dayjs().utc().toDate() });
 
 // internal functions to handle cleanup for individual integrations
 // when a user removes a card

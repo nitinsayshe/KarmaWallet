@@ -257,6 +257,9 @@ export class PlaidClient extends SdkClient {
     const configs: SandboxPublicTokenCreateRequest = {
       institution_id: institutionId,
       initial_products: [Products.Transactions],
+      options: {
+        webhook: process.env.PLAID_WEBHOOK_URI,
+      },
     };
     try {
       const publicTokenResponse = await this._client.sandboxPublicTokenCreate(configs);
@@ -310,7 +313,8 @@ export class PlaidClient extends SdkClient {
       // verification will throw error if the signature is invalid
       jsonwebtoken.verify(signedJwt, pem, { algorithms: ['ES256'], maxAge: '5 minutes' });
       // verify the request body
-      const bodyHash = crypto.createHash('sha256').update(requestBody).digest('hex');
+      // body must be hashed with tab spacing of 2: https://stackoverflow.com/questions/62117400/hashing-plaid-request-body-webhook
+      const bodyHash = crypto.createHash('sha256').update(JSON.stringify(requestBody, null, 2)).digest('hex');
       const claimedBodyHash = (decodedToken.payload as IPlaidWebhookJWTPayload).request_body_sha256;
       if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(claimedBodyHash))) {
         throw new CustomError('Invalid request body', ErrorTypes.SERVICE);

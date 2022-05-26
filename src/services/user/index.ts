@@ -329,7 +329,11 @@ export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData &
 export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyTokenBody>) => {
   const { token } = req.body;
   if (!token) throw new CustomError('Token required.', ErrorTypes.INVALID_ARG);
-  const _token = await TokenService.getToken({ value: token, type: TokenTypes.Password });
+  const _token = await TokenService.getToken({ 
+    value: token, 
+    type: TokenTypes.Password, 
+    consumed: false 
+  });
   if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
   return { message: 'OK' };
 };

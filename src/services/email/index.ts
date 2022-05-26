@@ -69,6 +69,7 @@ export interface IEmailJobData {
   style?: string;
   token?: string;
   isSuccess?: boolean;
+  passwordResetLink?: string;
 }
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
@@ -265,11 +266,21 @@ export const sendTransactionsProcessedEmail = async ({
 export const sendPasswordResetEmail = async ({
   user,
   recipientEmail,
-  isSuccess,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   domain = process.env.FRONTEND_DOMAIN,
-  sendEmail = true }) => {
+  token,
+  name,
+  sendEmail = true }: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.PasswordReset;
+  const { isValid, missingFields } = verifyRequiredFields(['token', 'domain', 'recipientEmail', 'name'], { token, domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
+  const subject = 'Reset your KarmaWallet Password';
+  const passwordResetLink = `${domain}?createpassword=${token}`;
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
 export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {

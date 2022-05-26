@@ -27,20 +27,7 @@ export const getToken = async (query: FilterQuery<IToken>) => TokenModel.findOne
   expires: { $gte: dayjs().utc().toDate() },
 });
 
-export const getTokenAndConsume = async (user: IUserDocument, value: string, type: TokenTypes, additionalQuery?: object) => {
-  let query = {
-    user,
-    value,
-    type,
-    consumed: false,
-    expires: { $gte: dayjs().utc().toDate() },
-  };
-  if (!!additionalQuery) {
-    query = { ...query, ...additionalQuery };
-  }
-  const token = await TokenModel.findOneAndUpdate(query, { consumed: true }, { new: true }).select('-__v').lean();
-  return token;
-};
+export const getTokenAndConsume = async (query: FilterQuery<IToken>) => TokenModel.findOneAndUpdate({ ...query, consumed: false }, { consumed: true }, { new: true });
 
 export const createToken = async ({
   user,

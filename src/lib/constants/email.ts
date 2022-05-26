@@ -7,6 +7,7 @@ export enum EmailTemplateKeys {
   WelcomeCC1 = 'welcomeCC1',
   WelcomeCCG1 = 'welcomeCCG1',
   TransactionsProcessed = 'transactionsProcessed',
+  PasswordReset = 'passwordReset',
 }
 
 export enum EmailTemplateTypes {
@@ -22,6 +23,10 @@ export interface IEmailTemplateConfig {
 }
 
 export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
+  PasswordReset: {
+    name: EmailTemplateKeys.PasswordReset,
+    type: EmailTemplateTypes.Essential,
+  },
   GroupVerification: {
     name: EmailTemplateKeys.GroupVerification,
     type: EmailTemplateTypes.Verification,

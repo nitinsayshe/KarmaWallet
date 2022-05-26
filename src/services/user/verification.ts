@@ -42,7 +42,7 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
   const { requestor } = req;
   const { tokenValue } = req.body;
   if (!tokenValue) throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
-  const token = await TokenService.getTokenAndConsume(requestor, tokenValue, TokenTypes.Email);
+  const token = await TokenService.getTokenAndConsume({ user: requestor, value: tokenValue, type: TokenTypes.Email });
   if (!token) throw new CustomError('Token not found. Please request email verification again.', ErrorTypes.INVALID_ARG);
   const email = token?.resource?.email;
   if (!email) throw new CustomError('This token is not associated with an email address.', ErrorTypes.INVALID_ARG);

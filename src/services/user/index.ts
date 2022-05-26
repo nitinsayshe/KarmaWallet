@@ -22,6 +22,10 @@ import { verifyRequiredFields } from '../../lib/requestData';
 
 dayjs.extend(utc);
 
+export interface IVerifyTokenBody {
+  token: string;
+}
+
 export interface ILoginData {
   email: string;
   password?: string;
@@ -297,7 +301,7 @@ export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>
   if (!email || !isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const user = await UserModel.findOne({ 'emails.email': email });
   if (user) {
-    await TokenService.createToken({ user, minutes, type: TokenTypes.Password });
+    await TokenService.createToken({ user, resource: email, minutes, type: TokenTypes.Password });
   }
   // TODO: Send Email
   const message = `An email has been sent to the email address you provided with further instructions. Your reset request will expire in ${passwordResetTokenMinutes} minutes.`;
@@ -316,4 +320,12 @@ export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData &
   const existingToken = await TokenService.getTokenAndConsume(user, token, TokenTypes.Password);
   if (!existingToken) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
   return changePassword(req, user, newPassword);
+};
+
+export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyTokenBody>) => {
+  const { token } = req.body;
+  if (!token) throw new CustomError('Token required.', ErrorTypes.INVALID_ARG);
+  const _token = await TokenService.getToken({ value: token, type: TokenTypes.Password });
+  if (!_token) throw new CustomError('Token not found.', ErrorTypes.AUTHENTICATION);
+  return { message: 'OK' };
 };

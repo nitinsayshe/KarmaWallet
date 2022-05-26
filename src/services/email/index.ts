@@ -76,7 +76,6 @@ export interface IBuildTemplateParams {
   templatePath?: string;
   stylePath?: string;
 }
-
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
 }
@@ -261,6 +260,16 @@ export const sendTransactionsProcessedEmail = async ({
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendPasswordResetEmail = async ({
+  user,
+  recipientEmail,
+  isSuccess,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  sendEmail = true }) => {
 };
 
 export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {

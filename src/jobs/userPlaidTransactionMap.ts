@@ -34,11 +34,14 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
   try {
     await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
     isSuccess = true;
+    console.log('>>>>> setting result...');
     result = {
       message: `Successfully mapped transactions for user: ${userId}`,
       userId,
     };
+    console.log('>>>>> result', result);
   } catch (e: any) {
+    console.log('>>>>> error', e);
     result = {
       message: `Error: ${e.message}`,
     };

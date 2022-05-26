@@ -136,5 +136,5 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
 
 export const getCards = async (req: IRequest) => {
   const { requestor } = req;
-  return _getCards({ $and: [{ userId: requestor._id }, { 'integrations.rare': null }] });
+  return _getCards({ $and: [{ status: { $nin: [CardStatus.Removed] } }, { userId: requestor._id }, { 'integrations.rare': null }] });
 };

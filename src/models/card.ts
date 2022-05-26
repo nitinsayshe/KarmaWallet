@@ -43,6 +43,7 @@ export interface IShareableCard {
   institution: string;
   createdOn: Date;
   lastModified: Date;
+  initialTransactionsProcessing: boolean;
 }
 
 export interface ICard extends IShareableCard {
@@ -92,6 +93,7 @@ const cardSchema = new Schema({
       },
     },
   },
+  initialTransactionsProcessing: { type: Boolean },
   createdOn: { type: Date },
   lastModified: { type: Date },
 });

@@ -57,6 +57,7 @@ jobs:
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
-    - run: echo 'BETSI_ENV=lilbetsi' >> .env
+    - run: echo 'BETSI_ENV=bigolbetsi' >> .env
     - run: npm i
     - run: pm2 restart all
+    

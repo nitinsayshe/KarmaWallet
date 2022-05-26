@@ -155,7 +155,7 @@ export const calculateAllCompanyScores = async () => {
     });
 
     const combinedScore = unsdgScores.reduce((acc, curr) => acc + curr, 0);
-    const rating = getCompanyRatingFromScore(combinedScore);
+    const rating = await getCompanyRatingFromScore(combinedScore);
 
     const subcategoryScores: ISubcategoryScore[] = Object.entries(allSubcategoryScores).map(([key, scores]) => ({
       subcategory: subcategories.find(s => s._id.toString() === key),

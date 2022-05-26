@@ -222,7 +222,12 @@ const staticSwaps = [
   ],
 ];
 
-export const getSwaps = async (previousSwaps: string[][] = [], reset = false, includeHidden = false) => {
+export interface IGetSwapsResponse {
+  swaps: ICompany[],
+  reset: boolean,
+}
+
+export const getSwaps = async (previousSwaps: string[][] = [], reset = false, includeHidden = false): Promise<IGetSwapsResponse> => {
   let high;
   let low;
   let randomHighGradeCompany;
@@ -275,6 +280,6 @@ export const getSwaps = async (previousSwaps: string[][] = [], reset = false, in
   } if (!allAvailableSubGroupsForUser.length && !randomHighGradeCompany && !randomLowGradeCompany) {
     // all pairs have been exhausted
     // time to start recycling...
-    await getSwaps([], true);
+    return getSwaps([], true);
   }
 };

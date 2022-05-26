@@ -9,6 +9,7 @@ router.route('/rare')
 router.route('/plaid')
   .post(WebhooksController.handlePlaidWebhook);
 
+// legacy api passthrough route
 router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);
 

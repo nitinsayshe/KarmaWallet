@@ -15,6 +15,8 @@ import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
+import { TransactionModel } from '../../models/transaction';
+import { getCompanyRatingsThresholds } from '../misc';
 
 dayjs.extend(utc);
 
@@ -65,6 +67,18 @@ export interface IUserImpactDataResponse {
   monthlyBreakdown: IUserImpactMonthData[];
   totalTransactions: number;
   ratings: IUserImpactRatings;
+}
+
+export interface IUserLowerImpactPurchasesRequestQuery {
+  companies: string,
+  days: string,
+}
+
+export interface IUserLowerImpactPurchasesResponse {
+  _id: string,
+  totalSpent: number,
+  transactionCount: number,
+  companyName: string
 }
 
 // values provided by Anushka 2/2/22. these may need to change
@@ -179,8 +193,8 @@ const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catche
   if (!userId && !(cachedTransactionTotal || catchedTransactionCount)) {
     return true;
   }
-  const transactionAmountTotal = cachedTransactionTotal || await TransactionService.getTransactionTotal({ userId, 'integrations.rare': null });
-  const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ userId, 'integrations.rare': null });
+  const transactionAmountTotal = cachedTransactionTotal || await TransactionService.getTransactionTotal({ user: userId, 'integrations.rare': null });
+  const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ user: userId, 'integrations.rare': null });
   // might need to break this down more granular
   return transactionCount <= 0 && transactionAmountTotal <= 0;
 };
@@ -209,7 +223,7 @@ export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarb
 
   const showAverage = await shouldUseAmericanAverage({ userId: _id });
 
-  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: new Types.ObjectId(_id) });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ user: new Types.ObjectId(_id) });
 
   const monthlyEmissions = showAverage
     ? { mt: averageAmericanEmissions.Monthly }
@@ -271,9 +285,9 @@ export const getCarbonOffsetsAndEmissions = async (req: IRequest<{}, ICarbonOffs
   let netEmissions = 0;
   let calculateMonthlyEquivalency = false;
 
-  const donationsCount = await CarbonService.getOffsetTransactionsCount({ userId: _id });
-  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ userId: _id });
-  const totalOffset = await CarbonService.getRareOffsetAmount({ userId: _id });
+  const donationsCount = await CarbonService.getOffsetTransactionsCount({ user: _id });
+  const totalDonated = await CarbonService.getOffsetTransactionsTotal({ user: _id });
+  const totalOffset = await CarbonService.getRareOffsetAmount({ user: _id });
 
   const useAmericanAverage = await shouldUseAmericanAverage({ userId: _id });
 
@@ -405,4 +419,81 @@ export const getUserImpactData = async (req: IRequest<{}, IUserImpactRequestQuer
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerImpactPurchasesRequestQuery>) => {
+  const { companies, days } = req.query;
+  const { requestor } = req;
+
+  let _companies;
+  let _days;
+
+  if (!!companies) _companies = parseInt(companies, 10);
+  if (!_companies || Number.isNaN(_companies)) _companies = 10;
+  if (!!days) _days = parseInt(days, 10);
+  if (!_days || Number.isNaN(_days)) _days = 30;
+
+  const thresholds = await getCompanyRatingsThresholds();
+  const neutralMax = thresholds?.neutral?.max;
+
+  if (!neutralMax) throw new CustomError('The selected company ratings threshold value was not found.', ErrorTypes.INVALID_ARG);
+
+  return TransactionModel.aggregate([
+    {
+      $match: {
+        user: requestor._id,
+        date: { $gte: dayjs().subtract(_days, 'day').toDate() },
+        company: { $ne: null },
+      },
+    },
+    {
+      $group: {
+        _id: '$company',
+        totalSpent: {
+          $sum: '$amount',
+        },
+        transactionCount: {
+          $sum: 1,
+        },
+        company: {
+          $first: '$company',
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: 'companies',
+        localField: 'company',
+        foreignField: '_id',
+        as: 'company',
+      },
+    },
+    {
+      $unwind: {
+        path: '$company',
+      },
+    },
+    {
+      $match: {
+        'company.combinedScore': {
+          $lte: neutralMax,
+        },
+      },
+    },
+    {
+      $project: {
+        totalSpent: 1,
+        transactionCount: 1,
+        company: 1,
+      },
+    },
+    {
+      $sort: {
+        totalSpent: -1,
+      },
+    },
+    {
+      $limit: _companies,
+    },
+  ]);
 };

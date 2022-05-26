@@ -63,3 +63,4 @@ jobs:
     - run: echo 'BETSI_ENV=bigolbetsi' >> .env
     - run: npm i
     - run: pm2 restart all
+    

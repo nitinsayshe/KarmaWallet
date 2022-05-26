@@ -53,6 +53,7 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
+  console.log('>>>>> calling emit to user room: ', `user/${result.userId}`);
   SocketClient.socket.emit({ rooms: [`user/${result.userId}`], eventName: SocketEvents.Update, type: SocketEventTypes.PlaidTransactionsReady });
   console.log(`${JobNames.UserPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
 };

@@ -1,6 +1,7 @@
 import { RedisAdapter } from '@socket.io/redis-adapter';
 import http from 'http';
-import { BroadcastOperator, Namespace, Server, Socket } from 'socket.io';
+import { BroadcastOperator, Namespace, Server } from 'socket.io';
+import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 import { AllowedOrigins, SocketEvents, SocketNamespaces, UserRoles } from '../lib/constants';
 import identify from './middleware/identify';
 import logger from './middleware/logger';
@@ -8,7 +9,6 @@ import { ISocket } from './types/request';
 import router from './routers';
 import protectedRequirements from './middleware/protected';
 import { SocketEventTypes } from '../lib/constants/sockets';
-import { DefaultEventsMap } from 'socket.io/dist/typed-events';
 
 export interface ISocketEmitConfig {
   namespace?: SocketNamespaces;
@@ -70,6 +70,9 @@ export class SocketServer {
     if (!!rooms?.length) _broadcastOperator = _namespace.to(rooms);
     if (!!except?.length) _broadcastOperator = _namespace.except(except);
 
+    console.log('>>>>> namespace: ', _namespace);
+    console.log('>>>>> broadcastOperator: ', _broadcastOperator);
+
     (_broadcastOperator || _namespace).emit(eventName, { type, data });
   }
 
@@ -78,5 +81,5 @@ export class SocketServer {
       case SocketNamespaces.Karma: return this._admin;
       default: return this._main;
     }
-  }
+  };
 }

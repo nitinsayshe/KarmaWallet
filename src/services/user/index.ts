@@ -301,8 +301,9 @@ export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>
   const { email } = req.body;
   if (!email || !isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const user = await UserModel.findOne({ 'emails.email': email });
+  console.log({ email });
   if (user) {
-    const token = await TokenService.createToken({ user, resource: email, minutes, type: TokenTypes.Password });
+    const token = await TokenService.createToken({ user, resource: { email }, minutes, type: TokenTypes.Password });
     // TODO: Send Email
     await sendPasswordResetEmail({ user: user._id, recipientEmail: email, name: user.name, token: token.value });
   }

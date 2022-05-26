@@ -275,9 +275,9 @@ export const sendPasswordResetEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.PasswordReset;
   const { isValid, missingFields } = verifyRequiredFields(['token', 'domain', 'recipientEmail', 'name'], { token, domain, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
-  const subject = 'Reset your KarmaWallet Password';
   const passwordResetLink = `${domain}?createpassword=${token}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
+  const subject = 'Reset your KarmaWallet Password';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };

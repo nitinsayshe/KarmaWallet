@@ -313,7 +313,7 @@ export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>
 
 export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData & IUpdatePasswordBody)>) => {
   const { newPassword, token } = req.body;
-  const requiredFields = ['newPassword', 'token', 'email'];
+  const requiredFields = ['newPassword', 'token'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
   if (!isValid) throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
   const errMsg = 'Token not found. Please request password reset again.';

@@ -28,7 +28,6 @@ interface IResult {
 }
 
 export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
-  console.log('>>>>> executing UserPlaidTransactionMapper');
   // initial card linking for individual user
   let isSuccess = false;
   let result: IResult;
@@ -37,21 +36,17 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
   try {
     await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
     isSuccess = true;
-    console.log('>>>>> setting result...');
     result = {
       message: `Successfully mapped transactions for user: ${userId}`,
       userId,
     };
-    console.log('>>>>> result', result);
   } catch (err: any) {
-    console.log('>>>>> error', err);
     result = {
       message: `Error: ${err.message}`,
     };
   }
 
   try {
-    console.log('>>>>> sending transactions ready email');
     // setting up transacation processed email
     const user = await getUser({} as IRequest, { _id: userId });
     const { jobData, jobOptions } = await EmailService.sendTransactionsProcessedEmail({
@@ -70,7 +65,6 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
     ];
     return { nextJobs, ...result };
   } catch (err: any) {
-    console.log('>>>>> error', err);
     return {
       message: `Error: ${err.message}`,
     };
@@ -78,7 +72,6 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {
-  console.log('>>>>> calling emit to user room: ', `user/${result.userId}`, result);
   SocketClient.socket.emit({ rooms: [`user/${result.userId}`], eventName: SocketEvents.Update, type: SocketEventTypes.PlaidTransactionsReady });
   console.log(`${JobNames.UserPlaidTransactionMapper} finished: \n ${JSON.stringify(result)}`);
 };

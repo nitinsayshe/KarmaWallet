@@ -69,6 +69,7 @@ export interface IEmailJobData {
   style?: string;
   token?: string;
   isSuccess?: boolean;
+  passwordResetLink?: string;
 }
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
@@ -76,7 +77,6 @@ export interface IBuildTemplateParams {
   templatePath?: string;
   stylePath?: string;
 }
-
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
 }
@@ -260,6 +260,26 @@ export const sendTransactionsProcessedEmail = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain, name } });
   const subject = 'Your KarmaWallet Impact';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess, name };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendPasswordResetEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  token,
+  name,
+  sendEmail = true }: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.PasswordReset;
+  const { isValid, missingFields } = verifyRequiredFields(['token', 'domain', 'recipientEmail', 'name'], { token, domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const passwordResetLink = `${domain}?createpassword=${token}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
+  const subject = 'Reset your KarmaWallet Password';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

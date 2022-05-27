@@ -8,7 +8,7 @@ router.post('/register', UserController.register);
 router.post('/login', UserController.login);
 
 router.post('/password/token/create', UserController.createPasswordResetToken);
-router.post('/password/token/verify', UserController.checkPasswordResetToken);
+router.post('/password/token/verify', UserController.verifyPasswordResetToken);
 router.put('/password/token', UserController.resetPasswordFromToken);
 
 // Authenticated

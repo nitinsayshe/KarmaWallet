@@ -70,9 +70,6 @@ export class SocketServer {
     if (!!rooms?.length) _broadcastOperator = _namespace.to(rooms);
     if (!!except?.length) _broadcastOperator = _namespace.except(except);
 
-    console.log('>>>>> namespace: ', _namespace);
-    console.log('>>>>> broadcastOperator: ', _broadcastOperator);
-
     (_broadcastOperator || _namespace).emit(eventName, { type, data });
   }
 

@@ -12,6 +12,7 @@ import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsFor
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
+import * as SendEmail from '../../../jobs/sendEmail';
 
 const MongoClient = new _MongoClient();
 
@@ -65,6 +66,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateRareProjectAverage:
       result = await UpdateRareProjectAverage.exec();
+      break;
+    case JobNames.SendEmail:
+      result = await SendEmail.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

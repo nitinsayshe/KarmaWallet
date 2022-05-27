@@ -248,17 +248,18 @@ export const sendTransactionsProcessedEmail = async ({
   user,
   recipientEmail,
   isSuccess,
+  name,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   domain = process.env.FRONTEND_DOMAIN,
   sendEmail = true,
 }: ISendTransactionsProcessedEmailParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.TrasactionsProcessed;
-  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
+  const emailTemplateConfig = EmailTemplateConfigs.TransactionsProcessed;
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name'], { domain, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain } });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain, name } });
   const subject = 'Your KarmaWallet Impact';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess };
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess, name };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

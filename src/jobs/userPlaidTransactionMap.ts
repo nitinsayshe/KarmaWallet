@@ -13,6 +13,8 @@ import { _updateCards } from '../services/card';
 
 interface IPlaidTransactionMapperResult {
   userId: string,
+  nextJobs: INextJob[],
+  message: string,
 }
 
 interface IUserPlaidTransactionMapParams {
@@ -48,7 +50,7 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
   }
   // setting up transacation processed email
   const user = await getUser({} as IRequest, { _id: userId });
-  const jobData = EmailService.sendTransactionsProcessedEmail({
+  const { jobData, jobOptions } = await EmailService.sendTransactionsProcessedEmail({
     user: user._id,
     name: user.name,
     recipientEmail: user.emails.find(e => e.primary).email,
@@ -59,10 +61,10 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
     {
       name: JobNames.SendEmail,
       data: jobData,
+      options: jobOptions,
     },
   ];
-
-  return { nextJobs, result };
+  return { nextJobs, ...result };
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {

@@ -52,6 +52,7 @@ export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
   const { name, data, queue } = req.body;
   switch (queue) {
     case QueueNames.Main:
+      console.log('>>>>> create job controller', name, data);
       await MainBullClient.createJob(name, data);
       break;
     case QueueNames.Email:

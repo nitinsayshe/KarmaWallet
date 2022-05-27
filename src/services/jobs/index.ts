@@ -6,6 +6,7 @@ import { EmailBullClient } from '../../clients/bull/email';
 import CustomError from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { QueueNames } from '../../lib/constants/jobScheduler';
+import { onComplete } from '../../jobs/userPlaidTransactionMap';
 
 export interface ISendEmailParams {
   name: string;
@@ -52,8 +53,7 @@ export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
   const { name, data, queue } = req.body;
   switch (queue) {
     case QueueNames.Main:
-      console.log('>>>>> create job controller', name, data);
-      await MainBullClient.createJob(name, data);
+      await MainBullClient.createJob(name, data, null, { onComplete });
       break;
     case QueueNames.Email:
       await EmailBullClient.createJob(name, data);

@@ -42,29 +42,38 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
       userId,
     };
     console.log('>>>>> result', result);
-  } catch (e: any) {
-    console.log('>>>>> error', e);
+  } catch (err: any) {
+    console.log('>>>>> error', err);
     result = {
-      message: `Error: ${e.message}`,
+      message: `Error: ${err.message}`,
     };
   }
-  // setting up transacation processed email
-  const user = await getUser({} as IRequest, { _id: userId });
-  const { jobData, jobOptions } = await EmailService.sendTransactionsProcessedEmail({
-    user: user._id,
-    name: user.name,
-    recipientEmail: user.emails.find(e => e.primary).email,
-    isSuccess,
-    sendEmail: false,
-  });
-  const nextJobs: INextJob[] = [
-    {
-      name: JobNames.SendEmail,
-      data: jobData,
-      options: jobOptions,
-    },
-  ];
-  return { nextJobs, ...result };
+
+  try {
+    console.log('>>>>> sending transactions ready email');
+    // setting up transacation processed email
+    const user = await getUser({} as IRequest, { _id: userId });
+    const { jobData, jobOptions } = await EmailService.sendTransactionsProcessedEmail({
+      user: user._id,
+      name: user.name,
+      recipientEmail: user.emails.find(e => e.primary).email,
+      isSuccess,
+      sendEmail: false,
+    });
+    const nextJobs: INextJob[] = [
+      {
+        name: JobNames.SendEmail,
+        data: jobData,
+        options: jobOptions,
+      },
+    ];
+    return { nextJobs, ...result };
+  } catch (err: any) {
+    console.log('>>>>> error', err);
+    return {
+      message: `Error: ${err.message}`,
+    };
+  }
 };
 
 export const onComplete = async (job: SandboxedJob, result: IPlaidTransactionMapperResult) => {

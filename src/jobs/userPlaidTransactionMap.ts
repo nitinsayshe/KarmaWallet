@@ -28,6 +28,7 @@ interface IResult {
 }
 
 export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapParams) => {
+  console.log('>>>>> executing UserPlaidTransactionMapper');
   // initial card linking for individual user
   let isSuccess = false;
   let result: IResult;

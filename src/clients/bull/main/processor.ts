@@ -62,6 +62,7 @@ export default async (job: SandboxedJob) => {
       result = await TransactionsMonitor.exec();
       break;
     case JobNames.UserPlaidTransactionMapper:
+      console.log('>>>>> starting UserPlaidTransactionMapper');
       result = await UserPlaidTransactionMapper.exec(data);
       break;
     case JobNames.UpdateRareProjectAverage:

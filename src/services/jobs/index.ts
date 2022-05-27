@@ -49,14 +49,14 @@ export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) 
 
 export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailService.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
 
-export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
+export const createJob = (req: IRequest<{}, {}, ICreateJobParams>) => {
   const { name, data, queue } = req.body;
   switch (queue) {
     case QueueNames.Main:
-      await MainBullClient.createJob(name, data, null, { onComplete });
+      MainBullClient.createJob(name, data, null, { onComplete });
       break;
     case QueueNames.Email:
-      await EmailBullClient.createJob(name, data);
+      EmailBullClient.createJob(name, data);
       break;
     default:
       throw new CustomError('Invalid queue name', ErrorTypes.INVALID_ARG);

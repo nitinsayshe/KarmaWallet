@@ -30,9 +30,9 @@ export const sendWelcomeEmail: IRequestHandler<{}, {}, JobService.ISendEmailPara
   }
 };
 
-export const createJob: IRequestHandler<{}, {}, JobService.ICreateJobParams> = async (req, res) => {
+export const createJob: IRequestHandler<{}, {}, JobService.ICreateJobParams> = (req, res) => {
   try {
-    const message = await JobService.createJob(req);
+    const message = JobService.createJob(req);
     output.api(req, res, message);
   } catch (err) {
     output.error(req, res, asCustomError(err));

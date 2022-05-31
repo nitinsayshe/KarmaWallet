@@ -79,7 +79,9 @@ export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<I
 // when a user removes a card
 const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   const client = new PlaidClient();
-  await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+  if (card?.integrations?.plaid?.accessToken) {
+    await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+  }
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
     // TODO: these jobs should ideally be broken down into jobs for users and jobs to get totals

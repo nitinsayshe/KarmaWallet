@@ -249,7 +249,11 @@ export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
       }
     }
 
-    const query: FilterQuery<ICompany> = { $and: [] };
+    const query: FilterQuery<ICompany> = {
+      $and: [
+        { 'hidden.status': false },
+      ],
+    };
 
     if (!!_sectors.length) query.$and.push({ 'sectors.sector': { $in: _sectors.map(s => new Types.ObjectId(s)) } });
     if (!!_excludedCompanyIds.length) query.$and.push({ _id: { $nin: _excludedCompanyIds.map(e => new Types.ObjectId(e)) } });
@@ -307,6 +311,7 @@ export const getShareableCompany = ({
   companyName,
   dataYear,
   grade,
+  hidden,
   isBrand,
   logo,
   parentCompany,
@@ -361,6 +366,7 @@ export const getShareableCompany = ({
     companyName,
     dataYear,
     grade,
+    hidden,
     isBrand,
     logo,
     parentCompany: _parentCompany,

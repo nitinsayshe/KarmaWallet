@@ -34,6 +34,12 @@ export interface ICompanySector {
   primary: boolean;
 }
 
+export interface ICompanyHidden {
+  status: boolean;
+  reason: string;
+  lastModified: Date;
+}
+
 export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -42,6 +48,7 @@ export interface IShareableCompany {
   companyName: string;
   dataYear: number;
   grade: string;
+  hidden: ICompanyHidden;
   isBrand: boolean;
   logo: string;
   // eslint-disable-next-line no-use-before-define

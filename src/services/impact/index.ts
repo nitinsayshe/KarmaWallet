@@ -17,6 +17,7 @@ import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
 import { TransactionModel } from '../../models/transaction';
 import { getCompanyRatingsThresholds } from '../misc';
+import { CompanyRating } from '../../lib/constants/company';
 
 dayjs.extend(utc);
 
@@ -118,7 +119,7 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
       uids: [process.env.APP_USER_ID],
       sectors: [sector],
       count: 11,
-      validator: (company: ICompanyDocument) => company.combinedScore > 2,
+      validator: (company: ICompanyDocument) => company.rating === CompanyRating.Positive,
     };
 
     if (!!req.requestor) config.uids.unshift(req.requestor._id.toString());
@@ -134,9 +135,11 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
     if ((companies || []).length < config.count) {
       // fill with relevant companies
       const relevantCompanies = await _getCompanies({
-        _id: { $nin: companies.map(c => c._id) },
-        'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) },
-        combinedScore: { $gt: 2 },
+        $and: [
+          { _id: { $nin: companies.map(c => c._id) } },
+          { 'sectors.sector': { $in: config.sectors.map(s => new Types.ObjectId(s)) } },
+          { rating: CompanyRating.Positive },
+        ],
       });
 
       const relevantCompanySamples = getSample<ICompanyDocument>(relevantCompanies, config.count - (companies || []).length);

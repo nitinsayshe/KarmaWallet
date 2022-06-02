@@ -109,7 +109,7 @@ export const getUserImpactRatings = async (): Promise<[number, number][]> => {
     try {
       ratings = new MiscModel({
         key: RatingKey,
-        value: '0-30,31-60,61-100',
+        value: '0-49.999,50-74.999,75-100',
       });
 
       await ratings.save();

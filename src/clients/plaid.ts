@@ -225,8 +225,18 @@ export class PlaidClient extends SdkClient {
       }
       return transactions;
     } catch (e: any) {
+      // TODO: update card status here...need to look at possible errors from Plaid.
+      // ??? send email to user advising that one or more of their cards has become unlinked ???
       console.log('[-] error getting plaid transactions.');
-
+      /*
+        plaid error codes don't distinguish between errors caused by environments
+        and those caused by the item no longer being linked/authorized, so reading
+        the error code isn't enough to determine if the item is no longer linked.
+      */
+      if (e.response?.data?.error_message.includes('provided access token is for the wrong Plaid environment')) {
+        console.log('[-] plaid environment mismatch. skipping access token.');
+        return null;
+      }
       if (e.response?.data?.error_code === 'INVALID_ACCESS_TOKEN') {
         try {
           const cards = await CardModel.find({ 'integrations.plaid.accessToken': access_token });

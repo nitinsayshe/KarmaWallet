@@ -312,25 +312,12 @@ export class PlaidMapper {
     const Plaid = new PlaidClient();
     for (const accessToken of Array.from(accessTokens)) {
       let plaidTransactions = null;
-      try {
-        plaidTransactions = await Plaid.getPlaidTransactions({
-          access_token: accessToken,
-          start_date: startDate.format('YYYY-MM-DD'),
-          end_date: endDate.format('YYYY-MM-DD'),
-        });
-      } catch (err) {
-        // TODO: update card status here...need to look at possible errors from Plaid.
-        // ??? send email to user advising that one or more of their cards has become unlinked ???
-        for (const card of cards) {
-          try {
-            if (card.integrations?.plaid?.accessToken === accessToken) {
-              card.status = CardStatus.Unlinked;
-              card.integrations.plaid.accessToken = null;
-              await card.save();
-            }
-          } catch { /* swallowing error so iterations aren't interrupted */ }
-        }
-      }
+
+      plaidTransactions = await Plaid.getPlaidTransactions({
+        access_token: accessToken,
+        start_date: startDate.format('YYYY-MM-DD'),
+        end_date: endDate.format('YYYY-MM-DD'),
+      });
 
       if (!plaidTransactions?.length) continue;
 

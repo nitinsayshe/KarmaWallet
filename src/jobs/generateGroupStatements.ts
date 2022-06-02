@@ -154,9 +154,10 @@ export const exec = async () => {
           // to be matched for this user, only add the amount left
           // otherwise, add the entire transaction amount to the
           // total.
-          let value = transaction.amount >= leftToBeMatched
+          const transactionSubTotalAmt = (transaction.integrations.rare.subtotal_amt * 100);
+          let value = transactionSubTotalAmt >= leftToBeMatched
             ? leftToBeMatched
-            : transaction.amount;
+            : transactionSubTotalAmt;
 
           value *= matchPercent;
 

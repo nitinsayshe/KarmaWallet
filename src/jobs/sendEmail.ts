@@ -14,7 +14,7 @@ import { UserEmailStatus, UserModel } from '../models/user';
  * THIS FLAG IS FOR TESTING https://github.com/karmawallet/karmawallet/issues/356 ONLY
  * THIS SHOULD BE REMOVED FOR PRODUCTION AS IT BLOCKS ALL EMAILS FROM BEING SENT
  */
-const DEV_TEST = false;
+const DEV_TEST = true;
 interface ISesEmailResult {
   SendEmailResponse: SendEmailResponse,
   AWSError: AWSError,

@@ -142,6 +142,9 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       {
         $match: companyQuery,
       },
+      {
+        $sort: { date: -1 },
+      },
     ]);
 
     const options = {

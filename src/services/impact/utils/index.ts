@@ -22,7 +22,7 @@ export const getImpactScores = ({ scores, total }: IImpactSummary, ratings: [num
 
   for (const score of _scores) {
     const amount = scores[`${score}`];
-    const totalPercentage = amount / total;
+    const totalPercentage = !total ? 0 : amount / total;
     const rawImpact = totalPercentage * score;
     const rating = getCompanyRating(ratings, score);
     impactScores.score += rawImpact;

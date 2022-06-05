@@ -331,7 +331,7 @@ const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[], includeHidden = fal
     for (let i = 0; i < 17; i++) {
       const now = toUTC(new Date());
       const _unsdg = new CompanyUnsdgModel({
-        companyId: company._id,
+        company: company._id,
         unsdg: unsdgs[i],
         value: (company as any)[`unSdg${i + 1}`],
         year: 2021,
@@ -342,7 +342,8 @@ const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[], includeHidden = fal
       try {
         await _unsdg.save();
         count += 1;
-      } catch {
+      } catch (err: any) {
+        console.log(err.message);
         // swallowing error...
       }
     }

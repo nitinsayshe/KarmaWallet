@@ -28,7 +28,7 @@ export const exec = async () => {
           },
         }, {
           $group: {
-            _id: '$userId',
+            _id: '$user',
           },
         }, {
           $lookup: {

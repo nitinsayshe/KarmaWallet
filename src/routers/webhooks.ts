@@ -6,6 +6,10 @@ const router = Router();
 router.route('/rare')
   .post(WebhooksController.mapRareTransaction);
 
+router.route('/plaid')
+  .post(WebhooksController.handlePlaidWebhook);
+
+// legacy api passthrough route
 router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);
 

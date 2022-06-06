@@ -4,6 +4,10 @@ import { error } from '../services/output';
 import { IRequestHandler } from '../types/request';
 
 const checkToken: IRequestHandler = (req, res, next) => {
+  if (req.headers['plaid-verification'] && req.url === '/webhook/plaid') {
+    return next();
+  }
+
   const token = req.headers.authorization;
   if (!token || token.replace('Bearer ', '') !== process.env.PUBLIC_TOKEN) {
     error(req, res, new CustomError('Access denied. Invalid token.', ErrorTypes.AUTHENTICATION));

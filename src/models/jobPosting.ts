@@ -13,6 +13,8 @@ export interface IJobPosting {
   description: string;
   department: string;
   jobLocation: string;
+  applicationUrl: string;
+  published: boolean;
   createdAt: Date;
   lastModified: Date;
 }
@@ -37,6 +39,13 @@ const jobPostingSchema = new Schema({
   },
   jobLocation: { // could not use `location` as it is a reserved keyword
     type: String,
+  },
+  applicationUrl: {
+    type: String,
+  },
+  published: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,

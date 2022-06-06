@@ -52,8 +52,8 @@ const getOffsetsPerMember = (statementTransactions: ITransactionDocument[]) => {
 
   for (const transaction of statementTransactions) {
     // create default data for this user if doesnt already exist
-    if (!offsetsPerMember[transaction.userId.toString()]) {
-      offsetsPerMember[transaction.userId.toString()] = {
+    if (!offsetsPerMember[transaction.user.toString()]) {
+      offsetsPerMember[transaction.user.toString()] = {
         matched: 0,
         unmatched: 0,
       };
@@ -74,8 +74,8 @@ const getOffsetsPerMember = (statementTransactions: ITransactionDocument[]) => {
       unmatchedAmount = transaction.amount;
     }
 
-    offsetsPerMember[transaction.userId.toString()].matched += matchedAmount;
-    offsetsPerMember[transaction.userId.toString()].unmatched += unmatchedAmount;
+    offsetsPerMember[transaction.user.toString()].matched += matchedAmount;
+    offsetsPerMember[transaction.user.toString()].unmatched += unmatchedAmount;
   }
 
   return offsetsPerMember;
@@ -117,7 +117,7 @@ export const exec = async () => {
 
       const offsetTransactionQuery: FilterQuery<ITransaction> = {
         $and: [
-          { userId: { $in: memberIds } },
+          { user: { $in: memberIds } },
           { 'association.group': group._id },
           { date: { $gte: !!group.settings.matching.maxDollarAmount ? yearStart.toDate() : monthStart.toDate() } },
           { date: { $lte: monthEnd.toDate() } },
@@ -142,7 +142,7 @@ export const exec = async () => {
         const thisMonthsTransactions = allTransactions.filter(t => monthStart.isBefore(t.date));
 
         for (const transaction of thisMonthsTransactions) {
-          const userOffsets = offsetsPerMember[transaction.userId.toString()];
+          const userOffsets = offsetsPerMember[transaction.user.toString()];
 
           // if user has already been matched 100%, skip this transaction
           if (userOffsets.matched >= group.settings.matching.maxDollarAmount) continue;
@@ -154,9 +154,10 @@ export const exec = async () => {
           // to be matched for this user, only add the amount left
           // otherwise, add the entire transaction amount to the
           // total.
-          let value = transaction.amount >= leftToBeMatched
+          const transactionSubTotalAmt = (transaction.integrations.rare.subtotal_amt * 100);
+          let value = transactionSubTotalAmt >= leftToBeMatched
             ? leftToBeMatched
-            : transaction.amount;
+            : transactionSubTotalAmt;
 
           value *= matchPercent;
 

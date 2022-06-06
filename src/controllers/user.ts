@@ -1,9 +1,7 @@
 import * as UserService from '../services/user';
 import * as output from '../services/output';
 import { verifyRequiredFields } from '../lib/requestData';
-import { ErrorTypes, TokenTypes } from '../lib/constants';
-import * as Token from '../services/token';
-import { isValidEmailFormat } from '../lib/string';
+import { ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
@@ -87,28 +85,10 @@ export const createPasswordResetToken: IRequestHandler<{}, {}, UserService.ILogi
   }
 };
 
-export const checkPasswordResetToken: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
+export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVerifyTokenBody> = async (req, res) => {
   try {
-    const { email, token } = req.body;
-    if (!token) {
-      output.error(req, res, new CustomError('Invalid token.', ErrorTypes.AUTHENTICATION));
-      return;
-    }
-    if (!email || !isValidEmailFormat(email)) {
-      output.error(req, res, new CustomError('Invalid email.', ErrorTypes.AUTHENTICATION));
-      return;
-    }
-    const user = await UserService.getUser(req, { email });
-    if (!user) {
-      output.error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
-      return;
-    }
-    const data = await Token.getToken(user, token, TokenTypes.Password);
-    if (!data) {
-      output.error(req, res, new CustomError('Not found', ErrorTypes.NOT_FOUND));
-      return;
-    }
-    output.api(req, res, { created: data.createdOn, expires: data.expires, valid: true });
+    const data = await UserService.verifyPasswordResetToken(req);
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

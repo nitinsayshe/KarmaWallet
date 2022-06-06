@@ -1,19 +1,23 @@
 import aws from 'aws-sdk';
 import { Express } from 'express';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
 
+dayjs.extend(utc);
+
 interface IAwsClient {
   s3: aws.S3,
-  ses: aws.SES
+  sesV2: aws.SESV2
 }
 
 interface ISendEmailRequest {
-  senderEmail?: aws.SES.Address;
-  recipientEmail: aws.SES.Address;
-  replyToAddresses: aws.SES.AddressList;
+  senderEmail?: aws.SESV2.EmailAddress;
+  recipientEmail: aws.SESV2.EmailAddress;
+  replyToAddresses: aws.SESV2.EmailAddressList;
   template: string;
   subject: string;
   senderName?: string;
@@ -42,7 +46,7 @@ export class AwsClient extends SdkClient {
     });
 
     this._client = {
-      ses: new aws.SES(),
+      sesV2: new aws.SESV2({ apiVersion: '2019-09-27' }),
       s3: new aws.S3(),
     };
   }
@@ -55,29 +59,45 @@ export class AwsClient extends SdkClient {
     subject,
     replyToAddresses = [EmailAddresses.ReplyTo],
   }: ISendEmailRequest) => {
-    const params = {
-      Source: `${senderName} <${senderEmail}>`,
+    const params: aws.SESV2.SendEmailRequest = {
+      FromEmailAddress: `${senderName} <${senderEmail}>`,
+      ReplyToAddresses: replyToAddresses,
+      Content: {
+        Simple: {
+          Body: {
+            Html: {
+              Charset: 'UTF-8',
+              Data: template,
+            },
+          },
+          Subject: {
+            Charset: 'UTF-8',
+            Data: subject,
+          },
+        },
+      },
       Destination: {
         ToAddresses: [
           recipientEmail,
         ],
       },
-      ReplyToAddresses: replyToAddresses,
-      Message: {
-        Body: {
-          Html: {
-            Charset: 'UTF-8',
-            Data: template,
-          },
-        },
-        Subject: {
-          Charset: 'UTF-8',
-          Data: subject,
-        },
-      },
     };
-    return this._client.ses.sendEmail(params).promise();
+    return this._client.sesV2.sendEmail(params).promise();
   };
+
+  // https://docs.aws.amazon.com/AWSJavaScriptSDK/latest/AWS/SESV2.html#listSuppressedDestinations-property
+  getSuppressedDestinations = ({
+    EndDate = new Date(),
+    // startDate going back five years by default
+    StartDate = dayjs().utc().subtract(5, 'years').toDate(),
+    NextToken = null,
+    PageSize = 100,
+  }: aws.SESV2.ListSuppressedDestinationsRequest): Promise<aws.SESV2.ListSuppressedDestinationsResponse> => this._client.sesV2.listSuppressedDestinations({
+    EndDate,
+    StartDate,
+    PageSize,
+    NextToken,
+  }).promise();
 
   uploadToS3 = async ({
     acl = 'public-read',

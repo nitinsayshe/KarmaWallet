@@ -19,8 +19,13 @@ import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
+import { sendPasswordResetEmail } from '../email';
 
 dayjs.extend(utc);
+
+export interface IVerifyTokenBody {
+  token: string;
+}
 
 export interface ILoginData {
   email: string;
@@ -111,7 +116,6 @@ export const register = async (req: IRequest, {
     const authKey = await Session.createSession(newUser._id.toString());
 
     const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-
     await resendEmailVerification(verificationEmailRequest);
 
     return { user: newUser, authKey };
@@ -133,7 +137,7 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
   return { user, authKey };
 };
 
-export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
+export const getUsersPaginated = (_: IRequest, query: FilterQuery<IUser>) => {
   const options = {
     projection: query?.projection || '',
     populate: query.population || [],
@@ -142,9 +146,10 @@ export const getUsers = (_: IRequest, query: FilterQuery<IUser>) => {
     sort: query?.sort ? { ...query.sort, _id: 1 } : { name: 1, _id: 1 },
     limit: query?.limit || 10,
   };
-
   return UserModel.paginate(query.filter, options);
 };
+
+export const getUsers = async (_: IRequest, query = {}) => UserModel.find(query);
 
 export const getUser = async (_: IRequest, query = {}) => {
   try {
@@ -297,23 +302,36 @@ export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>
   if (!email || !isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const user = await UserModel.findOne({ 'emails.email': email });
   if (user) {
-    await TokenService.createToken({ user, minutes, type: TokenTypes.Password });
+    const token = await TokenService.createToken({ user, resource: { email }, minutes, type: TokenTypes.Password });
+    await sendPasswordResetEmail({ user: user._id, recipientEmail: email, name: user.name, token: token.value });
   }
-  // TODO: Send Email
   const message = `An email has been sent to the email address you provided with further instructions. Your reset request will expire in ${passwordResetTokenMinutes} minutes.`;
   return { message };
 };
 
 export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData & IUpdatePasswordBody)>) => {
-  const { newPassword, token, email } = req.body;
-  const requiredFields = ['newPassword', 'token', 'email'];
+  const { newPassword, token } = req.body;
+  const requiredFields = ['newPassword', 'token'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
   if (!isValid) throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
-  if (!isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const errMsg = 'Token not found. Please request password reset again.';
+  const existingToken = await TokenService.getTokenAndConsume({ value: token, type: TokenTypes.Password });
+  if (!existingToken) throw new CustomError(errMsg, ErrorTypes.NOT_FOUND);
+  const email = existingToken?.resource?.email;
+  if (!email) throw new CustomError(errMsg, ErrorTypes.NOT_FOUND);
   const user = await UserModel.findOne({ 'emails.email': email });
-  if (!user) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
-  const existingToken = await TokenService.getTokenAndConsume(user, token, TokenTypes.Password);
-  if (!existingToken) throw new CustomError(errMsg, ErrorTypes.AUTHENTICATION);
+  if (!user) throw new CustomError(errMsg, ErrorTypes.NOT_FOUND);
   return changePassword(req, user, newPassword);
+};
+
+export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyTokenBody>) => {
+  const { token } = req.body;
+  if (!token) throw new CustomError('Token required.', ErrorTypes.INVALID_ARG);
+  const _token = await TokenService.getToken({ 
+    value: token, 
+    type: TokenTypes.Password, 
+    consumed: false 
+  });
+  if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
+  return { message: 'OK' };
 };

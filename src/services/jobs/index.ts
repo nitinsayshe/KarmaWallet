@@ -1,11 +1,18 @@
+import { Types } from 'mongoose';
 import { IRequest } from '../../types/request';
 import * as EmailService from '../email';
 import { MainBullClient } from '../../clients/bull/main';
+import { EmailBullClient } from '../../clients/bull/email';
+import CustomError from '../../lib/customError';
+import { ErrorTypes } from '../../lib/constants';
+import { QueueNames } from '../../lib/constants/jobScheduler';
+import { onComplete } from '../../jobs/userPlaidTransactionMap';
 
 export interface ISendEmailParams {
   name: string;
   domain: string;
   recipientEmail: string;
+  user: string;
 }
 
 export interface ISendVerificationEmailParams extends ISendEmailParams {
@@ -18,30 +25,42 @@ export interface ISendGroupVerificationEmailParams extends ISendVerificationEmai
 
 export interface ICreateJobParams {
   name: string,
-  data?: any
+  data?: any,
+  queue: QueueNames
 }
 
 export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmailParams>) => {
-  const { name, domain, token, groupName, recipientEmail } = req.body;
-  await EmailService.sendGroupVerificationEmail({ name, domain, token, groupName, recipientEmail });
+  const { name, domain, token, groupName, recipientEmail, user } = req.body;
+  await EmailService.sendGroupVerificationEmail({ name, domain, token, groupName, recipientEmail, user: new Types.ObjectId(user) });
   return 'Job added to queue';
 };
 
 export const sendEmailVerification = async (req: IRequest<{}, {}, ISendVerificationEmailParams>) => {
-  const { name, domain, token, recipientEmail } = req.body;
-  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail });
+  const { name, domain, token, recipientEmail, user } = req.body;
+  await EmailService.sendEmailVerification({ name, domain, token, recipientEmail, user: new Types.ObjectId(user) });
   return 'Job added to queue';
 };
 
 export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) => {
-  const { name, domain, recipientEmail } = req.body;
-  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail });
+  const { name, domain, recipientEmail, user } = req.body;
+  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail, user: new Types.ObjectId(user) });
   return 'Job added to queue';
 };
 
-export const createJob = async (req: IRequest<{}, {}, ICreateJobParams>) => {
-  const { name, data } = req.body;
-  MainBullClient.createJob(name, data);
+export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailService.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
+
+export const createJob = (req: IRequest<{}, {}, ICreateJobParams>) => {
+  const { name, data, queue } = req.body;
+  switch (queue) {
+    case QueueNames.Main:
+      MainBullClient.createJob(name, data, null, { onComplete });
+      break;
+    case QueueNames.Email:
+      EmailBullClient.createJob(name, data);
+      break;
+    default:
+      throw new CustomError('Invalid queue name', ErrorTypes.INVALID_ARG);
+  }
   return 'Job added to queue';
 };
 

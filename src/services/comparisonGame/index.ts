@@ -2,7 +2,7 @@ import { FilterQuery } from 'mongoose';
 import { CompanyModel, ICompany } from '../../models/company';
 import { getRandom } from '../../lib/number';
 
-const threshold = 60; // the threshold between "high" and "low" grade companies
+const threshold = 2; // the threshold between "high" and "low" grade companies
 
 // split the companies into low and high graded companies
 const splitCompanies = (companies: ICompany[]) => {
@@ -222,7 +222,12 @@ const staticSwaps = [
   ],
 ];
 
-export const getSwaps = async (previousSwaps: number[][] = [], reset = false, includeHidden = false) => {
+export interface IGetSwapsResponse {
+  swaps: ICompany[],
+  reset: boolean,
+}
+
+export const getSwaps = async (previousSwaps: string[][] = [], reset = false, includeHidden = false): Promise<IGetSwapsResponse> => {
   let high;
   let low;
   let randomHighGradeCompany;
@@ -275,6 +280,6 @@ export const getSwaps = async (previousSwaps: number[][] = [], reset = false, in
   } if (!allAvailableSubGroupsForUser.length && !randomHighGradeCompany && !randomLowGradeCompany) {
     // all pairs have been exhausted
     // time to start recycling...
-    await getSwaps([], true);
+    return getSwaps([], true);
   }
 };

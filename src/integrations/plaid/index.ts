@@ -1,7 +1,26 @@
-import { asCustomError } from '../../lib/customError';
+/* eslint-disable camelcase */
+import { SandboxItemFireWebhookRequestWebhookCodeEnum } from 'plaid';
+import CustomError, { asCustomError } from '../../lib/customError';
 import { PlaidItemModel } from '../../models/plaidItem';
 import { IRequest } from '../../types/request';
 import { PlaidMapper } from './mapper';
+import { PlaidClient } from '../../clients/plaid';
+import { _getCard } from '../../services/card';
+import { ErrorTypes } from '../../lib/constants';
+import { IPlaidLinkOnSuccessMetadata } from './types';
+
+export interface ICreateLinkTokenBody {
+  cardId?: string;
+}
+export interface IExchangePublicTokenBody {
+  publicToken?: string;
+  metadata: IPlaidLinkOnSuccessMetadata
+}
+
+export interface ISandboxItemFireWebhookBody {
+  webhookCode?: SandboxItemFireWebhookRequestWebhookCodeEnum;
+  accessToken?: string;
+}
 
 export const mapExistingItems = async (_: IRequest) => {
   try {
@@ -14,7 +33,7 @@ export const mapExistingItems = async (_: IRequest) => {
 
     const mapper = new PlaidMapper(plaidItems);
     await mapper.mapItems();
-    await mapper.mapCategoriesToTransactions();
+    await mapper.mapSectorsToTransactions();
     await mapper.mapTransactionsToCompanies();
     await mapper.saveTransactions();
     await mapper.saveSummary();
@@ -37,7 +56,7 @@ export const mapTransactionsFromPlaid = async (_: IRequest, acs: string[] = [], 
       return { message };
     }
 
-    await mapper.mapCategoriesToTransactions();
+    await mapper.mapSectorsToTransactions();
     await mapper.mapTransactionsToCompanies();
     await mapper.saveTransactions();
     await mapper.saveSummary();
@@ -62,4 +81,32 @@ export const mapPlaidCategoriesToKarmaCategoriesAndCarbonMultiplier = async (_: 
 export const reset = async (_: IRequest) => {
   const mapper = new PlaidMapper();
   await mapper.reset();
+};
+
+export const createLinkToken = async (req: IRequest<{}, {}, ICreateLinkTokenBody>) => {
+  const userId = req.requestor._id.toString();
+  const { cardId } = req.body;
+  let access_token;
+  if (cardId) {
+    const card = await _getCard({ _id: cardId, user: userId });
+    if (!card) throw new CustomError(`Card with id ${cardId} not found`, ErrorTypes.NOT_FOUND);
+    access_token = card?.integrations?.plaid?.accessToken
+      ? card?.integrations?.plaid?.accessToken
+      : card?.integrations?.plaid?.unlinkedAccessTokens[card?.integrations?.plaid?.unlinkedAccessTokens.length];
+  }
+  const client = new PlaidClient();
+  return client.createLinkToken({ userId, access_token });
+};
+
+export const exchangePublicToken = (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {
+  const { requestor } = req;
+  const { publicToken: public_token, metadata } = req.body;
+  const client = new PlaidClient();
+  return client.exchangePublicTokenForAccessToken({ public_token, userId: requestor._id.toString(), metadata });
+};
+
+export const sandboxFireTestWebhook = (req: IRequest<{}, {}, ISandboxItemFireWebhookBody>) => {
+  const { accessToken: access_token, webhookCode: webhook_code } = req.body;
+  const client = new PlaidClient();
+  return client.sandboxFireTestWebhook({ access_token, webhook_code });
 };

@@ -7,6 +7,7 @@ import { Schema } from 'mongoose';
 import Transaction from './transaction';
 import { CardModel, ICardDocument } from '../../models/card';
 import { CardStatus } from '../../lib/constants';
+import { IPlaidInstitution, IPlaidItem } from './types';
 
 dayjs.extend(utc);
 
@@ -22,13 +23,13 @@ class Card {
   _accessToken: string = null;
   _publicToken: string = null;
   _linkSessionId: string = null;
-  _institution: Institution = null;
+  _institution: Institution | IPlaidInstitution = null;
   _transactionsIndex = new Set();
   // all transactions for this card
   _transactions: Transaction[] = [];
   _duplicateTransactions: Transaction[] = [];
   _isNew = false;
-  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: TransactionsGetResponse) {
+  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: IPlaidItem | TransactionsGetResponse) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
@@ -54,12 +55,12 @@ class Card {
    */
   toKarmaFormat = () => ({
     userId: this._userId,
-    name: this._account.name,
+    name: this._account?.name,
     mask: this._account.mask,
     type: this._account.type,
     subtype: this._account.subtype,
     status: CardStatus.Linked,
-    institution: this._institution.name,
+    institution: this._institution?.name,
     integrations: {
       plaid: {
         accessToken: this._accessToken,
@@ -67,7 +68,7 @@ class Card {
         items: Array.from(this._plaid_items),
         publicToken: this._publicToken,
         linkSessionId: this._linkSessionId,
-        institutionId: this._institution.institution_id,
+        institutionId: this._institution?.institution_id,
       },
     },
   });
@@ -109,11 +110,11 @@ class Card {
     // returned from Plaid could change.
     let card = await CardModel.findOne({
       userId: this._userId,
-      name: this._account.name,
+      name: this._account?.name,
       mask: this._account.mask,
       type: this._account.type,
       subtype: this._account.subtype,
-      institution: this._institution.name,
+      institution: this._institution?.name,
     });
 
     if (!!card) {
@@ -126,6 +127,7 @@ class Card {
       card = new CardModel({
         ...this.toKarmaFormat(),
         createdOn: dayjs().utc().format(),
+        initialTransactionsProcessing: true,
       });
       this._isNew = true;
     }
@@ -140,7 +142,7 @@ class Card {
    *
    * @param {Object} account - the plaid account object to update this instance with
    */
-  update = (account: AccountBase, plaidItem: TransactionsGetResponse) => {
+  update = (account: AccountBase, plaidItem: IPlaidItem | TransactionsGetResponse) => {
     this._plaid_items.add(`${plaidItem.item_id}`);
     this._account = account;
     this._accessToken = `${plaidItem.access_token}`;

@@ -1,9 +1,10 @@
 import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { FilterQuery } from 'mongoose';
 import { TokenTypes } from '../../lib/constants';
 import { getDateFrom } from '../../lib/date';
-import { TokenModel } from '../../models/token';
+import { IToken, TokenModel } from '../../models/token';
 import { IUserDocument } from '../../models/user';
 
 dayjs.extend(utc);
@@ -21,31 +22,12 @@ export const getTokenById = async (id: string) => {
   return data;
 };
 
-export const getToken = async (user: IUserDocument, value: string, type: TokenTypes) => {
-  const data = await TokenModel.findOne({
-    user,
-    value,
-    type,
-    consumed: false,
-    expires: { $gte: dayjs().utc().toDate() },
-  }).select('-__v').lean();
-  return data;
-};
+export const getToken = async (query: FilterQuery<IToken>) => TokenModel.findOne({
+  ...query,
+  expires: { $gte: dayjs().utc().toDate() },
+});
 
-export const getTokenAndConsume = async (user: IUserDocument, value: string, type: TokenTypes, additionalQuery?: object) => {
-  let query = {
-    user,
-    value,
-    type,
-    consumed: false,
-    expires: { $gte: dayjs().utc().toDate() },
-  };
-  if (!!additionalQuery) {
-    query = { ...query, ...additionalQuery };
-  }
-  const token = await TokenModel.findOneAndUpdate(query, { consumed: true }, { new: true }).select('-__v').lean();
-  return token;
-};
+export const getTokenAndConsume = async (query: FilterQuery<IToken>) => TokenModel.findOneAndUpdate({ ...query, consumed: false }, { consumed: true }, { new: true });
 
 export const createToken = async ({
   user,

@@ -10,4 +10,16 @@ router.route('/carbon')
 router.route('/carbon/offset/donation-suggestions')
   .get(authenticate, ImpactController.getCarbonOffsetDonationSuggestions);
 
+router.route('/top-companies')
+  .get(ImpactController.getTopCompanies);
+
+router.route('/top-sectors')
+  .get(ImpactController.getTopSectors);
+
+router.route('/user/data')
+  .get(authenticate, ImpactController.getUserImpactData);
+
+router.route('/user/lower-impact-purchases')
+  .get(authenticate, ImpactController.getUserLowerImpactPurchases);
+
 export default (app: Express) => app.use('/impact', router);

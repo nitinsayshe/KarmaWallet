@@ -800,6 +800,81 @@ export const getSummary = async (_: IRequest) => {
   }
 };
 
+export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
+  const { requestor } = req;
+  const { groupId } = req.params;
+  try {
+    if (!groupId) {
+      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
+    }
+    const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
+    const membersPromise = getAllGroupMembers(req);
+    const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
+
+    const memberDonations = {
+      dollars: 0,
+      tonnes: 0,
+    };
+
+    let membersWithDonations = 0;
+
+    const cachedDataKey = getGroupOffsetDataKey(groupId);
+    let cachedData = await getCachedData(cachedDataKey);
+
+    if (!cachedData || bustCache) {
+      for (const member of members) {
+        const query = { user: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
+        const donationsTotalTonnesPromise = getRareOffsetAmount(query);
+
+        const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
+
+        if (donationsTotalDollars > 0) {
+          membersWithDonations += 1;
+        }
+
+        memberDonations.dollars += donationsTotalDollars;
+        memberDonations.tonnes += donationsTotalTonnes;
+      }
+
+      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': (userGroup.group as IGroupDocument)._id };
+
+      const groupDonationsTotalDollarsPromise = getOffsetTransactionsTotal(groupTransactionQuery);
+      const groupDonationsTotalTonnesPromise = getRareOffsetAmount(groupTransactionQuery);
+
+      const [groupDonationsTotalDollars, groupDonationsTotalTonnes] = await Promise.all([groupDonationsTotalDollarsPromise, groupDonationsTotalTonnesPromise]);
+
+      const groupDonations = {
+        dollars: groupDonationsTotalDollars,
+        tonnes: groupDonationsTotalTonnes,
+      };
+
+      const totalDonations = {
+        dollars: memberDonations.dollars + groupDonations.dollars,
+        tonnes: memberDonations.tonnes + groupDonations.tonnes,
+      };
+
+      const cachedDataValue = {
+        membersWithDonations,
+        groupDonations,
+        memberDonations,
+        totalDonations,
+      };
+
+      cachedData = await createCachedData({ key: cachedDataKey, value: cachedDataValue });
+    }
+
+    return {
+      userGroup,
+      members: members.length,
+      ...cachedData.value,
+      lastUpdated: cachedData.lastUpdated,
+    };
+  } catch (e) {
+    throw asCustomError(e);
+  }
+};
+
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
 
@@ -890,7 +965,11 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         user, days: emailVerificationDays, type: TokenTypes.Email, resource: { email: validEmail },
       });
       await sendGroupVerificationEmail({
-        name: user.name, token: token.value, groupName: group.name, recipientEmail: validEmail,
+        name: user.name,
+        token: token.value,
+        groupName: group.name,
+        recipientEmail: validEmail,
+        user: user._id,
       });
     }
 
@@ -920,6 +999,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     await user.save();
+
+    // busting cache for group dashboard
+    const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
+    await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
 
     return userGroup ?? usersUserGroup;
   } catch (err) {
@@ -958,6 +1041,10 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
     }
 
     await userGroup.save();
+
+    // busting cache for group dashboard
+    const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
+    await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
   } catch (err) {
     throw asCustomError(err);
   }
@@ -1415,81 +1502,6 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
     return updatedMemberUserGroups;
   } catch (err) {
     throw asCustomError(err);
-  }
-};
-
-export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
-  const { requestor } = req;
-  const { groupId } = req.params;
-  try {
-    if (!groupId) {
-      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
-    }
-    const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const membersPromise = getAllGroupMembers(req);
-    const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
-
-    const memberDonations = {
-      dollars: 0,
-      tonnes: 0,
-    };
-
-    let membersWithDonations = 0;
-
-    const cachedDataKey = getGroupOffsetDataKey(groupId);
-    let cachedData = await getCachedData(cachedDataKey);
-
-    if (!cachedData || bustCache) {
-      for (const member of members) {
-        const query = { userId: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
-        const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
-        const donationsTotalTonnesPromise = getRareOffsetAmount(query);
-
-        const [donationsTotalDollars, donationsTotalTonnes] = await Promise.all([donationsTotalDollarsPromise, donationsTotalTonnesPromise]);
-
-        if (donationsTotalDollars > 0) {
-          membersWithDonations += 1;
-        }
-
-        memberDonations.dollars += donationsTotalDollars;
-        memberDonations.tonnes += donationsTotalTonnes;
-      }
-
-      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': (userGroup.group as IGroupDocument)._id };
-
-      const groupDonationsTotalDollarsPromise = getOffsetTransactionsTotal(groupTransactionQuery);
-      const groupDonationsTotalTonnesPromise = getRareOffsetAmount(groupTransactionQuery);
-
-      const [groupDonationsTotalDollars, groupDonationsTotalTonnes] = await Promise.all([groupDonationsTotalDollarsPromise, groupDonationsTotalTonnesPromise]);
-
-      const groupDonations = {
-        dollars: groupDonationsTotalDollars,
-        tonnes: groupDonationsTotalTonnes,
-      };
-
-      const totalDonations = {
-        dollars: memberDonations.dollars + groupDonations.dollars,
-        tonnes: memberDonations.tonnes + groupDonations.tonnes,
-      };
-
-      const cachedDataValue = {
-        membersWithDonations,
-        groupDonations,
-        memberDonations,
-        totalDonations,
-      };
-
-      cachedData = await createCachedData({ key: cachedDataKey, value: cachedDataValue });
-    }
-
-    return {
-      userGroup,
-      members: members.length,
-      ...cachedData.value,
-      lastUpdated: cachedData.lastUpdated,
-    };
-  } catch (e) {
-    throw asCustomError(e);
   }
 };
 

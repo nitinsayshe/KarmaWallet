@@ -31,7 +31,7 @@ export const getSummary: IRequestHandler = async (req, res) => {
 export const getUsers: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
-    const users = await AccessControlService.getUsers(req, query);
+    const users = await AccessControlService.getUsersPaginated(req, query);
 
     output.api(req, res, users);
   } catch (err) {

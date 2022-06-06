@@ -5,6 +5,7 @@ import {
   addHours,
   addYears,
 } from 'date-fns';
+import dayjs from 'dayjs';
 
 export interface IGetDateFromData {
   months?: string | number;
@@ -50,6 +51,11 @@ export const getDateFrom = ({
     date = addHours(date, controlledHours);
   }
   return date;
+};
+
+export const getDaysFromPreviousDate = (date: Date) => {
+  const then = dayjs(date);
+  return dayjs().diff(then, 'days');
 };
 
 export const toUTC = (date: Date) => new Date(

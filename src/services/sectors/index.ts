@@ -36,12 +36,24 @@ const MAX_SECTOR_NAME_LENGTH = 60;
 const browseByQuery = {
   _id: {
     $in: [
-      '62192ef1f022c9e3fbff0aac',
-      '62192ef3f022c9e3fbff0c20',
-      '62192ef2f022c9e3fbff0aec',
-      '62192ef2f022c9e3fbff0b52',
-      '62192ef3f022c9e3fbff0c40',
-      '62192ef3f022c9e3fbff0ba4',
+      // apparel
+      '62192ef1f022c9e3fbff0aac', // staging
+      '621b9ada5f87e75f53666f38', // prod
+      // technology
+      '62192ef3f022c9e3fbff0c20', // staging
+      '621b9adb5f87e75f536670ac', // prod
+      // dining out
+      '62192ef2f022c9e3fbff0aec', // staging
+      '621b9ada5f87e75f53666f78', // prod
+      // home & garden
+      '62192ef2f022c9e3fbff0b52', // staging
+      '621b9adb5f87e75f53666fde', // prod
+      // travel
+      '62192ef3f022c9e3fbff0c40', // staging
+      '621b9adc5f87e75f536670cc', // prod
+      // personal care
+      '62192ef3f022c9e3fbff0ba4', // staging
+      '621b9adb5f87e75f53667030', // prod
     ],
   },
 };

@@ -3,7 +3,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { reportPosCompaniesInSectors } from '../src/services/scripts/pos_companies';
 
 (async () => {
   try {
@@ -24,8 +23,6 @@ import { reportPosCompaniesInSectors } from '../src/services/scripts/pos_compani
     // await mapDataSourcesToUNSDGs();
     // await mapCompanies2DataSources();
     // await calculateAllCompanyScores();
-
-    await reportPosCompaniesInSectors();
 
     await MongoClient.disconnect();
   } catch (err) {

@@ -323,6 +323,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
       name,
       code,
       settings: defaultGroupSettings,
+      createdOn: dayjs().utc().toDate(),
     });
 
     if (!!settings) group.settings = verifyGroupSettings(settings);
@@ -345,6 +346,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
       email: group.owner.email,
       role: UserGroupRole.Owner,
       status: UserGroupStatus.Verified,
+      joinedOn: dayjs().utc().toDate(),
     });
 
     await userGroup.save();
@@ -1195,6 +1197,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
       if (!!ownerUserGroup) {
         // update existing user group
         ownerUserGroup.role = UserGroupRole.Owner;
+        ownerUserGroup.lastModified = dayjs().utc().toDate();
       } else {
         // create new user group
         ownerUserGroup = new UserGroupModel({
@@ -1203,6 +1206,7 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
           email: group.owner.email,
           role: UserGroupRole.Owner,
           status: UserGroupStatus.Verified,
+          joinedOn: dayjs().utc().toDate(),
         });
 
         // ??? do we want to require email verification? which email to set here?
@@ -1247,6 +1251,8 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     }
 
     if (!!domains) group.domains = verifyDomains(domains, !!group.settings.allowDomainRestriction);
+
+    group.lastModified = dayjs().utc().toDate();
 
     await group.save();
     return group;

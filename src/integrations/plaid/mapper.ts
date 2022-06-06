@@ -321,6 +321,9 @@ export class PlaidMapper {
 
       if (!plaidTransactions?.length) continue;
 
+      // pending transactions should be excluded from any further processing
+      plaidTransactions = plaidTransactions.filter(t => !t?.pending);
+
       try {
         this._transactions = [
           ...this._transactions,

@@ -1,5 +1,4 @@
 import { Types } from 'mongoose';
-import { CompanyModel } from '../../models/company';
 import { UserModel } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
@@ -23,7 +22,7 @@ export class RareTransactionMapper {
   mapTransactions = async (isMatch: boolean, group: IGroupDocument) => {
     try {
       // TODO: update to Rare ID when in DB
-      const rare = await CompanyModel.findOne({ legacyId: 15302 });
+      // const rare = await CompanyModel.findOne({ legacyId: 15302 });
 
       for (const transaction of this._rareTransactions) {
         // TODO: update this to structure returned from rare
@@ -61,7 +60,8 @@ export class RareTransactionMapper {
         await card.load();
         await card.save();
 
-        const _transaction = new Transaction(user, rare, card, transaction);
+        // TODO: second param should be Rare Company Object when added to DB
+        const _transaction = new Transaction(user, null, card, transaction);
 
         if (isMatch) {
           _transaction._matchType = MatchTypes.Offset;

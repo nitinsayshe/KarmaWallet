@@ -10,7 +10,7 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { Card, IRareCard } from './card';
 import { IGroup } from '../../models/group';
-import { ISectorDocument, SectorModel } from '../../models/sector';
+import { ISectorDocument } from '../../models/sector';
 
 dayjs.extend(utc);
 
@@ -45,7 +45,8 @@ export class Transaction {
 
   constructor(user: IUserDocument, company: ICompanyDocument, card: Card, rareTransaction: IRareTransaction) {
     if (!user) throw new CustomError('Rare Integration Trasaction Error - no user provided', ErrorTypes.INVALID_ARG);
-    if (!company) throw new CustomError('Rare Integration Transaction Error - no company provided', ErrorTypes.INVALID_ARG);
+    // TODO: add Rare as company in DB. Until then, company should be set to null
+    // if (!company) throw new CustomError('Rare Integration Transaction Error - no company provided', ErrorTypes.INVALID_ARG);
     if (!card) throw new CustomError('Rare Integration Transaction Error - no card provided');
     if (!rareTransaction) throw new CustomError('Rare Integration Transaction Error - no rare transaction provided', ErrorTypes.INVALID_ARG);
 
@@ -67,8 +68,9 @@ export class Transaction {
   set _group(group: IGroup) { this.__group = group; }
 
   load = async () => {
+    // TODO: add Rare as company in DB. Until then, sector should be set to null
     // ................................................................staging........................prod
-    this.__sector = await SectorModel.findOne({ _id: { $in: ['62192ef2f022c9e3fbff0b52', '621b9adb5f87e75f53666fde'] } });
+    // this.__sector = await SectorModel.findOne({ _id: { $in: ['62192ef2f022c9e3fbff0b52', '621b9adb5f87e75f53666fde'] } });
   };
 
   toKarmaFormat = () => {

@@ -155,6 +155,18 @@ const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQue
 
 const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>) => {
   try {
+    const sectorsToExclude = [
+      '621b9ada5f87e75f53666f6c',
+      '621b9ada5f87e75f53666f72',
+      '621b9adb5f87e75f53667018',
+      '621b9adb5f87e75f53667028',
+      '621b9adb5f87e75f5366702c',
+      '621b9adb5f87e75f53667040',
+      '621b9adc5f87e75f536670f2',
+      '62192ef2f022c9e3fbff0b0c',
+      '621b9ada5f87e75f53666f98',
+    ];
+
     const config = {
       // get users and all users in same request...if user
       // does not have enough top sectors, all users will
@@ -162,7 +174,7 @@ const getTopSectorsToShopBy = async (req: IRequest<{}, ITopSectorsRequestQuery>)
       uids: [process.env.APP_USER_ID],
       tiers: [1],
       // exclude financial services (staging, prod)
-      sectorsToExclude: ['62192ef2f022c9e3fbff0b0c', '621b9ada5f87e75f53666f98'],
+      sectorsToExclude,
       count: 4,
     };
 

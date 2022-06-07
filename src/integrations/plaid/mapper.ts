@@ -463,15 +463,19 @@ export class PlaidMapper {
 
         if (!!found) {
           // this is not an accurate total...
-          // confirmed with Anushkay, does not need to be...
+          // confirmed with Anushka, does not need to be...
           // is only used to identify high priority companies.
           // eslint-disable-next-line radix
-          const count = parseInt(u.count);
-          if (!Number.isNaN(count)) {
-            found.count += count;
-            found.lastModified = dayjs().utc().toDate();
-          }
-          await found.save();
+          let count = parseInt(u.count);
+          if (!Number.isNaN(count)) count = 0;
+
+          await UnmatchedCompanyNameModel.updateOne(
+            { _id: found._id },
+            {
+              $inc: { count: u.count },
+              lastModified: dayjs().utc().toDate(),
+            },
+          );
         }
 
         return !found;

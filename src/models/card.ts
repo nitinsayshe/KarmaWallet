@@ -44,6 +44,7 @@ export interface IShareableCard {
   createdOn: Date;
   lastModified: Date;
   initialTransactionsProcessing: boolean;
+  lastTransactionSync: Date;
 }
 
 export interface ICard extends IShareableCard {
@@ -96,6 +97,7 @@ const cardSchema = new Schema({
   initialTransactionsProcessing: { type: Boolean },
   createdOn: { type: Date },
   lastModified: { type: Date },
+  lastTransactionSync: { type: Date },
 });
 
 export const CardModel = model<ICardDocument, Model<ICard>>('card', cardSchema);

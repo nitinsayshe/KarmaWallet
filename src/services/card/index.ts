@@ -46,6 +46,7 @@ export const getShareableCard = ({
   createdOn,
   lastModified,
   initialTransactionsProcessing,
+  lastTransactionSync,
 }: ICardDocument) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name
     ? getShareableUser(userId as IUserDocument)
@@ -66,6 +67,7 @@ export const getShareableCard = ({
     createdOn,
     lastModified,
     initialTransactionsProcessing,
+    lastTransactionSync,
   };
 };
 

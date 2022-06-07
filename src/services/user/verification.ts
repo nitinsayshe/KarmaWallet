@@ -21,6 +21,7 @@ export interface IEmailVerificationData {
 }
 
 export const emailChecks = (user: IUserDocument, email: string) => {
+  email = email?.toLowerCase();
   if (!isemail.validate(email, { minDomainAtoms: 2 })) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   if (!user?.emails?.length) throw new CustomError(`Email: ${email} does not exist for this user.`, ErrorTypes.INVALID_ARG);
   const existingEmail = user.emails.find(e => e.email === email);
@@ -30,7 +31,8 @@ export const emailChecks = (user: IUserDocument, email: string) => {
 
 export const resendEmailVerification = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
-  const { email } = req.body;
+  let { email } = req.body;
+  email = email?.toLowerCase();
   const days = emailVerificationDays;
   emailChecks(requestor, email);
   const token = await TokenService.createToken({ user: requestor, days, type: TokenTypes.Email, resource: { email } });

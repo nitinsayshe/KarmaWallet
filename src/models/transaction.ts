@@ -53,6 +53,7 @@ export interface IPlaidTransactionIntegration {
   category?: string[];
   category_id?: string;
   check_number?: string;
+  date?: string;
   iso_currency_code?: string;
   location?: IPlaidTransactionLocation;
   merchant_name?: string;
@@ -191,6 +192,7 @@ const transactionSchema = new Schema({
         category: [{ type: String }],
         category_id: { type: String },
         check_number: { type: Number },
+        date: { type: String },
         iso_currency_code: { type: String },
         location: { type: Object },
         merchant_name: { type: String },

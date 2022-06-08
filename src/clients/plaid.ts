@@ -16,6 +16,8 @@ import pino from 'pino';
 import jsonwebtoken from 'jsonwebtoken';
 import jwkToPem from 'jwk-to-pem';
 import crypto from 'crypto';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { ErrorTypes, CardStatus } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
@@ -23,6 +25,8 @@ import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
 import PlaidUser from '../integrations/plaid/user';
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
+
+dayjs.extend(utc);
 
 const logger = pino();
 
@@ -245,6 +249,7 @@ export class PlaidClient extends SdkClient {
               card.status = CardStatus.Unlinked;
               card.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
               card.integrations.plaid.accessToken = null;
+              card.lastTransactionSync = dayjs().utc().toDate();
               await card.save();
             }
           }

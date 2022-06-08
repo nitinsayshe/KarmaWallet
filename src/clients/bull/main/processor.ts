@@ -45,7 +45,7 @@ export default async (job: SandboxedJob) => {
       result = await GenerateUserTransactionTotals.exec();
       break;
     case JobNames.GlobalPlaidTransactionMapper:
-      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest, [], 730);
+      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest, [], 90);
 
       result = {
         nextJobs: [

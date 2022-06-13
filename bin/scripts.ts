@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { generateTransactionCsv } from '../src/services/scripts/generate-transaction-csv';
 
 (async () => {
   try {
@@ -14,15 +15,7 @@ import { Logger } from '../src/services/logger';
 
     // add mappers here...
 
-    // await mapLegacyUserPwToNewUserPw();
-    // await mapUNSDGs();
-    // await updateCompanySectorsWithPrimaryStatus();
-    // await cleanTransactions();
-    // await mapSectorsToTransactions();
-    // await createDataSources();
-    // await mapDataSourcesToUNSDGs();
-    // await mapCompanies2DataSources();
-    // await calculateAllCompanyScores();
+    await generateTransactionCsv();
 
     await MongoClient.disconnect();
   } catch (err) {

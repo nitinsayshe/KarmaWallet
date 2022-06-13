@@ -35,7 +35,7 @@ class Transaction {
   get company() { return this._company; }
   get date() {
     if (!this._date) {
-      this._date = dayjs('1 Jan, 1970');
+      this._date = dayjs('1970-01-01T00:00:00.000+00:00').utc();
       const parsedDate = this._plaidTransaction.date.split('-');
       this._date = this._date.set('year', parseInt(parsedDate[0]));
       this._date = this._date.set('month', parseInt(parsedDate[1]) - 1);

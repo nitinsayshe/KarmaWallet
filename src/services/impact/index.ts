@@ -16,7 +16,7 @@ import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
 import { TransactionModel } from '../../models/transaction';
-import { getCompanyRatingsThresholds } from '../misc';
+import { getCompanyRatingsThresholds, getRareProjectAverage } from '../misc';
 import { CompanyRating } from '../../lib/constants/company';
 
 dayjs.extend(utc);
@@ -394,11 +394,8 @@ export const getTonnesByByDollarAmount = async (req: IRequest<{}, ITonnesByDolla
     if (!amount) throw new CustomError('No amount found. Please provide a dollar amount as a number.', ErrorTypes.INVALID_ARG);
     const _amount = parseFloat(amount.toString());
     if (isNaN(_amount)) throw new CustomError('Invalid amount found. Please provide a dollar amount as a number.', ErrorTypes.INVALID_ARG);
-    const rareProjectAverage = await MiscModel.findOne({ key: 'rare-project-average' });
-    if (!rareProjectAverage) throw new CustomError('No rare project average found.', ErrorTypes.INVALID_ARG);
-    const rareProjectAverageAmount = parseFloat(rareProjectAverage.value);
-
-    return _amount / rareProjectAverageAmount;
+    const rareProjectAverage = await getRareProjectAverage();
+    return _amount / rareProjectAverage;
   } catch (err) {
     throw asCustomError(err);
   }

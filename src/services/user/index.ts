@@ -73,7 +73,7 @@ export const register = async (req: IRequest, {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
     if (!email) throw new CustomError('A email is required.', ErrorTypes.INVALID_ARG);
-
+    email = email?.toLowerCase();
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
       throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
@@ -125,6 +125,7 @@ export const register = async (req: IRequest, {
 };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
+  email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
@@ -226,6 +227,7 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
 };
 
 export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpdateUserEmailParams) => {
+  email = email?.toLowerCase();
   if (!pw) throw new CustomError('Your password is required when updating your email.', ErrorTypes.INVALID_ARG);
   const passwordMatch = await argon2.verify(req.requestor.password, pw);
   if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
@@ -255,6 +257,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const updates = req.body;
   const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
   if (updates?.email) {
+    updates.email = updates?.email?.toLowerCase();
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
@@ -298,7 +301,8 @@ export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>)
 
 export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>) => {
   const minutes = passwordResetTokenMinutes;
-  const { email } = req.body;
+  let { email } = req.body;
+  email = email?.toLowerCase();
   if (!email || !isValidEmailFormat(email)) throw new CustomError('Invalid email.', ErrorTypes.INVALID_ARG);
   const user = await UserModel.findOne({ 'emails.email': email });
   if (user) {
@@ -327,10 +331,10 @@ export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData &
 export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyTokenBody>) => {
   const { token } = req.body;
   if (!token) throw new CustomError('Token required.', ErrorTypes.INVALID_ARG);
-  const _token = await TokenService.getToken({ 
-    value: token, 
-    type: TokenTypes.Password, 
-    consumed: false 
+  const _token = await TokenService.getToken({
+    value: token,
+    type: TokenTypes.Password,
+    consumed: false,
   });
   if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
   return { message: 'OK' };

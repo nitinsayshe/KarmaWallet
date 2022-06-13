@@ -110,13 +110,25 @@ class Transaction {
 
     if (this.isValid) {
       this._transaction = await TransactionModel.findOne({
-        user: this._user,
-        card: this._card,
-        company: this.company,
-        amount: this._plaidTransaction.amount,
-        date: this.date.toDate(),
-        'integrations.plaid.merchant_name': this._plaidTransaction.merchant_name,
-        'integrations.plaid.authorized_date': this._plaidTransaction.authorized_date,
+        $or: [
+          {
+            $and: [
+              { 'integrations.plaid.pending_transaction_id': this._plaidTransaction.pending_transaction_id },
+              { 'integrations.plaid.pending_transaction_id': { $ne: null } },
+            ],
+          },
+          {
+            $and: [
+              { user: this._user },
+              { card: this._card },
+              { company: this.company },
+              { amount: this._plaidTransaction.amount },
+              { date: this.date.toDate() },
+              { 'integrations.plaid.merchant_name': this._plaidTransaction.merchant_name },
+              { 'integrations.plaid.authorized_date': this._plaidTransaction.authorized_date },
+            ],
+          },
+        ],
       });
 
       /**

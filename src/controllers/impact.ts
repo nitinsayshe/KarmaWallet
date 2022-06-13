@@ -49,6 +49,17 @@ export const getTopSectors: IRequestHandler<{}, ImpactService.ITopSectorsRequest
   }
 };
 
+export const getTonnesByByDollarAmount: IRequestHandler<{}, ImpactService.ITonnesByDollarAmountRequestQuery> = async (req, res) => {
+  try {
+    const tonnesByDollarAmount = await ImpactService.getTonnesByByDollarAmount(req);
+    output.api(req, res, {
+      tonnes: tonnesByDollarAmount,
+    });
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getUserImpactData: IRequestHandler = async (req, res) => {
   try {
     const impactData = await ImpactService.getUserImpactData(req);

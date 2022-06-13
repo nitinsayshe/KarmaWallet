@@ -344,6 +344,7 @@ export class PlaidMapper {
         for (const card of cards) {
           if (card.integrations?.plaid?.accessToken === accessToken) {
             card.status = CardStatus.Linked;
+            card.lastTransactionSync = dayjs().utc().toDate();
             await card.save();
           }
         }

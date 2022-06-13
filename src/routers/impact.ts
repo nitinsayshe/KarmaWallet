@@ -10,6 +10,9 @@ router.route('/carbon')
 router.route('/carbon/offset/donation-suggestions')
   .get(authenticate, ImpactController.getCarbonOffsetDonationSuggestions);
 
+router.route('/carbon/tonnes-by-dollar-amount')
+  .get(authenticate, ImpactController.getTonnesByByDollarAmount);
+
 router.route('/top-companies')
   .get(ImpactController.getTopCompanies);
 

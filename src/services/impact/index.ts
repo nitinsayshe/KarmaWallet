@@ -16,7 +16,7 @@ import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
 import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } from '../../models/userImpactTotals';
 import { TransactionModel } from '../../models/transaction';
-import { getCompanyRatingsThresholds } from '../misc';
+import { getCompanyRatingsThresholds, getRareProjectAverage } from '../misc';
 import { CompanyRating } from '../../lib/constants/company';
 
 dayjs.extend(utc);
@@ -36,6 +36,10 @@ export interface ITopCompaniesRequestQuery {
 
 export interface ITopSectorsRequestQuery {
   config?: TopSectorsConfig;
+}
+
+export interface ITonnesByDollarAmountRequestQuery {
+  amount: number;
 }
 
 export interface IUserImpactRequestQuery {
@@ -379,6 +383,19 @@ export const getTopSectors = async (req: IRequest<{}, ITopSectorsRequestQuery>) 
       case TopSectorsConfig.ShopBy: return getTopSectorsToShopBy(req);
       default: throw new CustomError(`Invalid configuration for getting top sectors: ${config}`, ErrorTypes.INVALID_ARG);
     }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getTonnesByByDollarAmount = async (req: IRequest<{}, ITonnesByDollarAmountRequestQuery>) => {
+  try {
+    const { amount } = req.query;
+    if (!amount) throw new CustomError('No amount found. Please provide a dollar amount as a number.', ErrorTypes.INVALID_ARG);
+    const _amount = parseFloat(amount.toString());
+    if (isNaN(_amount)) throw new CustomError('Invalid amount found. Please provide a dollar amount as a number.', ErrorTypes.INVALID_ARG);
+    const rareProjectAverage = await getRareProjectAverage();
+    return _amount / rareProjectAverage;
   } catch (err) {
     throw asCustomError(err);
   }

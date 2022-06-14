@@ -486,6 +486,7 @@ export class PlaidMapper {
 
       await Promise.all(existingUnmatchedTransactions.map(async (transaction) => {
         const match = matches.find(m => m.original === transaction.name || m.original === transaction.merchant_name);
+
         if (!!match) {
           transaction.setCompany(match._id);
         } else {

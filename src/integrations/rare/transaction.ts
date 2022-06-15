@@ -58,7 +58,7 @@ export class Transaction {
 
   get _user() { return this._transaction?.user || this.__user._id; }
   get _card() { return this._transaction?.card || this.__card._id; }
-  get _company() { return this._transaction?.company || this.__company._id; }
+  get _company() { return this._transaction?.company || this?.__company?._id; }
   get _amount() { return this._transaction?.amount || this._rareTransaction.amt; }
   get _date() { return this._transaction?.date || new Date(this._rareTransaction.processed_ts); }
   get _sector() { return this.__sector; }

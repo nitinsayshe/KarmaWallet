@@ -2,7 +2,6 @@
 import { mapTransactions } from '../integrations/rare';
 import { api, error } from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
-import KarmaApiClient from '../integrations/karmaApi';
 import { ErrorTypes } from '../lib/constants';
 import { IRequestHandler } from '../types/request';
 import { IRareTransaction } from '../integrations/rare/transaction';
@@ -52,9 +51,8 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
   }
 
   try {
-    const client = new KarmaApiClient();
     console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
-    console.log({ rareTransaction: req?.body });
+    console.log({ rareTransaction: JSON.stringify(req?.body) });
 
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
@@ -99,8 +97,6 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
       };
       await matchMemberOffsets(req, matchStatementData);
       // TODO: send socket event notifying user of matches being successfully applied.
-    } else {
-      await client.sendRareWebhook(uid);
     }
 
     api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });

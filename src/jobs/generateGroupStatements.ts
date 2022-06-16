@@ -121,6 +121,8 @@ export const exec = async () => {
           { 'association.group': group._id },
           { date: { $gte: !!group.settings.matching.maxDollarAmount ? yearStart.toDate() : monthStart.toDate() } },
           { date: { $lte: monthEnd.toDate() } },
+          // exclude matches from the statement
+          { matchType: { $exists: false } },
         ],
       };
 

@@ -28,7 +28,6 @@ export const createJobPosting = (req: IRequest<{}, {}, IJobPostingRequestBody>) 
   if (!description) throw new CustomError('A job description is required.', ErrorTypes.INVALID_ARG);
   if (!department) throw new CustomError('A job department is required.', ErrorTypes.INVALID_ARG);
   if (!jobLocation) throw new CustomError('A job location is required.', ErrorTypes.INVALID_ARG);
-  if (!applicationUrl) throw new CustomError('An application url is required.', ErrorTypes.INVALID_ARG);
 
   try {
     const timestamp = toUTC(new Date());

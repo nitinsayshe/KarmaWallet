@@ -9,10 +9,10 @@ import { parse } from 'json2csv';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
-import { ObjectId } from 'mongoose';
+import { LeanDocument, ObjectId } from 'mongoose';
 import { printTable } from '../logger';
 import User from './user';
-import { CompanyModel } from '../../models/company';
+import { CompanyModel, ICompany } from '../../models/company';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IMatchedCompanyNameDocument, MatchedCompanyNameModel } from '../../models/matchedCompanyName';
 import { IUnmatchedCompanyNameDocument, UnmatchedCompanyNameModel } from '../../models/unmatchedCompanyName';
@@ -34,26 +34,27 @@ dayjs.extend(utc);
 const execAsync = util.promisify(exec);
 
 export class PlaidMapper {
-  _plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [];
-  _users: { [key: string]: User } = {};
+  private _plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [];
+  private _users: { [key: string]: User } = {};
+  private _companies: LeanDocument<ICompany>[] = [];
+  private _totalTransactions = 0;
+  private _transactions: Transaction[] = [];
+  private _totalCards = 0;
+  private _totalAccessTokens = 0;
+  private _unmappedTransactionsIndex = new Set();
+  private _unmappedTransactions: PlaidTransaction[] = [];
+  private _duplicateUnmappedTransactions: PlaidTransaction[] = [];
+  private _duplicateTransactions: PlaidTransaction[] = [];
+  private _existingMatches: IMatchedCompanyNameDocument[] = [];
+  private _existingCompanyMatchesCount = 0;
+  private _newTransactionsSaved = 0;
+  private _updatedTransactionsSaved = 0;
+  private _transactionsNotMappedAtAll = 0;
+  private _newMatchedToCompany = 0;
+  private _unmatchedToCompany = 0;
+  private _plaidSectorMappings: IPlaidCategoriesToSectorMappingDocument[] = [];
+  private _startTimestamp: Date = null;
 
-  _totalTransactions = 0;
-  _transactions: Transaction[] = [];
-  _totalCards = 0;
-  _totalAccessTokens = 0;
-  _unmappedTransactionsIndex = new Set();
-  _unmappedTransactions: PlaidTransaction[] = [];
-  _duplicateUnmappedTransactions: PlaidTransaction[] = [];
-  _duplicateTransactions: PlaidTransaction[] = [];
-  _existingMatches: IMatchedCompanyNameDocument[] = [];
-  _existingCompanyMatchesCount = 0;
-  _newTransactionsSaved = 0;
-  _updatedTransactionsSaved = 0;
-  _transactionsNotMappedAtAll = 0;
-  _newMatchedToCompany = 0;
-  _unmatchedToCompany = 0;
-  _plaidSectorMappings: IPlaidCategoriesToSectorMappingDocument[] = [];
-  _startTimestamp: Date = null;
   constructor(plaidItems: IPlaidItem[] | TransactionsGetResponse[] = [], transactions: Transaction[] = []) {
     this._startTimestamp = dayjs().toDate();
     this._plaidItems = plaidItems;
@@ -145,6 +146,10 @@ export class PlaidMapper {
     } else {
       this._updatedTransactionsSaved += 1;
     }
+  };
+
+  init = async () => {
+    this._companies = await CompanyModel.find({}).lean();
   };
 
   mapSectorsToTransactions = async () => {
@@ -400,6 +405,12 @@ export class PlaidMapper {
       if (!!match) {
         if (!match.manualMatch || !transaction.company) {
           transaction.setCompany(match.companyId || null);
+          const company = this._companies.find(c => c._id.toString() === match.companyId.toString());
+
+          if (!!company) {
+            const sector = company.sectors.find(s => s.primary)?.sector as ObjectId;
+            if (!!sector) transaction.setSector(sector);
+          }
         }
 
         existingMatchedTransactions.push(transaction);
@@ -489,6 +500,11 @@ export class PlaidMapper {
 
         if (!!match) {
           transaction.setCompany(match._id);
+          const company = this._companies.find(c => c._id.toString() === match._id.toString());
+          if (!!company) {
+            const sector = company.sectors.find(s => s.primary)?.sector as ObjectId;
+            transaction.setSector(sector);
+          }
         } else {
           this._transactionsNotMappedAtAll += 1;
         }

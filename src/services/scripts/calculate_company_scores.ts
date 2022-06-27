@@ -89,6 +89,14 @@ export const calculateAllCompanyScores = async () => {
 
     for (const companyDataSource of companyDataSources) {
       const unsdgMapping = unsdgMappings.find(u => u.source.toString() === companyDataSource.source.toString());
+      const existingCompanyUnsdgs = await CompanyUnsdgModel
+        .find({ company })
+        .populate([
+          {
+            path: 'unsdg',
+            model: UnsdgModel,
+          },
+        ]);
 
       if (!unsdgMapping) {
         console.log(`[-] failed to find unsdg mapping for companyDataSource: ${companyDataSource._id}`);
@@ -96,14 +104,18 @@ export const calculateAllCompanyScores = async () => {
       }
 
       for (let i = 0; i < unsdgMapping.unsdgs.length; i++) {
-        const { goalNum, title } = unsdgMapping.unsdgs[i].unsdg as IUnsdgDocument;
+        const { goalNum, title, _id } = unsdgMapping.unsdgs[i].unsdg as IUnsdgDocument;
         if (goalNum === 17) continue;
 
         const { value } = unsdgMapping.unsdgs[i];
         let unsdgScore: number;
 
-        if (!companyUnsdgs[title]) {
-          companyUnsdgs[title] = new CompanyUnsdgModel({
+        let overwritePrevCompanyUnsdg = false;
+        if (companyUnsdgs[title]) {
+          overwritePrevCompanyUnsdg = true;
+        } else {
+          const existingCompanyUnsdg = existingCompanyUnsdgs.find(u => u.unsdg.toString() === _id.toString());
+          companyUnsdgs[title] = existingCompanyUnsdg || new CompanyUnsdgModel({
             company,
             unsdg: unsdgMapping.unsdgs[i].unsdg,
             value: 0,
@@ -119,10 +131,19 @@ export const calculateAllCompanyScores = async () => {
           unsdgScore = companyDataSource.status === -1 ? -1 : value;
         }
 
-        companyUnsdgs[title].allValues.push({
-          value: unsdgScore,
-          dataSource: unsdgMapping.source,
-        });
+        let existingAllValue = companyUnsdgs[title].allValues.find(v => v.dataSource.toString() === unsdgMapping.source.toString());
+
+        if (overwritePrevCompanyUnsdg && !!existingAllValue) {
+          existingAllValue = {
+            value: unsdgScore,
+            dataSource: unsdgMapping.source,
+          };
+        } else {
+          companyUnsdgs[title].allValues.push({
+            value: unsdgScore,
+            dataSource: unsdgMapping.source,
+          });
+        }
       }
     }
 
@@ -132,7 +153,7 @@ export const calculateAllCompanyScores = async () => {
     const allCategoryScores: { [key: string]: number[] } = {};
     const allSubcategoryScores: { [key: string]: number[] } = {};
 
-    Object.values(companyUnsdgs).forEach(companyUnsdg => {
+    for (const companyUnsdg of Object.values(companyUnsdgs)) {
       const score = calculateUnsdgScore(companyUnsdg.allValues.map(a => a.value));
       unsdgScores.push(score);
       companyUnsdg.value = score;
@@ -152,7 +173,7 @@ export const calculateAllCompanyScores = async () => {
       allCategoryScores[unsdgCategory._id.toString()].push(score);
 
       promises.push(companyUnsdg.save());
-    });
+    }
 
     const combinedScore = unsdgScores.reduce((acc, curr) => acc + curr, 0);
     const rating = await getCompanyRatingFromScore(combinedScore);

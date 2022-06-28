@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { updateTransactionSectors } from '../src/services/scripts/update_transaction_sectors';
+import { calculateAvgSectorScores } from '../src/services/scripts/calculate_avg_sector_scores';
 
 (async () => {
   try {
@@ -15,7 +15,7 @@ import { updateTransactionSectors } from '../src/services/scripts/update_transac
 
     // add mappers here...
 
-    await updateTransactionSectors();
+    await calculateAvgSectorScores();
 
     await MongoClient.disconnect();
   } catch (err) {

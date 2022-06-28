@@ -823,7 +823,12 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     if (!cachedData || bustCache) {
       for (const member of members) {
-        const query = { user: (member.user as IUserDocument)._id, date: { $gte: member.joinedOn } };
+        const query = {
+          user: (member.user as IUserDocument)._id,
+          date: { $gte: member.joinedOn },
+          // exclude matches from the member donation count
+          matchType: { $exists: false },
+        };
         const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
         const donationsTotalTonnesPromise = getRareOffsetAmount(query);
 
@@ -837,7 +842,10 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
         memberDonations.tonnes += donationsTotalTonnes;
       }
 
-      const groupTransactionQuery = { matchType: MatchTypes.Offset, 'association.group': (userGroup.group as IGroupDocument)._id };
+      const groupTransactionQuery = {
+        matchType: MatchTypes.Offset,
+        'association.group': (userGroup.group as IGroupDocument)._id,
+      };
 
       const groupDonationsTotalDollarsPromise = getOffsetTransactionsTotal(groupTransactionQuery);
       const groupDonationsTotalTonnesPromise = getRareOffsetAmount(groupTransactionQuery);

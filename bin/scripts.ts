@@ -3,7 +3,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateTransactionCsv } from '../src/services/scripts/generate-transaction-csv';
 
 (async () => {
   try {
@@ -14,8 +13,6 @@ import { generateTransactionCsv } from '../src/services/scripts/generate-transac
     await MongoClient.init();
 
     // add mappers here...
-
-    await generateTransactionCsv();
 
     await MongoClient.disconnect();
   } catch (err) {

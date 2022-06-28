@@ -32,6 +32,7 @@ export const mapExistingItems = async (_: IRequest) => {
     console.log('[+] plaid items retrieved\n');
 
     const mapper = new PlaidMapper(plaidItems);
+    await mapper.init();
     await mapper.mapItems();
     await mapper.mapSectorsToTransactions();
     await mapper.mapTransactionsToCompanies();

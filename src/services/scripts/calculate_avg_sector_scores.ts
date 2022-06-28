@@ -12,6 +12,12 @@ interface IAvgScores {
   sectorName: string;
   numCompanies: number;
   avgScore: number;
+  avgPlanetScore: number;
+  avgPeopleScore: number;
+  avgSustainabilityScore: number;
+  avgClimateActionScore: number;
+  avgCommunityWelfareScore: number;
+  avgDiversityInclusionScore: number;
 }
 
 interface IAvgCategoryScores {
@@ -41,7 +47,18 @@ export const calculateAvgSectorScores = async () => {
   const avgScores: IAvgScores[] = [];
 
   for (const sector of sectors) {
-    const companies = await CompanyModel.find({ 'sectors.sector': sector });
+    const companies = await CompanyModel
+      .find({ 'sectors.sector': sector })
+      .populate([
+        {
+          path: 'categoryScores.category',
+          model: UnsdgCategoryModel,
+        },
+        {
+          path: 'subcategoryScores.subcategory',
+          model: UnsdgSubcategoryModel,
+        },
+      ]);
 
     if (!companies?.length) {
       avgScores.push({
@@ -49,19 +66,76 @@ export const calculateAvgSectorScores = async () => {
         sectorName: sector.name,
         numCompanies: 0,
         avgScore: 0,
+        avgPlanetScore: 0,
+        avgPeopleScore: 0,
+        avgSustainabilityScore: 0,
+        avgClimateActionScore: 0,
+        avgCommunityWelfareScore: 0,
+        avgDiversityInclusionScore: 0,
       });
 
       continue;
     }
 
-    const sum = companies.reduce((acc, curr) => acc + curr.combinedScore, 0);
-    const avg = sum / companies.length;
+    let scoreSum = 0;
+    let planetSum = 0;
+    let peopleSum = 0;
+    let sustainabilitySum = 0;
+    let climateActionSum = 0;
+    let communityWelfareSum = 0;
+    let diversityInclusionSum = 0;
+
+    for (const company of companies) {
+      scoreSum += company.combinedScore;
+
+      for (const category of company.categoryScores) {
+        if ((category.category as IUnsdgCategoryDocument).name === 'Planet') {
+          planetSum += category.score;
+        }
+
+        if ((category.category as IUnsdgCategoryDocument).name === 'People') {
+          peopleSum += category.score;
+        }
+      }
+
+      for (const subcategory of company.subcategoryScores) {
+        if ((subcategory.subcategory as IUnsdgSubcategoryDocument).name === 'Sustainability') {
+          sustainabilitySum += subcategory.score;
+        }
+
+        if ((subcategory.subcategory as IUnsdgSubcategoryDocument).name === 'Climate Action') {
+          climateActionSum += subcategory.score;
+        }
+
+        if ((subcategory.subcategory as IUnsdgSubcategoryDocument).name === 'Community Welfare') {
+          communityWelfareSum += subcategory.score;
+        }
+
+        if ((subcategory.subcategory as IUnsdgSubcategoryDocument).name === 'Diversity & Inclusion') {
+          diversityInclusionSum += subcategory.score;
+        }
+      }
+    }
+
+    const avgScore = scoreSum / companies.length;
+    const avgPlanetScore = planetSum / companies.length;
+    const avgPeopleScore = peopleSum / companies.length;
+    const avgSustainabilityScore = sustainabilitySum / companies.length;
+    const avgClimateActionScore = climateActionSum / companies.length;
+    const avgCommunityWelfareScore = communityWelfareSum / companies.length;
+    const avgDiversityInclusionScore = diversityInclusionSum / companies.length;
 
     avgScores.push({
       sectorId: sector._id.toString(),
       sectorName: sector.name,
       numCompanies: companies.length,
-      avgScore: avg,
+      avgScore,
+      avgPlanetScore,
+      avgPeopleScore,
+      avgSustainabilityScore,
+      avgClimateActionScore,
+      avgCommunityWelfareScore,
+      avgDiversityInclusionScore,
     });
   }
 

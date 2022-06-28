@@ -3,7 +3,8 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateTransactionCsv } from '../src/services/scripts/generate-transaction-csv';
+import { calculateAllCompanyScores } from '../src/services/scripts/calculate_company_scores';
+import { mapCompanies2DataSources } from '../src/services/scripts/map_companies_2_data_sources';
 
 (async () => {
   try {
@@ -15,7 +16,8 @@ import { generateTransactionCsv } from '../src/services/scripts/generate-transac
 
     // add mappers here...
 
-    await generateTransactionCsv();
+    await mapCompanies2DataSources();
+    await calculateAllCompanyScores();
 
     await MongoClient.disconnect();
   } catch (err) {

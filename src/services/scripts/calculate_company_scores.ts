@@ -66,7 +66,15 @@ export const calculateAllCompanyScores = async () => {
     let unsdgMappings: IDataSourceMappingModel[];
 
     try {
-      companyDataSources = await CompanyDataSourceModel.find({ company });
+      const now = dayjs().utc().toDate();
+      companyDataSources = await CompanyDataSourceModel.find({
+        $and: [
+          { company: company._id },
+          { 'dateRange.start': { $lte: now } },
+          { 'dateRange.end': { $gte: now } },
+        ],
+      });
+
       unsdgMappings = await DataSourceMappingModel
         .find({ source: { $in: companyDataSources.map(c => c.source) } })
         .populate([

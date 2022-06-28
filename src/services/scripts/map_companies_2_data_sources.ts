@@ -365,6 +365,7 @@ const createCompanyDataSourceMappings = async (
   company: ICompanyDocument,
   row: IRawCompany2DataSourcesMapping,
   dataSources: IDataSourceDocument[],
+  existingDataSources: ICompanyDataSourceDocument[],
   inheritedCompanyDataSources: ICompanyDataSourceDocument[] = [],
 ) => {
   const newCompanyDataSources: { [key: string]: ICompanyDataSourceDocument } = {};
@@ -392,15 +393,15 @@ const createCompanyDataSourceMappings = async (
 
       const [month, date] = expirationStr.split('/');
 
-      const timestamp = dayjs().utc().toDate();
-      let expiration: Date;
+      const timestamp = dayjs().utc();
+      let expiration = dayjs(timestamp)
+        .add(1, 'year');
 
       if (!!month && !!date) {
-        expiration = dayjs().utc()
+        expiration = expiration
           .month(parseInt(month) - 1)
           .date(parseInt(date))
-          .add(1, 'year')
-          .toDate();
+          .add(1, 'year');
       }
 
       let status: number = null;
@@ -418,6 +419,17 @@ const createCompanyDataSourceMappings = async (
         for (const ncds in newCompanyDataSources) {
           newCompanyDataSources[ncds].isPrimary = false;
         }
+      }
+
+      const existingDataSource = existingDataSources.find(d => (
+        d.source.toString() === dataSource._id.toString()
+          && d.dateRange.start.getTime() <= timestamp.toDate().getTime()
+          && d.dateRange.end.getTime() >= expiration.toDate().getTime()
+      ));
+
+      if (!!existingDataSource) {
+        existingDataSource.dateRange.end = timestamp.toDate();
+        newCompanyDataSources[`old_${dataSourceName}`] = existingDataSource;
       }
 
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
@@ -442,7 +454,9 @@ const createCompanyBCorpDataSourceMappings = async (
   company: ICompanyDocument,
   row: IRawCompany2BCorpMapping,
   dataSources: IDataSourceDocument[],
+  existingDataSources: ICompanyDataSourceDocument[],
   inheritedCompanyDataSources: ICompanyDataSourceDocument[] = [],
+  expiration = dayjs().utc().add(1, 'year').endOf('year'),
 ) => {
   const newCompanyDataSources: { [key: string]: ICompanyDataSourceDocument } = {};
 
@@ -456,7 +470,7 @@ const createCompanyBCorpDataSourceMappings = async (
     });
   }
 
-  const expiration = dayjs('Dec 31, 2023').utc().toDate();
+  // const expiration = dayjs('Dec 31, 2023').utc().toDate();
 
   for (const dataSourceName of bCorpDataSourceNames) {
     if (!!row[dataSourceName]) {
@@ -483,13 +497,24 @@ const createCompanyBCorpDataSourceMappings = async (
         }
       }
 
+      const existingDataSource = existingDataSources.find(d => (
+        d.source.toString() === dataSource._id.toString()
+          && d.dateRange.start.getTime() <= timestamp.getTime()
+          && d.dateRange.end.getTime() >= expiration.toDate().getTime()
+      ));
+
+      if (!!existingDataSource) {
+        existingDataSource.dateRange.end = timestamp;
+        newCompanyDataSources[`old_${dataSourceName}`] = existingDataSource;
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
         status,
         dateRange: {
           start: timestamp,
-          end: expiration,
+          end: expiration.toDate(),
         },
         // the first data source used for company is to be marked as
         // the primary
@@ -507,7 +532,9 @@ const createCompanyJustCapitalDataSourceMappings = async (
   company: ICompanyDocument,
   row: IRawCompany2JustCapitalMapping,
   dataSources: IDataSourceDocument[],
+  existingDataSources: ICompanyDataSourceDocument[],
   inheritedCompanyDataSources: ICompanyDataSourceDocument[] = [],
+  expiration = dayjs().utc().add(1, 'year').endOf('year'),
 ) => {
   const newCompanyDataSources: { [key: string]: ICompanyDataSourceDocument } = {};
 
@@ -521,7 +548,7 @@ const createCompanyJustCapitalDataSourceMappings = async (
     });
   }
 
-  const expiration = dayjs('Dec 31, 2023').utc().toDate();
+  // const expiration = dayjs('Dec 31, 2023').utc().toDate();
 
   for (const dataSourceName of justCapitalDataSourceNames) {
     if (!!row[dataSourceName]) {
@@ -548,13 +575,24 @@ const createCompanyJustCapitalDataSourceMappings = async (
         }
       }
 
+      const existingDataSource = existingDataSources.find(d => (
+        d.source.toString() === dataSource._id.toString()
+          && d.dateRange.start.getTime() <= timestamp.getTime()
+          && d.dateRange.end.getTime() >= expiration.toDate().getTime()
+      ));
+
+      if (!!existingDataSource) {
+        existingDataSource.dateRange.end = timestamp;
+        newCompanyDataSources[`old_${dataSourceName}`] = existingDataSource;
+      }
+
       newCompanyDataSources[dataSourceName] = new CompanyDataSourceModel({
         company,
         source: dataSource,
         status,
         dateRange: {
           start: timestamp,
-          end: expiration,
+          end: expiration.toDate(),
         },
         // the first data source used for company is to be marked as
         // the primary
@@ -626,7 +664,9 @@ const mapCompaniesToBCorpDataSources = async (
       const companyAlreadyMapped = !!companyDataSourceMappings.find(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === company._id.toString());
       if (companyAlreadyMapped) continue;
 
-      const dataSourceMappings = await createCompanyBCorpDataSourceMappings(company, row, dataSources, parentDataSourceMappings);
+      const existingDataSources = await CompanyDataSourceModel.find({ company: company._id });
+
+      const dataSourceMappings = await createCompanyBCorpDataSourceMappings(company, row, dataSources, existingDataSources, parentDataSourceMappings);
       companyDataSourceMappings = [...companyDataSourceMappings, ...dataSourceMappings];
       count += dataSourceMappings.length;
     } catch (err) {
@@ -698,7 +738,9 @@ const mapCompaniesToJustCapitalDataSources = async (
       const companyAlreadyMapped = companyDataSourceMappings.find(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === company._id.toString());
       if (!!companyAlreadyMapped) continue;
 
-      const dataSourceMappings = await createCompanyJustCapitalDataSourceMappings(company, row, dataSources, parentDataSourceMappings);
+      const existingDataSources = await CompanyDataSourceModel.find({ company: company._id });
+
+      const dataSourceMappings = await createCompanyJustCapitalDataSourceMappings(company, row, dataSources, existingDataSources, parentDataSourceMappings);
       companyDataSourceMappings = [...companyDataSourceMappings, ...dataSourceMappings];
       count += dataSourceMappings.length;
     } catch (err) {
@@ -768,7 +810,9 @@ const mapCompanies2OtherDataSources = async (
       const companyAlreadyMapped = companyDataSourceMappings.find(cdsm => (cdsm.company as ICompanyDocument)._id.toString() === company._id.toString());
       if (!!companyAlreadyMapped) continue;
 
-      const dataSourceMappings = await createCompanyDataSourceMappings(company, row, dataSources, parentDataSourceMappings);
+      const existingDataSources = await CompanyDataSourceModel.find({ company: company._id });
+
+      const dataSourceMappings = await createCompanyDataSourceMappings(company, row, dataSources, existingDataSources, parentDataSourceMappings);
       companyDataSourceMappings = [...companyDataSourceMappings, ...dataSourceMappings];
       count += dataSourceMappings.length;
     } catch (err) {

@@ -119,6 +119,8 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
    * currently we will be taking remove data requests and handling them manually
    * until we decide how to handle the data associated with a card.
    * structure for handling the request will be left in for now as we decide how to move forward
+   * Removing card and data will remove ALL transactions associated with the card
+   * any generated reports and impact totals will be removed and possibly regenerated
    */
   const { removeData } = req.body;
 

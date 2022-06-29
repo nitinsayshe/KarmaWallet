@@ -1,5 +1,6 @@
 /* eslint-disable camelcase */
 import 'dotenv/config';
+import { GoogleClient } from '../src/clients/google';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
@@ -10,11 +11,12 @@ import { Logger } from '../src/services/logger';
     //   requestor: {},
     //   authKey: '',
     // } as IRequest);
-    await MongoClient.init();
+    // await MongoClient.init();
 
     // add mappers here...
 
-    await MongoClient.disconnect();
+
+    // await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');
     Logger.error(asCustomError(err));

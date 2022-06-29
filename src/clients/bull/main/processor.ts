@@ -13,6 +13,7 @@ import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
 import * as SendEmail from '../../../jobs/sendEmail';
+import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
 
 const MongoClient = new _MongoClient();
 
@@ -69,6 +70,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
+      break;
+    case JobNames.UploadCsvToGoogleDrive:
+      result = await UploadCsvToGoogleDrive.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

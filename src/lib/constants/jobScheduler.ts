@@ -3,6 +3,11 @@ export enum QueueNames {
   Email = 'email',
 }
 
+export enum CsvReportTypes {
+  Transactions = 'transactions',
+  Users = 'users',
+}
+
 export enum JobNames {
   CacheGroupOffsetData = 'cache-group-offset-data',
   CachedDataCleanup = 'cached-data-cleanup',
@@ -17,4 +22,5 @@ export enum JobNames {
   UpdateBouncedEmails = 'update-bounced-emails',
   SendWelcomeFlowEmails = 'send-welcome-flow-emails',
   UpdateRareProjectAverage = 'update-rare-project-average',
+  UploadCsvToGoogleDrive = 'upload-csv-to-google-drive',
 }

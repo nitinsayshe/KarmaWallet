@@ -1,6 +1,6 @@
 import path from 'path';
 import { Worker } from 'bullmq';
-import { JobNames, QueueNames } from '../../../lib/constants/jobScheduler';
+import { JobNames, QueueNames, CsvReportTypes } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
 
@@ -45,6 +45,20 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 3 * * *' } });
     this.createJob(JobNames.UpdateRareProjectAverage, null, { jobId: `${JobNames.UpdateRareProjectAverage}-daily`, repeat: { cron: '0 17 * * *' } });
+    if (process.env.NODE_ENV === 'production') {
+      this.createJob(
+        JobNames.UploadCsvToGoogleDrive,
+        { reportType: CsvReportTypes.Transactions },
+        { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Transactions}-daily`,
+          repeat: { cron: '0 7 * * *' } },
+      );
+      this.createJob(
+        JobNames.UploadCsvToGoogleDrive,
+        { reportType: CsvReportTypes.Users },
+        { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Users}-daily`,
+          repeat: { cron: '0 7 * * *' } },
+      );
+    }
   };
 }
 

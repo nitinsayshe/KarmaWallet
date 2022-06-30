@@ -13,6 +13,9 @@ router.route('/carbon/offset/donation-suggestions')
 router.route('/carbon/tonnes-by-dollar-amount')
   .get(authenticate, ImpactController.getTonnesByByDollarAmount);
 
+router.route('/ratings')
+  .get(ImpactController.getImpactRatings);
+
 router.route('/top-companies')
   .get(ImpactController.getTopCompanies);
 

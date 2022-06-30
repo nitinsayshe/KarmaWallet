@@ -144,7 +144,7 @@ export type ITransactionModel = IModel<ITransaction>;
 //   - subCategory
 //   - carbonMultiplier
 
-const transactionSchema = new Schema({
+export const transactionSchemaDefinition = {
   user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
@@ -286,7 +286,9 @@ const transactionSchema = new Schema({
       },
     },
   },
-});
+};
+
+const transactionSchema = new Schema(transactionSchemaDefinition);
 transactionSchema.plugin(mongoosePaginate);
 transactionSchema.plugin(mongooseAggregatePaginate);
 

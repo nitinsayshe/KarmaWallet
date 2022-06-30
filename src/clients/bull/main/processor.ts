@@ -10,6 +10,7 @@ import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotal
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
+import * as UserMonthlyImpactReport from '../../../jobs/userMonthlyImpactReports';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
 import * as SendEmail from '../../../jobs/sendEmail';
@@ -61,6 +62,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.TransactionsMonitor:
       result = await TransactionsMonitor.exec();
+      break;
+    case JobNames.UserMonthlyImpactReport:
+      result = await UserMonthlyImpactReport.exec(true);
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);

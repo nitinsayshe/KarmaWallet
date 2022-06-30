@@ -18,6 +18,7 @@ export enum JobNames {
   SendEmail = 'send-email',
   TotalOffsetsForAllUsers = 'total-offsets-for-all-users',
   TransactionsMonitor = 'transactions-monitor',
+  UserMonthlyImpactReport = 'user-monthly-impact-report',
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
   UpdateBouncedEmails = 'update-bounced-emails',
   SendWelcomeFlowEmails = 'send-welcome-flow-emails',

@@ -93,21 +93,29 @@ export const averageAmericanEmissions = {
   Lifetime: 1000,
 };
 
-const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: number, totalOffset: number) => {
-  /**
-   * Logic to Determine Number used for Total Equivalency
-   * Case: Net Emissions > 0: Use Net Emissions
-   * Case: Negative Net Emissions and 0 Gross Emissions: Use American Average over 2 years
-   * Case: Negative Net Emissions and  > 0 Gross Emissions: Use Total Offset
-   * Case: 0 Net Emissions and > 0 Gross Emissions and > 0 Offset: Use Total Offset
-   * Case: 0 Net Emissions and 0 Gross Emissions: Use American Average over 2 years
-   */
+export const getImpactRatings = async (_req: IRequest) => {
+  try {
+    const [neg, neut, pos] = await getUserImpactRatings();
 
-  if (netEmissions > 0) return netEmissions;
-  if (netEmissions < 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
-  if (netEmissions < 0 && totalEmissions > 0) return totalOffset;
-  if (netEmissions === 0 && totalEmissions > 0 && totalOffset > 0) return totalOffset;
-  if (netEmissions === 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
+    if (!neg || !neut || !pos) throw new CustomError('Could not retrieve user impact ratings', ErrorTypes.SERVER);
+
+    return {
+      negative: {
+        min: neg[0],
+        max: neg[1],
+      },
+      neutral: {
+        min: neut[0],
+        max: neut[1],
+      },
+      positive: {
+        min: pos[0],
+        max: pos[1],
+      },
+    };
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 const getTopCompaniesToShopBy = async (req: IRequest<{}, ITopCompaniesRequestQuery>) => {
@@ -216,6 +224,23 @@ const shouldUseAmericanAverage = async ({ userId, cachedTransactionTotal, catche
   const transactionCount = catchedTransactionCount || await TransactionService.getTransactionCount({ user: userId, 'integrations.rare': null });
   // might need to break this down more granular
   return transactionCount <= 0 && transactionAmountTotal <= 0;
+};
+
+export const getAmountForTotalEquivalency = (netEmissions: number, totalEmissions: number, totalOffset: number) => {
+  /**
+   * Logic to Determine Number used for Total Equivalency
+   * Case: Net Emissions > 0: Use Net Emissions
+   * Case: Negative Net Emissions and 0 Gross Emissions: Use American Average over 2 years
+   * Case: Negative Net Emissions and  > 0 Gross Emissions: Use Total Offset
+   * Case: 0 Net Emissions and > 0 Gross Emissions and > 0 Offset: Use Total Offset
+   * Case: 0 Net Emissions and 0 Gross Emissions: Use American Average over 2 years
+   */
+
+  if (netEmissions > 0) return netEmissions;
+  if (netEmissions < 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
+  if (netEmissions < 0 && totalEmissions > 0) return totalOffset;
+  if (netEmissions === 0 && totalEmissions > 0 && totalOffset > 0) return totalOffset;
+  if (netEmissions === 0 && totalEmissions === 0) return averageAmericanEmissions.Annually * 2;
 };
 
 export const getCarbonOffsetDonationSuggestions = async (req: IRequest<{}, ICarbonOffsetRequestQuery>) => {

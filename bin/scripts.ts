@@ -8,15 +8,12 @@ import { Logger } from '../src/services/logger';
 (async () => {
   try {
     // const mockRequest = ({
-    //   requestor: {},
+    //   requestor: { },
     //   authKey: '',
     // } as IRequest);
-    // await MongoClient.init();
-
+    await MongoClient.init();
     // add mappers here...
-
-
-    // await MongoClient.disconnect();
+    await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');
     Logger.error(asCustomError(err));

@@ -25,6 +25,15 @@ export const getCarbonOffsetDonationSuggestions: IRequestHandler<{}, ImpactServi
   }
 };
 
+export const getImpactRatings: IRequestHandler = async (req, res) => {
+  try {
+    const impactRatings = await ImpactService.getImpactRatings(req);
+    output.api(req, res, impactRatings);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getTopCompanies: IRequestHandler<{}, ImpactService.ITopCompaniesRequestQuery> = async (req, res) => {
   try {
     const companies = await ImpactService.getTopCompanies(req);

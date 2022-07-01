@@ -70,11 +70,26 @@ const groupTransactionsByMonth = (transactions: ITransactionDocument[]) => {
   return monthlyBreakdown;
 };
 
-export const exec = async (generateFullHistory?: boolean) => {
+interface IJobData {
+  generateFullHistory?: boolean;
+  uid?: string;
+}
+
+export const exec = async ({ generateFullHistory, uid }: IJobData) => {
+  const userQuery: FilterQuery<IUserDocument> = !!uid ? { _id: uid } : {};
+
+  if (!!generateFullHistory) {
+    // clearing any existing history
+    // ...needed for when user links/relinks a card. have
+    // to delete existing histories (if any exist), and
+    // then recalc all with new card data.
+    await UserMontlyImpactReportModel.deleteMany(userQuery);
+  }
+
   const lastMonthStart = getMonthStartDate(dayjs().utc().subtract(1, 'month'));
 
-  console.log(`\ngenerating user monthly impact reports ${generateFullHistory ? 'for entire history' : `for ${lastMonthStart.format('MMM, YYYY')}`}...\n`);
-  const users = await UserModel.find({}).lean();
+  console.log(`\ngenerating user monthly impact reports ${generateFullHistory ? 'for entire history' : `for ${lastMonthStart.format('MMM, YYYY')}`}${!!uid ? ` for user: ${uid}` : ''}...\n`);
+  const users = await UserModel.find(userQuery).lean();
 
   let count = 0;
   let errorCount = 0;

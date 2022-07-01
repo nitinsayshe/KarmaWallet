@@ -64,7 +64,7 @@ export default async (job: SandboxedJob) => {
       result = await TransactionsMonitor.exec();
       break;
     case JobNames.UserMonthlyImpactReport:
-      result = await UserMonthlyImpactReport.exec(true);
+      result = await UserMonthlyImpactReport.exec(data);
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);

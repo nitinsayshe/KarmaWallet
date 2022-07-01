@@ -56,11 +56,19 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
       isSuccess,
       sendEmail: false,
     });
+
     const nextJobs: INextJob[] = [
       {
         name: JobNames.SendEmail,
         data: jobData,
         options: jobOptions,
+      },
+      {
+        name: JobNames.UserMonthlyImpactReport,
+        data: {
+          generateFullHistory: true,
+          uid: user._id,
+        },
       },
     ];
     return { nextJobs, ...result };

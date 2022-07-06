@@ -156,10 +156,11 @@ export const buildCarbonMultiplierPipeline = (uid: string | Types.ObjectId) => {
     .unwind('sector');
 };
 
-export const getTotalEmissions = async (uid: string | Types.ObjectId) => {
+export const getTotalEmissions = async (uid: string | Types.ObjectId, query: FilterQuery<ITransaction> = {}) => {
   // TODO: rewrite w/ new reference to plaid mapping
   const emissions = { kg: 0, mt: 0 };
   const sumTotal = await buildCarbonMultiplierPipeline(uid)
+    .match(query)
     .project({ userId: 1, emissions: { $multiply: ['$amount', '$sector.carbonMultiplier'] } })
     .group({ _id: '$user', amount: { $sum: '$emissions' } });
 

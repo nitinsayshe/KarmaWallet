@@ -59,7 +59,7 @@ export const getImpactSummary = (transactions: ITransactionDocument[]): IImpactS
   };
 };
 
-const getMonthStartDate = (date: dayjs.Dayjs) => date
+export const getMonthStartDate = (date: dayjs.Dayjs) => date
   .set('date', 1)
   .set('hours', 0)
   .set('minutes', 0)

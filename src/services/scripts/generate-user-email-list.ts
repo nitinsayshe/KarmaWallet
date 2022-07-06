@@ -31,7 +31,7 @@ const splitNameIntoFirstAndLast = (name: string): { firstName: string, lastName:
   return { firstName, lastName };
 };
 
-export const generateUserEmailList = async () => {
+export const generateUserEmailList = async ({ writeToDisk = true }) => {
   console.log('\ngenerating user email report...');
   try {
     const users = await UserModel.find({}).lean();
@@ -58,9 +58,9 @@ export const generateUserEmailList = async () => {
     }
 
     const _csv = parse(parsedUsers);
-    fs.writeFileSync(path.join(__dirname, '.tmp', 'user_email_report.csv'), _csv);
-
+    if (writeToDisk) fs.writeFileSync(path.join(__dirname, '.tmp', 'user_email_report.csv'), _csv);
     console.log(`[+] user email report generated successfully with ${parsedUsers.length} users\n`);
+    return _csv;
   } catch (err: any) {
     console.log('[-] error generating user email report');
     console.log(err.message);

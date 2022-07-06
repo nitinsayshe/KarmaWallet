@@ -58,6 +58,15 @@ export interface IUserImpactData {
 export interface IUserImpactTotalDocument extends IUserImpactData, Document {}
 export type IUserImpactTotalModel = IModel<IUserImpactData>;
 
+export const userImpactMonthlyBreakdownDefinition = {
+  date: { type: Date },
+  negative: { type: Number },
+  neutral: { type: Number },
+  positive: { type: Number },
+  score: { type: Number },
+  transactionCount: { type: Number },
+};
+
 const userImpactTotalSchema = new Schema({
   user: { type: Schema.Types.ObjectId, ref: 'user' },
   summary: {
@@ -80,14 +89,7 @@ const userImpactTotalSchema = new Schema({
     },
   },
   monthlyBreakdown: {
-    type: [{
-      date: { type: Date },
-      negative: { type: Number },
-      neutral: { type: Number },
-      positive: { type: Number },
-      score: { type: Number },
-      transactionCount: { type: Number },
-    }],
+    type: [userImpactMonthlyBreakdownDefinition],
   },
   totalTransactions: { type: Number },
   createdAt: { type: Date },

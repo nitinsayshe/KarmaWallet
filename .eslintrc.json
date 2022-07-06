@@ -47,6 +47,7 @@
       "no-await-in-loop": ["off", "always"],
       "no-console": "off",
       "no-extra-boolean-cast": "off",
+      "no-prototype-builtins": "off",
       "no-restricted-globals": "off",
       "no-restricted-syntax": [
         "error",

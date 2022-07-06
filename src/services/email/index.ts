@@ -121,7 +121,7 @@ export const sendGroupVerificationEmail = async ({
   });
   const emailTemplateConfig = EmailTemplateConfigs.GroupVerification;
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const verificationLink = `${domain}/#/account?emailVerification=${token}`;
+  const verificationLink = `${domain}/account?emailVerification=${token}`;
   // override to share email verification template and styles
   const template = buildTemplate({
     templateName: EmailTemplateConfigs.EmailVerification.name,
@@ -147,7 +147,7 @@ export const sendEmailVerification = async ({
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
-  const verificationLink = `${domain}/#/account?emailVerification=${token}`;
+  const verificationLink = `${domain}/account?emailVerification=${token}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'KarmaWallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
@@ -276,7 +276,7 @@ export const sendPasswordResetEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.PasswordReset;
   const { isValid, missingFields } = verifyRequiredFields(['token', 'domain', 'recipientEmail', 'name'], { token, domain, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const passwordResetLink = `${domain}/#/?createpassword=${token}`;
+  const passwordResetLink = `${domain}/?createpassword=${token}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
   const subject = 'Reset your KarmaWallet Password';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };

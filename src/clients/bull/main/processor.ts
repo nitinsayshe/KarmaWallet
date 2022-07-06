@@ -10,9 +10,11 @@ import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotal
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
+import * as UserMonthlyImpactReport from '../../../jobs/userMonthlyImpactReports';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
 import * as SendEmail from '../../../jobs/sendEmail';
+import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
 
 const MongoClient = new _MongoClient();
 
@@ -61,6 +63,9 @@ export default async (job: SandboxedJob) => {
     case JobNames.TransactionsMonitor:
       result = await TransactionsMonitor.exec();
       break;
+    case JobNames.UserMonthlyImpactReport:
+      result = await UserMonthlyImpactReport.exec(data);
+      break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);
       break;
@@ -69,6 +74,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
+      break;
+    case JobNames.UploadCsvToGoogleDrive:
+      result = await UploadCsvToGoogleDrive.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

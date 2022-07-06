@@ -15,9 +15,11 @@ import { group, groups } from './group';
 import card from './card';
 import notFound from './404';
 import upload from './upload';
+import userImpactReports from './userImpactReports';
 
 const routers = (app: Express) => {
   user(app);
+  userImpactReports(app);
   jobPostings(app);
   unsdgs(app);
   admin(app);

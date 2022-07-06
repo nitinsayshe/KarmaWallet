@@ -29,7 +29,7 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     - run: echo 'PUBLIC_TOKEN=${{secrets.STAGING_PUBLIC_TOKEN}}' >> .env
-    - run: echo 'NODE_ENV=production' >> .env
+    - run: echo 'NODE_ENV=staging' >> .env
     - run: echo 'PORT=8012' >> .env
     - run: echo 'FRONTEND_DOMAIN=https://ui.staging.karmawallet.io' >> .env
     - run: echo 'APP_USER_ID=6241e2260c9177f79772fdc5' >> .env
@@ -58,6 +58,7 @@ jobs:
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
     - run: echo 'BETSI_ENV=bigolbetsi' >> .env
+    - run: echo 'GOOGLE_KEY_STRING=${{secrets.GOOGLE_KEY_STRING}}' >> .env
     - run: npm i
     - run: pm2 restart all
     

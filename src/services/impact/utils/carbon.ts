@@ -3,6 +3,7 @@ import { convertKgToMT, formatNumber } from '../../../lib/number';
 import { RareTransactionQuery } from '../../../lib/constants';
 import { TransactionModel, ITransaction } from '../../../models/transaction';
 import { MiscModel } from '../../../models/misc';
+import { sectorsToExcludeFromTransactions } from '../../../lib/constants/transaction';
 
 export enum EquivalencyKey {
   Airplane = 'airplane',
@@ -146,7 +147,15 @@ const equivalenciesData: IEquivalency[] = [
 export const buildCarbonMultiplierPipeline = (uid: string | Types.ObjectId) => {
   const _uid = typeof uid === 'string' ? new Types.ObjectId(uid) : uid;
   return TransactionModel.aggregate()
-    .match({ user: _uid, sector: { $ne: null } })
+    .match({
+      $and: [
+        { user: _uid },
+        { amount: { $gt: 0 } },
+        { reversed: { $ne: true } },
+        { sector: { $ne: null } },
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+      ],
+    })
     .lookup({
       from: 'sectors',
       localField: 'sector',
@@ -224,27 +233,67 @@ export const getEquivalencies = (metricTons: number, keySelector?: EquivalencyKe
   return acc;
 }, { positive: [], negative: [] });
 
-export const getOffsetTransactionsCount = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...RareTransactionQuery, ...query }).count();
+export const getOffsetTransactionsCount = (query: FilterQuery<ITransaction>) => TransactionModel.find({
+  $and: [
+    { sector: { $nin: sectorsToExcludeFromTransactions } },
+    { amount: { $gt: 0 } },
+    { reversed: { $ne: true } },
+    { ...RareTransactionQuery },
+    { ...query },
+  ],
+}).count();
 
-export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => TransactionModel.find({ ...RareTransactionQuery, ...query });
+export const getOffsetTransactions = (query: FilterQuery<ITransaction>) => TransactionModel.find({
+  $and: [
+    { sector: { $nin: sectorsToExcludeFromTransactions } },
+    { amount: { $gt: 0 } },
+    { reversed: { $ne: true } },
+    { ...RareTransactionQuery },
+    { ...query },
+  ],
+});
 
 export const getOffsetTransactionsTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...RareTransactionQuery, ...query })
+    .match({
+      $and: [
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { amount: { $gt: 0 } },
+        { reversed: { $ne: true } },
+        { ...RareTransactionQuery },
+        { ...query },
+      ],
+    })
     .group({ _id: 'total', total: { $sum: '$integrations.rare.subtotal_amt' } });
   return aggResult?.length ? aggResult[0].total / 100 : 0;
 };
 
 export const countUsersWithOffsetTransactions = async (query: FilterQuery<ITransaction>) => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...RareTransactionQuery, ...query })
+    .match({
+      $and: [
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { amount: { $gt: 0 } },
+        { reversed: { $ne: true } },
+        { ...RareTransactionQuery },
+        { ...query },
+      ],
+    })
     .group({ _id: '$user', total: { $sum: 1 } });
   return aggResult.length;
 };
 
 export const getRareOffsetAmount = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...RareTransactionQuery, ...query })
+    .match({
+      $and: [
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { amount: { $gt: 0 } },
+        { reversed: { $ne: true } },
+        { ...RareTransactionQuery },
+        { ...query },
+      ],
+    })
     .group({ _id: 'total', total: { $sum: '$integrations.rare.tonnes_amt' } });
   return aggResult?.length ? aggResult[0].total : 0;
 };

@@ -3,6 +3,7 @@ import { JobNames } from '../../../lib/constants/jobScheduler';
 import { mockRequest } from '../../../lib/constants/request';
 import * as PlaidIntegration from '../../../integrations/plaid';
 import { _MongoClient } from '../../mongo';
+import * as AssociateNegativeToPositiveTransactions from '../../../jobs/associateNegativeToPositiveTransactions';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
@@ -15,6 +16,7 @@ import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionM
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
 import * as SendEmail from '../../../jobs/sendEmail';
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
+import { INextJob } from '../base';
 
 const MongoClient = new _MongoClient();
 
@@ -31,6 +33,18 @@ export default async (job: SandboxedJob) => {
   await MongoClient.init();
 
   switch (name) {
+    case JobNames.AssociationNegativeToPositiveTransactions:
+      await AssociateNegativeToPositiveTransactions.exec();
+
+      result = {
+        nextJobs: [],
+      } as { nextJobs: INextJob[] };
+
+      if (data?.reset?.userTransactionTotals) result.nextJobs.push({ name: JobNames.GenerateUserTransactionTotals });
+      if (data?.reset?.userImpactTotals) result.nextJobs.push({ name: JobNames.GenerateUserImpactTotals });
+      if (data?.reset?.userMonthlyImpactReports) result.nextJobs.push({ name: JobNames.UserMonthlyImpactReport, data: { generateFullHistory: true } });
+
+      break;
     case JobNames.CachedDataCleanup:
       result = CachedDataCleanup.exec();
       break;
@@ -51,8 +65,7 @@ export default async (job: SandboxedJob) => {
 
       result = {
         nextJobs: [
-          { name: JobNames.GenerateUserTransactionTotals },
-          { name: JobNames.GenerateUserImpactTotals },
+          { name: JobNames.AssociationNegativeToPositiveTransactions, data: { reset: { userTransactionTotals: true, userImpactTotals: true } } },
         ],
       };
 

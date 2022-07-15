@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import { asCustomError } from '../../lib/customError';
 import { TransactionModel } from '../../models/transaction';
 import { IChart } from '../../types/chart';
@@ -17,13 +18,23 @@ export const getCarbonOffsetsReport = async (req: IRequest<IReportRequestParams,
       .subtract(_daysInPast, 'days');
 
     const offsetsPurchasedBeforeThreshold = await TransactionModel.find({
-      date: { $lt: thresholdDate.toDate() },
-      'integrations.rare': { $exists: true },
+      $and: [
+        { date: { $lt: thresholdDate.toDate() } },
+        { 'integrations.rare': { $exists: true } },
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { amount: { $gt: 0 } },
+        { reversed: { $ne: true } },
+      ],
     }).count();
     let aggData = await TransactionModel.aggregate()
       .match({
-        date: { $gte: thresholdDate.toDate() },
-        'integrations.rare': { $exists: true },
+        $and: [
+          { sector: { $nin: sectorsToExcludeFromTransactions } },
+          { amount: { $gt: 0 } },
+          { reversed: { $ne: true } },
+          { date: { $gte: thresholdDate.toDate() } },
+          { 'integrations.rare': { $exists: true } },
+        ],
       })
       .project({ day: { $substr: ['$date', 0, 10] } })
       .group({ _id: '$day', count: { $sum: 1 } })

@@ -1,8 +1,15 @@
 import { FilterQuery } from 'mongoose';
+import { sectorsToExcludeFromTransactions } from '../../../lib/constants/transaction';
 import { ITransactionDocument, TransactionModel } from '../../../models/transaction';
 
 export const _getTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.aggregate([
-  { $match: query },
+  { $match: {
+    $and: [
+      { sector: { $nin: sectorsToExcludeFromTransactions } },
+      { amount: { $gt: 0 } },
+      { ...query },
+    ],
+  } },
   {
     $lookup: {
       from: 'cards',

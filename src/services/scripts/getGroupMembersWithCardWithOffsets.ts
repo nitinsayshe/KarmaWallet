@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import { TransactionModel } from '../../models/transaction';
 import { IUserDocument } from '../../models/user';
 
@@ -10,12 +11,11 @@ export const getGroupMembersWithCardWithOffsets = async (date: Date) => {
     const res = await TransactionModel.aggregate([
       {
         $match: {
-          'integrations.rare': {
-            $exists: true,
-          },
-          date: {
-            $gte: date,
-          },
+          'integrations.rare': { $exists: true },
+          date: { $gte: date },
+          sector: { $nin: sectorsToExcludeFromTransactions },
+          amount: { $gt: 0 },
+          reversed: { $ne: true },
         },
       }, {
         $project: {

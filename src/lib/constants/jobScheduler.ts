@@ -9,6 +9,7 @@ export enum CsvReportTypes {
 }
 
 export enum JobNames {
+  AssociationNegativeToPositiveTransactions = 'associate-negative-to-positive-transactions',
   CacheGroupOffsetData = 'cache-group-offset-data',
   CachedDataCleanup = 'cached-data-cleanup',
   GenerateGroupOffsetStatements = 'generate-group-offset-statements',

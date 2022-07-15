@@ -18,6 +18,10 @@ export enum MatchTypes {
   Offset = 'offset',
 }
 
+export enum TransactionAssociationReasons {
+  Reversed = 'reversed',
+}
+
 export interface IPlaidTransactionLocation {
   address: string;
   city: string;
@@ -90,6 +94,12 @@ export interface ITransactionIntegrations {
   rare?: IRareTransactionIntegration;
 }
 
+export interface ITransactionAssociation {
+  // eslint-disable-next-line no-use-before-define
+  transaction: IRef<ObjectId, ITransactionDocument>;
+  reason: TransactionAssociationReasons;
+}
+
 export interface IUserOrGroup {
   user?: IRef<ObjectId, (IShareableUser | IUserDocument)>;
   group?: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
@@ -108,6 +118,7 @@ export interface IShareableTransaction {
   card: IRef<ObjectId, IShareableCard>;
   sector: IRef<ObjectId, ISector>;
   amount: number;
+  reversed: boolean;
   date: Date;
   integrations?: ITransactionIntegrations;
   createdOn: Date;
@@ -116,16 +127,17 @@ export interface IShareableTransaction {
 }
 
 export interface ITransaction extends IShareableTransaction {
-  user: IRef<ObjectId, IUserDocument>;
-  userId: IRef<ObjectId, IUserDocument>;
-  company: IRef<ObjectId, ICompanyDocument>;
-  companyId: IRef<ObjectId, ICompanyDocument>;
+  association?: IUserOrGroup;
   card: IRef<ObjectId, ICardDocument>;
   cardId: IRef<ObjectId, ICardDocument>;
-  sector: IRef<ObjectId, ISectorDocument>;
-  onBehalfOf?: IUserOrGroup;
+  company: IRef<ObjectId, ICompanyDocument>;
+  companyId: IRef<ObjectId, ICompanyDocument>;
   matched?: ITransactionMatch;
-  association?: IUserOrGroup;
+  onBehalfOf?: IUserOrGroup;
+  sector: IRef<ObjectId, ISectorDocument>;
+  transactionAssociations: ITransactionAssociation[];
+  user: IRef<ObjectId, IUserDocument>;
+  userId: IRef<ObjectId, IUserDocument>;
 }
 
 export interface ITransactionAggregate extends ITransaction {
@@ -182,6 +194,23 @@ export const transactionSchemaDefinition = {
   },
   amount: { type: Number },
   date: { type: Date },
+  // if true, means this transaction was cancelled, bounced
+  // refunded, or otherwise not processed.
+  reversed: { type: Boolean },
+  // use this to "link" 2 transactions together because they
+  // are related in some way. Like a negative transaction
+  // linked to the positive transaction because it was
+  // reversed for some reason (like a refund).
+  transactionAssociations: [{
+    transaction: {
+      type: Schema.Types.ObjectId,
+      ref: 'transaction',
+    },
+    reason: {
+      type: String,
+      enum: Object.values(TransactionAssociationReasons),
+    },
+  }],
   integrations: {
     plaid: {
       type: {

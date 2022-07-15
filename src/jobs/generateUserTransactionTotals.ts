@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
+import { sectorsToExcludeFromTransactions } from '../lib/constants/transaction';
 import { ICompanyDocument, ICompanySector } from '../models/company';
 import { ISectorDocument } from '../models/sector';
 import { TransactionModel } from '../models/transaction';
@@ -21,6 +22,9 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
     {
       $match: {
         user: userId,
+        sector: { $nin: sectorsToExcludeFromTransactions },
+        amount: { $gt: 0 },
+        reversed: { $ne: true },
       },
     },
     {

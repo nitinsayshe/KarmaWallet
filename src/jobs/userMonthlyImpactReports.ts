@@ -1,6 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { FilterQuery } from 'mongoose';
+import { sectorsToExcludeFromTransactions } from '../lib/constants/transaction';
 import { CompanyModel } from '../models/company';
 import { SectorModel } from '../models/sector';
 import { ITransactionDocument, TransactionModel } from '../models/transaction';
@@ -99,6 +100,9 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
       $and: [
         { user },
         { company: { $ne: null } },
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { amount: { $gt: 0 } },
+        { reversed: { $ne: true } },
       ],
     };
 

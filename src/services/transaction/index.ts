@@ -328,7 +328,7 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
 
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ sector: { $nin: sectorsToExcludeFromTransactions, amount: { $gt: 0 } }, ...query, ...excludePaymentQuery })
+    .match({ sector: { $nin: sectorsToExcludeFromTransactions }, amount: { $gt: 0 }, ...query, ...excludePaymentQuery })
     .group({ _id: '$user', total: { $sum: '$amount' } });
 
   return aggResult?.length ? aggResult[0].total : 0;

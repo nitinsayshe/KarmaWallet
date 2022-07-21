@@ -23,6 +23,7 @@ import { GroupModel } from '../../models/group';
 import { _getTransactions } from './utils';
 import { CompanyRating } from '../../lib/constants/company';
 import { getCompanyRatingsThresholds } from '../misc';
+import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -75,6 +76,8 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
     const userQuery: FilterQuery<ITransaction> = {
       $and: [
         { company: { $ne: null } },
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { amount: { $gt: 0 } },
       ],
     };
 
@@ -215,9 +218,13 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
     limit: query?.limit || 10,
   };
   const filter: FilterQuery<ITransaction> = {
-    $and: Object.entries(query.filter)
-      .filter(([key]) => (key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets'))
-      .map(([key, value]) => ({ [key]: value })),
+    $and: [
+      ...Object.entries(query.filter)
+        .filter(([key]) => (key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets'))
+        .map(([key, value]) => ({ [key]: value })),
+      { sector: { $nin: sectorsToExcludeFromTransactions } },
+      { amount: { $gt: 0 } },
+    ],
   };
 
   if (!!userId) {
@@ -274,7 +281,7 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     const _limit = parseInt(limit.toString());
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
-    const query: FilterQuery<ITransactionDocument> = { $and: [] };
+    const query: FilterQuery<ITransactionDocument> = { $and: [{ sector: { $nin: sectorsToExcludeFromTransactions } }] };
 
     if (!!userId) {
       if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {
@@ -321,7 +328,7 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
 
 export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
   const aggResult = await TransactionModel.aggregate()
-    .match({ ...query, ...excludePaymentQuery })
+    .match({ sector: { $nin: sectorsToExcludeFromTransactions }, amount: { $gt: 0 }, ...query, ...excludePaymentQuery })
     .group({ _id: '$user', total: { $sum: '$amount' } });
 
   return aggResult?.length ? aggResult[0].total : 0;
@@ -329,17 +336,28 @@ export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Pro
 
 // await needed her for TS to resolve the type of aggregations output
 // eslint-disable-next-line no-return-await
-export const getTransactionCount = async (query = {}) => await TransactionModel.find({ ...query, ...excludePaymentQuery }).count();
+export const getTransactionCount = async (query = {}) => await TransactionModel.find({
+  sector: { $nin: sectorsToExcludeFromTransactions },
+  amount: { $gt: 0 },
+  ...query,
+  ...excludePaymentQuery,
+}).count();
 
 export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const Rare = new RareClient();
   const transactions: ITransactionDocument[] = await TransactionModel.find({
-    $or: [
-      { userId: req?.requestor?._id },
-      { 'onBehalfOf.user': req?.requestor?._id },
+    $and: [
+      { sector: { $nin: sectorsToExcludeFromTransactions } },
+      { amount: { $gt: 0 } },
+      {
+        $or: [
+          { userId: req?.requestor?._id },
+          { 'onBehalfOf.user': req?.requestor?._id },
+        ],
+      },
+      { matchType: null },
+      { ...RareTransactionQuery },
     ],
-    matchType: null,
-    ...RareTransactionQuery,
   });
 
   if (transactions.length === 0) return [];
@@ -361,6 +379,7 @@ export const getShareableTransaction = ({
   sector,
   amount,
   date,
+  reversed,
   createdOn,
   lastModified,
   integrations,
@@ -389,6 +408,7 @@ export const getShareableTransaction = ({
     sector: _sector,
     amount,
     date,
+    reversed,
     createdOn,
     lastModified,
   };
@@ -422,6 +442,7 @@ export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
 
     const query: FilterQuery<ITransaction> = {
       $and: [
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
         {
           $or: [
             { user: _userId },

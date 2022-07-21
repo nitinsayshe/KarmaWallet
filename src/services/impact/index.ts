@@ -501,6 +501,8 @@ export const getUserLowerImpactPurchases = async (req: IRequest<{}, IUserLowerIm
         user: requestor._id,
         date: { $gte: dayjs().subtract(_days, 'day').toDate() },
         company: { $ne: null },
+        amount: { $gt: 0 },
+        reversed: { $ne: true },
       },
     },
     {

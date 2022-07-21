@@ -2,6 +2,7 @@ import { count } from 'aws-sdk/clients/health';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
+import { sectorsToExcludeFromTransactions } from '../lib/constants/transaction';
 import { TransactionModel } from '../models/transaction';
 import { IUserDocument, UserModel } from '../models/user';
 import { IUserImpactMonthData, IUserImpactSummary, IUserImpactTotalDocument, IUserImpactTotalScores, UserImpactTotalModel } from '../models/userImpactTotals';
@@ -133,7 +134,10 @@ const getTransactions = (userId: Types.ObjectId) => TransactionModel
       $match: {
         $and: [
           { user: userId },
+          { sector: { $nin: sectorsToExcludeFromTransactions } },
           { company: { $ne: null } },
+          { amount: { $gt: 0 } },
+          { reversed: { $ne: true } },
         ],
       },
     },

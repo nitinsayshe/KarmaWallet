@@ -22,9 +22,9 @@ export const exec = async () => {
       .aggregate([
         {
           $match: {
-            'integrations.rare': {
-              $exists: true,
-            },
+            'integrations.rare': { $exists: true },
+            amount: { $gt: 0 },
+            reversed: { $ne: true },
           },
         }, {
           $group: {

@@ -6,6 +6,7 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { getRandomInt } from '../../lib/number';
 import { slugify } from '../../lib/slugify';
 import {
+  CompanyCreationStatus,
   CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
@@ -55,6 +56,7 @@ export interface ICreateBatchedCompaniesRequestBody {
 export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
   const _query = Object.entries(query).map(([key, value]) => ({ [key]: value }));
   _query.push({ 'hidden.status': includeHidden });
+  _query.push({ 'creation.status': { $ne: CompanyCreationStatus.InProgress } });
   _query.push({ 'sectors.sector': { $nin: sectorsToExclude } });
 
   return CompanyModel
@@ -152,7 +154,7 @@ export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>)
 
 export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
-    const query: FilterQuery<ICompany> = { _id };
+    const query: FilterQuery<ICompany> = { _id, 'creation.status': { $ne: CompanyCreationStatus.InProgress } };
     if (!includeHidden) query['hidden.status'] = false;
 
     const company = await CompanyModel.findOne(query)
@@ -216,6 +218,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
     limit: query?.limit || 10,
   };
   const filter: FilterQuery<ICompany> = { ...query.filter };
+  filter['creation.status'] = { $ne: CompanyCreationStatus.InProgress };
   if (!includeHidden) filter['hidden.status'] = false;
   return CompanyModel.paginate(filter, options);
 };
@@ -225,7 +228,10 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
   let noClearPick = false;
   let topPickScore = -5;
 
-  const _query: FilterQuery<ICompany> = { _id: { $in: query.companies } };
+  const _query: FilterQuery<ICompany> = {
+    _id: { $in: query.companies },
+    'creation.status': { $ne: CompanyCreationStatus.InProgress },
+  };
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)
     .populate({
@@ -254,7 +260,10 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
 
 // TODO: update to use new partner collection
 export const getPartners = (req: IRequest, companiesCount: number, includeHidden = false) => {
-  const query: FilterQuery<ICompany> = { isPartner: true };
+  const query: FilterQuery<ICompany> = {
+    isPartner: true,
+    'creation.status': { $ne: CompanyCreationStatus.InProgress },
+  };
   if (!includeHidden) query['hidden.status'] = false;
   return CompanyModel
     .find(query)
@@ -302,6 +311,7 @@ export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
     const query: FilterQuery<ICompany> = {
       $and: [
         { 'hidden.status': false },
+        { 'creation.status': { $ne: CompanyCreationStatus.InProgress } },
       ],
     };
 

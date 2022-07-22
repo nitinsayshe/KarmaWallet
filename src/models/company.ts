@@ -57,6 +57,7 @@ export interface IShareableCompany {
   sectors: ICompanySector[];
   slug: string;
   url: string;
+  createdAt: Date;
   lastModified: Date;
 }
 
@@ -123,11 +124,7 @@ const companySchema = new Schema(
     },
     logo: { type: String },
     relevanceScore: { type: Number, default: null },
-    legacyId: {
-      type: Number,
-      required: true,
-      unique: true,
-    },
+    legacyId: { type: Number },
     notes: {
       type: String,
     },
@@ -137,6 +134,10 @@ const companySchema = new Schema(
         reason: String,
         lastModified: Date,
       },
+      required: true,
+    },
+    createdAt: {
+      type: Date,
       required: true,
     },
     lastModified: { type: Date },

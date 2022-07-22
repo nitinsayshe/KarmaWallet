@@ -2,6 +2,17 @@ import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
 import * as CompanyService from '../../services/company';
 import { asCustomError } from '../../lib/customError';
+import { uploadBatchCompaniesCsv } from '../../services/upload';
+
+export const createBatchedCompanies: IRequestHandler = async (req, res) => {
+  try {
+    const uploadResult = await uploadBatchCompaniesCsv(req);
+    const result = await CompanyService.createBatchedCompanies({ ...req, body: { fileUrl: uploadResult.url } });
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
 
 export const updateCompany: IRequestHandler<CompanyService.ICompanyRequestParams, {}, CompanyService.IUpdateCompanyRequestBody> = async (req, res) => {
   try {

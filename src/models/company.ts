@@ -12,6 +12,12 @@ import { slugify } from '../lib/slugify';
 import { CompanyRating } from '../lib/constants/company';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
+import { IJobReportDocument, JobReportStatus } from './jobReport';
+
+export enum CompanyCreationStatus {
+  InProgress = 'in-progress',
+  Completed = 'completed',
+}
 
 export interface IHiddenCompany {
   status: boolean;
@@ -27,6 +33,11 @@ export interface ICategoryScore {
 export interface ISubcategoryScore {
   subcategory: IRef<ObjectId, (IUnsdgSubcategory | IUnsdgSubcategoryDocument)>;
   score: number;
+}
+
+export interface ICompanyCreation {
+  status: CompanyCreationStatus;
+  jobId: IRef<ObjectId, IJobReportDocument>;
 }
 
 export interface ICompanySector {
@@ -67,6 +78,7 @@ export interface ICompany extends IShareableCompany {
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, ICompanyDocument>;
   notes: string;
+  creation: ICompanyCreation;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -135,6 +147,16 @@ const companySchema = new Schema(
         lastModified: Date,
       },
       required: true,
+    },
+    creation: {
+      status: {
+        type: String,
+        enum: Object.values(JobReportStatus),
+      },
+      jobId: {
+        type: Schema.Types.ObjectId,
+        ref: 'job_report',
+      },
     },
     createdAt: {
       type: Date,

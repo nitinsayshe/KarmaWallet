@@ -2,11 +2,11 @@ import csvtojson from 'csvtojson';
 import axios, { AxiosResponse } from 'axios';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ObjectId } from 'mongoose';
+import { ObjectId, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import slugify from 'slugify';
 import { ISectorDocument, SectorModel } from '../models/sector';
-import { CompanyModel, ICompanyDocument, ICompanySector } from '../models/company';
+import { CompanyCreationStatus, CompanyModel, ICompanyDocument, ICompanySector } from '../models/company';
 import { JobReportStatus } from '../models/jobReport';
 import { IUpdateJobReportData, updateJobReport } from '../services/jobReport/utils';
 import { getImageFileExtensionFromMimeType } from '../services/upload';
@@ -536,6 +536,10 @@ const createCompanies = async ({
         },
         notes: row.notes,
         sectors: companySectors,
+        creation: {
+          status: CompanyCreationStatus.InProgress,
+          jobId: new Types.ObjectId(jobReportId),
+        },
         createdAt: dayjs().utc().toDate(),
       });
 

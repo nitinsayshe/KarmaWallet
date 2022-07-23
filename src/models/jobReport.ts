@@ -12,6 +12,7 @@ import { IUserDocument } from './user';
 export enum JobReportStatus {
   Initializing = 'initializing',
   Pending = 'pending',
+  PendingDataSources = 'pending-data-sources',
   Validating = 'validating',
   Processing = 'processing',
   Completed = 'completed',

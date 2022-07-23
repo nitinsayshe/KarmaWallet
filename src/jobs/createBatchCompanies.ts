@@ -612,12 +612,12 @@ const createCompanies = async ({
 
   if (errorCount > 0) {
     if (count > 0) {
-      finalStatus = JobReportStatus.CompletedWithErrors;
+      finalStatus = JobReportStatus.PendingDataSources;
     } else {
       finalStatus = JobReportStatus.Failed;
     }
   } else if (count > 0) {
-    finalStatus = JobReportStatus.Completed;
+    finalStatus = JobReportStatus.PendingDataSources;
   } else {
     finalStatus = JobReportStatus.Unknown;
   }

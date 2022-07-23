@@ -217,7 +217,7 @@ export const uploadBatchCompaniesCsv = async (req: IRequest<{}, {}, ICsvUploadBo
   if (file.mimetype !== 'text/csv') throw new CustomError('Only .csv files are supported for this action.', ErrorTypes.INVALID_ARG);
 
   try {
-    return await uploadCsv({ ...req, body: { filename: `tmp-${nanoid()}-${file.originalname}` } });
+    return await uploadCsv({ ...req, body: { filename: `batch-companies-creation-${nanoid()}` } });
   } catch (err: any) {
     Logger.error(asCustomError(err));
     throw new CustomError('An error occurred while uploading the batch companies csv file. Please try again later, or contact engineering for support.', ErrorTypes.SERVER);

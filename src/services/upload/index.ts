@@ -1,3 +1,4 @@
+import { parse } from 'json2csv';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
@@ -41,6 +42,11 @@ export interface IImageData {
   file: Buffer,
   name: string,
   contentType: string,
+}
+
+export interface IJsonUploadBody {
+  json: any;
+  filename: string;
 }
 
 const ImageFileExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
@@ -217,9 +223,28 @@ export const uploadBatchCompaniesCsv = async (req: IRequest<{}, {}, ICsvUploadBo
   if (file.mimetype !== 'text/csv') throw new CustomError('Only .csv files are supported for this action.', ErrorTypes.INVALID_ARG);
 
   try {
-    return await uploadCsv({ ...req, body: { filename: `batch-companies-creation-${nanoid()}` } });
+    return await uploadCsv({ ...req, body: { filename: `batch-companies-to-be-created-${nanoid()}` } });
   } catch (err: any) {
     Logger.error(asCustomError(err));
     throw new CustomError('An error occurred while uploading the batch companies csv file. Please try again later, or contact engineering for support.', ErrorTypes.SERVER);
+  }
+};
+
+export const uploadJsonAsCSVToS3 = async (req: IRequest<{}, {}, IJsonUploadBody>) => {
+  const { json, filename } = req.body;
+  const _csv = parse(json);
+
+  const fileData = {
+    file: Buffer.from(_csv),
+    // ensures that the filename has proper extension
+    name: `uploads/${removeFileExtension((filename), ['csv'])}-${nanoid()}.csv`,
+    contentType: 'application/octet-stream',
+  };
+
+  try {
+    const client = new AwsClient();
+    return client.uploadToS3(fileData);
+  } catch (err) {
+    throw asCustomError(err);
   }
 };

@@ -12,7 +12,7 @@ import { slugify } from '../lib/slugify';
 import { CompanyRating } from '../lib/constants/company';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
-import { IJobReportDocument, JobReportStatus } from './jobReport';
+import { IJobReportDocument } from './jobReport';
 
 export enum CompanyCreationStatus {
   InProgress = 'in-progress',
@@ -151,7 +151,7 @@ const companySchema = new Schema(
     creation: {
       status: {
         type: String,
-        enum: Object.values(JobReportStatus),
+        enum: Object.values(CompanyCreationStatus),
       },
       jobId: {
         type: Schema.Types.ObjectId,

@@ -9,8 +9,9 @@ import { ISectorDocument, SectorModel } from '../models/sector';
 import { CompanyCreationStatus, CompanyModel, ICompanyDocument, ICompanySector } from '../models/company';
 import { JobReportStatus } from '../models/jobReport';
 import { IUpdateJobReportData, updateJobReport } from '../services/jobReport/utils';
-import { getImageFileExtensionFromMimeType } from '../services/upload';
+import { getImageFileExtensionFromMimeType, IJsonUploadBody, uploadJsonAsCSVToS3 } from '../services/upload';
 import { AwsClient } from '../clients/aws';
+import { IRequest } from '../types/request';
 
 dayjs.extend(utc);
 
@@ -47,6 +48,17 @@ interface IConfig {
   companies: ICompanyDocument[];
   sectors: ISectorDocument[];
   altEnvSectors: IAltSector[];
+}
+
+enum CompanyItemStatus {
+  Created = 'created',
+  Updated = 'updated',
+}
+
+interface ICompanyStatusItem {
+  companyId: string;
+  companyName: string;
+  status: CompanyItemStatus;
 }
 
 const requiredFields: (keyof IRawCompany)[] = [
@@ -477,6 +489,7 @@ const createCompanies = async ({
 
   const failedLogoDownload: { companyName: string, error: string }[] = [];
   const reportMessages: IUpdateJobReportData[] = [];
+  const companiesStatusItems: ICompanyStatusItem[] = [];
 
   let count = 0;
   let errorCount = 0;
@@ -486,6 +499,7 @@ const createCompanies = async ({
     const companySectors = getCompanySectors(row, sectors, altEnvSectors);
 
     let company: ICompanyDocument;
+    let companyStatusItem: ICompanyStatusItem;
 
     if (row.updateExisting.toLowerCase() === 'true' && !!row.existingCompanyIdToUpdate) {
       company = companies.find(c => c._id.toString() === row.existingCompanyIdToUpdate);
@@ -525,6 +539,12 @@ const createCompanies = async ({
       }
 
       company.lastModified = dayjs().utc().toDate();
+
+      companyStatusItem = {
+        companyId: company._id.toString(),
+        companyName: company.companyName,
+        status: CompanyItemStatus.Updated,
+      };
     } else {
       company = new CompanyModel({
         companyName: row.companyName,
@@ -557,10 +577,19 @@ const createCompanies = async ({
           });
         }
       }
+
+      companyStatusItem = {
+        companyId: company._id.toString(),
+        companyName: company.companyName,
+        status: CompanyItemStatus.Created,
+      };
     }
 
     try {
       await company.save();
+
+      companiesStatusItems.push(companyStatusItem);
+
       count += 1;
     } catch (err) {
       errorCount += 1;
@@ -601,12 +630,30 @@ const createCompanies = async ({
 
   const companiesCreatedMessage = `${count} companies created.`;
 
-  reportMessages.push({
-    message: companiesCreatedMessage,
-    status: JobReportStatus.Completed,
-  });
-
   console.log(`[+] ${companiesCreatedMessage}`);
+
+  try {
+    const mockRequest = ({
+      requestor: {},
+      authKey: '',
+      body: {
+        json: companiesStatusItems,
+        filename: 'batch-companies-created',
+      },
+    } as IRequest<{}, {}, IJsonUploadBody>);
+
+    const { url } = await uploadJsonAsCSVToS3(mockRequest);
+
+    reportMessages.push({
+      message: `${companiesCreatedMessage} : ${url}`,
+      status: JobReportStatus.Completed,
+    });
+  } catch (err: any) {
+    reportMessages.push({
+      message: `An error occurred while saving list of companies that were just created/updated. - ${err.message}`,
+      status: JobReportStatus.Failed,
+    });
+  }
 
   let finalStatus: JobReportStatus;
 

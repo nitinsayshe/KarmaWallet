@@ -3,7 +3,7 @@ import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCa
 import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 import { CompanyUnsdgModel } from '../../models/companyUnsdg';
-import { CompanyModel, ICompany } from '../../models/company';
+import { CompanyCreationStatus, CompanyModel, ICompany } from '../../models/company';
 import { toUTC } from '../../lib/date';
 
 /**
@@ -323,7 +323,7 @@ const createUNSDGs = async (subCategories: IUnsdgSubcategoryDocument[]) => {
 const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[], includeHidden = false) => {
   console.log('creating companyUnsdgs...');
   let count = 0;
-  const query: FilterQuery<ICompany> = {};
+  const query: FilterQuery<ICompany> = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
   if (!includeHidden) query['hidden.status'] = false;
   const companies = await CompanyModel.find(query).lean();
 

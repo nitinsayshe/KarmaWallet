@@ -12,6 +12,13 @@ import { slugify } from '../lib/slugify';
 import { CompanyRating } from '../lib/constants/company';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
+import { IJobReportDocument } from './jobReport';
+
+export enum CompanyCreationStatus {
+  Completed = 'completed',
+  PendingDataSources = 'pending-data-sources',
+  PendingScoreCalculations = 'pending-score-calculations',
+}
 
 export interface IHiddenCompany {
   status: boolean;
@@ -27,6 +34,11 @@ export interface ICategoryScore {
 export interface ISubcategoryScore {
   subcategory: IRef<ObjectId, (IUnsdgSubcategory | IUnsdgSubcategoryDocument)>;
   score: number;
+}
+
+export interface ICompanyCreation {
+  status: CompanyCreationStatus;
+  jobReportId: IRef<ObjectId, IJobReportDocument>;
 }
 
 export interface ICompanySector {
@@ -57,6 +69,7 @@ export interface IShareableCompany {
   sectors: ICompanySector[];
   slug: string;
   url: string;
+  createdAt: Date;
   lastModified: Date;
 }
 
@@ -66,6 +79,7 @@ export interface ICompany extends IShareableCompany {
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, ICompanyDocument>;
   notes: string;
+  creation: ICompanyCreation;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -123,11 +137,7 @@ const companySchema = new Schema(
     },
     logo: { type: String },
     relevanceScore: { type: Number, default: null },
-    legacyId: {
-      type: Number,
-      required: true,
-      unique: true,
-    },
+    legacyId: { type: Number },
     notes: {
       type: String,
     },
@@ -137,6 +147,20 @@ const companySchema = new Schema(
         reason: String,
         lastModified: Date,
       },
+      required: true,
+    },
+    creation: {
+      status: {
+        type: String,
+        enum: Object.values(CompanyCreationStatus),
+      },
+      jobReportId: {
+        type: Schema.Types.ObjectId,
+        ref: 'job_report',
+      },
+    },
+    createdAt: {
+      type: Date,
       required: true,
     },
     lastModified: { type: Date },

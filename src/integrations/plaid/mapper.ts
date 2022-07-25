@@ -12,7 +12,7 @@ import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid'
 import { LeanDocument, ObjectId } from 'mongoose';
 import { printTable } from '../logger';
 import User from './user';
-import { CompanyModel, ICompany } from '../../models/company';
+import { CompanyCreationStatus, CompanyModel, ICompany } from '../../models/company';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IMatchedCompanyNameDocument, MatchedCompanyNameModel } from '../../models/matchedCompanyName';
 import { IUnmatchedCompanyNameDocument, UnmatchedCompanyNameModel } from '../../models/unmatchedCompanyName';
@@ -637,7 +637,9 @@ export class PlaidMapper {
   };
 
   writeCompaniesToCsv = async () => {
-    const companies = await CompanyModel.find({ 'hidden.status': false }).select('companyName').lean();
+    const companies = await CompanyModel
+      .find({ 'hidden.status': false, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } })
+      .select('companyName').lean();
     const fields = ['companyName', '_id'];
     const opts = { fields };
     try {
@@ -732,7 +734,11 @@ export class PlaidMapper {
           && e.companyId.toString() === data.companyId);
 
       if (!matchFound) {
-        const company = await CompanyModel.findOne({ legacyId: data.companyId, 'hidden.status': false });
+        const company = await CompanyModel.findOne({
+          legacyId: data.companyId,
+          'hidden.status': false,
+          'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
+        });
         const m = new MatchedCompanyNameModel({
           original: match.original,
           companyName: match.companyName,

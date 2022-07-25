@@ -1,10 +1,12 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { FilterQuery, isValidObjectId, ObjectId, Types } from 'mongoose';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getRandomInt } from '../../lib/number';
 import { slugify } from '../../lib/slugify';
 import {
+  CompanyCreationStatus,
   CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
@@ -17,6 +19,12 @@ import { IRequest } from '../../types/request';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
 import { CompanyRatings } from './utils';
+import { Logger } from '../logger';
+import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
+import { JobNames } from '../../lib/constants/jobScheduler';
+import { MainBullClient } from '../../clients/bull/main';
+
+dayjs.extend(utc);
 
 const MAX_SAMPLE_SIZE = 25;
 
@@ -36,6 +44,10 @@ export interface ICompanySampleRequest {
   ratings?: string;
 }
 
+export interface ICreateBatchedCompaniesRequestBody {
+  fileUrl: string;
+}
+
 /**
  * this function should only be used internally. for anything client
  * facing, please use functions: getCompanies as it has pagination
@@ -44,6 +56,7 @@ export interface ICompanySampleRequest {
 export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
   const _query = Object.entries(query).map(([key, value]) => ({ [key]: value }));
   _query.push({ 'hidden.status': includeHidden });
+  _query.push({ 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } });
   _query.push({ 'sectors.sector': { $nin: sectorsToExclude } });
 
   return CompanyModel
@@ -62,6 +75,45 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
         model: SectorModel,
       },
     ]);
+};
+
+export const createBatchedCompanies = async (req: IRequest<{}, {}, ICreateBatchedCompaniesRequestBody>) => {
+  let jobReport: IJobReportDocument;
+
+  try {
+    jobReport = new JobReportModel({
+      initiatedBy: req.requestor._id,
+      name: JobNames.CreateBatchCompanies,
+      status: JobReportStatus.Pending,
+      data: [
+        {
+          status: JobReportStatus.Completed,
+          message: `Batch file uploaded successfully. URL: ${req.body.fileUrl}`,
+          createdAt: dayjs().utc().toDate(),
+        },
+      ],
+      createdAt: dayjs().utc().toDate(),
+    });
+
+    await jobReport.save();
+  } catch (err: any) {
+    Logger.error(asCustomError(err));
+    throw new CustomError(`An error occurred while attempting to create a job report: ${err.message}`, ErrorTypes.SERVER);
+  }
+
+  try {
+    const data = {
+      fileUrl: req.body.fileUrl,
+      jobReportId: jobReport._id,
+    };
+
+    MainBullClient.createJob(JobNames.CreateBatchCompanies, data);
+
+    return { message: `Your request to create this batch of companies is being processed, but it may take a while. Please check back later for status updates. (see Job Report: ${jobReport._id})` };
+  } catch (err: any) {
+    Logger.error(asCustomError(err));
+    throw new CustomError(`An error occurred while attempting to create this job: ${err.message}`, ErrorTypes.SERVER);
+  }
 };
 
 export const getCompaniesOwned = (_: IRequest, parentCompany: ICompanyDocument) => {
@@ -102,7 +154,7 @@ export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>)
 
 export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
-    const query: FilterQuery<ICompany> = { _id };
+    const query: FilterQuery<ICompany> = { _id, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
     if (!includeHidden) query['hidden.status'] = false;
 
     const company = await CompanyModel.findOne(query)
@@ -166,6 +218,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
     limit: query?.limit || 10,
   };
   const filter: FilterQuery<ICompany> = { ...query.filter };
+  filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
   if (!includeHidden) filter['hidden.status'] = false;
   return CompanyModel.paginate(filter, options);
 };
@@ -175,7 +228,10 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
   let noClearPick = false;
   let topPickScore = -5;
 
-  const _query: FilterQuery<ICompany> = { _id: { $in: query.companies } };
+  const _query: FilterQuery<ICompany> = {
+    _id: { $in: query.companies },
+    'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
+  };
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)
     .populate({
@@ -204,7 +260,10 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
 
 // TODO: update to use new partner collection
 export const getPartners = (req: IRequest, companiesCount: number, includeHidden = false) => {
-  const query: FilterQuery<ICompany> = { isPartner: true };
+  const query: FilterQuery<ICompany> = {
+    isPartner: true,
+    'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
+  };
   if (!includeHidden) query['hidden.status'] = false;
   return CompanyModel
     .find(query)
@@ -252,6 +311,7 @@ export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
     const query: FilterQuery<ICompany> = {
       $and: [
         { 'hidden.status': false },
+        { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } },
       ],
     };
 
@@ -319,6 +379,7 @@ export const getShareableCompany = ({
   sectors,
   slug,
   url,
+  createdAt,
   lastModified,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
@@ -374,6 +435,7 @@ export const getShareableCompany = ({
     sectors: _sectors,
     slug: _slug,
     url,
+    createdAt,
     lastModified,
   };
 };

@@ -12,6 +12,7 @@ export enum JobNames {
   AssociationNegativeToPositiveTransactions = 'associate-negative-to-positive-transactions',
   CacheGroupOffsetData = 'cache-group-offset-data',
   CachedDataCleanup = 'cached-data-cleanup',
+  CreateBatchCompanies = 'create-batch-companies',
   GenerateGroupOffsetStatements = 'generate-group-offset-statements',
   GenerateUserImpactTotals = 'generate-user-impact-totals',
   GenerateUserTransactionTotals = 'generate-user-transaction-totals',

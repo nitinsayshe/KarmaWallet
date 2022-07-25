@@ -1,3 +1,4 @@
+import { parse } from 'json2csv';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
@@ -12,6 +13,7 @@ import { AwsClient } from '../../clients/aws';
 import { getCompanyById } from '../company';
 import { getUserGroup, getGroup } from '../groups';
 import { mockRequest } from '../../lib/constants/request';
+import { Logger } from '../logger';
 
 dayjs.extend(utc);
 
@@ -29,6 +31,22 @@ export interface IUploadImageRequestBody {
 
 export interface ICsvUploadBody {
   filename?: string,
+}
+
+export interface IS3UploadResponse {
+  url: string;
+  filename: string;
+}
+
+export interface IImageData {
+  file: Buffer,
+  name: string,
+  contentType: string,
+}
+
+export interface IJsonUploadBody {
+  json: any;
+  filename: string;
 }
 
 const ImageFileExtensions = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'];
@@ -166,7 +184,7 @@ export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>
   }
 };
 
-export const uploadCsv = async (req: IRequest<{}, {}, ICsvUploadBody>) => {
+export const uploadCsv = async (req: IRequest<{}, {}, ICsvUploadBody>): Promise<IS3UploadResponse> => {
   const MAX_FILE_SIZE_IN_MB = 100 * 1024 * 1024;
   try {
     const { file } = req;
@@ -189,10 +207,41 @@ export const uploadCsv = async (req: IRequest<{}, {}, ICsvUploadBody>) => {
     const fileData = {
       file: file.buffer,
       // ensures that the filename has proper extension
-      name: `uploads/${slugify(removeFileExtension(file.originalname, ['csv']))}.csv`,
+      name: `uploads/${slugify(removeFileExtension((filename || file.originalname), ['csv']))}.csv`,
       contentType: 'application/octet-stream',
     };
 
+    const client = new AwsClient();
+    return client.uploadToS3(fileData);
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const uploadBatchCompaniesCsv = async (req: IRequest<{}, {}, ICsvUploadBody>) => {
+  const { file } = req;
+  if (file.mimetype !== 'text/csv') throw new CustomError('Only .csv files are supported for this action.', ErrorTypes.INVALID_ARG);
+
+  try {
+    return await uploadCsv({ ...req, body: { filename: `batch-companies-to-be-created-${nanoid()}` } });
+  } catch (err: any) {
+    Logger.error(asCustomError(err));
+    throw new CustomError('An error occurred while uploading the batch companies csv file. Please try again later, or contact engineering for support.', ErrorTypes.SERVER);
+  }
+};
+
+export const uploadJsonAsCSVToS3 = async (req: IRequest<{}, {}, IJsonUploadBody>) => {
+  const { json, filename } = req.body;
+  const _csv = parse(json);
+
+  const fileData = {
+    file: Buffer.from(_csv),
+    // ensures that the filename has proper extension
+    name: `uploads/${removeFileExtension((filename), ['csv'])}-${nanoid()}.csv`,
+    contentType: 'application/octet-stream',
+  };
+
+  try {
     const client = new AwsClient();
     return client.uploadToS3(fileData);
   } catch (err) {

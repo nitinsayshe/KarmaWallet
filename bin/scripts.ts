@@ -3,7 +3,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { generateUserEmailList } from '../src/services/scripts/generate-user-email-list';
 
 (async () => {
   try {
@@ -13,7 +12,6 @@ import { generateUserEmailList } from '../src/services/scripts/generate-user-ema
     // } as IRequest);
     await MongoClient.init();
     // add mappers here...
-    await generateUserEmailList({ writeToDisk: true });
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

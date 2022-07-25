@@ -24,6 +24,8 @@ export interface IDataSource {
   url: string;
   notes?: string;
   integrations?: IDataSourceIntegrations;
+  createdAt: Date;
+  lastModified: Date;
 }
 
 export interface IDataSourceDocument extends IDataSource, Document {}
@@ -47,6 +49,8 @@ const dataSourceSchema = new Schema({
       },
     },
   },
+  createdAt: { type: Date },
+  lastModified: { type: Date },
 });
 
 export const DataSourceModel = model<IDataSourceDocument, Model<IDataSource>>('data_source', dataSourceSchema);

@@ -26,7 +26,7 @@ export const updateJobReport = async (jobReportId: string, reportStatus: JobRepo
       });
     }
 
-    jobReport.status = reportStatus;
+    if (!!reportStatus) jobReport.status = reportStatus;
     jobReport.data = allMessages;
     jobReport.lastModified = timestamp;
     await jobReport.save();

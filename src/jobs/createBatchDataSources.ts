@@ -9,6 +9,8 @@ import { JobReportStatus } from '../models/jobReport';
 import { IUnsdgDocument, UnsdgModel } from '../models/unsdg';
 import { IUnsdgTargetDocument, UnsdgTargetModel } from '../models/unsdgTarget';
 import { IUpdateJobReportData, updateJobReport } from '../services/jobReport/utils';
+import { IJsonUploadBody, uploadJsonAsCSVToS3 } from '../services/upload';
+import { IRequest } from '../types/request';
 
 dayjs.extend(utc);
 
@@ -373,7 +375,43 @@ const createDataSources = async ({
 
   if (!!creationErrors) await updateJobReport(jobReportId, null, creationErrors);
   if (!!newDataSources.length) {
-    console.log(`[+] ${newDataSources.length}/${rawData.length} new data sources created`);
+    const finalMessage = `${newDataSources.length}/${rawData.length} new data sources created`;
+    console.log(`[+] ${finalMessage}`);
+
+    try {
+      const mockRequest = ({
+        requestor: {},
+        authKey: '',
+        body: {
+          json: newDataSources.map(d => ({ name: d.name, _id: d._id })),
+          filename: 'batch-data-sources-created',
+        },
+      } as IRequest<{}, {}, IJsonUploadBody>);
+
+      const { url } = await uploadJsonAsCSVToS3(mockRequest);
+
+      await updateJobReport(
+        jobReportId,
+        null,
+        [
+          {
+            message: `${finalMessage} : ${url}`,
+            status: JobReportStatus.Completed,
+          },
+        ],
+      );
+    } catch (err: any) {
+      await updateJobReport(
+        jobReportId,
+        null,
+        [
+          {
+            message: `An error occurred while saving list of companies that were just created/updated. - ${err.message}`,
+            status: JobReportStatus.Failed,
+          },
+        ],
+      );
+    }
   } else {
     console.log('[!] no new data sources created');
   }

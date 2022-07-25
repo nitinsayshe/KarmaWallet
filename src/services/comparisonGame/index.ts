@@ -243,7 +243,7 @@ export const getSwaps = async (previousSwaps: string[][] = [], reset = false, in
     const randomSubGroup = allAvailableSubGroupsForUser[randSubGroupIndex];
     const query: FilterQuery<ICompany> = {
       _id: { $in: randomSubGroup },
-      'creation.status': { $ne: CompanyCreationStatus.InProgress },
+      'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
     };
     if (!includeHidden) query['hidden.status'] = false;
     const companies = await CompanyModel.find(query).lean();

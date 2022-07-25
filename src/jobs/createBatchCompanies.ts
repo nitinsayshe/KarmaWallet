@@ -557,8 +557,8 @@ const createCompanies = async ({
         notes: row.notes,
         sectors: companySectors,
         creation: {
-          status: CompanyCreationStatus.InProgress,
-          jobId: new Types.ObjectId(jobReportId),
+          status: CompanyCreationStatus.PendingDataSources,
+          jobReportId: new Types.ObjectId(jobReportId),
         },
         createdAt: dayjs().utc().toDate(),
       });

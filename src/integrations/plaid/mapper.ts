@@ -638,7 +638,7 @@ export class PlaidMapper {
 
   writeCompaniesToCsv = async () => {
     const companies = await CompanyModel
-      .find({ 'hidden.status': false, 'creation.status': { $ne: CompanyCreationStatus.InProgress } })
+      .find({ 'hidden.status': false, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } })
       .select('companyName').lean();
     const fields = ['companyName', '_id'];
     const opts = { fields };
@@ -737,7 +737,7 @@ export class PlaidMapper {
         const company = await CompanyModel.findOne({
           legacyId: data.companyId,
           'hidden.status': false,
-          'creation.status': { $ne: CompanyCreationStatus.InProgress },
+          'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
         });
         const m = new MatchedCompanyNameModel({
           original: match.original,

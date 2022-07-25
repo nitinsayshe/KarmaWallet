@@ -323,7 +323,7 @@ const createUNSDGs = async (subCategories: IUnsdgSubcategoryDocument[]) => {
 const createCompanyUNSDGs = async (unsdgs: IUnsdgDocument[], includeHidden = false) => {
   console.log('creating companyUnsdgs...');
   let count = 0;
-  const query: FilterQuery<ICompany> = { 'creation.status': { $ne: CompanyCreationStatus.InProgress } };
+  const query: FilterQuery<ICompany> = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
   if (!includeHidden) query['hidden.status'] = false;
   const companies = await CompanyModel.find(query).lean();
 

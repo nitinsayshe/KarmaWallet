@@ -56,7 +56,7 @@ export interface ICreateBatchedCompaniesRequestBody {
 export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
   const _query = Object.entries(query).map(([key, value]) => ({ [key]: value }));
   _query.push({ 'hidden.status': includeHidden });
-  _query.push({ 'creation.status': { $ne: CompanyCreationStatus.InProgress } });
+  _query.push({ 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } });
   _query.push({ 'sectors.sector': { $nin: sectorsToExclude } });
 
   return CompanyModel
@@ -109,7 +109,7 @@ export const createBatchedCompanies = async (req: IRequest<{}, {}, ICreateBatche
 
     MainBullClient.createJob(JobNames.CreateBatchCompanies, data);
 
-    return { message: 'Your request to create this batch of companies is being processed, but it may take a while. Please check back later for status updates.' };
+    return { message: `Your request to create this batch of companies is being processed, but it may take a while. Please check back later for status updates. (see Job Report: ${jobReport._id})` };
   } catch (err: any) {
     Logger.error(asCustomError(err));
     throw new CustomError(`An error occurred while attempting to create this job: ${err.message}`, ErrorTypes.SERVER);
@@ -154,7 +154,7 @@ export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>)
 
 export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
-    const query: FilterQuery<ICompany> = { _id, 'creation.status': { $ne: CompanyCreationStatus.InProgress } };
+    const query: FilterQuery<ICompany> = { _id, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
     if (!includeHidden) query['hidden.status'] = false;
 
     const company = await CompanyModel.findOne(query)
@@ -218,7 +218,7 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
     limit: query?.limit || 10,
   };
   const filter: FilterQuery<ICompany> = { ...query.filter };
-  filter['creation.status'] = { $ne: CompanyCreationStatus.InProgress };
+  filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
   if (!includeHidden) filter['hidden.status'] = false;
   return CompanyModel.paginate(filter, options);
 };
@@ -230,7 +230,7 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
 
   const _query: FilterQuery<ICompany> = {
     _id: { $in: query.companies },
-    'creation.status': { $ne: CompanyCreationStatus.InProgress },
+    'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
   };
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)
@@ -262,7 +262,7 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
 export const getPartners = (req: IRequest, companiesCount: number, includeHidden = false) => {
   const query: FilterQuery<ICompany> = {
     isPartner: true,
-    'creation.status': { $ne: CompanyCreationStatus.InProgress },
+    'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
   };
   if (!includeHidden) query['hidden.status'] = false;
   return CompanyModel
@@ -311,7 +311,7 @@ export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
     const query: FilterQuery<ICompany> = {
       $and: [
         { 'hidden.status': false },
-        { 'creation.status': { $ne: CompanyCreationStatus.InProgress } },
+        { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } },
       ],
     };
 

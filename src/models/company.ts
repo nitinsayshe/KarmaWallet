@@ -15,8 +15,9 @@ import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory
 import { IJobReportDocument } from './jobReport';
 
 export enum CompanyCreationStatus {
-  InProgress = 'in-progress',
   Completed = 'completed',
+  PendingDataSources = 'pending-data-sources',
+  PendingScoreCalculations = 'pending-score-calculations',
 }
 
 export interface IHiddenCompany {
@@ -37,7 +38,7 @@ export interface ISubcategoryScore {
 
 export interface ICompanyCreation {
   status: CompanyCreationStatus;
-  jobId: IRef<ObjectId, IJobReportDocument>;
+  jobReportId: IRef<ObjectId, IJobReportDocument>;
 }
 
 export interface ICompanySector {
@@ -153,7 +154,7 @@ const companySchema = new Schema(
         type: String,
         enum: Object.values(CompanyCreationStatus),
       },
-      jobId: {
+      jobReportId: {
         type: Schema.Types.ObjectId,
         ref: 'job_report',
       },

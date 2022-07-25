@@ -3,7 +3,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { resetNewCompanies } from '../src/services/scripts/reset_new_companies';
 
 (async () => {
   try {
@@ -13,7 +12,6 @@ import { resetNewCompanies } from '../src/services/scripts/reset_new_companies';
     // } as IRequest);
     await MongoClient.init();
     // add mappers here...
-    await resetNewCompanies();
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

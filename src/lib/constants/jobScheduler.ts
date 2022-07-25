@@ -13,6 +13,7 @@ export enum JobNames {
   CacheGroupOffsetData = 'cache-group-offset-data',
   CachedDataCleanup = 'cached-data-cleanup',
   CreateBatchCompanies = 'create-batch-companies',
+  CreateBatchDataSources = 'create-batch-data-sources',
   GenerateGroupOffsetStatements = 'generate-group-offset-statements',
   GenerateUserImpactTotals = 'generate-user-impact-totals',
   GenerateUserTransactionTotals = 'generate-user-transaction-totals',

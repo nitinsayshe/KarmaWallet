@@ -17,6 +17,12 @@ import { Logger } from '../logger';
 
 dayjs.extend(utc);
 
+export enum BatchCSVUploadType {
+  Companies = 'companies',
+  CompaniesParentChildRelationships = 'companies-parent-child-relationships',
+  DataSources = 'data-sources',
+}
+
 export enum ResourceTypes {
   GroupLogo = 'groupLogo',
   UserAvatar = 'userAvatar',
@@ -218,12 +224,12 @@ export const uploadCsv = async (req: IRequest<{}, {}, ICsvUploadBody>): Promise<
   }
 };
 
-export const uploadBatchCompaniesCsv = async (req: IRequest<{}, {}, ICsvUploadBody>) => {
+export const uploadBatchCsv = async (req: IRequest<{}, {}, ICsvUploadBody>, batchType: BatchCSVUploadType) => {
   const { file } = req;
   if (file.mimetype !== 'text/csv') throw new CustomError('Only .csv files are supported for this action.', ErrorTypes.INVALID_ARG);
 
   try {
-    return await uploadCsv({ ...req, body: { filename: `batch-companies-to-be-created-${nanoid()}` } });
+    return await uploadCsv({ ...req, body: { filename: `batch-${batchType}-to-be-created-${nanoid()}` } });
   } catch (err: any) {
     Logger.error(asCustomError(err));
     throw new CustomError('An error occurred while uploading the batch companies csv file. Please try again later, or contact engineering for support.', ErrorTypes.SERVER);

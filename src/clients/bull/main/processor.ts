@@ -7,6 +7,7 @@ import * as AssociateNegativeToPositiveTransactions from '../../../jobs/associat
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
 import * as CreateBatchCompanies from '../../../jobs/createBatchCompanies';
+import * as CreateBatchedDataSources from '../../../jobs/createBatchDataSources';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotals';
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
@@ -54,6 +55,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.CreateBatchCompanies:
       result = CreateBatchCompanies.exec(data);
+      break;
+    case JobNames.CreateBatchDataSources:
+      result = CreateBatchedDataSources.exec(data);
       break;
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();

@@ -13,6 +13,7 @@ export enum JobNames {
   CacheGroupOffsetData = 'cache-group-offset-data',
   CachedDataCleanup = 'cached-data-cleanup',
   CreateBatchCompanies = 'create-batch-companies',
+  CreateBatchDataSources = 'create-batch-data-sources',
   GenerateGroupOffsetStatements = 'generate-group-offset-statements',
   GenerateUserImpactTotals = 'generate-user-impact-totals',
   GenerateUserTransactionTotals = 'generate-user-transaction-totals',
@@ -24,6 +25,7 @@ export enum JobNames {
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
   UpdateBouncedEmails = 'update-bounced-emails',
   SendWelcomeFlowEmails = 'send-welcome-flow-emails',
+  UpdateCompanyParentChildrenRelationships = 'update-company-parent-children-relationships',
   UpdateRareProjectAverage = 'update-rare-project-average',
   UploadCsvToGoogleDrive = 'upload-csv-to-google-drive',
 }

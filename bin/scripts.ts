@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { addCreatedAtToDataSources } from '../src/services/scripts/add_created_at_to_data_sources';
 
 (async () => {
   try {
@@ -12,6 +13,8 @@ import { Logger } from '../src/services/logger';
     // } as IRequest);
     await MongoClient.init();
     // add mappers here...
+    // await resetNewDataSources();
+    await addCreatedAtToDataSources();
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

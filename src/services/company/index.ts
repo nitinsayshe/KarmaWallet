@@ -44,7 +44,7 @@ export interface ICompanySampleRequest {
   ratings?: string;
 }
 
-export interface ICreateBatchedCompaniesRequestBody {
+export interface IBatchedCompaniesRequestBody {
   fileUrl: string;
 }
 
@@ -77,7 +77,7 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
     ]);
 };
 
-export const createBatchedCompanies = async (req: IRequest<{}, {}, ICreateBatchedCompaniesRequestBody>) => {
+export const createBatchedCompanies = async (req: IRequest<{}, {}, IBatchedCompaniesRequestBody>) => {
   let jobReport: IJobReportDocument;
 
   try {
@@ -447,6 +447,45 @@ export const getShareableCompanyUnsdg = ({
   unsdg: getShareableUnsdg(unsdg as IUnsdgDocument),
   value,
 });
+
+export const updateBatchedCompaniesParentChildRelationships = async (req: IRequest<{}, {}, IBatchedCompaniesRequestBody>) => {
+  let jobReport: IJobReportDocument;
+
+  try {
+    jobReport = new JobReportModel({
+      initiatedBy: req.requestor._id,
+      name: JobNames.UpdateCompanyParentChildrenRelationships,
+      status: JobReportStatus.Pending,
+      data: [
+        {
+          status: JobReportStatus.Completed,
+          message: `Batch file uploaded successfully. URL: ${req.body.fileUrl}`,
+          createdAt: dayjs().utc().toDate(),
+        },
+      ],
+      createdAt: dayjs().utc().toDate(),
+    });
+
+    await jobReport.save();
+  } catch (err: any) {
+    Logger.error(asCustomError(err));
+    throw new CustomError(`An error occurred while attempting to create a job report: ${err.message}`, ErrorTypes.SERVER);
+  }
+
+  try {
+    const data = {
+      fileUrl: req.body.fileUrl,
+      jobReportId: jobReport._id,
+    };
+
+    MainBullClient.createJob(JobNames.UpdateCompanyParentChildrenRelationships, data);
+
+    return { message: `Your request to update this batch of company parent/child relationships is being processed, but it may take a while. Please check back later for status updates. (see Job Report: ${jobReport._id})` };
+  } catch (err: any) {
+    Logger.error(asCustomError(err));
+    throw new CustomError(`An error occurred while attempting to create this job: ${err.message}`, ErrorTypes.SERVER);
+  }
+};
 
 export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
   try {

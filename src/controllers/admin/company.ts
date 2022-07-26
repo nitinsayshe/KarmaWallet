@@ -22,3 +22,13 @@ export const updateCompany: IRequestHandler<CompanyService.ICompanyRequestParams
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const updateBatchedCompaniesParentChildRelationships: IRequestHandler = async (req, res) => {
+  try {
+    const uploadResult = await uploadBatchCsv(req, BatchCSVUploadType.CompaniesParentChildRelationships);
+    const result = await CompanyService.updateBatchedCompaniesParentChildRelationships({ ...req, body: { fileUrl: uploadResult.url } });
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

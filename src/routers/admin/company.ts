@@ -16,6 +16,14 @@ router.route('/batch')
     AdminCompanyController.createBatchedCompanies,
   );
 
+router.route('/batch/parent-child')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+    upload.single('file'),
+    AdminCompanyController.updateBatchedCompaniesParentChildRelationships,
+  );
+
 router.route('/:companyId')
   .put(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminCompanyController.updateCompany);
 

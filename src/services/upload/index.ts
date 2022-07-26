@@ -19,6 +19,7 @@ dayjs.extend(utc);
 
 export enum BatchCSVUploadType {
   Companies = 'companies',
+  CompaniesParentChildRelationships = 'companies-parent-child-relationships',
   DataSources = 'data-sources',
 }
 

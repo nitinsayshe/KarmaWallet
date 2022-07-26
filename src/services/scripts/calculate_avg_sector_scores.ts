@@ -2,22 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'json2csv';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
-import { ISectorDocument, SectorModel } from '../../models/sector';
+import { ISectorDocument, SectorModel, ISectorAverageScores } from '../../models/sector';
 import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 
-interface IAvgScores {
+interface IAvgScores extends ISectorAverageScores {
   sectorId: string;
   sectorName: string;
-  numCompanies: number;
-  avgScore: number;
-  avgPlanetScore: number;
-  avgPeopleScore: number;
-  avgSustainabilityScore: number;
-  avgClimateActionScore: number;
-  avgCommunityWelfareScore: number;
-  avgDiversityInclusionScore: number;
 }
 
 interface IAvgCategoryScores {
@@ -32,7 +24,7 @@ interface IAvgSubcategoryScores {
   avgScore: number;
 }
 
-export const calculateAvgSectorScores = async () => {
+export const calculateAvgSectorScores = async ({ writeToDisk = true }) => {
   console.log('\ncalculating average scores for all sectors...');
   let sectors: ISectorDocument[];
 
@@ -125,9 +117,7 @@ export const calculateAvgSectorScores = async () => {
     const avgCommunityWelfareScore = communityWelfareSum / companies.length;
     const avgDiversityInclusionScore = diversityInclusionSum / companies.length;
 
-    avgScores.push({
-      sectorId: sector._id.toString(),
-      sectorName: sector.name,
+    const _sectorAverages = {
       numCompanies: companies.length,
       avgScore,
       avgPlanetScore,
@@ -136,11 +126,22 @@ export const calculateAvgSectorScores = async () => {
       avgClimateActionScore,
       avgCommunityWelfareScore,
       avgDiversityInclusionScore,
+    };
+
+    avgScores.push({
+      sectorId: sector._id.toString(),
+      sectorName: sector.name,
+      ..._sectorAverages,
     });
+
+    sector.averageScores = _sectorAverages;
+    await sector.save();
   }
 
-  const _csv = parse(avgScores);
-  fs.writeFileSync(path.join(__dirname, '.tmp', 'avg_company_scores_by_sector.csv'), _csv);
+  if (writeToDisk) {
+    const _csv = parse(avgScores);
+    fs.writeFileSync(path.join(__dirname, '.tmp', 'avg_company_scores_by_sector.csv'), _csv);
+  }
 
   console.log('[+] avg sector scores calculated\n');
 };
@@ -219,7 +220,7 @@ export const calculateAvgCategoryScores = async () => {
   console.log('[+] avg category and subcategory scores calculated\n');
 };
 
-export const calculateAvgScores = async () => {
-  await calculateAvgSectorScores();
+export const calculateAvgScores = async ({ writeToDisk = true }) => {
+  await calculateAvgSectorScores({ writeToDisk });
   await calculateAvgCategoryScores();
 };

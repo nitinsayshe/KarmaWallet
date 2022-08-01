@@ -16,6 +16,7 @@ import card from './card';
 import notFound from './404';
 import upload from './upload';
 import userImpactReports from './userImpactReports';
+import dataSource from './dataSource';
 import values from './values';
 
 const routers = (app: Express) => {
@@ -34,6 +35,7 @@ const routers = (app: Express) => {
   unsdgs(app);
   upload(app);
   user(app);
+  dataSource(app);
   userImpactReports(app);
   values(app);
   webhook(app);

@@ -10,7 +10,7 @@ export interface IUpdateJobReportData {
 }
 
 export const updateJobReport = async (jobReportId: string, reportStatus: JobReportStatus, data: IUpdateJobReportData | IUpdateJobReportData[] = []) => {
-  const messages = Array.isArray(data) ? data : [data];
+  const messages = !!data ? (Array.isArray(data) ? data : [data]) : [];
 
   try {
     const timestamp = dayjs().utc().toDate();

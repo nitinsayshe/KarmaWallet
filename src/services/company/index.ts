@@ -49,6 +49,10 @@ export interface IBatchedCompaniesRequestBody {
   fileUrl: string;
 }
 
+export interface IBatchedCompanyParentChildRelationshipsRequestBody extends IBatchedCompaniesRequestBody {
+  jobReportId?: string;
+}
+
 /**
  * this function should only be used internally. for anything client
  * facing, please use functions: getCompanies as it has pagination
@@ -449,14 +453,21 @@ export const getShareableCompanyUnsdg = ({
   value,
 });
 
-export const updateBatchedCompaniesParentChildRelationships = async (req: IRequest<{}, {}, IBatchedCompaniesRequestBody>) => {
+export const initCompanyBatchJob = async (req: IRequest<{}, {}, IBatchedCompanyParentChildRelationshipsRequestBody>, jobName: JobNames) => {
+  const { jobReportId } = req.body;
   let jobReport: IJobReportDocument;
+
+  if (!!jobReportId) {
+    jobReport = await JobReportModel.findById(jobReportId);
+    if (!jobReport) throw new CustomError(`Job report with id: ${jobReportId} not found.`, ErrorTypes.INVALID_ARG);
+  }
 
   try {
     jobReport = new JobReportModel({
       initiatedBy: req.requestor._id,
-      name: JobNames.UpdateCompanyParentChildrenRelationships,
+      name: jobName,
       status: JobReportStatus.Pending,
+      prevJobReports: !!jobReport ? [jobReport] : [],
       data: [
         {
           status: JobReportStatus.Completed,
@@ -479,9 +490,9 @@ export const updateBatchedCompaniesParentChildRelationships = async (req: IReque
       jobReportId: jobReport._id,
     };
 
-    MainBullClient.createJob(JobNames.UpdateCompanyParentChildrenRelationships, data);
+    MainBullClient.createJob(jobName, data);
 
-    return { message: `Your request to update this batch of company parent/child relationships is being processed, but it may take a while. Please check back later for status updates. (see Job Report: ${jobReport._id})` };
+    return { message: `Your request is being processed, but it may take a while. Please check back later for status updates. (see Job Report: ${jobReport._id})` };
   } catch (err: any) {
     Logger.error(asCustomError(err));
     throw new CustomError(`An error occurred while attempting to create this job: ${err.message}`, ErrorTypes.SERVER);

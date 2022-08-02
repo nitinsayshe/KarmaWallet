@@ -11,6 +11,7 @@ export interface IUnsdgTarget {
   unsdg: IUnsdgDocument['_id'];
   title: string;
   description: string;
+  order: number;
 }
 
 export interface IUnsdgTargetDocument extends IUnsdgTarget, Document {}
@@ -28,6 +29,9 @@ const unsdgTargetSchema = new Schema({
   },
   description: {
     type: String,
+  },
+  order: {
+    type: Number,
   },
 });
 

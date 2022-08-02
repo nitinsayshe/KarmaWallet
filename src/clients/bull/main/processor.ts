@@ -6,6 +6,8 @@ import { _MongoClient } from '../../mongo';
 import * as AssociateNegativeToPositiveTransactions from '../../../jobs/associateNegativeToPositiveTransactions';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
 import * as CacheGroupOffsetData from '../../../jobs/cacheGroupOffsetData';
+import * as CalculateAverageSectorScores from '../../../jobs/calculateAverageSectorScores';
+import * as CalculateCompanyScores from '../../../jobs/calculateCompanyScores';
 import * as CreateBatchCompanies from '../../../jobs/createBatchCompanies';
 import * as CreateBatchedDataSources from '../../../jobs/createBatchDataSources';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
@@ -17,6 +19,8 @@ import * as UserMonthlyImpactReport from '../../../jobs/userMonthlyImpactReports
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
 import * as SendEmail from '../../../jobs/sendEmail';
+import * as UpdateBatchCompanyDataSources from '../../../jobs/updateBatchCompanyDataSources';
+import * as UpdateBatchCompanyParentChildrenRelationships from '../../../jobs/updateBatchCompanyParentChildrenRelationships';
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
 import { INextJob } from '../base';
 
@@ -53,11 +57,34 @@ export default async (job: SandboxedJob) => {
     case JobNames.CacheGroupOffsetData:
       result = CacheGroupOffsetData.exec();
       break;
+    case JobNames.CalculateCompanyScores:
+      await CalculateCompanyScores.exec(data);
+
+      result = {
+        nextJobs: [
+          { name: JobNames.CalculateAverageSectorScores },
+        ],
+      };
+
+      break;
+    case JobNames.CalculateAverageSectorScores:
+      result = await CalculateAverageSectorScores.exec();
+      break;
     case JobNames.CreateBatchCompanies:
-      result = CreateBatchCompanies.exec(data);
+      result = await CreateBatchCompanies.exec(data);
       break;
     case JobNames.CreateBatchDataSources:
-      result = CreateBatchedDataSources.exec(data);
+      await CreateBatchedDataSources.exec(data);
+
+      result = {
+        nextJobs: [
+          {
+            name: JobNames.CalculateCompanyScores,
+            data: { jobReportId: data.jobReportId },
+          },
+        ],
+      };
+
       break;
     case JobNames.GenerateGroupOffsetStatements:
       result = await GenerateGroupStatements.exec();
@@ -84,20 +111,36 @@ export default async (job: SandboxedJob) => {
     case JobNames.TransactionsMonitor:
       result = await TransactionsMonitor.exec();
       break;
+    case JobNames.SendEmail:
+      result = await SendEmail.exec(data);
+      break;
+    case JobNames.UpdateBatchCompanyDataSources:
+      result = await UpdateBatchCompanyDataSources.exec(data);
+      break;
+    case JobNames.UpdateBatchCompanyParentChildrenRelationships:
+      // eslint-disable-next-line no-case-declarations
+      const jobResult = await UpdateBatchCompanyParentChildrenRelationships.exec(data);
+
+      result = !data.jobReportId
+        ? {
+          nextJobs: [
+            { name: JobNames.CalculateCompanyScores, data: { jobReportId: data.jobReportId } },
+          ],
+        }
+        : jobResult;
+
+      break;
+    case JobNames.UpdateRareProjectAverage:
+      result = await UpdateRareProjectAverage.exec();
+      break;
+    case JobNames.UploadCsvToGoogleDrive:
+      result = await UploadCsvToGoogleDrive.exec(data);
+      break;
     case JobNames.UserMonthlyImpactReport:
       result = await UserMonthlyImpactReport.exec(data);
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);
-      break;
-    case JobNames.UpdateRareProjectAverage:
-      result = await UpdateRareProjectAverage.exec();
-      break;
-    case JobNames.SendEmail:
-      result = await SendEmail.exec(data);
-      break;
-    case JobNames.UploadCsvToGoogleDrive:
-      result = await UploadCsvToGoogleDrive.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

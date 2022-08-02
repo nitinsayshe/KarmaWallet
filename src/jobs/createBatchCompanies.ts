@@ -6,7 +6,7 @@ import { ObjectId, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import slugify from 'slugify';
 import { ISectorDocument, SectorModel } from '../models/sector';
-import { CompanyCreationStatus, CompanyModel, ICompanyDocument, ICompanySector } from '../models/company';
+import { CompanyCreationStatus, CompanyHideReasons, CompanyModel, ICompanyDocument, ICompanySector } from '../models/company';
 import { JobReportStatus } from '../models/jobReport';
 import { IUpdateJobReportData, updateJobReport } from '../services/jobReport/utils';
 import { getImageFileExtensionFromMimeType, IJsonUploadBody, uploadJsonAsCSVToS3 } from '../services/upload';
@@ -516,9 +516,10 @@ const createCompanies = async ({
       if (row.hiddenStatus) {
         company.hidden = {
           status: row.hiddenStatus?.toLowerCase() === 'true',
-          reason: row.hiddenReason,
+          reason: row.hiddenStatus?.toLowerCase() === 'true' ? CompanyHideReasons.Manual : CompanyHideReasons.None,
           lastModified: dayjs().utc().toDate(),
         };
+        company.notes = `${!!company.notes ? `${company.notes} \n` : ':'}${row.hiddenReason}`;
       }
       if (row.notes) company.notes = row.notes;
       if (!!companySectors.length) company.sectors = companySectors;
@@ -551,10 +552,10 @@ const createCompanies = async ({
         url: row.url,
         hidden: {
           status: row.hiddenStatus?.toLowerCase() === 'true',
-          reason: row.hiddenReason,
+          reason: row.hiddenStatus?.toLowerCase() === 'true' ? CompanyHideReasons.Manual : CompanyHideReasons.None,
           lastModified: dayjs().utc().toDate(),
         },
-        notes: row.notes,
+        notes: `${row.notes} \n${row.hiddenReason}`,
         sectors: companySectors,
         creation: {
           status: CompanyCreationStatus.PendingDataSources,
@@ -690,25 +691,3 @@ export const exec = async ({ fileUrl, jobReportId }: ICreateBatchCompaniesData) 
 
   await createCompanies(config);
 };
-
-/**
- * changing a company's parent company
- * means needing to change the data sources a company
- * has assigned to it (inheritance)
- *
- * changing the data sources of a company
- * will require changing the company's company to data
- * source mappings.
- *
- * changing the company's company to data source mappings
- * will require changing the company's company to unsdg
- * mappings.
- *
- * changing the company's company to unsdg mappings
- * will require the company's scores to be recalculated
- */
-
-/**
- * changing a company's sectors means that all sector
- * average scores need to be recalculated.
- */

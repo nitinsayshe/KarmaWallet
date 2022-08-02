@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { Types } from 'mongoose';
 import { nanoid } from 'nanoid';
+import axios from 'axios';
 import { slugify } from '../../lib/slugify';
 import {
   ErrorTypes, UserRoles, UserGroupRole,
@@ -34,6 +35,12 @@ export enum ResourceTypes {
 export interface IUploadImageRequestBody {
   resourceType: ResourceTypes;
   resourceId?: string;
+}
+
+export interface IDownloadImageAndUploadToS3RequestBody {
+  externalUrl: string;
+  fileId?: string;
+  filename: string;
 }
 
 export interface ICsvUploadBody {
@@ -83,6 +90,21 @@ export const getImageFileExtensionFromMimeType = (mimeType: string): string => {
     default:
       return '';
   }
+};
+
+export const downloadImageFromUrlAndStoreInS3 = async (req: IRequest<{}, {}, IDownloadImageAndUploadToS3RequestBody>) => {
+  const { externalUrl, fileId, filename } = req.body;
+  const { data, headers } = await axios.get(externalUrl, { responseType: 'stream' });
+  const mimetype = headers['content-type'];
+  if (!data) throw new CustomError('No image data found', ErrorTypes.SERVICE);
+  if (!checkMimeTypeForValidImageType(mimetype)) throw new CustomError('Invalid image type', ErrorTypes.SERVICE);
+  const imageData = {
+    file: data,
+    name: `uploads/${fileId || nanoid(8)}-${slugify(removeFileExtension(filename, ImageFileExtensions))}${getImageFileExtensionFromMimeType(mimetype)}`,
+    contentType: mimetype,
+  };
+  const client = new AwsClient();
+  return client.uploadToS3(imageData);
 };
 
 export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>) => {

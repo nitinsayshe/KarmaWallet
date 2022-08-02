@@ -94,3 +94,12 @@ export const getUNSDGs: IRequestHandler<{ _id: string }> = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getCompanyScoreRange: IRequestHandler = async (req, res) => {
+  try {
+    const result = await CompanyService.getCompanyScoreRange(req);
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

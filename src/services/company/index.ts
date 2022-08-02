@@ -16,6 +16,7 @@ import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCa
 import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+import { getCompanyRatingsThresholds } from '../misc';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
 import { CompanyRatings } from './utils';
@@ -124,7 +125,7 @@ export const getCompaniesOwned = (_: IRequest, parentCompany: ICompanyDocument) 
   if (!parentCompany) throw new CustomError('A parent company is required.', ErrorTypes.INVALID_ARG);
 
   return CompanyModel
-    .find({ parentCompany })
+    .find({ parentCompany, 'hidden.status': false })
     .populate([
       {
         path: 'sectors.sector',
@@ -524,4 +525,9 @@ export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUp
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getCompanyScoreRange = async (_req: IRequest) => {
+  const { positive, negative } = await getCompanyRatingsThresholds();
+  return { min: negative.min, max: positive.max };
 };

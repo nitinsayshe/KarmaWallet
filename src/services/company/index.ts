@@ -125,7 +125,7 @@ export const getCompaniesOwned = (_: IRequest, parentCompany: ICompanyDocument) 
   if (!parentCompany) throw new CustomError('A parent company is required.', ErrorTypes.INVALID_ARG);
 
   return CompanyModel
-    .find({ parentCompany })
+    .find({ parentCompany, 'hidden.status': false })
     .populate([
       {
         path: 'sectors.sector',

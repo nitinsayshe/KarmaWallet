@@ -32,6 +32,8 @@ export interface IJobReport {
   name: string;
   initiatedBy: IRef<ObjectId, IUserDocument>;
   status: JobReportStatus;
+  // eslint-disable-next-line no-use-before-define
+  prevJobReports: IRef<ObjectId, IJobReportDocument>[];
   data: IJobReportData[];
   createdAt: Date;
   lastModified?: Date;
@@ -54,6 +56,10 @@ const jobReportSchema = new Schema({
     required: true,
     enum: Object.values(JobReportStatus),
   },
+  prevJobReports: [{
+    type: Schema.Types.ObjectId,
+    ref: 'job_report',
+  }],
   data: {
     type: [{
       status: {

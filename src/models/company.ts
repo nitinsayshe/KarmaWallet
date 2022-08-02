@@ -20,9 +20,16 @@ export enum CompanyCreationStatus {
   PendingScoreCalculations = 'pending-score-calculations',
 }
 
+export enum CompanyHideReasons {
+  Manual = 'manual',
+  NoDataSources = 'no-data-sources',
+  None = 'none',
+  NoPrimaryDataSource = 'no-primary-data-source',
+}
+
 export interface IHiddenCompany {
   status: boolean;
-  reason: string;
+  reason: CompanyHideReasons;
   lastModified: Date;
 }
 
@@ -143,9 +150,12 @@ const companySchema = new Schema(
     },
     hidden: {
       type: {
-        status: Boolean,
-        reason: String,
-        lastModified: Date,
+        status: { type: Boolean },
+        reason: {
+          type: String,
+          enum: Object.values(CompanyHideReasons),
+        },
+        lastModified: { type: Date },
       },
       required: true,
     },

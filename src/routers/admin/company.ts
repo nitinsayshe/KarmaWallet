@@ -16,6 +16,14 @@ router.route('/batch')
     AdminCompanyController.createBatchedCompanies,
   );
 
+router.route('/batch/data-source')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+    upload.single('file'),
+    AdminCompanyController.mapBatchedCompaniesToDataSources,
+  );
+
 router.route('/batch/parent-child')
   .post(
     authenticate,

@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { CompanyDataSourceModel } from '../../models/companyDataSource';
-import { CompanyModel } from '../../models/company';
+import { CompanyHideReasons, CompanyModel } from '../../models/company';
 
 dayjs.extend(utc);
 
@@ -21,20 +21,21 @@ export const hideCompaniesWithoutDataSources = async () => {
       console.log(`${company.companyName} is being hidden`);
       company.hidden = {
         status: true,
-        reason: 'no data sources',
+        reason: CompanyHideReasons.NoDataSources,
         lastModified: dayjs().utc().toDate(),
       };
       await company.save();
       hiddenCompanies += 1;
       continue;
     }
-    if (!!dataSource && company.hidden.status && company.hidden.reason === 'no data sources') {
+    if (!!dataSource && company.hidden.status && company.hidden.reason === CompanyHideReasons.NoDataSources) {
       console.log(`${company.companyName} is being unhidden`);
       company.hidden = {
         status: false,
-        reason: '',
+        reason: CompanyHideReasons.None,
         lastModified: dayjs().utc().toDate(),
       };
+
       unhiddenCompanies += 1;
       await company.save();
     }

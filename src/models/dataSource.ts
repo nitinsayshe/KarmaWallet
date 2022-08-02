@@ -26,6 +26,10 @@ export interface IDataSource {
   integrations?: IDataSourceIntegrations;
   createdAt: Date;
   lastModified: Date;
+  logoUrl?: string;
+  rank?: number;
+  description?: string;
+  hidden: boolean;
 }
 
 export interface IDataSourceDocument extends IDataSource, Document {}
@@ -38,7 +42,11 @@ const dataSourceSchema = new Schema({
     unique: true,
   },
   url: { type: String },
+  logoUrl: { type: String },
+  description: { type: String },
   notes: { type: String },
+  rank: { type: Number },
+  hidden: { type: Boolean },
   integrations: {
     type: {
       justCapital: {

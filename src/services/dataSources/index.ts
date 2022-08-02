@@ -1,15 +1,23 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { FilterQuery } from 'mongoose';
 import { MainBullClient } from '../../clients/bull/main';
 import { ErrorTypes } from '../../lib/constants';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { IDataSourceDocument } from '../../models/dataSource';
+import { IDataSourceDocument, DataSourceModel, IDataSource } from '../../models/dataSource';
 import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
 import { IRequest } from '../../types/request';
 import { Logger } from '../logger';
 
 dayjs.extend(utc);
+
+export interface IGetDataSourcesQuery {
+  limit?: string;
+  maxRank?: string;
+  minRank?: string;
+  includeNoRank?: boolean;
+}
 
 export interface ICreateBatchedDataSourcesRequestBody {
   fileUrl: string;
@@ -59,9 +67,28 @@ export const getShareableDataSource = ({
   name,
   url,
   integrations,
+  logoUrl,
+  rank,
+  description,
 }: IDataSourceDocument) => ({
   _id,
   name,
   url,
   integrations,
+  logoUrl,
+  rank,
+  description,
 });
+
+export const getDataSources = async (req: IRequest<{}, IGetDataSourcesQuery, {}>) => {
+  const { query } = req;
+  const { limit: _limit, maxRank, minRank, includeNoRank } = query;
+  let limit: number;
+  if (_limit) limit = parseInt(_limit, 10);
+  const _query: FilterQuery<IDataSource> = { hidden: { $ne: true }, rank: { $exists: true } };
+  if (includeNoRank) delete _query.rank;
+  if (maxRank && !Number.isNaN(parseInt(maxRank, 10))) _query.rank = { $lte: maxRank };
+  if (minRank && !Number.isNaN(parseInt(minRank, 10))) _query.rank = { $gte: minRank };
+  const dataSources = await DataSourceModel.find(_query).sort({ rank: 1 }).limit(limit || null);
+  return dataSources;
+};

@@ -133,15 +133,12 @@ export const calculateAvgSectorScores = async ({ writeToDisk = true }) => {
       avgDiversityInclusionScore,
     };
 
-    console.log('line 133 sector averages', _sectorAverages);
-
     avgScores.push({
       sectorId: sector._id.toString(),
       sectorName: sector.name,
       ..._sectorAverages,
     });
 
-    console.log(_sectorAverages);
     sector.averageScores = _sectorAverages;
     await sector.save();
   }

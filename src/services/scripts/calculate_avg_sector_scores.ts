@@ -34,13 +34,15 @@ export const calculateAvgSectorScores = async ({ writeToDisk = true }) => {
     console.log('[-] Error retrieving sectors: ', err);
   }
 
+  console.log('no sectors', sectors?.length);
+
   if (!sectors) return;
 
   const avgScores: IAvgScores[] = [];
 
   for (const sector of sectors) {
     const companies = await CompanyModel
-      .find({ 'sectors.sector': sector })
+      .find({ 'sectors.sector': sector, combinedScore: { $exists: true } })
       .populate([
         {
           path: 'categoryScores.category',
@@ -51,6 +53,8 @@ export const calculateAvgSectorScores = async ({ writeToDisk = true }) => {
           model: UnsdgSubcategoryModel,
         },
       ]);
+
+    console.log('line 55 companies length', companies.length);
 
     if (!companies?.length) {
       avgScores.push({
@@ -78,6 +82,7 @@ export const calculateAvgSectorScores = async ({ writeToDisk = true }) => {
     let diversityInclusionSum = 0;
 
     for (const company of companies) {
+      console.log({ scoreSum, combinedScore: company.combinedScore, companyName: company.companyName, companyId: company._id });
       scoreSum += company.combinedScore;
 
       for (const category of company.categoryScores) {
@@ -128,12 +133,15 @@ export const calculateAvgSectorScores = async ({ writeToDisk = true }) => {
       avgDiversityInclusionScore,
     };
 
+    console.log('line 133 sector averages', _sectorAverages);
+
     avgScores.push({
       sectorId: sector._id.toString(),
       sectorName: sector.name,
       ..._sectorAverages,
     });
 
+    console.log(_sectorAverages);
     sector.averageScores = _sectorAverages;
     await sector.save();
   }
@@ -158,7 +166,7 @@ export const calculateAvgCategoryScores = async () => {
     categories = await UnsdgCategoryModel.find({});
     subcategories = await UnsdgSubcategoryModel.find({});
     unsdgs = await UnsdgModel.find({});
-    companies = await CompanyModel.find({});
+    companies = await CompanyModel.find({ combinedScore: { $exists: true } });
   } catch (err) {
     console.log('\n[-] error getting categories, subcategories, unsdgs or companies: ', err);
   }

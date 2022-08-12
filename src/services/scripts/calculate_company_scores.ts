@@ -44,7 +44,7 @@ export const calculateAllCompanyScores = async () => {
   let subcategories: IUnsdgSubcategoryDocument[];
 
   try {
-    companies = await CompanyModel.find({});
+    companies = await CompanyModel.find({}).sort({ createdAt: -1 });
     categories = await UnsdgCategoryModel.find({});
     subcategories = await UnsdgSubcategoryModel.find({})
       .populate([{
@@ -60,12 +60,18 @@ export const calculateAllCompanyScores = async () => {
 
   let count = 0;
   let errorCount = 0;
+  let companyIndex = 1;
 
   for (const company of companies) {
-    let companyDataSources: ICompanyDataSourceModel[];
-    let unsdgMappings: IDataSourceMappingModel[];
+    const childCompanyDataSources: ICompanyDataSourceModel[] = [];
+    let parentCompanyDataSources: ICompanyDataSourceModel[] = [];
+    let companyDataSources: ICompanyDataSourceModel[] = [];
+    let unsdgMappings: IDataSourceMappingModel[] = [];
 
     try {
+      console.log(`[+] calculating scores for company ${company.companyName} (${companyIndex}/${companies.length})`);
+      companyIndex += 1;
+      console.log(`[+] currently ${count} companies have been calculated with ${errorCount} errors`);
       const now = dayjs().utc().toDate();
       companyDataSources = await CompanyDataSourceModel.find({
         $and: [
@@ -74,6 +80,29 @@ export const calculateAllCompanyScores = async () => {
           { 'dateRange.end': { $gte: now } },
         ],
       });
+
+      if (company.parentCompany) {
+        parentCompanyDataSources = await CompanyDataSourceModel.find({
+          $and: [
+            { company: company.parentCompany },
+            { 'dateRange.start': { $lte: now } },
+            { 'dateRange.end': { $gte: now } },
+          ],
+        });
+      }
+
+      // Saving children dictionary for faster lookup
+      const childCompanyDataSourceDictionary = childCompanyDataSources.reduce((acc, curr) => {
+        const key = curr.source.toString();
+        acc[key] = true;
+        return acc;
+      }, {} as { [key: string]: boolean });
+
+      parentCompanyDataSources = parentCompanyDataSources.filter((ps) => !childCompanyDataSourceDictionary[ps.source.toString()]);
+
+      companyDataSources = [...companyDataSources, ...parentCompanyDataSources];
+
+      console.log(`[+] ${company.companyName} has ${companyDataSources.length} data sources`);
 
       unsdgMappings = await DataSourceMappingModel
         .find({ source: { $in: companyDataSources.map(c => c.source) } })
@@ -196,6 +225,7 @@ export const calculateAllCompanyScores = async () => {
     }));
 
     try {
+      console.log(`[+] saving company: ${company._id}: ${company.companyName} (combined score: ${combinedScore})`);
       await CompanyModel.updateOne({ _id: company._id }, { combinedScore, rating, subcategoryScores, categoryScores });
       await Promise.all(promises);
       count += 1;

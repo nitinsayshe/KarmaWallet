@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { resetNewCompanies } from '../src/services/scripts/resets';
+import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector_scores';
 
 (async () => {
   try {
@@ -13,7 +13,7 @@ import { resetNewCompanies } from '../src/services/scripts/resets';
     // } as IRequest);
     await MongoClient.init();
     // add mappers here...
-    await resetNewCompanies();
+    await calculateAvgScores({ writeToDisk: false });
     await MongoClient.disconnect();
   } catch (err) {
     console.log('\n[-] something went wrong during the migration!');

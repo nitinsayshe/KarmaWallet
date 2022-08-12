@@ -25,6 +25,7 @@ export enum CompanyHideReasons {
   NoDataSources = 'no-data-sources',
   None = 'none',
   NoPrimaryDataSource = 'no-primary-data-source',
+  WholeSectorIsHidden = 'whole-sector-is-hidden',
 }
 
 export interface IHiddenCompany {

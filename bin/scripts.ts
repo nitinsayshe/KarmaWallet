@@ -14,9 +14,7 @@ import { resetNewCompanies } from '../src/services/scripts/resets';
     await MongoClient.init();
     // add mappers here...
     await resetNewCompanies();
-    await MongoClient.disconnect();
   } catch (err) {
-    console.log('\n[-] something went wrong during the migration!');
     Logger.error(asCustomError(err));
     await MongoClient.disconnect();
   }

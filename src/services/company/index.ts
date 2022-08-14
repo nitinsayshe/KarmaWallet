@@ -36,6 +36,7 @@ export interface ICompanyRequestParams {
 export interface IUpdateCompanyRequestBody {
   companyName: string;
   url: string;
+  logo: string;
 }
 
 export interface ICompanySampleRequest {
@@ -502,7 +503,7 @@ export const initCompanyBatchJob = async (req: IRequest<{}, {}, IBatchedCompanyP
 export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
   try {
     const { companyId } = req.params;
-    const { companyName, url } = req.body;
+    const { companyName, url, logo } = req.body;
 
     if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
     if (!companyName && !url) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
@@ -514,6 +515,7 @@ export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUp
     // TODO: add name sterilization
     if (companyName) updatedData.companyName = companyName.trim();
     if (url) updatedData.url = url.trim();
+    if (logo) updatedData.logo = logo.trim();
 
     // TODO: add change log for record keeping.
 

@@ -5,10 +5,11 @@ import { CompanyModel } from '../../models/company';
 
 export const updateCompaniesUrls = async () => {
   const companies = await CompanyModel.find({
-    url: {
-      $not: /^http/,
-      $regex: 'www',
-    },
+    $and: [
+      { url: { $not: /^null/ } },
+      { url: { $ne: '' } },
+      { url: { $not: /^http/ } },
+    ],
   });
 
   for (const company of companies) {

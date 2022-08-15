@@ -506,7 +506,7 @@ export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUp
     const { companyName, url, logo } = req.body;
 
     if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
-    if (!companyName && !url) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
+    if (!companyName && !url && !logo) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
 
     const updatedData: Partial<ICompany> = {
       lastModified: dayjs().utc().toDate(),

@@ -60,7 +60,7 @@ export const exec = async () => {
       }
     }
   }
-  return suppressionListItems;
+  return `${suppressionListItems.length} emails have been updated`;
 };
 
 export const onComplete = async (_: SandboxedJob, result: any) => {

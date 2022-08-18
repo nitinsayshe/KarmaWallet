@@ -58,7 +58,8 @@ jobs:
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
     - run: echo 'BETSI_ENV=bigolbetsi' >> .env
-    - run: echo 'GOOGLE_KEY_STRING=${{secrets.GOOGLE_KEY_STRING}}' >> .env
+    - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
+    - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all
     

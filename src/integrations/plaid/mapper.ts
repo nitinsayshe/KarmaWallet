@@ -291,7 +291,7 @@ export class PlaidMapper {
    * otherwise, all transactions for all currently linked
    * cards will be mapped.
    */
-  mapTransactionsFromPlaid = async (acs: string[] = [], daysInPast = 90) => {
+  mapTransactionsFromPlaid = async (acs: string[] = [], daysInPast = 20) => {
     const endDate = dayjs();
     const startDate = endDate.subtract(daysInPast, 'day');
     this._transactions = [];

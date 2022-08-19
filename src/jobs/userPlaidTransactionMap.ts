@@ -31,8 +31,6 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
   // initial card linking for individual user
   let isSuccess = false;
   let result: IResult;
-  // regardless of result, the intial processing should be set to false
-  await _updateCards({ 'integrations.plaid.accessToken': accessToken }, { initialTransactionsProcessing: false });
   try {
     await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
     isSuccess = true;
@@ -40,10 +38,14 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
       message: `Successfully mapped transactions for user: ${userId}`,
       userId,
     };
+    // regardless of result, the intial processing should be set to false
+    await _updateCards({ 'integrations.plaid.accessToken': accessToken }, { initialTransactionsProcessing: false });
   } catch (err: any) {
     result = {
       message: `Error: ${err.message}`,
     };
+    // regardless of result, the intial processing should be set to false
+    await _updateCards({ 'integrations.plaid.accessToken': accessToken }, { initialTransactionsProcessing: false });
   }
 
   try {

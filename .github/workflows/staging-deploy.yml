@@ -32,7 +32,7 @@ jobs:
     - run: echo 'NODE_ENV=staging' >> .env
     - run: echo 'PORT=8012' >> .env
     - run: echo 'FRONTEND_DOMAIN=https://ui.staging.karmawallet.io' >> .env
-    - run: echo 'APP_USER_ID=6241e2260c9177f79772fdc5' >> .env
+    - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
     - run: echo 'DB_USER=${{secrets.STAGING_DB_USER}}' >> .env
     - run: echo 'DB_NAME=${{secrets.STAGING_DB_NAME}}' >> .env
     - run: echo 'DB_URL=${{secrets.STAGING_DB_URL}}:27017' >> .env
@@ -58,7 +58,8 @@ jobs:
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
     - run: echo 'BETSI_ENV=bigolbetsi' >> .env
-    - run: echo 'GOOGLE_KEY_STRING=${{secrets.GOOGLE_KEY_STRING}}' >> .env
+    - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
+    - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all
     

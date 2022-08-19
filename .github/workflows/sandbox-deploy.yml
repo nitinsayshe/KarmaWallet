@@ -34,7 +34,7 @@ jobs:
     - run: echo 'PUBLIC_TOKEN=${{secrets.STAGING_PUBLIC_TOKEN}}' >> .env
     - run: echo 'NODE_ENV=staging' >> .env
     - run: echo 'FRONTEND_DOMAIN=https://ui.sandbox-1.karmawallet.io' >> .env
-    - run: echo 'APP_USER_ID=6241e2260c9177f79772fdc5' >> .env
+    - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
     - run: echo 'PORT=8012' >> .env
     - run: echo 'DB_USER=${{secrets.STAGING_DB_USER}}' >> .env
     - run: echo 'DB_NAME=${{secrets.STAGING_DB_NAME}}' >> .env

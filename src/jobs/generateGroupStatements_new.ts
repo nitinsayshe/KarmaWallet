@@ -50,7 +50,7 @@ export const exec = async () => {
     for (const group of groups) {
       const toBeMatchedForGroup = 0;
       let { maxDollarAmount, matchPercentage } = group.settings.matching;
-      maxDollarAmount = 5;
+      maxDollarAmount = 100;
       matchPercentage = matchPercentage || 0;
 
       const memberMockRequest = { ...mockRequest, requestor: appUser };
@@ -93,6 +93,7 @@ export const exec = async () => {
         const yearlyOffsetTransactions = await getOffsetTransactions(yearlyOffsetTransactionQuery);
 
         const memberYearlyOffsetTotalDollars = yearlyOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt / 100, 0);
+        console.log({ memberYearlyOffsetTotalDollars, memberMonthlyOffsetTotalDollars });
         const memberHitLimit = memberYearlyOffsetTotalDollars >= maxDollarAmount;
         let amountToBeMatchedForMember = 0;
 

@@ -1,6 +1,7 @@
 import { SandboxedJob } from 'bullmq';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { UserRoles } from '../lib/constants';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { mockRequest } from '../lib/constants/request';
 import { ReportModel } from '../models/report';
@@ -16,12 +17,12 @@ dayjs.extend(utc);
  * implemented incorrectly.
  */
 
-const { APP_USER_ID } = process.env;
+// const { APP_USER_ID } = process.env;
 
 export const exec = async () => {
   console.log('\ngetting total offsets for all users...');
   try {
-    const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+    const appUser = await UserModel.findOne({ role: UserRoles.SuperAdmin });
 
     const res = await TransactionModel
       .aggregate([

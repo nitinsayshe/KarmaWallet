@@ -60,6 +60,14 @@ export interface ICompanyHidden {
   lastModified: Date;
 }
 
+export interface IWildfireCompanyIntegration {
+  merchantId?: string;
+}
+
+export interface ICompanyIntegrations {
+  wildfire?: IWildfireCompanyIntegration;
+}
+
 export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -79,6 +87,7 @@ export interface IShareableCompany {
   url: string;
   createdAt: Date;
   lastModified: Date;
+  integrations: ICompanyIntegrations;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -175,6 +184,12 @@ const companySchema = new Schema(
       required: true,
     },
     lastModified: { type: Date },
+    integrations: {
+      wildfire: {
+        type: {
+          merchantId: { type: String } },
+      },
+    },
   },
   {
     toJSON: { virtuals: true },

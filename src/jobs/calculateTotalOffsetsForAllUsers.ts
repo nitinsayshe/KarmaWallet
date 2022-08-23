@@ -5,6 +5,7 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import { mockRequest } from '../lib/constants/request';
 import { ReportModel } from '../models/report';
 import { TransactionModel } from '../models/transaction';
+import { UserModel } from '../models/user';
 import { getCarbonOffsetsAndEmissions } from '../services/impact';
 
 dayjs.extend(utc);
@@ -15,9 +16,13 @@ dayjs.extend(utc);
  * implemented incorrectly.
  */
 
+const { APP_USER_ID } = process.env;
+
 export const exec = async () => {
   console.log('\ngetting total offsets for all users...');
   try {
+    const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+
     const res = await TransactionModel
       .aggregate([
         {
@@ -51,7 +56,7 @@ export const exec = async () => {
     let totalTons = 0;
 
     for (const item of res) {
-      _mockRequest.requestor = item.user;
+      _mockRequest.requestor = appUser;
       _mockRequest.query = { userId: item.user };
       const offsetsAndEmissions = await getCarbonOffsetsAndEmissions(_mockRequest);
 

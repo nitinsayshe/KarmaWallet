@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { getCarbonOffsetTotals } from '../src/services/scripts/get_carbon_offset_totals';
+import { logTransactionProcessingLag } from '../src/services/scripts/log_transaction_processing_lag';
 
 (async () => {
   try {
@@ -14,7 +14,7 @@ import { getCarbonOffsetTotals } from '../src/services/scripts/get_carbon_offset
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
-    await getCarbonOffsetTotals();
+    await logTransactionProcessingLag();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

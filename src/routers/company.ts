@@ -9,7 +9,7 @@ router.get('/partners', MockController.test);
 router.get('/compare', MockController.test);
 router.get('/sample', CompanyController.getSample);
 router.get('/score-range', CompanyController.getCompanyScoreRange);
-router.get('/:companyId/unsdgs', MockController.test);
+router.get('/:companyId/merchant-rates', CompanyController.getMerchantRatesForCompany);
 router.get('/:companyId', CompanyController.getCompanyById);
 
 // see admin for company create/update/delete routes

@@ -103,3 +103,12 @@ export const getCompanyScoreRange: IRequestHandler = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getMerchantRatesForCompany: IRequestHandler<{ companyId: string }> = async (req, res) => {
+  try {
+    const result = await CompanyService.getMerchantRatesForCompany(req);
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

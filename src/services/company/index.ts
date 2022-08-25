@@ -7,7 +7,10 @@ import { getRandomInt } from '../../lib/number';
 import { slugify } from '../../lib/slugify';
 import {
   CompanyCreationStatus,
-  CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
+  CompanyModel,
+  ICompany,
+  ICompanyDocument,
+  IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { ISectorModel, SectorModel } from '../../models/sector';
@@ -26,6 +29,7 @@ import { JobNames } from '../../lib/constants/jobScheduler';
 import { MainBullClient } from '../../clients/bull/main';
 import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
 import { getShareableMerchant } from '../merchant';
+import { MerchantRateModel } from '../../models/merchantRate';
 
 dayjs.extend(utc);
 
@@ -551,4 +555,15 @@ export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUp
 export const getCompanyScoreRange = async (_req: IRequest) => {
   const { positive, negative } = await getCompanyRatingsThresholds();
   return { min: negative.min, max: positive.max };
+};
+
+export const getMerchantRatesForCompany = async (req: IRequest<ICompanyRequestParams, {}, {}>) => {
+  const { companyId } = req.params;
+  if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
+  const companyResponse = await getCompanyById(req, companyId);
+  const company = companyResponse?.company;
+  if (!company) throw new CustomError(`Company with id: ${companyId} could not be found.`, ErrorTypes.NOT_FOUND);
+  if (!company.merchant) throw new CustomError(`Company with id: ${companyId} does not have a merchant.`, ErrorTypes.NOT_FOUND);
+  const merchantRates = await MerchantRateModel.find({ merchant: company.merchant });
+  return merchantRates;
 };

@@ -1,0 +1,593 @@
+_id,kwName,kwUrl,wfUrl,wfName,domainId,score,merchantId,Merchant.MaxRate.Kind,Merchant.MaxRate.Amount,MatchAlgo,Rating,combinedScore(>=8 positive)
+621b993c5f87e75f5365a97d,Verizon Communications,http://verizon.com,verizon.com,Verizon Wireless,5834,1.09E-16,6738,FLAT,150,Sara,positive,8.5
+621b99b15f87e75f5365eda1,Xfinity,https://www.xfinity.com/,xfinity.com,Xfinity,7985,,119083,FLAT,120,Anushka,neutral,1.5
+62def1537b212526d1e06633,Vroom,https://www.vroom.com/,vroom.com,Vroom,3855357,,5483918,FLAT,110,Anushka,negative,-8.5
+621b993b5f87e75f5365a8b5,AT&T,http://att.com,att.com,AT&T Video,70647,2.22E-16,83337,FLAT,100,Sara,neutral,7
+621b996e5f87e75f5365c65d,Indusind Bank,http://indusind.com,indusind.com,IndusInd Bank,99481,1.02E-16,109596,FLAT,87.5,Sara,neutral,0
+62def2547b212526d1e07a4f,MSL,https://mslgroup.com/,msl.ua,Msl,114619,,115308,FLAT,43.705,Anushka,neutral,1
+621b994c5f87e75f5365b2a1,Inspire Clean Energy,http://inspirecleanenergy.com,inspirecleanenergy.com,Inspire Energy,99817,1.18E-16,100228,FLAT,42.5,Sara,positive,11
+621b993a5f87e75f5365a80d,RingCentral,http://ringcentral.com,ringcentral.com,RingCentral: Business Cloud Phone System,3855464,1.23E-16,5481694,FLAT,40,Sara,negative,-2.5
+621b99385f87e75f5365a735,Paychex,http://paychex.com,paychex.com,Paychex,3854656,8.07E-17,5481001,FLAT,37.5,Sara,negative,-4
+621b99895f87e75f5365d619,"Aspiration Partners, Inc.",http://aspiration.com,aspiration.com,Aspiration,78016,6.34E-17,78036,FLAT,37.5,Sara,neutral,1.5
+621b99535f87e75f5365b6a5,Aspiration,http://aspiration.com,aspiration.com,Aspiration,78016,6.34E-17,78036,FLAT,37.5,Sara,positive,10
+621b993b5f87e75f5365a8d1,TransUnion,http://transunion.com,transunion.com,TransUnion,75813,6.34E-17,76315,FLAT,30,Sara,neutral,0
+621b99f75f87e75f536615f5,Direct Energy,https://www.directenergy.com/,directenergy.com,Direct Energy,5512035,,5512553,FLAT,25,Anushka,negative,-2
+621b99b55f87e75f5365efb9,QuickBooks,https://quickbooks.intuit.com/,quickbooks.intuit.com,QuickBooks,3921680,0.02479338843,120331,FLAT,25,Sara,neutral,5
+621b993b5f87e75f5365a8e9,TripAdvisor,https://www.tripadvisor.com,tripadvisor.com,TripAdvisor,3924782,,5483430,PERCENTAGE,20,Anushka,negative,-5
+62def3e07b212526d1e0980d,Splendid Spoon,http://splendidspoon.com/,splendidspoon.com,Splendid Spoon,34853,0.02555069794,36765,FLAT,20,Sara,neutral,1
+621b993f5f87e75f5365aaed,Thrive Market,http://thrivemarket.com,thrivemarket.com,Thrive Market,3855303,9.76E-17,5483196,FLAT,20,Sara,positive,15
+621b99be5f87e75f5365f539,West Elm,https://www.westelm.com/,westelm.ae,West Elm,97765,,99074,FLAT,16.8,Anushka,neutral,7.5
+621b998e5f87e75f5365d8f9,American Provenance,http://americanprovenance.com,americanprovenance.com,American Provenance,111380,7.79E-17,112535,PERCENTAGE,15,Sara,neutral,0
+62def3e97b212526d1e09c28,ABBYY,https://www.abbyy.com/,abbyy.com,ABBYY,8875,,115730,PERCENTAGE,15,Anushka,neutral,0.5
+62def1b37b212526d1e072d0,Athletic Greens,https://athleticgreens.com/en,athleticgreens.com,Athletic Greens,4326481,,5475468,PERCENTAGE,15,Anushka,neutral,1
+621b99995f87e75f5365df71,Vegan Mia Organics,http://veganmia.com,veganmia.com,Vegan Mia Organics,82386,1.18E-16,82473,PERCENTAGE,15,Sara,neutral,1.5
+62def0f67b212526d1e058e2,Betterbrand,http://trybetterbrand.com,trybetterbrand.com,Betterbrand Health,122607,1.14E-16,123952,PERCENTAGE,15,Sara,neutral,1.5
+621b993e5f87e75f5365aa45,Plant People,http://plantpeople.co,plantpeople.co,Plant People,67050,9.16E-17,68425,PERCENTAGE,15,Sara,positive,14
+62def19d7b212526d1e06fca,NOVICA,www.NOVICA.com,novica.com,NOVICA,4611761,,5480662,PERCENTAGE,15,Anushka,positive,15
+62def3f07b212526d1e0a1b5,Marley Spoon,https://marleyspoon.com,marleyspoon.com,Marley Spoon,4325253,,84887,FLAT,12.5,Anushka,neutral,0.5
+62def1b27b212526d1e072bc,Pela,https://pela.earth/,pela.earth,Pela,120095,,120104,FLAT,12.5,Anushka,neutral,1
+62deee757b212526d1e0233b,Laguna Herbals,https://lagunaherbals.com/,lagunaherbals.com,Laguna Herbals,67490,0.02555069794,70667,PERCENTAGE,12.5,Sara,neutral,1.5
+62deeeb67b212526d1e02dfa,Innate Organic Body,https://www.innateorganicbody.com/,innateorganicbody.com,Innate Organic Body,5511192,,5512634,PERCENTAGE,12.5,Anushka,neutral,1.5
+621b99eb5f87e75f53660f69,American Home Shield,https://www.ahs.com/,ahs.com,American Home Shield,95398,,100783,FLAT,12,Anushka,negative,-3.5
+621b99d45f87e75f53660191,Glamglow,https://www.glamglow.com/,glamglow.com,GLAMGLOW,3921142,,5478234,PERCENTAGE,12,Anushka,positive,8
+621b99d45f87e75f536601e9,Origins,https://www.origins.com/,origins.com,Origins,3923076,,5480837,PERCENTAGE,12,Anushka,positive,8
+621b99d45f87e75f536601dd,Smashbox,https://www.smashbox.com/,smashbox.com,Smashbox,3924038,,5482359,PERCENTAGE,12,Anushka,positive,8
+621b99325f87e75f5365a3c1,Domino's Pizza,http://dominos.com,pizzaonline.dominos.co.in,Domino's Pizza,97467,,98328,FLAT,11,Anushka,negative,-6.5
+62deeeb47b212526d1e02d9d,MadeMan,https://getmademan.com/,getmademan.com,MadeMan,92125,,107945,PERCENTAGE,11,Anushka,neutral,1.5
+62def1547b212526d1e0665a,McAfee,https://www.mcafee.com/,mcafee.com,McAfee,97832,,5518712,FLAT,10,Anushka,negative,-1
+621b99855f87e75f5365d3b1,Otamot Foods,http://otamotfoods.com,otamotfoods.com,Otamot Foods,101391,1.02E-16,102385,PERCENTAGE,10,Sara,neutral,0
+621b99c05f87e75f5365f6a5,H&M,https://www2.hm.com/en_us/index.html,ae.hm.com,H&M,97587,,98736,PERCENTAGE,10,Anushka,neutral,0.5
+62def3d57b212526d1e09379,Alltruists,http://www.alltruists.com/,alltruists.com,Alltruists,110667,,111066,PERCENTAGE,10,Anushka,neutral,1
+62def1067b212526d1e05a6e,"Blue Apron, Inc.",https://www.blueapron.com/,blueapron.com,Blue Apron,1991676,,5475949,PERCENTAGE,10,Anushka,neutral,1
+62def2047b212526d1e073ed,Wyld CBD,https://wyldcbd.com/,wyldcbd.com,Wyld CBD,74482,,74730,PERCENTAGE,10,Anushka,neutral,1
+621b99875f87e75f5365d529,Mountain Mel's Essential Goods,http://mountainmels.com,mountainmels.com,Mountain Mel's,111562,1.11E-16,112622,PERCENTAGE,10,Sara,neutral,1.5
+621b99905f87e75f5365da41,"Skipwith Organics, LLC",http://skipwithorganics.com,skipwithorganics.com,Skipwith Organics,117207,8.33E-17,117240,PERCENTAGE,10,Sara,neutral,1.5
+621b99945f87e75f5365dc99,Alpine Start,http://alpinestartfoods.com,alpinestartfoods.com,Alpine Start,84941,1.36E-16,85587,PERCENTAGE,10,Sara,neutral,1.5
+621b999c5f87e75f5365e115,Bigfoot Kick,http://bigfootkick.com,bigfootkick.com,Bigfoot Kick,118555,1.02E-16,118599,PERCENTAGE,10,Sara,neutral,1.5
+62deee577b212526d1e01f04,3rd Rock Essentials,https://3rdrockessentials.com/,3rdrockessentials.com,3rd Rock Essentials,111640,0.02347583246,112729,PERCENTAGE,10,Sara,neutral,1.5
+62deee647b212526d1e020d0,Healist Advanced Naturals,https://healistnaturals.com/,healistnaturals.com,Healist Naturals,78307,0.02134492983,78317,PERCENTAGE,10,Sara,neutral,1.5
+62deee617b212526d1e02056,Mane Club,https://www.maneclubnyc.com/,maneclubnyc.com,Mane Club,84745,,85464,PERCENTAGE,10,Anushka,neutral,1.5
+62deed9f7b212526d1e017cc,Miami Beach Bum,https://miamibeachbum.com/,miamibeachbum.com,Miami Beach Bum,79475,,81592,PERCENTAGE,10,Anushka,neutral,1.5
+621b993e5f87e75f5365aa71,Tabeeze,http://tabeeze.com,tabeeze.com,Tabeeze,117529,8.07E-17,120005,PERCENTAGE,10,Sara,positive,11
+621b99375f87e75f5365a661,Microsoft,http://microsoft.com,microsoft.com,Microsoft365 for Business,1991654,1.12E-16,84367,FLAT,10,Sara,positive,12.5
+621b993e5f87e75f5365aaad,ButcherBox,http://butcherbox.com,butcherbox.com,ButcherBox,5510960,6.34E-17,5512508,FLAT,10,Sara,positive,13
+62def19d7b212526d1e06fd6,NuLeaf Naturals,NULEAFNATURALS.COM,nuleafnaturals.com,NuLeaf Naturals CBD Oil,78872,1.05E-16,80845,PERCENTAGE,10,Sara,positive,14
+62deeea47b212526d1e02a50,dome BEAUTY,https://www.domebeauty.com/?fbclid=IwAR1bOKIphZt1EGMRj5Nhi6znDqhRRwArfjjricGkCPNssdb-YMVVZ0z4uFo,domebeauty.com,Dome Beauty,117746,,117751,PERCENTAGE,9,Anushka,neutral,1.5
+62deed6d7b212526d1e010d6,Malia Designs,www.maliadesigns.com,maliadesigns.com,Malia Designs,5505621,,5508601,PERCENTAGE,9,Anushka,neutral,6
+62def3ee7b212526d1e0a181,BJs Wholesale Club,https://www.bjs.com/,bjs.com,BJ's Wholesale Club,4611571,,9359,PERCENTAGE,8,Anushka,neutral,0.5
+62def1427b212526d1e06483,DoorDash,https://www.doordash.com/,doordash.com,DoorDash,5497642,,5507288,FLAT,7.5,Anushka,negative,-4
+62def3ea7b212526d1e09d5b,Sheets & Giggles,https://sheetsgiggles.com/,sheetsgiggles.com,Sheets & Giggles,67743,,69996,PERCENTAGE,7.5,Anushka,neutral,0.5
+62def2147b212526d1e07539,JustAnswer,https://www.justanswer.com/,justanswer.com,JustAnswer,3921828,,82470,FLAT,7.5,Anushka,neutral,1
+62def1af7b212526d1e07241,Pakt Bags,https://paktbags.com/,paktbags.com,Pakt Bags,8716,,8961,PERCENTAGE,7.5,Anushka,neutral,1
+62def1ae7b212526d1e07214,Vahdam Teas,https://www.vahdam.com/,vahdamteas.com,VahdamTeas,3924923,,99556,PERCENTAGE,7.5,Anushka,neutral,1
+621b99805f87e75f5365d115,Romer LLC,http://romerskincare.com,romerskincare.com,Romer Skincare,79454,9.35E-17,83445,PERCENTAGE,7.5,Sara,neutral,1.5
+621b99835f87e75f5365d2c1,Plak That Printing Co.,http://plakthat.com,plakthat.com,Plak That Printing Co.,5505419,1.43E-16,5509215,PERCENTAGE,7.5,Sara,neutral,1.5
+621b99a75f87e75f5365e791,SHRED Optics,http://shredoptics.com,shredoptics.com,SHRED,66225,2.22E-16,66263,PERCENTAGE,7.5,Sara,neutral,1.5
+621b99ae5f87e75f5365ebb1,Epic Water Filters,http://epicwaterfilters.com,epicwaterfilters.com,Epic Water Filters,3920510,1.11E-16,79678,PERCENTAGE,7.5,Sara,neutral,1.5
+62deed977b212526d1e016be,CannaSmack,https://cannasmack.com/,cannasmack.com,CannaSmack,117539,0.02222222222,117702,PERCENTAGE,7.5,Sara,neutral,1.5
+62deed977b212526d1e016c2,Chemist Confessions,https://chemistconfessions.com/,chemistconfessions.com,Chemist Confessions Inc.,93316,0.02002389107,126204,PERCENTAGE,7.5,Sara,neutral,1.5
+62deedab7b212526d1e019ae,Seed Phytonutrients,https://seedphytonutrients.com/,seedphytonutrients.com,Seed Phytonutrients,124465,0.01681448298,124552,PERCENTAGE,7.5,Sara,neutral,1.5
+62deee647b212526d1e020d6,Hemplucid,https://hemplucid.com/,hemplucid.com,Hemplucid,111545,0.02551020408,112639,PERCENTAGE,7.5,Sara,neutral,1.5
+62deee7e7b212526d1e0243c,Clean Remedies,https://cleanremedies.com/,cleanremedies.com,"Clean Remedies, LLC",83638,0.02947328414,84200,PERCENTAGE,7.5,Sara,neutral,1.5
+62deee937b212526d1e02735,Better & Better,https://betterandbetter.com/,betterandbetter.com,Better & Better,99995,0.02946853999,126578,PERCENTAGE,7.5,Sara,neutral,1.5
+62deee957b212526d1e0279b,Perfect Image,https://perfectimage.com/,perfectimage.com,Perfect Image,100331,0.02816933699,102538,PERCENTAGE,7.5,Sara,neutral,1.5
+62def03a7b212526d1e04f0b,Petal,https://withpetal.com,withpetal.com,Petal,101379,2.22E-16,101799,PERCENTAGE,7.5,Sara,neutral,1.5
+62def0447b212526d1e05031,Erem Desert,http://eremlife.com,eremlife.com,EREM,117815,2.22E-16,118039,PERCENTAGE,7.5,Sara,neutral,1.5
+62deee5a7b212526d1e01f44,Athar'a Pure,https://atharapure.com/,atharapure.com,Athar'a Pure,94270,,94617,PERCENTAGE,7.5,Anushka,neutral,1.5
+62deedcb7b212526d1e01dd0,Bl'eau,https://bleaubeauty.com/,bleaubeauty.com,Bl'eau,107581,,108033,PERCENTAGE,7.5,Anushka,neutral,1.5
+62deeda37b212526d1e018b3,Costa Brazil,https://livecostabrazil.com/,livecostabrazil.com,Costa Brazil,114522,,114560,PERCENTAGE,7.5,Anushka,neutral,1.5
+62deeda27b212526d1e0188d,Herbal Dynamics Beauty,https://www.herbaldynamicsbeauty.com/,herbaldynamicsbeauty.com,Herbal Dynamics Beauty,67822,,112678,PERCENTAGE,7.5,Anushka,neutral,1.5
+62deeeb77b212526d1e02e2f,Masami,https://www.lovemasami.com/,lovemasami.com,MASAMI,75156,,75257,PERCENTAGE,7.5,Anushka,neutral,1.5
+62deee5f7b212526d1e01fff,O'o Hawaii,https://www.oohawaii.com/,oohawaii.com,O'o Hawaii,115783,,115813,PERCENTAGE,7.5,Anushka,neutral,1.5
+62deeee47b212526d1e0381d,Urban Hydration,https://www.urbanhydration.com/,urbanhydration.com,Urban Hydration,111857,,112257,PERCENTAGE,7.5,Anushka,neutral,1.5
+62def02e7b212526d1e04d45,Hitch,http://carryhitch.com,carryhitch.com,Hitch,113401,2.22E-16,113717,PERCENTAGE,7.5,Sara,neutral,2
+621b999d5f87e75f5365e1ad,Mon Coeur,http://moncoeur.com,moncoeur.com,Mon Coeur,109720,1.20E-16,119809,PERCENTAGE,7.5,Sara,neutral,2.5
+62deee9f7b212526d1e02964,Poo-Pourri,,poopourri.com,Poo~Pourri,79136,,81279,PERCENTAGE,7.5,Anushka,neutral,3
+62deef3d7b212526d1e0439d,Warp & Weft,www.warpandweft.com,warpweftworld.com,Warp + Weft,5506084,,5510548,PERCENTAGE,7.5,Anushka,neutral,3.5
+621b99745f87e75f5365c9cd,Hoffmaster Group,http://hoffmaster.com,hoffmaster.com,Hoffmaster,67559,6.34E-17,70639,PERCENTAGE,7.5,Sara,neutral,4
+62def2b37b212526d1e081b5,Conscious Coconut,https://consciouscoconut.com/,consciouscoconut.com,Conscious Coconut,111362,0.0196392364,112499,PERCENTAGE,7.5,Sara,neutral,5.5
+62def34d7b212526d1e08bbf,Coffee Blenders,http://coffeeblenders.com/,coffeeblenders.com,Coffee Blenders,8001,0.02329810173,8046,PERCENTAGE,7.5,Sara,neutral,5.5
+62def3a77b212526d1e08dd4,getPesty,https://getpesty.com/,getpesty.com,getPesty,117905,0.02958579882,118001,PERCENTAGE,7.5,Sara,neutral,5.5
+62def34a7b212526d1e08b5d,Starwest Botanicals,http://www.starwest-botanicals.com/default.asp,starwest-botanicals.com,Starwest Botanicals Inc.,5502888,,5509887,PERCENTAGE,7.5,Anushka,neutral,5.5
+621b99525f87e75f5365b611,"Rumi Spice, PBC",http://rumispice.com,rumispice.com,Rumi Spice,110762,1.13E-16,111024,PERCENTAGE,7.5,Sara,neutral,6
+621b99be5f87e75f5365f54d,Sam's Club,https://www.samsclub.com,samsclub.com,Sam's Club,5512196,,5512777,PERCENTAGE,7.5,Anushka,positive,9
+621b99595f87e75f5365b9fd,New Chapter,http://newchapter.com,newchapter.com,New Chapter,127868,1.07E-16,128122,PERCENTAGE,7.5,Sara,positive,11
+621b99415f87e75f5365ac21,The Uplifters' Prima,http://prima.co,prima.co,Prima,68390,8.33E-17,69650,PERCENTAGE,7.5,Sara,positive,14
+621b99595f87e75f5365b9f1,Kuli Kuli,http://kulikulifoods.com,kulikulifoods.com,Kuli Kuli Foods,110783,1.22E-16,111019,PERCENTAGE,7.5,Sara,positive,15
+621b99515f87e75f5365b549,Lemonade,http://lemonade.com,lemonade.com,Lemonade,7369,7.40E-17,75333,PERCENTAGE,6.825,Sara,neutral,6
+621b99a65f87e75f5365e729,EcoRoots DBA Smartshop LLC,http://ecoroots.us,ecoroots.us,EcoRoots,107718,6.06E-17,112594,PERCENTAGE,6.5,Sara,neutral,1.5
+621b99915f87e75f5365db21,DoneGood,http://donegood.co,donegood.co,DoneGood,102692,6.06E-17,103195,PERCENTAGE,6.25,Sara,neutral,0
+621b99aa5f87e75f5365e955,Green Goo,http://greengoohelps.com,greengoo.com,Green Goo,83289,,83400,PERCENTAGE,6,Anushka,neutral,0
+621b99705f87e75f5365c755,Rakuten,https://global.rakuten.com/corp/,globalexpress.rakuten.co.jp,Rakuten,5828,,116460,FLAT,6,Anushka,neutral,0
+62def3e37b212526d1e0993a,Jungle Culture,https://jungleculture.eco/,jungleculture.eco,Jungle Culture,116933,0.02555069794,116940,PERCENTAGE,6,Sara,neutral,1
+62deed937b212526d1e01617,PopSockets,https://www.popsockets.com/,popsockets.com,PopSockets,5504705,,5509249,PERCENTAGE,6,Anushka,neutral,1
+62deee627b212526d1e02099,Cocofloss,https://cocofloss.com/,cocofloss.com,Cocofloss,99862,0.02551020408,100911,PERCENTAGE,6,Sara,neutral,1.5
+62deee977b212526d1e02808,Antonym Cosmetics,https://www.antonymcosmetics.com/,antonymcosmetics.com,Antonym Cosmetics,5505143,,5506463,PERCENTAGE,6,Anushka,neutral,1.5
+62deeda97b212526d1e0192e,chiki buttah products,https://chikibuttah.com/,chikibuttah.com,Chiki Buttah Products,79447,,81431,PERCENTAGE,6,Anushka,neutral,1.5
+62deeda77b212526d1e018ed,Epicuren Discovery,https://epicuren.com/,epicuren.com,Epicuren Discovery,79084,,91729,PERCENTAGE,6,Anushka,neutral,1.5
+62deed967b212526d1e0168e,Kind Laundry,https://www.kindlaundry.com/,kindlaundry.com,Kind Laundry,96628,,98063,PERCENTAGE,6,Anushka,neutral,1.5
+62deeedc7b212526d1e03631,OLITA,https://www.olitashop.com/,olitashop.com,OLITA,112885,,113006,PERCENTAGE,6,Anushka,neutral,1.5
+62deee737b212526d1e022e9,The Flex Company,https://flexfits.com/,flexfits.com,The Flex Company,80940,,102147,PERCENTAGE,6,Anushka,neutral,1.5
+621b99975f87e75f5365dea1,GoPure Pod,http://gopurepod.com,gopurepod.com,GoPure Pod,5513469,1.13E-16,5518795,PERCENTAGE,6,Sara,neutral,2.5
+62deef557b212526d1e045a4,Aspinal of London,https://www.aspinaloflondon.com/,aspinaloflondon.com,Aspinal of London,110458,,112438,PERCENTAGE,6,Anushka,neutral,3.5
+621b99b75f87e75f5365f129,Fred Meyer Jewelers,https://www.fredmeyerjewelers.com/,fredmeyerjewelers.com,Fred Meyer Jewelers,3920948,,5477973,PERCENTAGE,6,Anushka,neutral,5.5
+62deed8f7b212526d1e015b0,Outerknown,https://www.outerknown.com/,outerknown.com,Outerknown,82720,,82763,PERCENTAGE,6,Anushka,neutral,5.5
+621b99585f87e75f5365b9b1,MPOWERD,http://mpowerd.com,mpowerd.com,MPOWERD,7628,8.07E-17,7673,PERCENTAGE,6,Sara,positive,9
+621b99465f87e75f5365af59,Only Natural Pet,http://onlynaturalpet.com,onlynaturalpet.com,Only Natural Pet,3923049,1.18E-16,5480794,PERCENTAGE,6,Sara,positive,11
+621b995a5f87e75f5365bac9,S.W. Basics,http://swbasicsofbk.com,swbasics.com,S.W. Basics,102755,,102864,PERCENTAGE,6,Anushka,positive,11
+621b99be5f87e75f5365f4f1,Smartwool,https://www.smartwool.com/,smartwool.com,SmartWool,4611828,,5482358,PERCENTAGE,6,Anushka,positive,11.5
+621b99595f87e75f5365ba65,Teatulia Organic Teas,http://teatulia.com,teatulia.com,Teatulia,5502744,7.40E-17,5510066,PERCENTAGE,6,Sara,positive,13
+621b993f5f87e75f5365ab05,Sunday Riley,http://sundayriley.com,sundayriley.com,Sunday Riley,99768,1.02E-16,100203,PERCENTAGE,6,Sara,positive,14
+62def19b7b212526d1e06f9c,Minor Figures,minorfigures.com,minifigures.com,Minifigures.com,3997657,0.015625,5480168,PERCENTAGE,6,Sara,positive,14
+62deeeda7b212526d1e0357b,LemonKind,https://drinklemonkind.com/,drinklemonkind.com,LEMONKIND,120643,0.02770083102,120659,PERCENTAGE,5.5,Sara,neutral,1.5
+621b99475f87e75f5365afa5,Synergy Clothing,http://synergyclothing.com,synergyclothing.com,Synergy Organic Clothing,94243,1.44E-16,94855,PERCENTAGE,5,Sara,neutral,0
+621b99835f87e75f5365d2a9,Infant Mattresses,http://naturepedic.com,naturepedic.com,Naturepedic,3922825,5.92E-17,5480523,PERCENTAGE,5,Sara,neutral,0
+621b998e5f87e75f5365d8d5,oHHo,http://weareohho.com,weareohho.com,oHHo,95605,2.22E-16,96039,PERCENTAGE,5,Sara,neutral,0
+621b99935f87e75f5365dc55,ICU Eyewear,http://icueyewear.com,icueyewear.com,ICU Eyewear Inc,79087,1.23E-16,110538,PERCENTAGE,5,Sara,neutral,0
+621b999a5f87e75f5365e06d,NURISH,http://nurish.naturemade.com,nurish.naturemade.com,nurish by Nature Made,92272,1.45E-16,92440,PERCENTAGE,5,Sara,neutral,0
+621b999d5f87e75f5365e1cd,Proclamation Goods Co.,http://proclamationgoods.com,proclamationgoods.com,Proclamation Goods,81010,8.05E-17,82574,PERCENTAGE,5,Sara,neutral,0
+621b99ad5f87e75f5365eb41,Undersun Fitness,http://undersunfitness.com,undersunfitness.com,Undersun Fitness,66917,8.64E-17,66946,PERCENTAGE,5,Sara,neutral,0
+624c69801ccf825229d2510e,Naturepedic Kids Mattresses,http://naturepedic.com,naturepedic.com,Naturepedic,3922825,5.92E-17,5480523,PERCENTAGE,5,Sara,neutral,0
+62deefa17b212526d1e04602,LifeStride,https://www.lifestride.com/,lifestride.com,LifeStride,3922162,,5479638,PERCENTAGE,5,Anushka,neutral,0
+62deefa37b212526d1e04620,Ryka,https://www.ryka.com/,ryka.com,Ryka,3923708,,5481814,PERCENTAGE,5,Anushka,neutral,0
+62def3e97b212526d1e09b81,PADDYWAX,https://paddywax.com/,paddywax.com,Paddywax,5520370,0.02958579882,7156,PERCENTAGE,5,Sara,neutral,0.5
+62def3e67b212526d1e09a2b,Guru Energy,https://www.guruenergy.com/en-ca,guruenergy.com,Guru Energy,102421,,102490,PERCENTAGE,5,Anushka,neutral,0.5
+62def3ef7b212526d1e0a1a5,Hello Fresh,https://blog.hellofresh.com/,hellofresh.com,HelloFresh,5497766,,5478587,FLAT,5,Anushka,neutral,0.5
+62def3ed7b212526d1e0a0b5,Oakywood,https://oakywood.shop/,oakywood.shop,OAKYWOOD,83631,,84234,PERCENTAGE,5,Anushka,neutral,0.5
+62def0257b212526d1e04c20,Taza Chocolate,https://www.tazachocolate.com,tazachocolate.com,Taza Chocolate,105909,,106434,PERCENTAGE,5,Anushka,neutral,0.5
+624c69781ccf825229d24d30,Pentair,http://pentair.com,pentair.com,Pelican Water,119827,2.22E-16,5481032,PERCENTAGE,5,Sara,neutral,1
+62def1067b212526d1e05a61,Edgewell Personal Care,https://edgewell.com/,edgewell.com,Edgewell,66314,0.02958579882,66589,PERCENTAGE,5,Sara,neutral,1
+62def20c7b212526d1e0749e,Forsake,https://www.forsake.com/shop/index.html,forsake.com,Forsake,34821,,36704,PERCENTAGE,5,Anushka,neutral,1
+621b99b65f87e75f5365f09d,Primal Kitchen,https://www.primalkitchen.com/,primalkitchen.com,Primal Kitchen,113505,,113680,PERCENTAGE,5,Anushka,neutral,1
+62def3d47b212526d1e092b4,Today Glitter,https://www.todayglitter.com/,todayglitter.com,Today Glitter,79444,,82800,PERCENTAGE,5,Anushka,neutral,1
+621b997a5f87e75f5365cd35,Bark Potty,http://barkpotty.com,barkpotty.com,Bark Potty,79396,1.13E-16,81409,PERCENTAGE,5,Sara,neutral,1.5
+621b997a5f87e75f5365cd59,"Nimble For Good, PBC",http://gonimble.com,gonimble.com,Nimble,65973,1.11E-16,66058,PERCENTAGE,5,Sara,neutral,1.5
+621b997d5f87e75f5365cf6d,Calgee,http://calgee.com,calgee.com,Calgee,95645,8.88E-17,96053,PERCENTAGE,5,Sara,neutral,1.5
+621b99825f87e75f5365d21d,Winc - Pacificana Wines,http://winc.com,winc.com,Winc,5504001,1.11E-16,5484073,PERCENTAGE,5,Sara,neutral,1.5
+621b99835f87e75f5365d2f1,teakruthi,http://teakruthi.com,teakruthi.com,teakruthi,79365,6.83E-17,81551,PERCENTAGE,5,Sara,neutral,1.5
+621b99875f87e75f5365d511,"Eco Vessel, LLC",http://ecovessel.com,ecovessel.com,EcoVessel,5503716,6.83E-17,68440,PERCENTAGE,5,Sara,neutral,1.5
+621b99875f87e75f5365d53d,Reese Cooper Inc,http://reese-cooper.com,reese-cooper.com,Reese Cooper,83825,9.76E-17,84088,PERCENTAGE,5,Sara,neutral,1.5
+621b99875f87e75f5365d541,Rheos Gear,http://rheosgear.com,rheosgear.com,Rheos Nautical Eyewear,75629,1.55E-16,81386,PERCENTAGE,5,Sara,neutral,1.5
+621b998a5f87e75f5365d6e1,Pacha,http://pachasoap.com,pachasoap.com,Pacha Soap,111239,1.13E-16,112166,PERCENTAGE,5,Sara,neutral,1.5
+621b998b5f87e75f5365d76d,Free Birdees,http://freebirdees.com,freebirdees.com,Free Birdees,113265,1.02E-16,115668,PERCENTAGE,5,Sara,neutral,1.5
+621b998c5f87e75f5365d819,Just Enough Wines,http://justenoughwines.com,justenoughwines.com,Just Enough Wines,93336,1.14E-16,93631,PERCENTAGE,5,Sara,neutral,1.5
+621b99915f87e75f5365dad5,Evermine,http://evermine.com,evermine.com,Evermine,2189660,7.40E-17,5477586,PERCENTAGE,5,Sara,neutral,1.5
+621b99975f87e75f5365de41,"Beast Brands, Inc.",http://getbeast.com,getbeast.com,Beast Brands,79469,1.52E-16,83084,PERCENTAGE,5,Sara,neutral,1.5
+621b99985f87e75f5365df2d,Bloomist,http://bloomist.com,bloomist.com,Bloomist,68049,7.40E-17,69450,PERCENTAGE,5,Sara,neutral,1.5
+621b99995f87e75f5365df79,Sonrei,http://sonreiskin.com,sonreiskin.com,Sonrei,78949,1.27E-16,110534,PERCENTAGE,5,Sara,neutral,1.5
+621b99995f87e75f5365dfc9,Nuu-Muu,http://nuu-muu.com,nuu-muu.com,Nuu-Muu,4326657,8.07E-17,5480682,PERCENTAGE,5,Sara,neutral,1.5
+621b999c5f87e75f5365e11d,Ada + East,http://adaandeast.com,adaandeast.com,Ada + East,117956,1.49E-16,117983,PERCENTAGE,5,Sara,neutral,1.5
+621b999e5f87e75f5365e235,Dailygreatness - a brand of Dreaming Room Publishing,http://dailygreatness.co,dailygreatness.co,Daily Greatness,7728,7.98E-17,7745,PERCENTAGE,5,Sara,neutral,1.5
+621b99a25f87e75f5365e4a9,giggle,http://giggle.com,giggle.com,Giggle,66599,8.88E-17,69436,PERCENTAGE,5,Sara,neutral,1.5
+621b99a25f87e75f5365e4d9,Humble Brands,http://humblebrands.com,humblebrands.com,Humble Brands,104255,9.76E-17,104472,PERCENTAGE,5,Sara,neutral,1.5
+621b99a65f87e75f5365e711,KOR Water,http://korwater.com,korwater.com,KOR Water,3997600,1.20E-16,5479413,PERCENTAGE,5,Sara,neutral,1.5
+621b99a75f87e75f5365e7ad,alpyn beauty,http://alpynbeauty.com,alpynbeauty.com,Alpyn Beauty,67332,1.02E-16,68579,PERCENTAGE,5,Sara,neutral,1.5
+621b99a85f87e75f5365e88d,Wiley Body,http://wileybody.com,wileybody.com,Wiley Body,67412,1.13E-16,68480,PERCENTAGE,5,Sara,neutral,1.5
+621b99ab5f87e75f5365ea51,Jibby Coffee,http://jibbycoffee.com,jibbycoffee.com,Jibby Coffee,101611,1.02E-16,102042,PERCENTAGE,5,Sara,neutral,1.5
+621b99ac5f87e75f5365ead5,"Promix Nutrition, Inc.",http://promixnutrition.com,promixnutrition.com,Promix Nutrition,5520551,8.64E-17,7175,PERCENTAGE,5,Sara,neutral,1.5
+621b99ad5f87e75f5365eb6d,Ned & Co. LLC,http://helloned.com,helloned.com,Ned,102635,2.22E-16,120745,PERCENTAGE,5,Sara,neutral,1.5
+621b99ae5f87e75f5365ebdd,"Arctic Lynx, LLC",http://arcticlynxmaternity.com,arcticlynxmaternity.com,Arctic Lynx Maternity,112273,1.02E-16,112875,PERCENTAGE,5,Sara,neutral,1.5
+624c697e1ccf825229d25051,Swoveralls,http://swoveralls.com,swoveralls.com,Swoveralls,94323,6.34E-17,122201,PERCENTAGE,5,Sara,neutral,1.5
+62deed987b212526d1e016e3,Curology,https://curology.com/,curology.com,Curology,126149,0.02958579882,126198,FLAT,5,Sara,neutral,1.5
+62deee5f7b212526d1e0201f,Dabble & Dollop,https://dabbleanddollop.com/,dabbleanddollop.com,Dabble & Dollop,111289,0.02946853999,112488,PERCENTAGE,5,Sara,neutral,1.5
+62deee837b212526d1e024f4,Zuzu Luxe,https://gabrielcosmeticsinc.com/,gabrielcosmeticsinc.com,Gabriel Cosmetics,5505067,0.02082710299,5507684,PERCENTAGE,5,Sara,neutral,1.5
+62deee927b212526d1e02706,Better Not Younger,https://better-notyounger.com/,better-notyounger.com,Better Not Younger,67509,0.02347583246,70642,PERCENTAGE,5,Sara,neutral,1.5
+62deee997b212526d1e02857,Gabriel Cosmetics,https://gabrielcosmeticsinc.com/,gabrielcosmeticsinc.com,Gabriel Cosmetics,5505067,0.02082710299,5507684,PERCENTAGE,5,Sara,neutral,1.5
+62deeeab7b212526d1e02be9,SUPA Naturals,https://supanaturals.com/,supanaturals.com,SUPA Naturals,80071,0.02816933699,81863,PERCENTAGE,5,Sara,neutral,1.5
+62def0e77b212526d1e055ed,Nuzzie,http://shopnuzzie.com,shopnuzzie.com,Nuzzie LLC,108588,1.49E-16,111105,PERCENTAGE,5,Sara,neutral,1.5
+62def0f57b212526d1e058cd,Gomorrah,https://gomorrahnyc.com,gomorrahnyc.com,Gomorrah,114814,1.04E-16,115645,PERCENTAGE,5,Sara,neutral,1.5
+62deee577b212526d1e01f11,Act+Acre,https://actandacre.com/,actandacre.com,Act+Acre,79316,,83910,PERCENTAGE,5,Anushka,neutral,1.5
+62deee5b7b212526d1e01f60,AYOND,https://ayond.us/,ayond.us,Ayond,80518,,83178,PERCENTAGE,5,Anushka,neutral,1.5
+62deee5c7b212526d1e01f70,Beauty by Earth,https://beautybyearth.com/,beautybyearth.com,Beauty by Earth,84600,,84832,PERCENTAGE,5,Anushka,neutral,1.5
+62deeea07b212526d1e029b4,Bossy Cosmetics,https://bossybeauty.com/,bossybeauty.com,Bossy Cosmetics,114014,,114403,PERCENTAGE,5,Anushka,neutral,1.5
+621b99ae5f87e75f5365ebb9,Free Rain,http://freerain.com,drinkfreerain.com,Free Rain LLC,81009,,82253,PERCENTAGE,5,Anushka,neutral,1.5
+62deed9c7b212526d1e01753,Gryph & IvyRose,https://gryphandivyrose.com/,gryphandivyrose.com,Gryph & Ivy Rose,109817,,109981,PERCENTAGE,5,Anushka,neutral,1.5
+62def0337b212526d1e04df0,Hemp Mellow,https://www.hempmellow.com/,hempmellow.com,Hemp Mellow,82848,,82877,PERCENTAGE,5,Anushka,neutral,1.5
+62deeed77b212526d1e034c8,Herbal Goodness,https://www.herbalgoodnessco.com/,herbalgoodnessco.com,Herbal Goodness,71683,,5507979,PERCENTAGE,5,Anushka,neutral,1.5
+62deeebc7b212526d1e02f03,Hylunia Skincare,https://www.hylunia.com/,hylunia.com,HYLUNIA SKINCARE,107702,,112410,PERCENTAGE,5,Anushka,neutral,1.5
+62deeed87b212526d1e0350f,inPowered Lights,https://www.inpoweredlights.com/,inpoweredlights.com,inPowered Lights,114029,,114347,PERCENTAGE,5,Anushka,neutral,1.5
+62deeeae7b212526d1e02ca0,Loum Beauty of Calm,https://loumbeauty.com/,loumbeauty.com,Loum Beauty,82864,,82898,PERCENTAGE,5,Anushka,neutral,1.5
+62deedbb7b212526d1e01bcb,Madison Reed,https://www.madison-reed.com/,madison-reed.com,Madison-Reed,5503000,,5508581,PERCENTAGE,5,Anushka,neutral,1.5
+62deee5e7b212526d1e01fe3,MERIT,https://www.meritbeauty.com/,meritbeauty.com,MERIT,93412,,106656,PERCENTAGE,5,Anushka,neutral,1.5
+621b99b15f87e75f5365ede1,Michael Kors,https://www.michaelkors.com/,michaelkors.com,Michael Kors,3922517,,5480119,PERCENTAGE,5,Anushka,neutral,1.5
+62deedb37b212526d1e01ae3,Miss Spa,https://miss-spa.com/,miss-spa.com,Miss Spa,103719,,104649,PERCENTAGE,5,Anushka,neutral,1.5
+62deee667b212526d1e02121,NIUCOCO,https://niucoco.com/,niucoco.com,NIUCOCO,83293,,84215,PERCENTAGE,5,Anushka,neutral,1.5
+62deee9d7b212526d1e0292b,Organic Loven,https://www.organicloven.com/,organicloven.com,Organic Loven,108607,,108918,PERCENTAGE,5,Anushka,neutral,1.5
+62deedbe7b212526d1e01c22,Prai Beauty,https://praibeauty.com/,praibeauty.com,Prai Beauty,34834,,36677,PERCENTAGE,5,Anushka,neutral,1.5
+62deeeb07b212526d1e02cf7,Refresh Skin Therapy,https://www.refreshskintherapy.com/,refreshskintherapy.com,Refresh Skin Therapy,67027,,67218,PERCENTAGE,5,Anushka,neutral,1.5
+62deee907b212526d1e026d7,REUZEL,https://www.reuzel.com/,reuzel.com,Reuzel,76672,,76764,PERCENTAGE,5,Anushka,neutral,1.5
+62deedb17b212526d1e01a87,Skylar Body,https://skylar.com/,skylar.com,Skylar Body,5515153,,5512796,PERCENTAGE,5,Anushka,neutral,1.5
+621b99bd5f87e75f5365f4a5,Stuart Weitzman,https://www.stuartweitzman.com/,stuartweitzman.com,Stuart Weitzman,4611846,,5482693,PERCENTAGE,5,Anushka,neutral,1.5
+62deeec57b212526d1e030da,SWAIR,https://www.swairhair.com/,swairhair.com,SWAIR,80572,,83948,PERCENTAGE,5,Anushka,neutral,1.5
+62deeee27b212526d1e037aa,The Beauty Crop Limited,http://www.thebeautycrop.com/,thebeautycrop.com,The Beauty Crop,111884,,112413,PERCENTAGE,5,Anushka,neutral,1.5
+62deeea17b212526d1e029cd,Unsun Cosmetics,https://www.unsuncosmetics.com/,unsuncosmetics.com,Unsun Cosmetics,111539,,112341,PERCENTAGE,5,Anushka,neutral,1.5
+62deeebd7b212526d1e02f53,Visha Skincare,https://www.vishaskincare.com/,vishaskincare.com,Visha Skincare,5505960,,5510491,PERCENTAGE,5,Anushka,neutral,1.5
+62deeec87b212526d1e03136,ZENMED,https://zenmed.com/,zenmed.com,ZENMED,4464846,,5484269,PERCENTAGE,5,Anushka,neutral,1.5
+621b998e5f87e75f5365d8fd,Chews Happiness,http://chewshappiness.com,chewshappiness.com,CHEWS HAPPINESS,92039,8.98E-17,93830,PERCENTAGE,5,Sara,neutral,2
+621b99ad5f87e75f5365eb15,Needed PBC,http://thisisneeded.com,thisisneeded.com,Needed PBC,109651,2.22E-16,109888,PERCENTAGE,5,Sara,neutral,2
+62deeed47b212526d1e033d4,Eat Me Guilt Free,https://www.eatmeguiltfree.com/,eatmeguiltfree.com,Eat Me Guilt Free,93753,,93799,PERCENTAGE,5,Anushka,neutral,2
+621b99345f87e75f5365a4c9,GoDaddy,http://godaddy.com,godaddy.com,GoDaddy,4611669,8.07E-17,5478275,PERCENTAGE,5,Sara,neutral,2.5
+621b99695f87e75f5365c365,The Honest Company,http://honest.com,honest.com,The Honest Company,3919078,7.14E-17,5478699,PERCENTAGE,5,Sara,neutral,2.5
+621b998c5f87e75f5365d7dd,Conscious Step,http://consciousstep.com,consciousstep.com,Conscious Step,78235,9.35E-17,76863,PERCENTAGE,5,Sara,neutral,2.5
+621b999e5f87e75f5365e295,Pirani Life,http://pirani.life,pirani.life,"Pirani Life, Inc",100054,5.57E-17,100929,PERCENTAGE,5,Sara,neutral,2.5
+62deeeaf7b212526d1e02cc4,Versed,https://versedskin.com/,versedskin.com,VersedSkin.com,65986,0.004444444444,76542,PERCENTAGE,5,Sara,neutral,2.5
+62deef187b212526d1e03ea0,Giant Food,https://www.giantfood.com/,giantfood.com,Giant Food,93728,,93747,FLAT,5,Anushka,neutral,3.5
+62deefab7b212526d1e046cf,Icebug AB,https://icebug.com/,icebug.com,ICEBUG,102326,,102380,PERCENTAGE,5,Anushka,neutral,4
+62deed8d7b212526d1e01530,White Lotus Home,https://www.whitelotushome.com/,whitelotushome.com,White Lotus Home,67319,,69398,PERCENTAGE,5,Anushka,neutral,4.5
+62def3207b212526d1e0860f,Desert Farms,http://desertfarms.net/,desertfarms.com,Desert Farms,114460,,114543,PERCENTAGE,5,Anushka,neutral,5.5
+62def31e7b212526d1e085ad,Fresh Roasted Coffee LLC,http://www.freshroastedcoffee.com/,freshroastedcoffee.com,Fresh Roasted Coffee,102466,,102537,PERCENTAGE,5,Anushka,neutral,5.5
+62def2b87b212526d1e0824f,Tea Drops,http://myteadrop.com/,myteadrop.com,Tea Drops,66604,,66957,PERCENTAGE,5,Anushka,neutral,5.5
+621b99e85f87e75f53660d3d,Lancome,https://www.lancome.com,lancome-usa.com,Lancome,78671,,81762,PERCENTAGE,5,Anushka,neutral,6
+621b99e75f87e75f53660d29,NYX Professional Makeup,https://www.nyxcosmetics.com/,nyxcosmetics.com,NYX Professional Makeup,35344,,37526,PERCENTAGE,5,Anushka,neutral,6
+621b99e85f87e75f53660d6d,Vichy,https://www.vichyusa.com/,vichyusa.com,Vichy,3924977,,5483795,PERCENTAGE,5,Anushka,neutral,6
+624c69801ccf825229d250e4,Woot,https://www.woot.com/,woot.com,Woot!,4667038,,5484127,PERCENTAGE,5,Anushka,neutral,7.5
+621b992f5f87e75f5365a1d1,Amazon,http://amazon.com,amazon.com,Amazon,3557605,8.88E-17,5475294,PERCENTAGE,5,Sara,positive,8
+621b994e5f87e75f5365b3bd,Accompany,http://accompanyus.com,accompanyus.com,Accompany Fashion,5504468,1.16E-16,5506335,PERCENTAGE,5,Sara,positive,8
+621b99d35f87e75f53660179,Bumble and Bumble,https://www.bumbleandbumble.com/,bumbleandbumble.com,Bumble and Bumble,3920686,,5476189,PERCENTAGE,5,Anushka,positive,8
+621b99595f87e75f5365ba05,MiiR,http://miir.com,miir.com,MiiR,4326635,1.11E-16,5480138,PERCENTAGE,5,Sara,positive,9
+621b99595f87e75f5365ba69,Therafit Shoe,http://therafitshoe.com,therafitshoe.com,Therafit Shoe,123295,9.76E-17,123395,PERCENTAGE,5,Sara,positive,9
+621b995c5f87e75f5365bc01,Bixbee,http://bixbee.com,bixbee.com,Bixbee,85704,8.88E-17,85723,PERCENTAGE,5,Sara,positive,9
+621b99435f87e75f5365ad91,Nimble,http://gonimble.com,gonimble.com,Nimble,65973,1.11E-16,66058,PERCENTAGE,5,Sara,positive,10
+621b99565f87e75f5365b831,Dr. Hauschka Skin Care,http://drhauschka.com,drhauschka.com,Dr. Hauschka,107917,1.22E-16,109074,PERCENTAGE,5,Sara,positive,10
+62def1787b212526d1e06b08,Homethings,gethomethings.com,gethomethings.com,Homethings,109030,9.14E-17,109271,PERCENTAGE,5,Sara,positive,10
+62def1aa7b212526d1e071a8,Pitaya Foods,www.pitayafoods.com,pitayafoods.com,Pitaya Foods,94292,,103077,PERCENTAGE,5,Anushka,positive,10
+621b99545f87e75f5365b76d,Babo Botanicals,http://babobotanicals.com,babobotanicals.com,Babo Botanicals,5503053,8.98E-17,5506554,PERCENTAGE,5,Sara,positive,11
+62def1107b212526d1e05b5a,Awake Corporation,https://awakechocolate.com/,awakechocolate.com,AWAKE Chocolate,124035,0.02329810173,130108,PERCENTAGE,5,Sara,positive,12
+621b99595f87e75f5365ba35,Simply Straws,http://simplystraws.com,simplystraws.com,Simply Straws,79339,9.76E-17,81391,PERCENTAGE,5,Sara,positive,12.5
+621b993f5f87e75f5365ab19,Ace of Air,http://aceofair.com,aceofair.com,Ace of Air,127332,1.49E-16,127425,PERCENTAGE,5,Sara,positive,13
+621b994c5f87e75f5365b289,Nisolo,http://nisolo.com,nisolo.com,Nisolo,3922905,8.88E-17,5480616,PERCENTAGE,5,Sara,positive,14
+62def1a17b212526d1e0706e,Healthy Human LLC,healthyhumanlife.com,healthyhumanlife.com,Healthy Human Life,127444,1.11E-16,127535,PERCENTAGE,5,Sara,positive,14
+621b99415f87e75f5365ac55,Karen Kane,http://karenkane.com,karenkane.com,KarenKane.com,5518377,4.93E-32,94875,PERCENTAGE,5,Sara,positive,15
+621b99575f87e75f5365b92d,Raven + Lily,http://ravenandlily.com,ravenandlily.com,Raven + Lily,127995,1.38E-16,129035,PERCENTAGE,5,Sara,positive,15
+621b995a5f87e75f5365ba91,West Paw,http://westpaw.com,westpaw.com,West Paw,127169,1.27E-16,127352,PERCENTAGE,5,Sara,positive,15
+62def1957b212526d1e06ec7,"Attn: Grace, Inc",www.attngrace.com,attngrace.com,Attn: Grace,80245,,81951,PERCENTAGE,5,Anushka,positive,15
+621b99425f87e75f5365aca5,PEAK DESIGN,http://peakdesign.com,peakdesign.com,Peak Design,112886,1.07E-16,113005,PERCENTAGE,5,Sara,positive,16
+62def1427b212526d1e0648c,Dun & Bradstreet,https://www.dnb.com/,dnb.com,Dun & Bradstreet,95118,,5476891,PERCENTAGE,4.8,Anushka,negative,-3
+621b99575f87e75f5365b955,Grove Collaborative,http://grove.co,grove.co,Grove Collaborative,5520352,5.10E-17,7779,FLAT,4.8,Sara,positive,15
+621b99e85f87e75f53660da9,Urban Decay,https://www.urbandecay.com/,urbandecay.com,Urban Decay,59184,,115724,PERCENTAGE,4.51,Anushka,neutral,6
+621b99e35f87e75f53660a81,Paramount+,https://www.paramountplus.com/,paramountplus.com,Paramount+,95461,,100835,FLAT,4.5,Anushka,neutral,3.5
+621b99375f87e75f5365a6b1,Nuance Communications,http://nuance.com,nuance.com,Nuance,4611762,8.88E-17,5480667,PERCENTAGE,4,Sara,negative,-4
+621b99bd5f87e75f5365f495,Cynthia Rowley TJX,https://cynthiarowley.com/,cynthiarowley.com,Cynthia Rowley,5512312,0.02555069794,5512543,PERCENTAGE,4,Sara,negative,-1.5
+621b99315f87e75f5365a341,Columbia Sportswear Company,http://columbia.com,columbia.com,Columbia Sportswear,4464631,1.02E-16,5476640,PERCENTAGE,4,Sara,negative,-1
+621b99b25f87e75f5365ee11,Mountain Hardwear,https://www.mountainhardwear.com/,mountainhardwear.com,Mountain Hardwear,4611749,,5480313,PERCENTAGE,4,Anushka,negative,-1
+62def1407b212526d1e06442,Petco,https://www.petco.com/shop/en/petcostore,petco.com,PETCO,3854616,,5481098,FLAT,4,Anushka,negative,-1
+621b99b15f87e75f5365ede5,SOREL,https://www.sorel.com/,sorel.com,Sorel,4611833,,5482457,PERCENTAGE,4,Anushka,negative,-1
+621b99805f87e75f5365d0fd,Simbly,http://simbly.com,simbly.com,Simbly,78165,8.88E-17,78293,PERCENTAGE,4,Sara,neutral,0
+621b99a35f87e75f5365e5a9,Happsy,http://happsy.com,happsy.com,Happsy,5505832,8.88E-17,5507912,PERCENTAGE,4,Sara,neutral,0
+621b99a55f87e75f5365e655,Give'r,http://give-r.com,give-r.com,Give'r,116375,1.11E-16,116879,PERCENTAGE,4,Sara,neutral,0
+62deefa17b212526d1e04608,Veronica Beard,https://veronicabeard.com/,veronicabeard.com,Veronica Beard,3924959,0.02555069794,5483770,PERCENTAGE,4,Sara,neutral,0
+62def00b7b212526d1e04936,Make Up For Ever,https://www.makeupforever.com/us/en,makeupforever.com,Make Up For Ever,65978,,76236,PERCENTAGE,4,Anushka,neutral,0
+621b99885f87e75f5365d5a9,Toad&Co - Dresses,https://www.toadandco.com,toadandco.com,Toad & Co,66328,,66559,PERCENTAGE,4,Anushka,neutral,0
+62deef467b212526d1e04461,Neal's Yard Remedies,https://us.nealsyardremedies.com/?feature=locale-popup&referringSite=nyr_en_GB&countrySelected=Y,us.nealsyardremedies.com,Neal's Yard Remedies,107911,,5480536,PERCENTAGE,4,Anushka,neutral,0.5
+62def1aa7b212526d1e071bf,KORA Organics,https://us.koraorganics.com/,us.koraorganics.com,Kora Organics,79251,0.02843094214,84490,PERCENTAGE,4,Sara,neutral,1
+62def3d17b212526d1e09212,Aquasana,https://www.aquasana.com/,aquasana.com,Aquasana,3920683,,5475398,PERCENTAGE,4,Anushka,neutral,1
+621b998c5f87e75f5365d7ed,Seager,http://seagerco.com,seagerco.com,Seager,99474,1.11E-16,99654,PERCENTAGE,4,Sara,neutral,1.5
+621b999d5f87e75f5365e1c5,Earthlove,http://earthlove.co,earthlove.co,Earthlove,67996,5.55E-17,69373,PERCENTAGE,4,Sara,neutral,1.5
+621b999e5f87e75f5365e271,Ridge Merino,http://ridgemerino.com,ridgemerino.com,Ridge Merino,5514237,1.02E-16,5518646,PERCENTAGE,4,Sara,neutral,1.5
+621b99a05f87e75f5365e3a1,STEP 22 Gear,http://step22gear.com,step22gear.com,STEP 22 Gear,81579,1.36E-16,82282,PERCENTAGE,4,Sara,neutral,1.5
+621b99a75f87e75f5365e7d5,ALPAKA,http://alpakagear.com,alpakagear.com,ALPAKA,76069,1.27E-16,74725,PERCENTAGE,4,Sara,neutral,1.5
+624c697a1ccf825229d24e32,Pale Blue Earth LLC,http://paleblueearth.com,paleblueearth.com,Pale Blue,78576,1.53E-16,79711,PERCENTAGE,4,Sara,neutral,1.5
+62deeeb77b212526d1e02e47,Sparitual,https://sparitual.com/,sparitual.com,Sparitual,84578,0.02551020408,84810,PERCENTAGE,4,Sara,neutral,1.5
+62deeebd7b212526d1e02f64,One Ocean Beauty,https://oneoceanbeauty.com/,oneoceanbeauty.com,One Ocean Beauty,68062,0.02958197328,69680,PERCENTAGE,4,Sara,neutral,1.5
+62deeedd7b212526d1e03664,Packed with Purpose,https://packedwithpurpose.gifts/,packedwithpurpose.gifts,Packed with Purpose,84710,0.02365945845,85378,PERCENTAGE,4,Sara,neutral,1.5
+62deee577b212526d1e01f0c,aavrani,https://aavrani.com/,aavrani.com,Aavrani,76698,,76770,PERCENTAGE,4,Anushka,neutral,1.5
+62deedb57b212526d1e01b28,Castle Baths,https://www.castlebaths.com/,castlebaths.com,CastleBaths,5502861,,5506919,PERCENTAGE,4,Anushka,neutral,1.5
+62deed9b7b212526d1e01729,Follain,https://follain.com/,follain.com,Follain,9546,,5509650,PERCENTAGE,4,Anushka,neutral,1.5
+62deed9e7b212526d1e01791,KitavaMD,https://kitavamd.com/,kitavamd.com,KITAVA MD,78196,,76851,PERCENTAGE,4,Anushka,neutral,1.5
+62deee767b212526d1e02367,Noble Panacea,https://www.noblepanacea.com/,noblepanacea.com,Noble Panacea,93098,,116983,PERCENTAGE,4,Anushka,neutral,1.5
+62deedaf7b212526d1e01a3f,W3LL PEOPLE,https://www.w3llpeople.com/,w3llpeople.com,W3ll People,5518340,,106906,PERCENTAGE,4,Anushka,neutral,1.5
+621b997e5f87e75f5365cfe5,Sunski,http://sunski.com,sunski.com,Sunski,5515397,8.88E-17,5518588,PERCENTAGE,4,Sara,neutral,2
+621b999d5f87e75f5365e225,Ombraz Sunglasses,http://ombraz.com,ombraz.com,Ombraz Sunglasses,110866,1.16E-16,111141,PERCENTAGE,4,Sara,neutral,2
+62deee9d7b212526d1e028f6,Kate McLeod,https://www.katemcleod.com/,katemcleod.com,Kate McLeod,115976,,116663,PERCENTAGE,4,Anushka,neutral,2.5
+62deedb97b212526d1e01bac,Pangea Organics,https://pangeaorganics.com/,pangeaorganics.com,Pangea Organics,3923136,0.02329810173,5480924,PERCENTAGE,4,Sara,neutral,3.5
+621b99e85f87e75f53660d9d,La Roche-Posay,https://www.laroche-posay.com/,laroche-posay.us,La Roche-Posay,3922008,,5479487,PERCENTAGE,4,Anushka,neutral,6
+621b99e85f87e75f53660d5d,Mugler,https://www.mugler.com/,muglerusa.com,Mugler,5513213,,5519378,PERCENTAGE,4,Anushka,neutral,6
+62deed687b212526d1e01083,New Balance,https://www.newbalance.com/,newbalance.com,New Balance,3922860,,5480569,PERCENTAGE,4,Anushka,neutral,6
+621b99f25f87e75f53661359,Peets Coffee,https://www.peets.com/,peets.com,Peet's Coffee,7604,,5480136,PERCENTAGE,4,Anushka,positive,8
+621b99ba5f87e75f5365f2c5,Gillette,https://gillette.com/,gillette.com,Gillette,65612,0.02958579882,115543,PERCENTAGE,4,Sara,positive,8.5
+621b99ba5f87e75f5365f2d5,Braun,https://us.braun.com/,us.braun.com,Braun,118196,,82616,PERCENTAGE,4,Anushka,positive,8.5
+621b99ba5f87e75f5365f305,The Art of Shaving,https://theartofshaving.com/,theartofshaving.com,The Art of Shaving,3854665,,5482985,PERCENTAGE,4,Anushka,positive,8.5
+621b99cb5f87e75f5365fc79,Wolf & Badger,https://www.wolfandbadger.com/us/,wolfandbadger.com,Wolf & Badger,3925196,,5484107,PERCENTAGE,4,Anushka,positive,9
+621b99495f87e75f5365b135,MegaFood,http://megafood.com,megafood.com,MegaFood,8814,7.40E-17,99497,PERCENTAGE,4,Sara,positive,10
+621b99545f87e75f5365b729,Country Life,http://countrylifevitamins.com,countrylifevitamins.com,Country Life Vitamins & Biochem Protein,85243,1.28E-16,85282,PERCENTAGE,4,Sara,positive,11
+621b99565f87e75f5365b86d,Soapbox,http://soapboxsoaps.com,soapboxsoaps.com,Soapbox,104897,1.25E-16,105347,PERCENTAGE,4,Sara,positive,11
+621b99bd5f87e75f5365f4c9,Eagle Creek,https://www.eaglecreek.com/,eaglecreek.com,Eagle Creek,5513984,,37454,PERCENTAGE,4,Anushka,positive,11.5
+621b99be5f87e75f5365f4f9,Nautica,https://www.nautica.com/,nautica.com,Nautica,4425464,,5480527,PERCENTAGE,4,Anushka,positive,11.5
+621b99815f87e75f5365d19d,Bona Furtuna,http://bonafurtuna.com,bonafurtuna.com,Bona Furtuna,103718,1.02E-16,104072,PERCENTAGE,4,Sara,positive,14
+621b99605f87e75f5365be85,Happy Earth Apparel,http://happyearthapparel.com,happyearthapparel.com,Happy Earth,129808,1.49E-16,130163,PERCENTAGE,4,Sara,positive,16
+62deee647b212526d1e020ca,GuruNanda,https://gurunanda.com/,gurunanda.com,GuruNanda,5505238,0.02551020408,5507886,PERCENTAGE,3.75,Sara,neutral,1.5
+621b99f75f87e75f53661605,Goal Zero,http://www.goalzero.com/,goalzero.com,Goal Zero,5518424,,104316,PERCENTAGE,3.5,Anushka,negative,-2
+621b99d75f87e75f53660381,4 Wheel Parts,https://www.4wheelparts.com/,4wheelparts.com,4 Wheel Parts,2189683,,5475005,PERCENTAGE,3.5,Anushka,neutral,0
+62deef517b212526d1e04540,Speedo,https://us.speedo.com/,us.speedo.com,Speedo,110390,,5482496,PERCENTAGE,3.5,Anushka,neutral,0
+621b992f5f87e75f5365a1fd,Autodesk,http://autodesk.in,autodesk.com,Autodesk,3997306,,5519489,PERCENTAGE,3.5,Anushka,neutral,0.5
+62def3eb7b212526d1e09ec7,Cariuma,https://cariuma.com/,cariuma.com,Cariuma,65950,,66062,PERCENTAGE,3.5,Anushka,neutral,0.5
+62def3eb7b212526d1e09db8,No Issue,https://www.noissue.ca/,noissue.co,noissue.,5518933,,119080,PERCENTAGE,3.5,Anushka,neutral,0.5
+62def3ea7b212526d1e09cd8,Reebok,https://www.reebok.com/us,reebok.com,Reebok,122488,,5509685,PERCENTAGE,3.5,Anushka,neutral,0.5
+62deed927b212526d1e01606,Cutter & Buck,https://cutterbuck.com/,cutterbuck.com,Cutter and Buck,4611616,,5476856,PERCENTAGE,3.5,Anushka,neutral,1
+62deeefa7b212526d1e03b23,"Outstanding Foods, Inc.",http://www.outstandingfoods.com/?utm_source=plantbasedfoods,outstandingfoods.com,Outstanding Foods,110461,,110988,PERCENTAGE,3.5,Anushka,neutral,1
+62deeefb7b212526d1e03b3e,PeaTos,https://peatos.com/?utm_source=plantbasedfoods,peatos.com,PeaTos,77415,,77423,PERCENTAGE,3.5,Anushka,neutral,1
+621b99a15f87e75f5365e465,RightOnTrek,http://rightontrek.com,rightontrek.com,RightOnTrek,127338,5.92E-17,127408,PERCENTAGE,3.5,Sara,neutral,1.5
+62deedb57b212526d1e01b1c,Derma E,https://dermae.com/,dermae.com,DERMAE,3920195,,5477003,PERCENTAGE,3.5,Anushka,neutral,1.5
+621b99bd5f87e75f5365f47d,Kate Spade,https://www.katespade.com/,katespade.com,Kate Spade,120015,,5479279,PERCENTAGE,3.5,Anushka,neutral,1.5
+62deeecc7b212526d1e031f8,Luzern,https://luzernlabs.com/,luzernlabs.com,Luzern Labs,5515449,,5519099,PERCENTAGE,3.5,Anushka,neutral,1.5
+62deeec17b212526d1e03067,Paula's Choice,https://www.paulaschoice.com/,paulaschoice.com,Paula's Choice,3923182,,5480992,PERCENTAGE,3.5,Anushka,neutral,1.5
+62deeeb17b212526d1e02d3d,Glow Recipe,https://www.glowrecipe.com/,glowrecipe.com,Glow Recipe,5505224,,5507785,PERCENTAGE,3.5,Anushka,neutral,2.5
+62deee697b212526d1e021c0,Sweet Chef,https://sweetchefskincare.com/,sweetchefskincare.com,Sweet Chef,76711,,105107,PERCENTAGE,3.5,Anushka,neutral,2.5
+62deeff87b212526d1e0474f,Nunn Bush,https://www.nunnbush.com/,nunnbush.com,Nunn Bush,3922964,,5480674,PERCENTAGE,3.5,Anushka,neutral,3.5
+621b99e85f87e75f53660d69,Kerastese,https://www.kerastase.com/,kerastase-usa.com,Kerastase,5512210,,5512652,PERCENTAGE,3.5,Anushka,neutral,6
+621b99e85f87e75f53660db1,Pureology,https://www.pureology.com/,pureology.com,Pureology,5790,,6798,PERCENTAGE,3.5,Anushka,neutral,6
+621b99ba5f87e75f5365f301,Olay,https://www.olay.com/,olay.com,Olay,3923011,,5480736,PERCENTAGE,3.5,Anushka,positive,8.5
+621b99525f87e75f5365b655,Barebones Living,http://barebonesliving.com,barebonesliving.com,Barebones,82924,1.17E-16,82978,PERCENTAGE,3.5,Sara,positive,10
+62deefa07b212526d1e045ea,Franco Sarto,https://www.francosarto.com/,francosarto.com,Franco Sarto,3920971,,5477961,PERCENTAGE,3.2,Anushka,neutral,0
+62def00b7b212526d1e04949,KVD Vegan Beauty,https://www.kvdveganbeauty.com/,kvdveganbeauty.com,KVD Vegan Beauty,95141,,117079,PERCENTAGE,3.2,Anushka,neutral,0
+62deee967b212526d1e027d2,Apoterra Skincare,https://www.apoterra.com/,apoterra.com,Apoterra Skincare,35256,,37414,PERCENTAGE,3.2,Anushka,neutral,1.5
+621b99b15f87e75f5365edbd,Jimmy Choo,https://www.jimmychoo.com/en/home,jimmychoo.com,Jimmy Choo,5514433,,36784,PERCENTAGE,3.2,Anushka,neutral,1.5
+621b99d95f87e75f536604b9,The Laundress,https://www.thelaundress.com/,thelaundress.com,The Laundress,75672,,76540,PERCENTAGE,3.2,Anushka,neutral,6
+621b99bb5f87e75f5365f33d,Calvin Klein,https://www.calvinklein.us/en,calvinklein.us,Calvin Klein,95180,,5476261,PERCENTAGE,3.2,Anushka,positive,9.5
+621b99bd5f87e75f5365f4dd,Kipling,https://www.kipling-usa.com/,kipling-usa.com,Kipling,4425442,,78822,PERCENTAGE,3.2,Anushka,positive,11.5
+621b993a5f87e75f5365a849,SiriusXM,https://www.siriusxm.com/?intcmp=FullNav_NA_www:Home_Logo,siriusxm.com,SiriusXM,1991653,,5482278,FLAT,3,Anushka,negative,-8.5
+621b99af5f87e75f5365ecb9,Rentalcars.com,https://www.rentalcars.com/,rentalcars.com,RentalCars.com,3923588,,5481646,PERCENTAGE,3,Anushka,negative,-4.5
+62deefa07b212526d1e045fc,Vince,https://www.vince.com/,vince.com,Vince,5514392,,7861,PERCENTAGE,3,Anushka,neutral,0
+62def3e97b212526d1e09c8a,FarmRio,https://www.farmrio.com/,farmrio.com,FarmRio,55847,,57057,PERCENTAGE,3,Anushka,neutral,0.5
+62deed917b212526d1e015e1,Bella+Carwas,https://www.bellacanvas.com/,bellacanvas.com,BELLA+CANVAS,76008,,74835,PERCENTAGE,3,Anushka,neutral,1
+62def1b67b212526d1e07315,BioLite,https://www.bioliteenergy.com/,bioliteenergy.com,BioLite,4326502,,5475877,PERCENTAGE,3,Anushka,neutral,1
+62def3d27b212526d1e09236,G Adventures,http://www.gadventures.com/,gadventures.com,G Adventures,3920993,,5478071,PERCENTAGE,3,Anushka,neutral,1
+62def10d7b212526d1e05afc,Hydro Flask,https://www.hydroflask.com/,hydroflask.com,Hydro Flask,4326597,,5478839,PERCENTAGE,3,Anushka,neutral,1
+621b997b5f87e75f5365ce25,distil union,http://distilunion.com,distilunion.com,Distil Union,124631,1.02E-16,124836,PERCENTAGE,3,Sara,neutral,1.5
+621b99975f87e75f5365de31,Hairstory - New Wash,http://hairstory.com,hairstory.com,Hairstory,76681,6.83E-17,101765,PERCENTAGE,3,Sara,neutral,1.5
+621b99a35f87e75f5365e535,Zeal Optics,http://zealoptics.com,zealoptics.com,Zeal Optics Sunglasses & Goggles,85242,1.40E-16,85281,PERCENTAGE,3,Sara,neutral,1.5
+62deed9e7b212526d1e017b7,Marie's Original Formulas,https://marieoriginals.com/,marieoriginals.com,Marie Originals,125019,0.02329810173,125025,PERCENTAGE,3,Sara,neutral,1.5
+62deed9a7b212526d1e01719,Fekkai,https://fekkai.com/,fekkai.com,Fekkai,3920826,,116709,PERCENTAGE,3,Anushka,neutral,1.5
+62deedb67b212526d1e01b40,Herbivore Botanicals,https://www.herbivorebotanicals.com/,herbivorebotanicals.com,Herbivore Botanicals,7115,,7142,PERCENTAGE,3,Anushka,neutral,1.5
+62deed9d7b212526d1e01767,Indie Lee & Co.,https://indielee.com/,indielee.com,Indie Lee,67001,,119778,PERCENTAGE,3,Anushka,neutral,1.5
+62deee797b212526d1e023c9,Sulina Shop,https://www.sulinashop.com/,sulinashop.com,Sulina Shop,79552,,81628,PERCENTAGE,3,Anushka,neutral,1.5
+62deee927b212526d1e02718,Wander Beauty,https://www.wanderbeauty.com/,wanderbeauty.com,Wander Beauty,5520429,,6866,PERCENTAGE,3,Anushka,neutral,1.5
+62deedc97b212526d1e01dab,Biossance,https://biossance.com/,biossance.com,Biossance,5514013,0.02551020408,5518809,PERCENTAGE,3,Sara,neutral,2
+621b99675f87e75f5365c211,OfficeDepot OfficeMax,http://officedepot.com,officedepot.com,Office Depot,1991725,1.02E-16,5517485,PERCENTAGE,3,Sara,neutral,2.5
+62deef117b212526d1e03d4f,Community Coffee,http://www.communitycoffee.com/,communitycoffee.com,Community Coffee,78859,,78895,PERCENTAGE,3,Anushka,neutral,2.5
+62def3cb7b212526d1e090fb,ecobee,https://www.ecobee.com/en-us/,ecobee.com,ecobee,78421,,78763,PERCENTAGE,3,Anushka,neutral,2.5
+62deef237b212526d1e04057,Stone Street Coffee Company,https://www.stonestreetcoffee.com/,stonestreetcoffee.com,Stone Street Coffee,114214,,114271,PERCENTAGE,3,Anushka,neutral,2.5
+62deef537b212526d1e04580,ALDO,https://www.aldoshoes.com/us/en_US,aldoshoes.com,Aldo,3919084,,5475212,PERCENTAGE,3,Anushka,neutral,3.5
+62deeffc7b212526d1e047b8,The Sak,https://www.thesak.com/,thesak.com,The Sak,69721,,69869,PERCENTAGE,3,Anushka,neutral,3.5
+62def21d7b212526d1e075ad,Boohoo,www.boohoo.com,us.boohoo.com,Boohoo,3855148,,102896,PERCENTAGE,3,Anushka,neutral,4.5
+621b99765f87e75f5365cae9,Office Depot,http://officedepot.com,officedepot.com,Office Depot,1991725,1.02E-16,5517485,PERCENTAGE,3,Sara,neutral,5
+621b99b55f87e75f5365efc9,Credit Karma,https://www.creditkarma.com/,creditkarma.com,Credit Karma,66323,,66580,FLAT,3,Anushka,neutral,5
+62def00c7b212526d1e04965,John Hardy,https://www.johnhardy.com/,johnhardy.com,John Hardy,3921791,,5479170,PERCENTAGE,3,Anushka,neutral,5
+621b99e85f87e75f53660d75,SkinCeuticals,https://www.skinceuticals.com/,skinceuticals.com,SkinCeuticals,3923990,,5482301,PERCENTAGE,3,Anushka,neutral,6
+621b99975f87e75f5365de6d,Harney & Sons,http://harney.com,harney.com,Harney & Sons,78477,1.31E-16,82572,PERCENTAGE,3,Sara,neutral,6.5
+621b99e75f87e75f53660d11,Molton Brown,https://www.moltonbrown.com/,moltonbrown.com,Molton Brown,4464733,,5519742,PERCENTAGE,3,Anushka,neutral,6.5
+621b99335f87e75f5365a44d,Facebook,http://facebook.com,store.facebook.com,Facebook,127585,0.02,116768,PERCENTAGE,3,Sara,neutral,7.5
+621b99b35f87e75f5365eee9,Intermix,https://www.intermixonline.com/,intermixonline.com,Intermix,3997563,,5478989,PERCENTAGE,3,Anushka,neutral,7.5
+621b99d35f87e75f5366017d,Aveda,https://www.aveda.com/,aveda.com,Aveda,3960763,,5475542,PERCENTAGE,3,Anushka,positive,8
+621b99d45f87e75f536601ad,Clinique,https://www.clinique.com/,clinique.com,Clinique,99719,,5476586,PERCENTAGE,3,Anushka,positive,8
+621b99d35f87e75f53660185,DKNY,https://www.donnakaran.com/category/dkny.do,donnakaran.com,DKNY,3920322,,5477158,PERCENTAGE,3,Anushka,positive,8
+621b99d45f87e75f53660215,Too Faced,https://www.toofaced.com/,toofaced.com,Too Faced Cosmetics,5514565,,5519483,PERCENTAGE,3,Anushka,positive,8
+621b99be5f87e75f5365f549,Moosejaw,https://www.moosejaw.com/,moosejaw.com,Moosejaw,3922646,,5480280,PERCENTAGE,3,Anushka,positive,9
+621b99b95f87e75f5365f1fd,Converse,https://www.converse.com/,converse.com,Converse,3920024,,5476691,PERCENTAGE,3,Anushka,positive,10
+621b99be5f87e75f5365f501,Rite Aid,https://www.riteaid.com/,riteaid.com,Rite Aid,4464779,,5481704,PERCENTAGE,2.8,Anushka,neutral,3
+621b99e55f87e75f53660bdd,At-A-Glance,https://www.ataglance.com/about-us/,ataglance.com,AT-A-GLANCE,4464588,,5475464,PERCENTAGE,2.75,Anushka,neutral,2.5
+621b99395f87e75f5365a7d9,Roku,http://roku.com,roku.com,Roku,3855632,1.11E-16,5481746,PERCENTAGE,2.5,Sara,negative,-7.5
+621b99b25f87e75f5365ee51,Boost Mobile,https://www.boostmobile.com/,boostmobile.com,Boost Mobile,5513125,,5519076,PERCENTAGE,2.5,Anushka,negative,-7.5
+62def1477b212526d1e0654b,GameStop,https://www.gamestop.com/,gamestop.com,GameStop,1991721,,5478087,PERCENTAGE,2.5,Anushka,negative,-7.5
+621b99b15f87e75f5365ed65,See's Candies,https://www.sees.comm,sees.com,See's Candies,4611814,,5481960,PERCENTAGE,2.5,Anushka,negative,-7
+621b99335f87e75f5365a471,Fair Isaac,http://fico.com,myfico.com,FICO,5503044,0.01,5508841,FLAT,2.5,Sara,negative,-6
+621b99b75f87e75f5365f14d,Ticketmaster,https://www.ticketmaster.com/,ticketmaster.com,Ticketmaster,1991727,,5483208,PERCENTAGE,2.5,Anushka,negative,-2
+621b99325f87e75f5365a3a1,Dollar Tree,http://dollartree.com,dollartree.com,DollarTree,5504398,6.34E-17,5507279,PERCENTAGE,2.5,Sara,negative,-1
+621b99b35f87e75f5365ee8d,Orbitz,https://www.orbitz.com/,orbitz.com,Orbitz,5517440,,5517484,PERCENTAGE,2.5,Anushka,negative,-0.5
+621b99b25f87e75f5365ee79,Travelocity,https://www.travelocity.com/,travelocity.com,Travelocity,5517442,,5517487,PERCENTAGE,2.5,Anushka,negative,-0.5
+621b99345f87e75f5365a4dd,GrubHub,http://grubhub.com,grubhub.com,Grubhub,104216,8.07E-17,104452,FLAT,2.5,Sara,neutral,0
+621b99505f87e75f5365b4dd,Dr. Brite,http://drbrite.com,drbrite.com,Dr. Brite,83624,1.45E-16,83988,PERCENTAGE,2.5,Sara,neutral,0
+621b99e95f87e75f53660e09,Helmut Lang,https://www.helmutlang.com/,helmutlang.com,Helmut Lang,84640,,84870,PERCENTAGE,2.5,Anushka,neutral,0
+62def3eb7b212526d1e09f14,Rheal Superfoods,https://rhealsuperfoods.com/,rhealsuperfoods.com,Rheal Superfoods,129090,0.02134492983,129250,PERCENTAGE,2.5,Sara,neutral,0.5
+621b99aa5f87e75f5365e98d,Made Trade,https://www.madetrade.com/,madetrade.com,Made Trade,67452,,112376,PERCENTAGE,2.5,Anushka,neutral,1
+62def1037b212526d1e05a26,Oxo,https://www.oxo.com/,oxo.com,OXO,111231,,112140,PERCENTAGE,2.5,Anushka,neutral,1
+62def2017b212526d1e07383,Paravel,https://tourparavel.com/,tourparavel.com,Paravel,5518302,,8432,PERCENTAGE,2.5,Anushka,neutral,1
+62def0037b212526d1e0487b,Sephora,https://www.sephora.com/,sephora.com,Sephora,1991709,,5481985,PERCENTAGE,2.5,Anushka,neutral,1
+62def0fb7b212526d1e059a7,YETI,https://www.yeti.com/en_US,yeti.com,YETI,4627862,,5484204,PERCENTAGE,2.5,Anushka,neutral,1
+621b99915f87e75f5365dab5,Pedal Electric,http://pedalelectric.com,pedalelectric.com,PEDAL Electric,127846,9.35E-17,128132,PERCENTAGE,2.5,Sara,neutral,1.5
+621b99935f87e75f5365dbf9,The Paper Store,http://thepaperstore.com,thepaperstore.com,The Paper Store,3924500,1.22E-16,5483102,PERCENTAGE,2.5,Sara,neutral,1.5
+621b99985f87e75f5365debd,Everyday California,http://everydaycalifornia.com,everydaycalifornia.com,Everyday California,111655,7.79E-17,112366,PERCENTAGE,2.5,Sara,neutral,1.5
+621b99a15f87e75f5365e445,Prospect Farms,http://prospectfarms.com,prospectfarms.com,Prospect Farms,93314,9.35E-17,95330,PERCENTAGE,2.5,Sara,neutral,1.5
+62deeebf7b212526d1e03016,Barefoot Scientist,https://barefootscientist.com/,barefootscientist.com,Barefoot Scientist,77414,0.01814000564,77426,PERCENTAGE,2.5,Sara,neutral,1.5
+62deeed47b212526d1e033e4,Electric City Roasting Co.,http://electriccityroasting.com/,electriccityroasting.com,Electric City Roasting Co.,93015,0.01788854382,93441,PERCENTAGE,2.5,Sara,neutral,1.5
+62deee977b212526d1e0280e,Baseblue Cosmetics,https://www.basebluecosmetics.com/,basebluecosmetics.com,Baseblue Cosmetics,78589,,79719,PERCENTAGE,2.5,Anushka,neutral,1.5
+62def0f57b212526d1e0589b,Brondell,https://www.brondell.com/,brondell.com,Brondell,92936,,92985,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deeda17b212526d1e0184b,Dermalogica,https://www.dermalogica.ca/,dermalogica.com,Dermalogica,107022,,102880,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deee907b212526d1e026c3,Hey Honey,https://www.heyhoney.com/,heyhoney.com,Hey Honey,75879,,76283,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deedaa7b212526d1e01981,Lime Crime,https://limecrime.com/,limecrime.com,Lime Crime,5513276,,5518644,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deeeb17b212526d1e02d13,LYS Beauty,https://lysbeauty.com/,lysbeauty.com,LYS Beauty,104619,,104643,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deeda97b212526d1e01933,Mineral Fusion,https://www.mineralfusion.com/,mineralfusion.com,Mineral Fusion,92303,,92674,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deee9a7b212526d1e02889,OFRA Cosmetics,https://www.ofracosmetics.com/,ofracosmetics.com,OFRA Cosmetics,78594,,79724,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deeea27b212526d1e02a0d,ORLY,https://orlybeauty.com/,orlybeauty.com,ORLY,55864,,57040,PERCENTAGE,2.5,Anushka,neutral,1.5
+62deee817b212526d1e024c4,PYT Beauty,https://pytbeauty.com/,pytbeauty.com,PYT Beauty,35221,,36674,PERCENTAGE,2.5,Anushka,neutral,1.5
+62def0d67b212526d1e052a8,Solo Stove,https://www.solostove.com/,solostove.com,Solo Stove,76725,,76816,PERCENTAGE,2.5,Anushka,neutral,1.5
+621b995c5f87e75f5365bbbd,KAMMOK,http://kammok.com,kammok.com,Kammok,8868,8.88E-17,8974,PERCENTAGE,2.5,Sara,neutral,2
+621b99da5f87e75f53660565,Philips Hue,http://philips-hue.com,philips-hue.com,Philips Hue,77695,1.02E-16,36632,PERCENTAGE,2.5,Sara,neutral,3
+621b99775f87e75f5365cbc1,Staples,http://staples.com,staples.com,Staples,4176249,8.07E-17,5482571,PERCENTAGE,2.5,Sara,neutral,4
+621b99b25f87e75f5365ee6d,Golf Galaxy,https://www.golfgalaxy.com/,golfgalaxy.com,Golf Galaxy,73958,,74602,PERCENTAGE,2.5,Anushka,neutral,4.5
+621b993c5f87e75f5365a99d,Western Digital,http://westerndigital.com,westerndigital.com,WesternDigital.com,113133,4.93E-32,5482667,PERCENTAGE,2.5,Sara,neutral,5.5
+62def2b57b212526d1e081e6,Massimo Zanetti Beverage,http://mzb-usa.com/,shopmzb.com,Massimo Zanetti Beverage USA,113517,,114288,PERCENTAGE,2.5,Anushka,neutral,5.5
+621b99c05f87e75f5365f689,Puma,https://us.puma.com/,us.puma.com,PUMA,5506143,,5482147,PERCENTAGE,2.5,Anushka,neutral,5.5
+62deed777b212526d1e011fc,GlobeIn,https://globein.com/,globein.com,GlobeIn,5503560,,5507783,PERCENTAGE,2.5,Anushka,neutral,6
+621b99e85f87e75f53660d51,IT Cosmetics,https://www.itcosmetics.com/,itcosmetics.com,IT Cosmetics,78471,,5508195,PERCENTAGE,2.5,Anushka,neutral,6
+62deed737b212526d1e01195,The Little Market,www.thelittlemarket.com,thelittlemarket.com,The Little Market,83047,,83129,PERCENTAGE,2.5,Anushka,neutral,6
+621b99be5f87e75f5365f519,everydrop,https://everydropwater.com/,everydropwater.com,EveryDrop,93017,0.02770083102,93052,PERCENTAGE,2.5,Sara,neutral,7.5
+621b99af5f87e75f5365ec29,AbeBooks,https://www.abebooks.com/,abebooks.com,AbeBooks,3919011,,5475059,PERCENTAGE,2.5,Anushka,neutral,7.5
+621b99af5f87e75f5365ec8d,Book Depository,https://www.bookdepository.com/,bookdepository.com,Book Depository,3924432,,99568,PERCENTAGE,2.5,Anushka,neutral,7.5
+621b99be5f87e75f5365f509,Kitchenaid,https://www.kitchenaid.com/,kitchenaid.com,KitchenAid,5498206,,5508329,PERCENTAGE,2.5,Anushka,neutral,7.5
+621b99d35f87e75f53660189,Dr.Jart+,https://www.drjart.com/,us.drjart.com,Dr. Jart+,76160,,74862,PERCENTAGE,2.5,Anushka,positive,8
+62deef237b212526d1e0405d,Stop & Shop,https://www.stopandshop.com/,stopandshop.com,Stop & Shop,93731,,93742,FLAT,2.5,Anushka,positive,8.5
+621b99be5f87e75f5365f4fd,Under Armour,https://www.underarmour.com/en-us/,underarmour.com,Under Armour,7974,,8020,PERCENTAGE,2.5,Anushka,positive,9
+621b99455f87e75f5365aea9,EarthHero,http://earthhero.com,earthhero.com,EarthHero,107304,6.83E-17,107372,PERCENTAGE,2.5,Sara,positive,10
+621b994e5f87e75f5365b3e5,Rachio,http://rachio.com,rachio.com,Rachio,78558,8.88E-17,79691,PERCENTAGE,2.5,Sara,positive,10
+621b99525f87e75f5365b5e5,Cora,https://cora.life,cora.life,Cora,76502,1.23E-16,74780,FLAT,2.5,Sara,positive,10
+621b995d5f87e75f5365bc79,The Tea Spot PBC,http://theteaspot.com,theteaspot.com,The Tea Spot,5502552,1.36E-16,5510180,PERCENTAGE,2.5,Sara,positive,10
+621b99b15f87e75f5365ed85,Colgate,https://www.colgate.com/en-us,shop.colgate.com,Colgate,66210,,84484,PERCENTAGE,2.5,Anushka,positive,10
+621b99605f87e75f5365be35,Better World Books,http://betterworldbooks.com,betterworldbooks.com,Better World Books,3855522,1.11E-16,5475820,PERCENTAGE,2.5,Sara,positive,12
+621b99545f87e75f5365b715,Cotopaxi,http://cotopaxi.com,cotopaxi.com,Cotopaxi,5505510,7.40E-17,5507086,PERCENTAGE,2.5,Sara,positive,12.5
+621b995d5f87e75f5365bc75,United By Blue,http://unitedbyblue.com,unitedbyblue.com,United By Blue,5517518,1.26E-16,5519805,PERCENTAGE,2.5,Sara,positive,14
+62def16d7b212526d1e06997,Sezzle,sezzle.com,sezzle.com,Sezzle,109868,8.88E-17,109928,FLAT,2.5,Sara,positive,14
+62def1767b212526d1e06ad0,Cabinet Health P.B.C,cabinethealth.com,cabinethealth.com,Cabinet,122704,1.31E-16,76850,PERCENTAGE,2.5,Sara,positive,14
+621b993f5f87e75f5365ab29,4ocean PBC,http://4ocean.com,4ocean.com,4 ocean,74566,1.36E-16,78754,PERCENTAGE,2.5,Sara,positive,15
+62def1a37b212526d1e070b2,Emma Bridgewater Ltd,emmabridgewater.co.uk,us.emmabridgewater.com,Emma Bridgewater,117436,,5512570,PERCENTAGE,2.5,Anushka,positive,15
+62deef3e7b212526d1e043bc,asos,https://www.asos.com/,asos.com,ASOS,5497511,,5506511,PERCENTAGE,2.4,Anushka,neutral,5.5
+621b99d45f87e75f5366021d,Lab Series,https://www.labseries.com/,labseries.com,Lab Series,3922012,,117117,PERCENTAGE,2.4,Anushka,positive,8
+62def3e87b212526d1e09ac5,Samsonite,http://www.samsonite.com/,samsonite.com,Samsonite,4611809,,5481853,PERCENTAGE,2.375,Anushka,neutral,0.5
+621b993a5f87e75f5365a841,Skechers,https://www.skechers.com,skechers.com,Skechers,3923978,,5482289,PERCENTAGE,2,Anushka,negative,-8
+621b99b15f87e75f5365ed55,Helzberg Diamonds,https://www.helzberg.com/,helzberg.com,Helzberg Diamonds,3921345,,5478592,PERCENTAGE,2,Anushka,negative,-7
+621b99b05f87e75f5365eccd,Booking.com,https://www.booking.com/,booking.com,Booking.com,1991722,,5476041,PERCENTAGE,2,Anushka,negative,-4.5
+621b992e5f87e75f5365a175,Advance Auto Parts,http://advanceautoparts.com,shop.advanceautoparts.com,Advance Auto Parts,3919031,,5482069,PERCENTAGE,2,Anushka,negative,-4
+621b993b5f87e75f5365a919,Ulta Beauty,http://ulta.com,ulta.com,ULTA Beauty,1991729,1.36E-16,5483579,PERCENTAGE,2,Sara,negative,-3.5
+624c69821ccf825229d25258,Kids Foot Locker,https://www.kidsfootlocker.com/,kidsfootlocker.com,Kids Foot Locker,4348508,,5479331,PERCENTAGE,2,Anushka,negative,-1.5
+621b99b35f87e75f5365ee89,Hotwire,https://www.hotwire.com/,hotwire.com,Hotwire,5497778,,5518713,PERCENTAGE,2,Anushka,negative,-0.5
+621b99575f87e75f5365b921,Vital Choice,http://vitalchoice.com,vitalchoice.com,Vital Choice Wild Seafood & Organics,3855208,1.42E-16,5483859,PERCENTAGE,2,Sara,neutral,0
+62deefa07b212526d1e045f0,Allen Edmonds,https://www.allenedmonds.com/,allenedmonds.com,Allen Edmonds,4611541,,5475240,PERCENTAGE,2,Anushka,neutral,0
+62def00a7b212526d1e0492e,Benefit Cosmetics,https://www.benefitcosmetics.com/en-us,benefitcosmetics.com,Benefit Cosmetics,3919462,,5475761,PERCENTAGE,2,Anushka,neutral,0
+621b99ec5f87e75f53660fc1,Framebridge,https://www.framebridge.com/,framebridge.com,Framebridge,5503059,,5507631,PERCENTAGE,2,Anushka,neutral,0
+62def00b7b212526d1e04944,Fresh,https://www.fresh.com/us/home,fresh.com,Fresh,35637,,77040,PERCENTAGE,2,Anushka,neutral,0
+62def10e7b212526d1e05b15,Fresh Direct,https://www.freshdirect.com/,freshdirect.com,FreshDirect,2189632,,8981,PERCENTAGE,2,Anushka,neutral,0
+62deef577b212526d1e045d2,Sam Edelman,https://www.samedelman.com/,samedelman.com,Sam Edelman,3923726,,5481851,PERCENTAGE,2,Anushka,neutral,0
+62deeecb7b212526d1e031ca,Sanuk,https://www.sanuk.com/,sanuk.com,Sanuk,3923748,,5481870,PERCENTAGE,2,Anushka,neutral,0
+62deeecb7b212526d1e031c4,Teva,https://www.teva.com/,teva.com,Teva,4611859,,5482962,PERCENTAGE,2,Anushka,neutral,0
+621b99c15f87e75f5365f6b9,COS,https://www.cosstores.com/,cosstores.com,COS,102440,,116500,PERCENTAGE,2,Anushka,neutral,0.5
+62deef497b212526d1e044a4,River Island,https://www.riverisland.com/us,riverisland.com,River Island,3923622,,5481707,PERCENTAGE,2,Anushka,neutral,0.5
+62def2367b212526d1e077b4,Herman Miller Inc.,https://store.hermanmiller.com/,store.hermanmiller.com,Herman Miller,5518410,0.02744806445,122068,PERCENTAGE,2,Sara,neutral,1
+62def20a7b212526d1e0745f,GEARTRADE,https://www.geartrade.com/,geartrade.com,GearTrade.com,4212165,,5478129,FLAT,2,Anushka,neutral,1
+62def1097b212526d1e05aa6,"Melissa and Doug, LLC",https://www.melissaanddoug.com/,melissaanddoug.com,Melissa and Doug,3922478,,5480076,PERCENTAGE,2,Anushka,neutral,1
+62deed927b212526d1e015fb,New Era Cap,https://www.neweracap.com/,neweracap.com,New Era Cap,78442,,5480576,PERCENTAGE,2,Anushka,neutral,1
+62def28f7b212526d1e07ebf,Replacements Ltd.,https://www.replacements.com/,replacements.com,Replacements,58674,,58731,PERCENTAGE,2,Anushka,neutral,1
+62def2167b212526d1e07553,YourSuper Foods,https://yoursuper.com/,yoursuper.com,Your Super,67236,,68449,PERCENTAGE,2,Anushka,neutral,1
+621b99815f87e75f5365d191,SeaVees Inc.,http://seavees.com,seavees.com,SeaVees,75559,8.07E-17,76216,PERCENTAGE,2,Sara,neutral,1.5
+621b99955f87e75f5365dd01,Vitamin A,http://vitaminaswim.com,vitaminaswim.com,Vitamin A Swim,65948,1.26E-16,76298,PERCENTAGE,2,Sara,neutral,1.5
+621b99975f87e75f5365de91,Citizen - citizenwatch.com,http://citizenwatch.com,citizenwatch.com,Citizen Watch,76122,9.76E-17,114412,PERCENTAGE,2,Sara,neutral,1.5
+62deeeb57b212526d1e02dbc,bkr,https://mybkr.com/,mybkr.com,bkr,5514017,,5518959,PERCENTAGE,2,Anushka,neutral,1.5
+62deedb17b212526d1e01a99,Glossier,https://www.glossier.com/,glossier.com,Glossier,3921116,,5478249,PERCENTAGE,2,Anushka,neutral,1.5
+62deee957b212526d1e02776,R+Co,https://www.randco.com/,randco.com,R+Co,110501,,110551,PERCENTAGE,2,Anushka,neutral,1.5
+621b997f5f87e75f5365d071,LARQ,http://livelarq.com,livelarq.com,LARQ,35320,2.22E-16,37494,PERCENTAGE,2,Sara,neutral,2.5
+62deefac7b212526d1e046f2,John Varatos,https://www.johnvarvatos.com/,johnvarvatos.com,John Varvatos,3921793,,5479179,PERCENTAGE,2,Anushka,neutral,3.5
+621b99da5f87e75f53660559,Philips,http://philips.com,usa.philips.com,Philips,110944,0.01454545455,5481132,PERCENTAGE,2,Sara,neutral,4
+62deed637b212526d1e0100f,7 For All Mankind,https://www.7forallmankind.com/,7forallmankind.com,7 For All Mankind,3918966,,5475025,PERCENTAGE,2,Anushka,neutral,4.5
+621b99325f87e75f5365a3b1,Dick's Sporting Goods,https://www.dickssportinggoods.com,dickssportinggoods.com,Dick's Sporting Goods,5513000,,5513010,PERCENTAGE,2,Anushka,neutral,4.5
+62def21e7b212526d1e075cb,Hawes & Curtis,www.hawesandcurtis.co.uk,hawesandcurtis.com,Hawes and Curtis,3921301,,5478529,PERCENTAGE,2,Anushka,neutral,4.5
+62deed677b212526d1e0105a,Lands End,https://www.landsend.com/,landsend.com,Lands' End,1991649,,5479474,PERCENTAGE,2,Anushka,neutral,4.5
+621b99b45f87e75f5365ef39,Maidenform,https://www.maidenform.com/,maidenform.com,Maidenform,35327,,37503,PERCENTAGE,2,Anushka,neutral,4.5
+621b99bf5f87e75f5365f5e9,Viviscal,https://www.viviscal.com/,viviscal.com,Viviscal,3855260,,109240,PERCENTAGE,2,Anushka,neutral,5
+621b99345f87e75f5365a509,Hanesbrands,http://hanes.com,hanes.com,Hanes.com,4176028,4.93E-32,5478494,PERCENTAGE,2,Sara,neutral,5.5
+621b99c25f87e75f5365f741,Dockers,https://www.dockers.com/US/en_US/,dockers.com,Dockers,3920282,,5483677,PERCENTAGE,2,Anushka,neutral,5.5
+621b99c25f87e75f5365f779,Levi's,https://www.levi.com/US/en_US/,levi.com,Levi's,3922146,,5483690,PERCENTAGE,2,Anushka,neutral,5.5
+621b99b35f87e75f5365eea5,Oculus VR,https://www.oculus.com/,oculus.com,Oculus,75582,,76228,PERCENTAGE,2,Anushka,neutral,7
+621b99b35f87e75f5365eed1,Old Navy,https://oldnavy.gap.com/,oldnavy.gap.com,Old Navy,4381424,,5480737,PERCENTAGE,2,Anushka,neutral,7.5
+621b993d5f87e75f5365a9dd,Whirlpool,http://whirlpoolcorp.com,whirlpool.com,Whirlpool,92768,,5480871,PERCENTAGE,2,Anushka,neutral,7.5
+621b99355f87e75f5365a535,Hilton Worldwide Holdings,http://hilton.com,hilton.com,Hilton,3557770,8.88E-17,5478630,PERCENTAGE,2,Sara,positive,8
+621b99b35f87e75f5365eecd,Banana Republic,https://bananarepublic.gap.com/,bananarepublic.gap.com,Banana Republic,4381254,0.02412851445,5475632,PERCENTAGE,2,Sara,positive,8
+621b99725f87e75f5365c89d,Brandless,http://brandless.com,brandless.com,Brandless,8838,6.83E-17,8945,PERCENTAGE,2,Sara,positive,8.5
+621b993c5f87e75f5365a9a5,Walmart,http://corporate.walmart.com,walmart.com,Walmart,2189784,,5483936,PERCENTAGE,2,Anushka,positive,9
+621b99435f87e75f5365ad35,Burton,http://burton.com,burton.com,Burton Snowboards,82935,1.16E-16,82992,PERCENTAGE,2,Sara,positive,10
+621b994a5f87e75f5365b139,Athleta,http://athleta.gap.com,athleta.gap.com,Athleta,4381251,1.18E-16,5475467,PERCENTAGE,2,Sara,positive,12.5
+621b99c45f87e75f5365f8ed,graze,GRAZE.COM,graze.com,Graze,3921216,9.87E-17,5478371,PERCENTAGE,2,Sara,positive,14
+621b993e5f87e75f5365aaa9,Welly Health PBC,http://getwelly.com,getwelly.com,Welly Bandages,113145,1.52E-16,113556,PERCENTAGE,2,Sara,positive,15
+621b99415f87e75f5365ac59,S'well,http://swellbottle.com,swellbottle.com,S'well,3923710,2.22E-16,5482813,PERCENTAGE,2,Sara,positive,15
+621b99435f87e75f5365ad95,Prose,http://prose.com,prose.com,Prose,107213,9.87E-17,107330,PERCENTAGE,2,Sara,positive,15
+621b99545f87e75f5365b739,Eileen Fisher,http://eileenfisher.com,eileenfisher.com,Eileen Fisher,68344,9.76E-17,74663,PERCENTAGE,2,Sara,positive,15
+62deeed47b212526d1e03404,Ettitude,https://www.ettitude.com/,ettitude.com,Ettitude,65923,,5477556,PERCENTAGE,1.6,Anushka,neutral,2.5
+62deefae7b212526d1e04709,Kurt Geiger Ltd,http://www.kurtgeiger.com/,kurtgeiger.com,Kurt Geiger,3921983,,5479432,PERCENTAGE,1.6,Anushka,neutral,3.5
+62deed657b212526d1e01043,Guess,https://www.guess.com/us/en/home/,guess.com,Guess,3921230,,5478422,PERCENTAGE,1.6,Anushka,neutral,4.5
+621b995d5f87e75f5365bc85,Dogeared,http://dogeared.com,dogeared.com,Dogeared,3920285,7.40E-17,5477135,PERCENTAGE,1.6,Sara,positive,14
+621b99e35f87e75f53660a61,STOCK YARDS,https://www.stockyards.com/,stockyards.com,Stock Yards,3924194,,5482615,PERCENTAGE,1.5,Anushka,negative,-5
+621b99bb5f87e75f5365f381,JCPenney,https://m.jcpenney.com/,jcpenney.com,JCPenney,1991755,,5479116,PERCENTAGE,1.5,Anushka,negative,-1.5
+621b99bd5f87e75f5365f475,Marshalls,https://www.marshalls.com/,marshalls.com,Marshalls,118996,,5479985,PERCENTAGE,1.5,Anushka,negative,-1.5
+621b99985f87e75f5365def1,Soapbox Test Member,http://mysoapbox.com,mysoapbox.com,Soapbox,115214,1.02E-16,105347,FLAT,1.5,Sara,neutral,0
+62def3ea7b212526d1e09d04,Ruggable,https://ruggable.com/,ruggable.com,Ruggable,120759,0.02958579882,120771,PERCENTAGE,1.5,Sara,neutral,0.5
+621b993b5f87e75f5365a8f9,Tractor Supply Co,http://tractorsupply.com,tractorsupply.com,Tractor Supply,3924736,9.35E-17,5483351,PERCENTAGE,1.5,Sara,neutral,1
+62def2327b212526d1e07763,Macy's Inc.,https://www.macysinc.com/,macys.com,Macy's,1991713,,5479868,PERCENTAGE,1.5,Anushka,neutral,1
+62def2017b212526d1e07393,Ministry of Supply,https://www.ministryofsupply.com/,ministryofsupply.com,Ministry of Supply,5504457,,5508717,PERCENTAGE,1.5,Anushka,neutral,1
+62def2027b212526d1e073a3,The Cushion Lab,https://thecushionlab.com/,thecushionlab.com,Cushion Lab,84714,,85389,PERCENTAGE,1.5,Anushka,neutral,1
+621b99905f87e75f5365da31,Ponto Footwear,http://pontofootwear.com,pontofootwear.com,Ponto Footwear,114790,9.35E-17,115641,PERCENTAGE,1.5,Sara,neutral,1.5
+621b99a15f87e75f5365e419,Miaou,http://miaou.com,miaou.com,Miaou,107684,9.87E-17,112409,PERCENTAGE,1.5,Sara,neutral,1.5
+62deee6a7b212526d1e021f8,VEGAMOUR,https://vegamour.com/,vegamour.com,Vegamour,115440,0.02958579882,5483758,PERCENTAGE,1.5,Sara,neutral,1.5
+62deeed47b212526d1e0341e,Feed Your Soul,https://feedyoursoul.com/,feedyoursoul.com,Feed Your Soul Bakery,95569,,96260,PERCENTAGE,1.5,Anushka,neutral,1.5
+62deee727b212526d1e022db,Hello Bello,https://hellobello.com/,hellobello.com,Hello Bello,78470,,78797,PERCENTAGE,1.5,Anushka,neutral,1.5
+62deee5d7b212526d1e01fb3,MILANI,https://www.milanicosmetics.com/,milanicosmetics.com,Milani,35332,,84123,PERCENTAGE,1.5,Anushka,neutral,1.5
+62deed9f7b212526d1e017f9,Ogee,https://ogee.com/,ogee.com,Ogee,5505113,,5509006,PERCENTAGE,1.5,Anushka,neutral,1.5
+621b99885f87e75f5365d561,Kyrgies,http://kyrgies.com,kyrgies.com,Kyrgies,76708,8.07E-17,119010,PERCENTAGE,1.5,Sara,neutral,2
+621b99625f87e75f5365bfad,Boxed Wholesale,http://boxed.com,boxed.com,Boxed,3997367,9.87E-17,114567,PERCENTAGE,1.5,Sara,neutral,2.5
+621b99bc5f87e75f5365f445,Lenox,https://www.lenox.com/,lenox.com,Lenox,2189715,,5479594,PERCENTAGE,1.5,Anushka,neutral,3
+621b996e5f87e75f5365c6b9,Lenovo Group,http://lenovo.com,lenovo.com,Lenovo,3922107,8.88E-17,5479593,PERCENTAGE,1.5,Sara,neutral,4
+621b99b25f87e75f5365ee65,Field & Stream,https://www.fieldandstreamshop.com/,fieldandstreamshop.com,Field & Stream,95271,,95385,PERCENTAGE,1.5,Anushka,neutral,4.5
+62deed647b212526d1e0103d,Gerber Childrenswear,https://www.gerberchildrenswear.com/,gerberchildrenswear.com,Gerber Childrenswear,35300,,66060,PERCENTAGE,1.5,Anushka,neutral,4.5
+62deef407b212526d1e043f7,Fatface,https://us.fatface.com/,us.fatface.com,FatFace,8082,,8112,PERCENTAGE,1.5,Anushka,neutral,5.5
+62def2b97b212526d1e0827c,Madewell,https://www.madewell.com/,madewell.com,Madewell,3922342,,119667,PERCENTAGE,1.5,Anushka,neutral,5.5
+621b99e85f87e75f53660d49,Armani Beauty,https://www.armanibeauty.com/,armanibeauty.es,Armani Beauty,120751,,5475418,PERCENTAGE,1.5,Anushka,neutral,6
+621b99315f87e75f5365a349,Costco,http://costco.com,costcomembershipoffer.com,Costco,119398,,119399,FLAT,1.5,Anushka,neutral,6.5
+621b99ba5f87e75f5365f2b5,Oral-B,https://oralb.com/,oralb.com,Oral B,84495,,77577,PERCENTAGE,1.5,Anushka,positive,8.5
+621b99425f87e75f5365acd9,Bluebird Botanicals,http://bluebirdbotanicals.com,bluebirdbotanicals.com,Bluebird Botanicals,94079,7.79E-17,94154,PERCENTAGE,1.5,Sara,positive,10
+621b99f45f87e75f5366144d,Hu,https://hukitchen.com/,hukitchen.com,Hu Kitchen,78415,,78761,PERCENTAGE,1.5,Anushka,positive,13.5
+621b993e5f87e75f5365aa95,Lazarus Naturals,http://lazarusnaturals.com,lazarusnaturals.com,Lazarus Naturals,96556,8.64E-17,100196,PERCENTAGE,1.5,Sara,positive,14
+621b993e5f87e75f5365aa99,Frank & Eileen,http://frankandeileen.com,frankandeileen.com,Frank and Eileen,5901,1.18E-16,102273,PERCENTAGE,1.5,Sara,positive,15
+621b99475f87e75f5365afad,TOMS,http://toms.com,toms.com,TOMS,3924682,1.11E-16,5483286,PERCENTAGE,1.5,Sara,positive,15
+621b996a5f87e75f5365c40d,Canon,http://usa.canon.com,shop.usa.canon.com,Canon,3918910,,5482176,PERCENTAGE,1.25,Anushka,neutral,2.5
+62deef9f7b212526d1e045de,Naturalizer,https://www.naturalizer.com/,naturalizer.com,Naturalizer,3922818,,5480517,PERCENTAGE,1.2,Anushka,neutral,0
+62deefa37b212526d1e04626,Zodiac Shoes,https://www.zodiacshoes.com/,zodiacshoes.com,Zodiac Shoes,78640,,79757,PERCENTAGE,1.2,Anushka,neutral,0
+62deeea37b212526d1e02a1d,Supergoop!,https://supergoop.com/,supergoop.com,Supergoop!,5505058,0.02551020408,5509985,PERCENTAGE,1.2,Sara,neutral,1.5
+62deef527b212526d1e04552,Whistles,https://www.whistles.com/,whistles.com,Whistles,3925150,,5484032,PERCENTAGE,1.2,Anushka,neutral,3.5
+62def1ff7b212526d1e07379,Stio,https://www.stio.com/,stio.com,Stio,4212231,,5482612,PERCENTAGE,1.2,Anushka,neutral,6.5
+621b99315f87e75f5365a2d5,Choice Hotels International,http://choicehotels.com,choicehotels.com,Choice Hotels,3919922,9.76E-17,5476495,PERCENTAGE,1,Sara,negative,-3
+621b99375f87e75f5365a649,MSC Industrial Direct Co.,http://mscdirect.com,mscdirect.com,MSC Industrial Supply,3922692,2.22E-16,5480336,PERCENTAGE,1,Sara,negative,-1.5
+621b99b35f87e75f5365eea9,Champs Sports,https://www.champssports.com/,champssports.com,Champs Sports,4611596,,5476427,PERCENTAGE,1,Anushka,negative,-1.5
+621b99345f87e75f5365a489,Foot Locker,https://www.footlocker.com/,footlocker.com,Foot Locker,3920921,,5477885,PERCENTAGE,1,Anushka,negative,-1.5
+621b99b35f87e75f5365ee99,Vrbo,https://www.vrbo.com/,vrbo.com,VRBO,3925075,,5483916,PERCENTAGE,1,Anushka,negative,-0.5
+621b993a5f87e75f5365a875,Extended Stay America,http://extendedstayamerica.com,extendedstayamerica.com,Extended Stay America,3855169,1.02E-16,5477630,PERCENTAGE,1,Sara,neutral,0
+62def00d7b212526d1e04973,shopDisney,https://www.shopdisney.com/,shopdisney.com,shopDisney,3923899,,5482095,PERCENTAGE,1,Anushka,neutral,0
+621b99345f87e75f5365a4e9,Garmin,http://garmin.com,garmin.com,Garmin,4611667,8.88E-17,5478112,PERCENTAGE,1,Sara,neutral,0.5
+62deef4b7b212526d1e044d2,Ted Baker,https://www.tedbaker.com/us?country=US,tedbaker.com,Ted Baker,3997858,,5482920,PERCENTAGE,1,Anushka,neutral,0.5
+62def2307b212526d1e07731,Mitchell Gold + Bob Williams,https://www.mgbwhome.com/,mgbwhome.com,Mitchell Gold + Bob Williams,106732,,108486,PERCENTAGE,1,Anushka,neutral,1
+62def1ac7b212526d1e071ee,tentree,https://www.tentree.com/,tentree.com,tentree,5842,,108900,PERCENTAGE,1,Anushka,neutral,1
+62def2017b212526d1e07398,Tropicfeel,https://shop.tropicfeel.com/,tropicfeel.com,Tropicfeel,68029,,100697,PERCENTAGE,1,Anushka,neutral,1
+62def2117b212526d1e07505,weightwatchers,https://www.weightwatchers.com/uk/,weightwatchers.com,Weight Watchers,5506269,,5519929,PERCENTAGE,1,Anushka,neutral,1
+62deeeac7b212526d1e02bee,GUSSI,https://www.gussihair.com/,gussihair.com,Gussi Hair,113769,,113872,PERCENTAGE,1,Anushka,neutral,1.5
+62deeeb27b212526d1e02d4f,Puracy,https://puracy.com/,puracy.com,Puracy,51727,,51880,PERCENTAGE,1,Anushka,neutral,1.5
+62deee6a7b212526d1e021f3,Urban Skin Rx,https://urbanskinrx.com/,urbanskinrx.com,Urban Skin Rx,109787,,109883,PERCENTAGE,1,Anushka,neutral,1.5
+621b99625f87e75f5365bf8d,BISSELL Homecare,http://bissell.com,bissell.com,Bissell,4144021,8.07E-17,5475895,PERCENTAGE,1,Sara,neutral,2.5
+621b99315f87e75f5365a325,Carter's,http://carters.com,carters.com,Carter's,1991656,1.01E-16,5476351,PERCENTAGE,1,Sara,neutral,3
+62deefa57b212526d1e04650,Cole Haan,http://www.colehaan.com/,colehaan.com,Cole Haan,3920030,,5476628,PERCENTAGE,1,Anushka,neutral,3.5
+621b99b25f87e75f5365edf1,prAna,https://www.prana.com/,prana.com,prAna,3923371,,5481315,PERCENTAGE,1,Anushka,neutral,4
+62deed687b212526d1e01072,The Children's Place,https://www.childrensplace.com/us/home,childrensplace.com,The Children's Place,119301,,119307,PERCENTAGE,1,Anushka,neutral,4.5
+62deed687b212526d1e0107d,Tommy Bahama,https://www.tommybahama.com/,tommybahama.com,Tommy Bahama,3855318,,5483281,PERCENTAGE,1,Anushka,neutral,4.5
+62deed8a7b212526d1e014e1,Boll & Branch,https://www.bollandbranch.com/,bollandbranch.com,Boll & Branch,4175882,,5476014,PERCENTAGE,1,Anushka,neutral,5.5
+621b99e75f87e75f53660d2d,Biotherm,http://int.biotherm.com/,biotherm.com,Biotherm,105015,,104772,PERCENTAGE,1,Anushka,neutral,6
+621b99e85f87e75f53660d55,Shu Uemura,https://www.shuuemura-usa.com/,shuuemura-usa.com,Shu Uemura,73962,,78402,PERCENTAGE,1,Anushka,neutral,6
+621b99475f87e75f5365affd,Parker Clay,http://parkerclay.com,parkerclay.com,Parker Clay,75620,1.07E-16,76245,PERCENTAGE,1,Sara,positive,8
+621b99505f87e75f5365b541,Leesa Sleep,http://leesa.com,leesa.com,Leesa Sleep,5497828,1.25E-16,116413,PERCENTAGE,1,Sara,positive,9
+624c69831ccf825229d252cd,Heyday,https://www.heydayskincare.com/,heydayskincare.com,Heyday,99887,,100454,PERCENTAGE,1,Anushka,positive,9
+621b99bb5f87e75f5365f341,Tommy Hilfiger,https://usa.tommy.com/en,usa.tommy.com,Tommy Hilfiger,3924681,,5483666,PERCENTAGE,1,Anushka,positive,9.5
+621b99bd5f87e75f5365f4d5,JanSport,https://www.jansport.com/,jansport.com,JanSport,3921746,,5479104,PERCENTAGE,1,Anushka,positive,11.5
+621b99475f87e75f5365afc9,Gaia Herbs,http://gaiaherbs.com,gaiaherbs.com,Gaia Herbs,76057,1.13E-16,106895,PERCENTAGE,1,Sara,positive,12
+621b99355f87e75f5365a529,HP,https://www.hp.com/us-en/home.html,hp.com,HP,1991703,,79766,PERCENTAGE,1,Anushka,positive,13
+621b994b5f87e75f5365b1f5,OLLY PBC,http://olly.com,olly.com,Olly,100800,1.11E-16,100842,PERCENTAGE,1,Sara,positive,14
+62def19a7b212526d1e06f69,healthybaby,healthybaby.com,healthybaby.com,healthybaby,99884,5.92E-17,120321,PERCENTAGE,1,Sara,positive,15
+621b99305f87e75f5365a241,AutoZone,http://autozone.com,autozone.com,AutoZone,3997324,7.40E-17,5475533,PERCENTAGE,0.8,Sara,negative,-5.5
+621b99835f87e75f5365d281,DMOS Collective,http://dmoscollective.com,dmoscollective.com,DMOS Collective,76157,8.98E-17,74860,PERCENTAGE,0.8,Sara,neutral,0
+62deef527b212526d1e0454c,Phase eight,https://www.phase-eight.com/,phase-eight.com,Phase Eight,3923258,,72064,PERCENTAGE,0.8,Anushka,neutral,0
+621b99945f87e75f5365dcd9,La Sportiva - Apparel,http://sportiva.com,sportiva.com,La Sportiva,75637,1.09E-16,76251,PERCENTAGE,0.8,Sara,neutral,1.5
+62deeffc7b212526d1e047be,Tory Burch,https://www.toryburch.co.uk/,toryburch.co.uk,Tory Burch,98428,,99182,PERCENTAGE,0.8,Anushka,neutral,3.5
+621b99bd5f87e75f5365f4c1,Vans,https://www.vans.com/,vans.com,Vans,3974622,,5483741,PERCENTAGE,0.8,Anushka,positive,11.5
+621b99375f87e75f5365a6b9,Nu Skin Enterprises,http://nse.co,ysense.com,Ysense,77999,0.0159,78000,FLAT,0.5,Sara,neutral,0
+62def00f7b212526d1e049a2,Beyond Good,https://www.beyondgood.com/store-locator,beyondgood.com,Beyond Good,107657,,109167,FLAT,0.5,Anushka,neutral,0.5
+621b99a65f87e75f5365e6e5,Boox,http://boox.com,shop.boox.com,boox,67965,0.025,71166,PERCENTAGE,0.5,Sara,neutral,1.5
+62deeec47b212526d1e030bf,Smile Brilliant,https://www.smilebrilliant.com/,smilebrilliant.com,Smile Brilliant,95831,,96386,PERCENTAGE,0.5,Anushka,neutral,1.5
+621b99f35f87e75f53661415,American Girl,https://www.americangirl.com/,americangirl.com,American Girl,3919177,,5475307,PERCENTAGE,0.5,Anushka,neutral,2
+62def10e7b212526d1e05b10,Food Lion,https://www.foodlion.com/,foodlion.com,Food Lion,85212,,85662,FLAT,0.5,Anushka,neutral,3.5
+62deed8a7b212526d1e014c7,Hanna Andersson,https://www.hannaandersson.com/,hannaandersson.com,Hanna Andersson,3921282,,5478496,PERCENTAGE,0.5,Anushka,neutral,4.5
+621b99b55f87e75f5365f025,Rack Room Shoes,https://www.rackroomshoes.com/,rackroomshoes.com,Rack Room Shoes,6960,,36698,PERCENTAGE,0.5,Anushka,neutral,4.5
+621b99355f87e75f5365a595,Nordstrom,http://nordstrom.com,nordstrom.com,Nordstrom,1991748,6.83E-17,5482132,PERCENTAGE,0.5,Sara,neutral,7.5
+621b99be5f87e75f5365f505,Maytag,https://www.maytag.com/,maytag.com,Maytag,92769,,92807,PERCENTAGE,0.5,Anushka,neutral,7.5
+621b99375f87e75f5365a691,Nike,http://nike.com,nike.com,NIKE,3922888,1.11E-16,5480607,PERCENTAGE,0.5,Sara,positive,8.5
+621b99365f87e75f5365a5ad,Kohls,http://kohls.com,kohls.com,Kohl's,1991657,1.23E-16,5479397,PERCENTAGE,0.5,Sara,positive,10.5
+621b99af5f87e75f5365ecad,momondo,https://www.momondo.com/,momondo.com,Momondo,3922619,,49708,FLAT,0.4125,Anushka,negative,-4.5
+62deef9f7b212526d1e045d8,Famous Footwear,https://www.famousfootwear.com/,famousfootwear.com,Famous Footwear,4611652,,5477678,PERCENTAGE,0.4,Anushka,neutral,0
+62deeeca7b212526d1e031b2,UGG,https://www.ugg.com/,ugg.com,UGG,4611876,,5483531,PERCENTAGE,0.4,Anushka,neutral,0
+62deeec17b212526d1e0307c,Plant Therapy,https://www.planttherapy.com/,planttherapy.com,Plant Therapy,3855341,,5481221,PERCENTAGE,0.4,Anushka,neutral,2
+621b995a5f87e75f5365bb05,Beautycounter,http://beautycounter.com,beautycounter.com,Beautycounter,3997347,5.22E-17,5475708,PERCENTAGE,0.4,Sara,positive,15
+621b99bd5f87e75f5365f48d,Coach,https://www.coach.com/,coach.com,Coach,37982,,37980,PERCENTAGE,0.25,Anushka,neutral,1.5
+62def2b57b212526d1e081d7,DAVIDsTEA,http://www.davidstea.com/,davidstea.com,DAVIDsTEA,58501,,58696,PERCENTAGE,0.25,Anushka,neutral,5.5
+621b99305f87e75f5365a251,Best Buy,http://bestbuy.com,bestbuy.com,Best Buy,2189783,1.27E-16,5475784,PERCENTAGE,0.25,Sara,positive,10.5

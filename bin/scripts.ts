@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
+import { associateWildfireMatches } from '../src/services/scripts/associate_wildfire_merchants';
 
 (async () => {
   try {
@@ -13,6 +14,8 @@ import { Logger } from '../src/services/logger';
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
+    await associateWildfireMatches();
+    await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));
     await MongoClient.disconnect();

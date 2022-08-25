@@ -24,6 +24,8 @@ import { Logger } from '../logger';
 import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { MainBullClient } from '../../clients/bull/main';
+import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
+import { getShareableMerchant } from '../merchant';
 
 dayjs.extend(utc);
 
@@ -68,6 +70,10 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
   return CompanyModel
     .find({ $and: _query })
     .populate([
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
       {
         path: 'parentCompany',
         model: CompanyModel,
@@ -166,6 +172,10 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
     const company = await CompanyModel.findOne(query)
       .populate([
         {
+          path: 'merchant',
+          model: MerchantModel,
+        },
+        {
           path: 'parentCompany',
           model: CompanyModel,
           populate: [
@@ -204,6 +214,10 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
   const options = {
     projection: query?.projection || '',
     populate: query.population || [
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
       {
         path: 'parentCompany',
         model: CompanyModel,
@@ -387,6 +401,7 @@ export const getShareableCompany = ({
   url,
   createdAt,
   lastModified,
+  merchant,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -394,6 +409,9 @@ export const getShareableCompany = ({
   const _parentCompany: IRef<ObjectId, IShareableCompany> = (!!parentCompany && !!Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : parentCompany as ObjectId;
+
+  const _merchant: IRef<ObjectId, IShareableMerchant> = (!!merchant && !!Object.keys(merchant).length) ? getShareableMerchant(merchant as IMerchantDocument)
+    : merchant as ObjectId;
 
   const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
     ? {
@@ -443,6 +461,7 @@ export const getShareableCompany = ({
     url,
     createdAt,
     lastModified,
+    merchant: _merchant,
   };
 };
 

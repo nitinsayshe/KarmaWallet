@@ -20,11 +20,12 @@ export interface IWildfireMerchantRateIntegration {
 
 export interface IMerchantIntegrations {
   wildfire?: IWildfireMerchantRateIntegration;
-  integrations: IMerchantIntegrations;
 }
 
 export interface IShareableMerchantRate {
   merchant: IRef<ObjectId, IMerchantModel>;
+  integrations: IMerchantIntegrations;
+  _id: ObjectId;
 }
 
 export interface IMerchantRate extends IShareableMerchantRate {

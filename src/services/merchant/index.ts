@@ -3,6 +3,7 @@ import { getMaxWildfireMerchantRateDescription } from './utils';
 
 export interface IShareableMerchantWithEnrichedData extends IShareableMerchant {
   maxDescription?: string;
+  maxAmount: string;
   domain?: string;
 }
 
@@ -23,9 +24,13 @@ export const getShareableMerchant = ({
   integrations,
 }: IMerchantDocument): IShareableMerchantWithEnrichedData => {
   let maxDescription = '';
+  let maxAmount = '';
   let _integrations = {};
   if (integrations?.wildfire) {
-    maxDescription = getMaxWildfireMerchantRateDescription(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate);
+    const descriptions = getMaxWildfireMerchantRateDescription(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate);
+    maxAmount = descriptions.maxAmount;
+    maxDescription = descriptions.maxDescription;
+    name = integrations?.wildfire.Name;
     _integrations = {
       wildfire: getShareableWildfireIntegration(integrations.wildfire),
     };
@@ -35,6 +40,7 @@ export const getShareableMerchant = ({
     name,
     integrations: _integrations,
     maxDescription,
+    maxAmount,
   };
 };
 

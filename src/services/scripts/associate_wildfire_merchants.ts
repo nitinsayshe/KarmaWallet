@@ -50,6 +50,7 @@ export const createMerchantRates = async (merchant: any, merchantRates: any) => 
 };
 
 export const associateWildfireMatches = async () => {
+  // Creates JSON for merchants, rates, domains, and matches (all provided in .tmp)
   const errors = [];
   const matches = await csv().fromFile(path.resolve(__dirname, './.tmp', 'wildfireMatches.csv'));
   const rawDomains = fs.readFileSync(path.resolve(__dirname, './.tmp', 'wfdomains.json'), 'utf8');
@@ -60,7 +61,14 @@ export const associateWildfireMatches = async () => {
   const merchants = JSON.parse(rawMerchants);
   const wildfireMerchantDictionary = getWildfireDictionary(merchants);
   const wildfireDomainDictionary = getWildfireDictionary(domains);
-  console.log(matches.length, merchants.length, Object.keys(rates).length, domains.length);
+
+  console.log(`[info] ${matches.length} matches found`);
+  console.log(`[info] ${rates.length} rates found`);
+  console.log(`[info] ${merchants.length} merchants found`);
+  console.log(`[info] ${domains.length} domains found`);
+
+  console.log('[info] starting process of creating merchants, merchant-rates, and associating matches with companies \n');
+
   for (const match of matches) {
     const { _id: companyId, domainId, merchantId } = match;
     if (!companyId || !domainId || !merchantId) console.log(`[err] match is missing info: company - ${companyId}; domain - ${domainId}; merchant - ${merchantId}`);

@@ -9,6 +9,7 @@ export const getMaxWildfireMerchantRateDescription = (merchantRate: Partial<IWil
   const { Kind, Amount } = merchantRate;
   let maxAmount = '';
   let maxDescription = '';
+  let amount = 0;
   if (!Kind) {
     return {
       maxAmount,
@@ -19,11 +20,13 @@ export const getMaxWildfireMerchantRateDescription = (merchantRate: Partial<IWil
     case WildfireRateKinds.Percentage: {
       maxDescription = `Up to ${Amount}%`;
       maxAmount = `${Amount}%`;
+      amount = Amount;
       break;
     }
     case WildfireRateKinds.Flat: {
       maxDescription = `Up to ${Amount} back`;
-      maxAmount = `$${Amount}`;
+      maxAmount = `${Amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+      amount = Amount;
       break;
     }
     default:
@@ -35,5 +38,6 @@ export const getMaxWildfireMerchantRateDescription = (merchantRate: Partial<IWil
   return {
     maxDescription,
     maxAmount,
+    amount,
   };
 };

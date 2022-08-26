@@ -24,8 +24,8 @@ export const getMaxWildfireMerchantRateDescription = (merchantRate: Partial<IWil
       break;
     }
     case WildfireRateKinds.Flat: {
-      maxDescription = `Up to ${Amount} back`;
       maxAmount = `${Amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+      maxDescription = `Up to ${maxAmount} back`;
       amount = Amount;
       break;
     }

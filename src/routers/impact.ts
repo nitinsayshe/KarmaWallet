@@ -13,6 +13,8 @@ router.route('/carbon/offset/donation-suggestions')
 router.route('/carbon/tonnes-by-dollar-amount')
   .get(authenticate, ImpactController.getTonnesByByDollarAmount);
 
+router.get('/featured-cashback', ImpactController.getFeaturedCashback);
+
 router.route('/ratings')
   .get(ImpactController.getImpactRatings);
 

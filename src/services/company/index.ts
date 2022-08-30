@@ -294,34 +294,6 @@ export const getPartners = (req: IRequest, companiesCount: number, includeHidden
     .limit(companiesCount);
 };
 
-export const getFeaturedCashback = async () => {
-  const companies = await CompanyModel
-    .find(
-      { _id: { $in: [
-        '621b99be5f87e75f5365f4fd', // Under Armour
-        '621b993c5f87e75f5365a97d', // Verizon
-        '621b99545f87e75f5365b715', // Cotopaxi
-        '621b99435f87e75f5365ad35', // Sams Club
-        '621b99d35f87e75f53660179', // Bumble and Bumble
-        '621b99f25f87e75f53661359', // Peets Coffeed
-        '621b99435f87e75f5365ad95', // prose
-        '621b993e5f87e75f5365aaad', // Butcher Box
-        '621b993e5f87e75f5365aa45', // Plant People
-        '621b99d45f87e75f536601ad', // Clinique
-        '621b99be5f87e75f5365f549', // Moosejaw
-        '621b99435f87e75f5365ad35', // Burton
-      ] } },
-    )
-    .populate([
-      {
-        path: 'merchant',
-        model: MerchantModel,
-      },
-    ]);
-
-  return companies;
-};
-
 export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
   try {
     const { count = 10, sectors, excludedCompanyIds, ratings } = req.query;

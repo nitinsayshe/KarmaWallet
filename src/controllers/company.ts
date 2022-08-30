@@ -52,15 +52,6 @@ export const getSample: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getFeaturedCashback: IRequestHandler = async (req, res) => {
-  try {
-    const companies = await CompanyService.getFeaturedCashback(req);
-    output.api(req, res, companies.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)));
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
 export const compare: IRequestHandler<{}, ICompareQuery> = async (req, res) => {
   try {
     const query = {

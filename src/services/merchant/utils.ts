@@ -1,12 +1,9 @@
-import { IWildfireMerchantRateIntegration } from '../../models/merchantRate';
+enum WildfireRateKinds {
+  Percentage = 'percentage',
+  Flat = 'flat',
+}
 
-export const WildfireRateKinds = {
-  Percentage: 'percentage',
-  Flat: 'flat',
-};
-
-export const getMaxWildfireMerchantRateDescription = (merchantRate: Partial<IWildfireMerchantRateIntegration>) => {
-  const { Kind, Amount } = merchantRate;
+export const getMaxWildfireMerchantRateDescription = (Kind: string, Amount: number) => {
   let maxAmount = '';
   let maxDescription = '';
   let amount = 0;

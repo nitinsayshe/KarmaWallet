@@ -27,7 +27,10 @@ export const getShareableMerchant = ({
   let maxAmount = '';
   let _integrations = {};
   if (integrations?.wildfire) {
-    const descriptions = getMaxWildfireMerchantRateDescription(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate);
+    const { Amount, Kind } = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate;
+    // the cut that we are passing on to end user is 75%
+    const maxAmountNumber = Amount * 0.75;
+    const descriptions = getMaxWildfireMerchantRateDescription(Kind, maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxDescription = descriptions.maxDescription;
     name = integrations?.wildfire.Name;

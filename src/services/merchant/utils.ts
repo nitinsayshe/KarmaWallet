@@ -15,13 +15,13 @@ export const getMaxWildfireMerchantRateDescription = (Kind: string, Amount: numb
   }
   switch (Kind.toLowerCase()) {
     case WildfireRateKinds.Percentage: {
-      maxDescription = `Up to ${Amount}%`;
-      maxAmount = `${Amount}%`;
+      maxDescription = `Up to ${Amount.toFixed(2)}%`;
+      maxAmount = `${Amount.toFixed(2)}%`;
       amount = Amount;
       break;
     }
     case WildfireRateKinds.Flat: {
-      maxAmount = Amount % 1 === 0 ? `$${Amount}` : `${Amount.toLocaleString('en-US', { style: 'currency', currency: 'USD' })}`;
+      maxAmount = Amount % 1 === 0 ? `$${Amount.toFixed(2)}` : `${Amount.toFixed(2)}`;
       maxDescription = `Up to ${maxAmount}`;
       amount = Amount;
       break;

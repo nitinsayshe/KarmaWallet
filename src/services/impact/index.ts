@@ -121,18 +121,18 @@ export const getFeaturedCashback = async () => {
     const companies = await CompanyModel
       .find(
         { _id: { $in: [
-          '621b99be5f87e75f5365f4fd', // Under Armour
+          '621b993c5f87e75f5365a9a5', // Walmart
           '621b993c5f87e75f5365a97d', // Verizon
           '621b99545f87e75f5365b715', // Cotopaxi
           '621b99be5f87e75f5365f54d', // Sams Club
-          '621b99455f87e75f5365aea9', // EarthHero
-          '621b99b15f87e75f5365ed85', // Peets Coffeed
-          '621b99565f87e75f5365b86d', // soapbox
-          '621b993e5f87e75f5365aaad', // Butcher Box
-          '621b993e5f87e75f5365aa45', // Plant People
+          '621b99be5f87e75f5365f4fd', // Under Armour
+          '621b99605f87e75f5365be85', // Happy Earth Apparel
+          '621b99365f87e75f5365a5ad', // Kohls
+          '621b99435f87e75f5365ad35', // Prose
+          '621b993e5f87e75f5365aa45', // Burton
           '621b99d45f87e75f536601ad', // Clinique
-          '621b99be5f87e75f5365f549', // Moosejaw
-          '621b99435f87e75f5365ad35', // Burton
+          '621b99b35f87e75f5365eecd', // Banana Republic
+          '621b993f5f87e75f5365aaed', // Thrive Market
         ] } },
       )
       .populate([

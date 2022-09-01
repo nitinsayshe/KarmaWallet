@@ -2,25 +2,21 @@ import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { FilterQuery, ObjectId } from 'mongoose';
 import { mockRequest } from '../lib/constants/request';
-import { asCustomError } from '../lib/customError';
 import { GroupModel, GroupStatus } from '../models/group';
-import { StatementModel } from '../models/statement';
 import { ITransaction, ITransactionDocument } from '../models/transaction';
 import { IUserDocument, UserModel } from '../models/user';
+import { StatementModel } from '../models/statement';
 import { getAllGroupMembers } from '../services/groups';
-import { getOffsetTransactions, getOffsetTransactionsTotal, getRareOffsetAmount } from '../services/impact/utils/carbon';
+import { getOffsetTransactions } from '../services/impact/utils/carbon';
 import { IRef } from '../types/model';
-
-dayjs.extend(utc);
+import { asCustomError } from '../lib/customError';
 
 interface IToBeMatched {
   value: number;
   transaction: IRef<ObjectId, ITransactionDocument>;
 }
-interface IUserOffsets {
-  matched: number;
-  unmatched: number;
-}
+
+dayjs.extend(utc);
 
 const getStartDate = (d: Dayjs) => d
   .utc()
@@ -31,7 +27,7 @@ const getStartDate = (d: Dayjs) => d
   .set('millisecond', 1);
 
 const getStartAndEndDates = () => {
-  const yearStart = getStartDate(dayjs()).set('month', 1);
+  const yearStart = getStartDate(dayjs()).set('month', 0);
   const monthStart = getStartDate(dayjs()).subtract(1, 'month');
   const monthEnd = dayjs()
     .utc()
@@ -45,174 +41,185 @@ const getStartAndEndDates = () => {
   return [yearStart, monthStart, monthEnd];
 };
 
-const getOffsetsPerMember = (statementTransactions: ITransactionDocument[]) => {
-  // will hold total matched and unmatched amounts
-  // for every member for this year.
-  const offsetsPerMember: {[key: string]: IUserOffsets} = {};
-
-  for (const transaction of statementTransactions) {
-    // create default data for this user if doesnt already exist
-    if (!offsetsPerMember[transaction.user.toString()]) {
-      offsetsPerMember[transaction.user.toString()] = {
-        matched: 0,
-        unmatched: 0,
-      };
-    }
-
-    let matchedAmount = 0;
-    let unmatchedAmount = 0;
-
-    if (!!transaction.matched?.status) {
-      matchedAmount = transaction.matched.amount;
-      const diff = transaction.amount - matchedAmount;
-      // if diff is greater than 0, means that this transaction
-      // was previously only partially matched and there is
-      // still a smaller amount left to be matched that
-      // needs to be accounted for.
-      unmatchedAmount = diff > 0 ? diff : 0;
-    } else {
-      unmatchedAmount = transaction.amount;
-    }
-
-    offsetsPerMember[transaction.user.toString()].matched += matchedAmount;
-    offsetsPerMember[transaction.user.toString()].unmatched += unmatchedAmount;
-  }
-
-  return offsetsPerMember;
-};
-
 export const exec = async () => {
-  console.log('\ngenerating monthly group offset statements...');
   let statementCount = 0;
-
   try {
+    console.log('\ngenerating monthly group offset statements...');
+
     const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
+
     const groups = await GroupModel.find({
       $and: [
         { 'settings.matching.enabled': true },
         { status: { $ne: GroupStatus.Deleted } },
+        // hardcoded KW group for testing
+        // { _id: '6233a60f1fc03e8853a64dc8' },
       ],
     });
 
     const [yearStart, monthStart, monthEnd] = getStartAndEndDates();
 
     for (const group of groups) {
-      const _statement = await StatementModel.findOne({ group, date: monthStart.toDate() });
+      let toBeMatchedForGroupDollars = 0;
+      let toBeMatchedForGroupTonnes = 0;
+      const toBeMatchedForGroupTransactions: IToBeMatched[] = [];
 
-      // preventative measure to ensure only 1 statement gets
-      // created per group, per month
-      //
-      // multiple statements could be generated if a job fails
-      // and retries. in such a case, another statement will
-      // not be created for this group and the job will pick
-      // up where it left off.
-      if (!!_statement) continue;
+      const { maxDollarAmount, matchPercentage } = group.settings.matching;
 
-      // get list of all member ids
       const memberMockRequest = { ...mockRequest, requestor: appUser };
       memberMockRequest.params = { groupId: group._id.toString() };
+
       const members = await getAllGroupMembers(memberMockRequest);
       const memberIds: string[] = members.map(m => (m.user as IUserDocument)._id);
-      const matchPercent = group.settings.matching.matchPercentage / 100;
-
-      const offsetTransactionQuery: FilterQuery<ITransaction> = {
-        $and: [
-          { user: { $in: memberIds } },
-          { 'association.group': group._id },
-          { date: { $gte: !!group.settings.matching.maxDollarAmount ? yearStart.toDate() : monthStart.toDate() } },
-          { date: { $lte: monthEnd.toDate() } },
-          // exclude matches from the statement
-          { matchType: { $exists: false } },
-        ],
+      const getOffsetTransactionQueryBase = () => {
+        const querybase: FilterQuery<ITransaction> = {
+          $and: [
+            { 'association.group': group._id },
+            { date: { $lte: monthEnd.toDate() } },
+            // exclude matches from the statement
+            { matchType: { $exists: false } },
+          ],
+        };
+        return querybase;
       };
 
-      const allTransactions = await getOffsetTransactions(offsetTransactionQuery);
-      const memberDonationsTotalDollars = await getOffsetTransactionsTotal(offsetTransactionQuery);
-      const memberDonationsTotalTonnes = await getRareOffsetAmount(offsetTransactionQuery);
+      // Query for all transactions that are offset transactions for the month
+      const monthlyOffsetTransactionQuery = { ...getOffsetTransactionQueryBase() };
+      monthlyOffsetTransactionQuery.$and.push({ date: { $gte: monthStart.toDate() } });
+      monthlyOffsetTransactionQuery.$and.push({ user: { $in: memberIds } });
 
-      // will hold a breakdown of values to be matched
-      // for each transaction.
-      const toBeMatched: IToBeMatched[] = [];
+      const allMembersMonthOffsetTransactions = await getOffsetTransactions(monthlyOffsetTransactionQuery);
+      const allMembersMonthOffsetTransactionDollars = allMembersMonthOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt, 0) / 100;
+      const allMembersMonthOffsetTransactionTonnes = allMembersMonthOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.tonnes_amt, 0);
 
-      let totalDollarsToMatch = 0;
+      for (const member of members) {
+        const memberId = (member.user as IUserDocument)._id.toString();
+        const memberMonthlyOffsetTransactions = allMembersMonthOffsetTransactions.filter(t => t.user.toString() === memberId);
+        const memberMonthlyOffsetTotalDollars = memberMonthlyOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt, 0) / 100;
+        const memberMonthlyOffsetTotalDollarsAfterMatchingPercentage = memberMonthlyOffsetTotalDollars * (matchPercentage / 100);
 
-      if (!!group.settings.matching.maxDollarAmount) {
-        const offsetsPerMember = getOffsetsPerMember(allTransactions);
+        // YEARLY TRANSACTIONS FOR MATCH LIMIT CHECK
+        const yearlyOffsetTransactionQuery = { ...getOffsetTransactionQueryBase() };
+        yearlyOffsetTransactionQuery.$and.push({ date: { $gte: yearStart.toDate() } });
+        yearlyOffsetTransactionQuery.$and.push({ user: memberId });
+        const yearlyOffsetTransactions = await getOffsetTransactions(yearlyOffsetTransactionQuery);
+        const memberYearlyOffsetTotalDollars = yearlyOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt / 100, 0);
+        const memberYearlyOffsetTotalDollarsAfterMatchingPercentage = memberYearlyOffsetTotalDollars * (matchPercentage / 100);
 
-        // get just this month's transactions out of full year worth
-        // of transactions
-        const thisMonthsTransactions = allTransactions.filter(t => monthStart.isBefore(t.date));
+        const hasMemberAlreadyDonatedYearlyMax = memberYearlyOffsetTotalDollarsAfterMatchingPercentage >= maxDollarAmount;
+        const remainingMatchingBalance = hasMemberAlreadyDonatedYearlyMax ? 0 : maxDollarAmount - memberYearlyOffsetTotalDollarsAfterMatchingPercentage;
 
-        for (const transaction of thisMonthsTransactions) {
-          const userOffsets = offsetsPerMember[transaction.user.toString()];
+        let currentMonthAmountToBeMatchedForMember = 0;
 
-          // if user has already been matched 100%, skip this transaction
-          if (userOffsets.matched >= group.settings.matching.maxDollarAmount) continue;
-
-          // get remaining balance to be matched for this user
-          const leftToBeMatched = group.settings.matching.maxDollarAmount - userOffsets.matched;
-
-          // if this transaction is greater than the amount left
-          // to be matched for this user, only add the amount left
-          // otherwise, add the entire transaction amount to the
-          // total.
-          const transactionSubTotalAmt = (transaction.integrations.rare.subtotal_amt * 100);
-          let value = transactionSubTotalAmt >= leftToBeMatched
-            ? leftToBeMatched
-            : transactionSubTotalAmt;
-
-          value *= matchPercent;
-
-          totalDollarsToMatch += value;
-          toBeMatched.push({ value, transaction });
+        if (!hasMemberAlreadyDonatedYearlyMax) {
+          // if the limit hasn't been reached, calculate the amount to be matched for the month: either the entire amount or a portion
+          currentMonthAmountToBeMatchedForMember = memberMonthlyOffsetTotalDollarsAfterMatchingPercentage > remainingMatchingBalance ? remainingMatchingBalance : memberMonthlyOffsetTotalDollarsAfterMatchingPercentage;
         }
-      } else {
-        // matching 100% with no max...getting total for all offsets for the month
-        totalDollarsToMatch = allTransactions.reduce((prev, curr) => (curr.amount * matchPercent) + prev, 0);
+
+        if (currentMonthAmountToBeMatchedForMember === 0) continue;
+        console.log(`\nmember: ${(member.user as IUserDocument).name}`);
+        console.log(`yearly offset total: ${memberYearlyOffsetTotalDollarsAfterMatchingPercentage}`);
+        console.log(`current month match amount: ${currentMonthAmountToBeMatchedForMember}`);
+
+        toBeMatchedForGroupDollars += currentMonthAmountToBeMatchedForMember;
+
+        // if the match amount exists then we need to grab the value of the match
+        // per transaction and add up the total tonnes that will be matched
+
+        let amountRemainingToBeMatchedForMember = currentMonthAmountToBeMatchedForMember;
+        for (const transaction of memberMonthlyOffsetTransactions) {
+          const transactionSubtotal = transaction.integrations.rare.subtotal_amt / 100;
+          const transactionSubtotalQualifyingForMatch = transactionSubtotal * (matchPercentage / 100);
+          const transactionMatchAmount = (transactionSubtotalQualifyingForMatch <= amountRemainingToBeMatchedForMember) ? transactionSubtotalQualifyingForMatch : amountRemainingToBeMatchedForMember;
+
+          console.log({ transactionId: transaction._id, transactionSubtotal, transactionMatchAmount, amountRemainingToBeMatchedForMember });
+
+          // if the transaction match isn't > 0 then they don't have any remaining balance to match and we can stop
+          if (transactionMatchAmount <= 0) break;
+          amountRemainingToBeMatchedForMember -= transactionMatchAmount;
+          toBeMatchedForGroupTransactions.push({
+            value: transactionMatchAmount,
+            transaction,
+          });
+          const matchPercentageOfTransactionSubtotal = transactionMatchAmount / transactionSubtotal;
+          const tonnesMatch = matchPercentageOfTransactionSubtotal * transaction.integrations.rare.tonnes_amt;
+          toBeMatchedForGroupTonnes += tonnesMatch;
+        }
+
+        console.log({
+          memberMonthlyOffsetTotalDollars,
+          memberYearlyOffsetTotalDollars,
+          maxDollarAmount,
+          currentMonthAmountToBeMatchedForMember });
       }
 
-      const toBeMatchedTransactions = !!toBeMatched.length
-        ? toBeMatched
-        : allTransactions.map(t => ({
-          value: t.amount * matchPercent,
-          transaction: t,
-        }));
+      console.log('\n\n final result\n\n');
 
-      let toBeMatchedTonnes = 0;
-      for (const toBeMatchedTransaction of toBeMatchedTransactions) {
-        toBeMatchedTonnes += (toBeMatchedTransaction.transaction as ITransactionDocument).integrations.rare.tonnes_amt;
-      }
-      toBeMatchedTonnes *= matchPercent;
-
+      // FINAL GROUP STATEMENT
       const statement = new StatementModel({
-        group,
+        group: group._id,
         offsets: {
-          matchPercentage: group.settings.matching.matchPercentage,
-          maxDollarAmount: group.settings.matching.maxDollarAmount,
-          toBeMatched: {
-            dollars: totalDollarsToMatch,
-            tonnes: toBeMatchedTonnes,
-            transactions: toBeMatchedTransactions,
-          },
+          matchPercentage,
+          maxDollarAmount,
           totalMemberOffsets: {
-            dollars: memberDonationsTotalDollars,
-            tonnes: memberDonationsTotalTonnes,
+            dollars: allMembersMonthOffsetTransactionDollars,
+            tonnes: allMembersMonthOffsetTransactionTonnes,
+          },
+          toBeMatched: {
+            dollars: toBeMatchedForGroupDollars,
+            tonnes: toBeMatchedForGroupTonnes,
+            transactions: toBeMatchedForGroupTransactions,
           },
         },
-        transactions: allTransactions.filter(t => monthStart.isBefore(t.date)),
+        transactions: allMembersMonthOffsetTransactions.map(t => t._id),
         date: monthStart.toDate(),
         createdOn: dayjs().utc().toDate(),
       });
 
       await statement.save();
       statementCount += 1;
-
-      // TODO: send email to owner and superadmins notifying them that a new statement is available
     }
-
     console.log(`[+] ${statementCount} statements generated successfully\n`);
-  } catch (err) {
+  } catch (err: any) {
     console.log(`\n[-] An error occurred while generating monthly group offset statements. ${statementCount} statement were created before this error occurred.\n`);
     throw asCustomError(err);
   }
+
+  // arr member transactions for group for current month
+
+  // iterate over users with transactions
+  // how much company has matched for this user
+
+  // return: member offsets for the MONTH (total tonnes), member offsets for the MONTH to MATCH (may be the same as the month if the threshold hadn't been met), match dollar amount (offset to match * rare offset rate), status
 };
+
+/*
+{
+  group,
+  offsets: {
+    matchPercentage,
+    maxDollarAmount,
+    toBeMatched: {
+      dollars,
+      tonnes,
+      transactions: [
+        {
+          value,
+          transaction,
+        }
+      ],
+    },
+    matched: {
+      dollars,
+      tonnes,
+      transactor: {
+        user,
+        group,
+      },
+      date,
+  },
+  transactions,
+  date,
+  createdOn,
+}
+*/

@@ -1,7 +1,9 @@
 /* eslint-disable camelcase */
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
-import * as DeleteUserAndAssociatedData from '../src/jobs/deleteUserAndAssociatedData';
+import { asCustomError } from '../src/lib/customError';
+import { Logger } from '../src/services/logger';
+import * as GenerateGroupStatements from '../src/jobs/generateGroupStatements';
 
 (async () => {
   try {
@@ -12,10 +14,10 @@ import * as DeleteUserAndAssociatedData from '../src/jobs/deleteUserAndAssociate
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
-    await DeleteUserAndAssociatedData.exec({ userId: '630aae7a41090cabb3257428' });
+    await GenerateGroupStatements.exec();
     await MongoClient.disconnect();
   } catch (err) {
-    console.log(err);
+    Logger.error(asCustomError(err));
     await MongoClient.disconnect();
   }
 })();

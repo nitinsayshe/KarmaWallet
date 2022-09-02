@@ -804,9 +804,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
   const { requestor } = req;
   const { groupId } = req.params;
   try {
-    if (!groupId) {
-      throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
-    }
+    if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
     const membersPromise = getAllGroupMembers(req);
     const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
@@ -874,7 +872,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     return {
       userGroup,
-      members: members.length,
+      members: members.filter(m => [UserGroupStatus.Approved, UserGroupStatus.Verified].includes(m.status)).length,
       ...cachedData.value,
       lastUpdated: cachedData.lastUpdated,
     };

@@ -93,6 +93,9 @@ export const getImageFileExtensionFromMimeType = (mimeType: string): string => {
 };
 
 export const downloadImageFromUrlAndStoreInS3 = async (req: IRequest<{}, {}, IDownloadImageAndUploadToS3RequestBody>) => {
+  const { requestor } = req;
+  // limiting to karma for now
+  if (requestor.role === UserRoles.None) throw new CustomError('Only karma users can upload images', ErrorTypes.UNAUTHORIZED);
   const { externalUrl, fileId, filename } = req.body;
   const { data, headers } = await axios.get(externalUrl, { responseType: 'stream' });
   const mimetype = headers['content-type'];

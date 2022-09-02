@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { logTransactionProcessingLag } from '../src/services/scripts/log_transaction_processing_lag';
+import * as GenerateGroupStatements from '../src/jobs/generateGroupStatements';
 
 (async () => {
   try {
@@ -14,7 +14,7 @@ import { logTransactionProcessingLag } from '../src/services/scripts/log_transac
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
-    await logTransactionProcessingLag();
+    await GenerateGroupStatements.exec();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

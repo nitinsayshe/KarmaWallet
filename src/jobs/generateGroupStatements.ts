@@ -142,6 +142,7 @@ export const exec = async () => {
           const tonnesMatch = matchPercentageOfTransactionSubtotal * transaction.integrations.rare.tonnes_amt;
           toBeMatchedForGroupTonnes += tonnesMatch;
         }
+      }
 
       // FINAL GROUP STATEMENT
       const statement = new StatementModel({

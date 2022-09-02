@@ -119,9 +119,6 @@ export const exec = async () => {
         }
 
         if (currentMonthAmountToBeMatchedForMember === 0) continue;
-        console.log(`\nmember: ${(member.user as IUserDocument).name}`);
-        console.log(`yearly offset total: ${memberYearlyOffsetTotalDollarsAfterMatchingPercentage}`);
-        console.log(`current month match amount: ${currentMonthAmountToBeMatchedForMember}`);
 
         toBeMatchedForGroupDollars += currentMonthAmountToBeMatchedForMember;
 
@@ -134,8 +131,6 @@ export const exec = async () => {
           const transactionSubtotalQualifyingForMatch = transactionSubtotal * (matchPercentage / 100);
           const transactionMatchAmount = (transactionSubtotalQualifyingForMatch <= amountRemainingToBeMatchedForMember) ? transactionSubtotalQualifyingForMatch : amountRemainingToBeMatchedForMember;
 
-          console.log({ transactionId: transaction._id, transactionSubtotal, transactionMatchAmount, amountRemainingToBeMatchedForMember });
-
           // if the transaction match isn't > 0 then they don't have any remaining balance to match and we can stop
           if (transactionMatchAmount <= 0) break;
           amountRemainingToBeMatchedForMember -= transactionMatchAmount;
@@ -147,13 +142,6 @@ export const exec = async () => {
           const tonnesMatch = matchPercentageOfTransactionSubtotal * transaction.integrations.rare.tonnes_amt;
           toBeMatchedForGroupTonnes += tonnesMatch;
         }
-
-        console.log({
-          memberMonthlyOffsetTotalDollars,
-          memberYearlyOffsetTotalDollars,
-          maxDollarAmount,
-          currentMonthAmountToBeMatchedForMember });
-      }
 
       console.log('\n\n final result\n\n');
 

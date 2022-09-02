@@ -12,7 +12,7 @@ dayjs.extend(utc);
 
 export const getCarbonOffsetsReport = async (req: IRequest<IReportRequestParams, IReportRequestQuery>): Promise<IChart> => {
   try {
-    const _daysInPast = getDaysInPast(req.query.daysInPast || '30', 365);
+    const _daysInPast = getDaysInPast(req.query.daysInPast || '365', 365);
     const thresholdDate = dayjs(dayjs().utc().format('MMM DD, YYYY'))
       .utc()
       .subtract(_daysInPast, 'days');

@@ -143,8 +143,6 @@ export const exec = async () => {
           toBeMatchedForGroupTonnes += tonnesMatch;
         }
 
-      console.log('\n\n final result\n\n');
-
       // FINAL GROUP STATEMENT
       const statement = new StatementModel({
         group: group._id,

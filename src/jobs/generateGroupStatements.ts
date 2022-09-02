@@ -26,17 +26,19 @@ const getStartDate = (d: Dayjs) => d
   .set('second', 0)
   .set('millisecond', 1);
 
+const getMonthEnd = (d: Dayjs) => d
+  .utc()
+  .subtract(1, 'month')
+  .set('date', d.daysInMonth())
+  .set('hour', 23)
+  .set('minute', 59)
+  .set('second', 59)
+  .set('millisecond', 999);
+
 const getStartAndEndDates = () => {
   const yearStart = getStartDate(dayjs()).set('month', 0);
   const monthStart = getStartDate(dayjs()).subtract(1, 'month');
-  const monthEnd = dayjs()
-    .utc()
-    .subtract(1, 'month')
-    .set('date', monthStart.daysInMonth())
-    .set('hour', 23)
-    .set('minute', 59)
-    .set('second', 59)
-    .set('millisecond', 999);
+  const monthEnd = getMonthEnd(monthStart);
 
   return [yearStart, monthStart, monthEnd];
 };
@@ -71,11 +73,11 @@ export const exec = async () => {
 
       const members = await getAllGroupMembers(memberMockRequest);
       const memberIds: string[] = members.map(m => (m.user as IUserDocument)._id);
-      const getOffsetTransactionQueryBase = () => {
+      const getOffsetTransactionQueryBase = (endDate = monthEnd) => {
         const querybase: FilterQuery<ITransaction> = {
           $and: [
             { 'association.group': group._id },
-            { date: { $lte: monthEnd.toDate() } },
+            { date: { $lte: endDate.toDate() } },
             // exclude matches from the statement
             { matchType: { $exists: false } },
           ],
@@ -99,7 +101,7 @@ export const exec = async () => {
         const memberMonthlyOffsetTotalDollarsAfterMatchingPercentage = memberMonthlyOffsetTotalDollars * (matchPercentage / 100);
 
         // YEARLY TRANSACTIONS FOR MATCH LIMIT CHECK
-        const yearlyOffsetTransactionQuery = { ...getOffsetTransactionQueryBase() };
+        const yearlyOffsetTransactionQuery = { ...getOffsetTransactionQueryBase(dayjs()).subtract(2, 'month') };
         yearlyOffsetTransactionQuery.$and.push({ date: { $gte: yearStart.toDate() } });
         yearlyOffsetTransactionQuery.$and.push({ user: memberId });
         const yearlyOffsetTransactions = await getOffsetTransactions(yearlyOffsetTransactionQuery);

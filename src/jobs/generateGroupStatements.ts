@@ -1,6 +1,6 @@
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { FilterQuery, ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { mockRequest } from '../lib/constants/request';
 import { GroupModel, GroupStatus } from '../models/group';
 import { ITransaction, ITransactionDocument } from '../models/transaction';
@@ -28,7 +28,6 @@ const getStartDate = (d: Dayjs) => d
 
 const getMonthEnd = (d: Dayjs) => d
   .utc()
-  .subtract(1, 'month')
   .set('date', d.daysInMonth())
   .set('hour', 23)
   .set('minute', 59)
@@ -38,9 +37,58 @@ const getMonthEnd = (d: Dayjs) => d
 const getStartAndEndDates = () => {
   const yearStart = getStartDate(dayjs()).set('month', 0);
   const monthStart = getStartDate(dayjs()).subtract(1, 'month');
-  const monthEnd = getMonthEnd(monthStart);
+  const monthEnd = getMonthEnd(dayjs().subtract(1, 'month'));
 
   return [yearStart, monthStart, monthEnd];
+};
+
+const getMatchedTransactionsValueTotalForUserForYear = async (groupId: Types.ObjectId, userId: Types.ObjectId, date: Date) => {
+  const result = await StatementModel.aggregate([
+    {
+      $match: {
+        group: groupId,
+        date: { $lt: date },
+      },
+    }, {
+      $project: {
+        'offsets.toBeMatched.transactions': 1,
+      },
+    }, {
+      $unwind: {
+        path: '$offsets.toBeMatched.transactions',
+        includeArrayIndex: 'string',
+        preserveNullAndEmptyArrays: true,
+      },
+    }, {
+      $project: {
+        transaction: '$offsets.toBeMatched.transactions',
+      },
+    }, {
+      $project: {
+        value: '$transaction.value',
+        transaction: '$transaction.transaction',
+      },
+    }, {
+      $lookup: {
+        from: 'transactions',
+        localField: 'transaction',
+        foreignField: '_id',
+        as: 'transaction',
+      },
+    }, {
+      $match: {
+        'transaction.user': userId,
+      },
+    }, {
+      $group: {
+        _id: '$transaction.user',
+        totalMatched: {
+          $sum: '$value',
+        },
+      },
+    },
+  ]);
+  return result.length ? result[0].totalMatched : 0;
 };
 
 export const exec = async () => {
@@ -60,6 +108,10 @@ export const exec = async () => {
     });
 
     const [yearStart, monthStart, monthEnd] = getStartAndEndDates();
+
+    console.log(`yearStart: ${yearStart.toISOString()}`);
+    console.log(`monthStart: ${monthStart.toISOString()}`);
+    console.log(`monthEnd: ${monthEnd.toISOString()}`);
 
     for (const group of groups) {
       let toBeMatchedForGroupDollars = 0;
@@ -84,32 +136,29 @@ export const exec = async () => {
         };
         return querybase;
       };
-
       // Query for all transactions that are offset transactions for the month
       const monthlyOffsetTransactionQuery = { ...getOffsetTransactionQueryBase() };
       monthlyOffsetTransactionQuery.$and.push({ date: { $gte: monthStart.toDate() } });
       monthlyOffsetTransactionQuery.$and.push({ user: { $in: memberIds } });
-
       const allMembersMonthOffsetTransactions = await getOffsetTransactions(monthlyOffsetTransactionQuery);
       const allMembersMonthOffsetTransactionDollars = allMembersMonthOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt, 0) / 100;
       const allMembersMonthOffsetTransactionTonnes = allMembersMonthOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.tonnes_amt, 0);
 
+      console.log('allMembersMonthOffsetTransactions:', allMembersMonthOffsetTransactions.length);
+      console.log('allMembersMonthOffsetTransactionDollars:', allMembersMonthOffsetTransactionDollars);
+
       for (const member of members) {
         const memberId = (member.user as IUserDocument)._id.toString();
+        console.log(`\nmember: ${(member.user as IUserDocument).name} `);
         const memberMonthlyOffsetTransactions = allMembersMonthOffsetTransactions.filter(t => t.user.toString() === memberId);
         const memberMonthlyOffsetTotalDollars = memberMonthlyOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt, 0) / 100;
         const memberMonthlyOffsetTotalDollarsAfterMatchingPercentage = memberMonthlyOffsetTotalDollars * (matchPercentage / 100);
 
         // YEARLY TRANSACTIONS FOR MATCH LIMIT CHECK
-        const yearlyOffsetTransactionQuery = { ...getOffsetTransactionQueryBase(dayjs()).subtract(2, 'month') };
-        yearlyOffsetTransactionQuery.$and.push({ date: { $gte: yearStart.toDate() } });
-        yearlyOffsetTransactionQuery.$and.push({ user: memberId });
-        const yearlyOffsetTransactions = await getOffsetTransactions(yearlyOffsetTransactionQuery);
-        const memberYearlyOffsetTotalDollars = yearlyOffsetTransactions.reduce((acc, t) => acc + t.integrations.rare.subtotal_amt / 100, 0);
-        const memberYearlyOffsetTotalDollarsAfterMatchingPercentage = memberYearlyOffsetTotalDollars * (matchPercentage / 100);
+        const memberYearlyOffsetTotalDollars = await getMatchedTransactionsValueTotalForUserForYear(group._id, (member.user as IUserDocument)._id, monthStart.toDate());
 
-        const hasMemberAlreadyDonatedYearlyMax = memberYearlyOffsetTotalDollarsAfterMatchingPercentage >= maxDollarAmount;
-        const remainingMatchingBalance = hasMemberAlreadyDonatedYearlyMax ? 0 : maxDollarAmount - memberYearlyOffsetTotalDollarsAfterMatchingPercentage;
+        const hasMemberAlreadyDonatedYearlyMax = memberYearlyOffsetTotalDollars >= maxDollarAmount;
+        const remainingMatchingBalance = hasMemberAlreadyDonatedYearlyMax ? 0 : maxDollarAmount - memberYearlyOffsetTotalDollars;
 
         let currentMonthAmountToBeMatchedForMember = 0;
 
@@ -117,6 +166,11 @@ export const exec = async () => {
           // if the limit hasn't been reached, calculate the amount to be matched for the month: either the entire amount or a portion
           currentMonthAmountToBeMatchedForMember = memberMonthlyOffsetTotalDollarsAfterMatchingPercentage > remainingMatchingBalance ? remainingMatchingBalance : memberMonthlyOffsetTotalDollarsAfterMatchingPercentage;
         }
+
+        console.log(`yearly offset total: ${memberYearlyOffsetTotalDollars}`);
+        console.log(`memberMonthlyOffsetTotalDollars: ${memberMonthlyOffsetTotalDollars}`);
+        console.log(`memberMonthlyOffsetTotalDollarsAfterMatchingPercentage: ${memberMonthlyOffsetTotalDollarsAfterMatchingPercentage}`);
+        console.log(`currentMonthAmountToBeMatchedForMember: ${currentMonthAmountToBeMatchedForMember}`);
 
         if (currentMonthAmountToBeMatchedForMember === 0) continue;
 
@@ -130,7 +184,11 @@ export const exec = async () => {
           const transactionSubtotal = transaction.integrations.rare.subtotal_amt / 100;
           const transactionSubtotalQualifyingForMatch = transactionSubtotal * (matchPercentage / 100);
           const transactionMatchAmount = (transactionSubtotalQualifyingForMatch <= amountRemainingToBeMatchedForMember) ? transactionSubtotalQualifyingForMatch : amountRemainingToBeMatchedForMember;
-
+          console.log({
+            transactionSubtotal,
+            transactionSubtotalQualifyingForMatch,
+            transactionMatchAmount,
+          });
           // if the transaction match isn't > 0 then they don't have any remaining balance to match and we can stop
           if (transactionMatchAmount <= 0) break;
           amountRemainingToBeMatchedForMember -= transactionMatchAmount;
@@ -141,11 +199,11 @@ export const exec = async () => {
           const matchPercentageOfTransactionSubtotal = transactionMatchAmount / transactionSubtotal;
           const tonnesMatch = matchPercentageOfTransactionSubtotal * transaction.integrations.rare.tonnes_amt;
           toBeMatchedForGroupTonnes += tonnesMatch;
+          console.log({ tonnesMatch });
         }
       }
 
-      // FINAL GROUP STATEMENT
-      const statement = new StatementModel({
+      const result = {
         group: group._id,
         offsets: {
           matchPercentage,
@@ -163,8 +221,9 @@ export const exec = async () => {
         transactions: allMembersMonthOffsetTransactions.map(t => t._id),
         date: monthStart.toDate(),
         createdOn: dayjs().utc().toDate(),
-      });
-
+      };
+      console.log(result);
+      const statement = new StatementModel(result);
       await statement.save();
       statementCount += 1;
     }

@@ -4,6 +4,7 @@ import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { associateWildfireMatches } from '../src/services/scripts/associate_wildfire_merchants';
+import * as GenerateGroupStatements from '../src/jobs/generateGroupStatements';
 
 (async () => {
   try {
@@ -15,6 +16,7 @@ import { associateWildfireMatches } from '../src/services/scripts/associate_wild
     // updateCompaniesUrls();
     // add mappers here...
     await associateWildfireMatches();
+    await GenerateGroupStatements.exec();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

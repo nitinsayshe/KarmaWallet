@@ -20,6 +20,7 @@ const {
 
 export class WildfireClient extends SdkClient {
   _client: AxiosInstance;
+  _adminClient: AxiosInstance;
 
   constructor() {
     super('Wildfire');
@@ -33,7 +34,25 @@ export class WildfireClient extends SdkClient {
       },
       baseURL: `https://www.wildlink.me/data/${WILDFIRE_CLIENT_APP_ID}`,
     });
+
+    this._adminClient = axios.create({
+      headers: {
+        Authorization: WILDFIRE_CLIENT_APP_KEY,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      baseURL: 'https://api.wfi.re/v2',
+    });
   }
+
+  adminCreateDevice = async () => {
+    try {
+      const data = await this._adminClient.post('/device', { data: { DeviceKey: '' } });
+      return data;
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   getMerchantRates = async () => {
     let data;

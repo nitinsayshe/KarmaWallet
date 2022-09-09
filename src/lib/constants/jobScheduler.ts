@@ -31,4 +31,5 @@ export enum JobNames {
   UpdateBatchCompanyParentChildrenRelationships = 'update-batch-company-parent-children-relationships',
   UpdateRareProjectAverage = 'update-rare-project-average',
   UploadCsvToGoogleDrive = 'upload-csv-to-google-drive',
+  DeleteUserAndAssociatedData = 'delete-user-and-associated-data',
 }

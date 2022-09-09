@@ -8,5 +8,6 @@ const router = Router();
 const upload = multer();
 
 router.post('/image', authenticate, upload.single('file'), UploadController.uploadImage);
+router.post('/image/from-url', authenticate, UploadController.downloadImageFromUrlAndStoreInS3);
 
 export default (app: Express) => app.use('/upload', router);

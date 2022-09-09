@@ -241,7 +241,7 @@ export class PlaidClient extends SdkClient {
         console.log('[-] plaid environment mismatch. skipping access token.');
         return null;
       }
-      if (e.response?.data?.error_code === 'INVALID_ACCESS_TOKEN') {
+      if (['INVALID_ACCESS_TOKEN', 'ITEM_LOGIN_REQUIRED'].includes(e.response?.data?.error_code)) {
         try {
           const cards = await CardModel.find({ 'integrations.plaid.accessToken': access_token });
           if (!!cards.length) {

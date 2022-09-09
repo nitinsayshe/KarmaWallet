@@ -17,6 +17,8 @@ import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
 
+_adminClient;
+
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 
 // these are query parameters that were sent
@@ -27,6 +29,29 @@ const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 interface IRareTransactionBody {
   transaction: IRareTransaction;
   forwarded_query_params?: IRareRelayedQueryParams;
+}
+
+interface IWildfireWebhookBody {
+  ID: string,
+  Type: string,
+  Action: string,
+  Payload: {
+    ID: number,
+    ApplicationID: number,
+    MerchantID: number,
+    DeviceID: number,
+    SaleAmount: string,
+    Amount: string,
+    Status: string,
+    TrackingCode: string,
+    EventDate: string,
+    CreatedDate: string,
+    ModifiedDate: string,
+    MerchantOrderID: string,
+    MerchantSKU: string
+
+  },
+  CreatedDate: string
 }
 
 interface IUserPlaidTransactionsMapBody {
@@ -130,6 +155,15 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
       MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId: card.userId, accessToken: card.integrations.plaid.accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
     }
     api(req, res, { message: 'Plaid webhook processed successfully.' });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
+  try {
+    const { body, headers } = req;
+    const wildfireSignature = headers['X-Wf-Signature'];
   } catch (e) {
     error(req, res, asCustomError(e));
   }

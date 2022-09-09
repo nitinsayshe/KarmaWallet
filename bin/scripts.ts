@@ -17,8 +17,8 @@ import { WildfireClient } from '../src/clients/wildfire';
     // await associateWildfireMatches();
     // await GenerateGroupStatements.exec();
     const client = new WildfireClient();
-    const device = await client.adminCreateDevice();
-    console.log(device);
+    const details = await client.getComissionSummary();
+    console.log(details?.data);
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

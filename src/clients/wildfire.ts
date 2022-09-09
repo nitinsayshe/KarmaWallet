@@ -12,17 +12,27 @@ interface IWildfireClient {
   client: string
 }
 
+export interface IWildfireAdminCommissionParams {
+  startDate: string,
+  endDate?: string,
+  limit?: number,
+  cursor?: string
+}
+
 const {
   WILDFIRE_ADMIN_APP_KEY,
   WILDFIRE_ADMIN_APP_ID,
   WILDFIRE_CLIENT_APP_KEY,
   WILDFIRE_CLIENT_APP_ID,
+  WILDFIRE_DEVICE_KEY,
+  WILDFIRE_DEVICE_TOKEN,
+  WIDLFIRE_DEVICE_UUID,
 } = process.env;
 
-export const getWildfireAuthorization = (appId: string, appKey: string) => {
+export const getWildfireAuthorization = (appId: string, appKey: string, deviceToken: string = '') => {
   if (!appId || !appKey) throw new Error('Missing wildfire app id or app key');
   const wfTime = new Date().toISOString();
-  const stringToSign = `${[wfTime, '', ''].join('\n')}\n`;
+  const stringToSign = `${[wfTime, deviceToken, ''].join('\n')}\n`;
   const appSignature = CryptoJS.HmacSHA256(stringToSign, appKey).toString(CryptoJS.enc.Hex);
   const authorization = `WFAV1 ${[appId, appSignature, '', ''].join(':')}`;
   return { authorization, wfTime };
@@ -31,6 +41,7 @@ export const getWildfireAuthorization = (appId: string, appKey: string) => {
 export class WildfireClient extends SdkClient {
   _client: AxiosInstance;
   _adminClient: AxiosInstance;
+  _clientClient: AxiosInstance;
 
   constructor() {
     super('Wildfire');
@@ -45,24 +56,22 @@ export class WildfireClient extends SdkClient {
       baseURL: `https://www.wildlink.me/data/${WILDFIRE_CLIENT_APP_ID}`,
     });
 
-    const { authorization, wfTime } = getWildfireAuthorization(WILDFIRE_ADMIN_APP_ID, WILDFIRE_ADMIN_APP_KEY);
-
-    console.log('authorization', authorization);
+    const { authorization: adminAuthorization, wfTime: adminWfTime } = getWildfireAuthorization(WILDFIRE_ADMIN_APP_ID, WILDFIRE_ADMIN_APP_KEY);
 
     this._adminClient = axios.create({
       headers: {
-        Authorization: authorization,
-        'X-WF-DateTime': wfTime,
+        Authorization: adminAuthorization,
+        'X-WF-DateTime': adminWfTime,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      baseURL: 'https://api.wfi.re/v2',
+      baseURL: 'https://api.wfi.re',
     });
   }
 
   adminCreateDevice = async () => {
     try {
-      const data = await this._adminClient.post('/device', { data: { DeviceKey: '' } });
+      const data = await this._adminClient.post('/v2/device', { data: { DeviceKey: '' } });
       return data;
     } catch (err) {
       console.log(err);
@@ -138,6 +147,54 @@ export class WildfireClient extends SdkClient {
       throw asCustomError(err);
     }
     if (!data) throw new CustomError('No featured merchant data returned from Wildfire');
+    return data;
+  };
+
+  getComissionSummary = async () => {
+    let data;
+    try {
+      data = await this._clientClient.get('/device/stats/commission-summary');
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+    if (!data) throw new CustomError('No commission summary data returned from Wildfire');
+    return data;
+  };
+
+  // IMPORTANT: This endpoint has a rate limit of 1 request per 5 seconds.
+  getAdminComissionDetails = async ({
+    startDate,
+    endDate,
+    cursor,
+    limit = 100,
+  }: IWildfireAdminCommissionParams) => {
+    let data;
+    let params = '';
+    if (!startDate) throw Error('Missing start date');
+    params += `start_modified_date=${dayjs(startDate).utc().format('YYYY-MM-DD')}&limit=${limit}`;
+    if (endDate) params += `&end_modified_date=${dayjs(endDate).utc().format('YYYY-MM-DD')}`;
+    if (cursor) params += `&cursor=${cursor}`;
+    try {
+      data = await this._adminClient.get(`/v3/commission?${params}`);
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+    if (!data) throw new CustomError('No commission detail data returned from Wildfire');
+    return data;
+  };
+
+  // used for testing the callback
+  resendComissionCallback = async (commissionId: string) => {
+    let data;
+    try {
+      data = await this._adminClient.post(`/v2/commission/${commissionId}/send-callback`);
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+    if (!data) throw new CustomError('No commission detail data returned from Wildfire');
     return data;
   };
 }

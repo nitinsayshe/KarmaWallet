@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import dayjs from 'dayjs';
+import CryptoJS from 'crypto-js';
 import utc from 'dayjs/plugin/utc';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
@@ -18,6 +19,15 @@ const {
   WILDFIRE_CLIENT_APP_ID,
 } = process.env;
 
+export const getWildfireAuthorization = (appId: string, appKey: string) => {
+  if (!appId || !appKey) throw new Error('Missing wildfire app id or app key');
+  const wfTime = new Date().toISOString();
+  const stringToSign = `${[wfTime, '', ''].join('\n')}\n`;
+  const appSignature = CryptoJS.HmacSHA256(stringToSign, appKey).toString(CryptoJS.enc.Hex);
+  const authorization = `WFAV1 ${[appId, appSignature, '', ''].join(':')}`;
+  return { authorization, wfTime };
+};
+
 export class WildfireClient extends SdkClient {
   _client: AxiosInstance;
   _adminClient: AxiosInstance;
@@ -35,9 +45,14 @@ export class WildfireClient extends SdkClient {
       baseURL: `https://www.wildlink.me/data/${WILDFIRE_CLIENT_APP_ID}`,
     });
 
+    const { authorization, wfTime } = getWildfireAuthorization(WILDFIRE_ADMIN_APP_ID, WILDFIRE_ADMIN_APP_KEY);
+
+    console.log('authorization', authorization);
+
     this._adminClient = axios.create({
       headers: {
-        Authorization: WILDFIRE_CLIENT_APP_KEY,
+        Authorization: authorization,
+        'X-WF-DateTime': wfTime,
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },

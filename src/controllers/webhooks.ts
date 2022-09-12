@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+import crypto from 'crypto';
 import { mapTransactions } from '../integrations/rare';
 import { api, error } from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
@@ -17,9 +18,7 @@ import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
 
-_adminClient;
-
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -164,6 +163,7 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
   try {
     const { body, headers } = req;
     const wildfireSignature = headers['X-Wf-Signature'];
+    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body));
   } catch (e) {
     error(req, res, asCustomError(e));
   }

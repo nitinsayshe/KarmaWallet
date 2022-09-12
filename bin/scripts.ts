@@ -3,7 +3,6 @@ import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { WildfireClient } from '../src/clients/wildfire';
 
 (async () => {
   try {
@@ -16,9 +15,8 @@ import { WildfireClient } from '../src/clients/wildfire';
     // add mappers here...
     // await associateWildfireMatches();
     // await GenerateGroupStatements.exec();
-    const client = new WildfireClient();
-    const details = await client.getComissionSummary();
-    console.log(details?.data);
+    // await removeMerchant('63079ac5e33a266250fb7ce4');
+    // await removeDuplicateWildfireMerchants();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

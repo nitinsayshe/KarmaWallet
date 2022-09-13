@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 
 const {
@@ -27,17 +28,23 @@ export class PaypalClient extends SdkClient {
   }
 
   async getAccessToken(code: string) {
-    const { data } = await this._client.post('/identity/openidconnect/tokenservice', {
-      grant_type: 'authorization_code',
-      code,
-    });
-    // add error handling
-    return data;
+    try {
+      const { data } = await this._client.post('/identity/openidconnect/tokenservice', {
+        grant_type: 'authorization_code',
+        code,
+      });
+      // add error handling
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
   }
 
   async getCustomerDataFromToken(accessToken: string) {
     const { data } = await this._client.get('/oauth2/token/userinfo?schema=openid', {
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
       },
     });

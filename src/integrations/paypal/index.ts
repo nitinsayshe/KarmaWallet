@@ -19,7 +19,13 @@ export const linkAccount = async (req: IRequest<{}, {}, ILinkAccountBody>) => {
   const customerData = await paypalClient.getCustomerDataFromToken(accessToken);
   // TODO: confirm data structure from paypal response
   const user = await UserModel.findOneAndUpdate({ _id: requestor._id }, { 'integrations.paypal': { payerId: customerData.payerId, email: customerData.email } }, { new: true });
-  if (customerData) responseMessage = 'Successfully linked paypal account';
-  else responseMessage = 'Failed to link paypal account';
+  if (customerData) responseMessage = 'Successfully linked Paypal account';
+  else responseMessage = 'Failed to link Paypal account';
   return { message: responseMessage, user: getShareableUser(user) };
+};
+
+export const unlinkAccount = async (req: IRequest<{}, {}, {}>) => {
+  const { requestor } = req;
+  const user = await UserModel.findOneAndUpdate({ _id: requestor._id }, { 'integrations.paypal': null }, { new: true });
+  return { message: 'Paypal account successfully unlinked', user: getShareableUser(user) };
 };

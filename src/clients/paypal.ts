@@ -31,6 +31,7 @@ export class PaypalClient extends SdkClient {
       grant_type: 'authorization_code',
       code,
     });
+    // add error handling
     return data;
   }
 
@@ -40,6 +41,7 @@ export class PaypalClient extends SdkClient {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+    // add error handling
     return data;
   }
 }

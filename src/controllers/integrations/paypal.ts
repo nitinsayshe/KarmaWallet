@@ -11,3 +11,12 @@ export const linkAccount: IRequestHandler<{}, {}, PaypalService.ILinkAccountBody
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const unlinkAccount: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const data = await PaypalService.unlinkAccount(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

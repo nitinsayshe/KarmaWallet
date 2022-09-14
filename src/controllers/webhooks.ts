@@ -163,8 +163,17 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
   try {
     const { body, headers } = req;
     const wildfireSignature = headers['X-Wf-Signature'];
-    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body));
+    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
+    console.log({
+      wildfireSignature,
+      bodyHash,
+    });
+    if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+    console.log('wf check has passed. callback body: ', body);
   } catch (e) {
     error(req, res, asCustomError(e));
   }
 };
+
+// wildfireSignature = c8abc5baf0a109d3365f90b1f783a9f71eaecd1746fcf39b9b4b1b3417b84cca // body encrypted with stored WFCBKey in PADMIN from SHA256 algo
+// bodyHash = c8abc5baf0a109d3365f90b1f783a9f71eaecd1746fcf39b9b4b1b3417b84cca // body encrypted with WILDFIRE_CALLBACK_KEY in .env from SHA256 algo

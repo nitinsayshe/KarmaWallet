@@ -55,6 +55,18 @@ jobs:
     - run: echo 'BETSI_ENV=lilbetsi' >> .env
     - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
     - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
+    - run: echo 'WILDFIRE_ADMIN_APP_KEY=${{secrets.WILDFIRE_ADMIN_APP_KEY}}' >> .env
+    - run: echo 'WILDFIRE_ADMIN_APP_ID=140' >> .env
+    - run: echo 'WILDFIRE_CLIENT_APP_KEY=${{secrets.WILDFIRE_CLIENT_APP_KEY}}' >> .env
+    - run: echo 'WILDFIRE_CLIENT_APP_ID=141' >> .env
+    - run: echo 'WILDFIRE_DEVICE_ID=16513502' >> .env
+    - run: echo 'WILDFIRE_DEVICE_KEY=${{secrets.WILDFIRE_DEVICE_KEY}}' >> .env
+    - run: echo 'WILDFIRE_DEVICE_TOKEN=${{secrets.WILDFIRE_DEVICE_TOKEN}}' >> .env
+    - run: echo 'WIDLFIRE_DEVICE_UUID=${{secrets.WIDLFIRE_DEVICE_UUID}}' >> .env
+    - run: echo 'WILDFIRE_CALLBACK_KEY=${{secrets.WILDFIRE_CALLBACK_KEY}}' >> .env
+    - run: echo 'PAYPAL_CLIENT_ID=${{secrets.LIVE_PAYPAL_CLIENT_ID}}' >> .env
+    - run: echo 'PAYPAL_MODE=live' >> .env
+    - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env     
     - run: npm i
     - run: pm2 restart all
     

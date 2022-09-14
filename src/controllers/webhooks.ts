@@ -179,6 +179,3 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
     error(req, res, asCustomError(e));
   }
 };
-
-// wildfireSignature = c8abc5baf0a109d3365f90b1f783a9f71eaecd1746fcf39b9b4b1b3417b84cca // body encrypted with stored WFCBKey in PADMIN from SHA256 algo
-// bodyHash = c8abc5baf0a109d3365f90b1f783a9f71eaecd1746fcf39b9b4b1b3417b84cca // body encrypted with WILDFIRE_CALLBACK_KEY in .env from SHA256 algo

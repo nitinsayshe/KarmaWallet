@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+import crypto from 'crypto';
 import { mapTransactions } from '../integrations/rare';
 import { api, error } from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
@@ -17,7 +18,7 @@ import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -27,6 +28,29 @@ const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 interface IRareTransactionBody {
   transaction: IRareTransaction;
   forwarded_query_params?: IRareRelayedQueryParams;
+}
+
+interface IWildfireWebhookBody {
+  ID: string,
+  Type: string,
+  Action: string,
+  Payload: {
+    ID: number,
+    ApplicationID: number,
+    MerchantID: number,
+    DeviceID: number,
+    SaleAmount: string,
+    Amount: string,
+    Status: string,
+    TrackingCode: string,
+    EventDate: string,
+    CreatedDate: string,
+    ModifiedDate: string,
+    MerchantOrderID: string,
+    MerchantSKU: string
+
+  },
+  CreatedDate: string
 }
 
 interface IUserPlaidTransactionsMapBody {
@@ -134,3 +158,22 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
     error(req, res, asCustomError(e));
   }
 };
+
+export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
+  try {
+    const { body, headers } = req;
+    const wildfireSignature = headers['X-Wf-Signature'];
+    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
+    console.log({
+      wildfireSignature,
+      bodyHash,
+    });
+    if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+    console.log('wf check has passed. callback body: ', body);
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+// wildfireSignature = c8abc5baf0a109d3365f90b1f783a9f71eaecd1746fcf39b9b4b1b3417b84cca // body encrypted with stored WFCBKey in PADMIN from SHA256 algo
+// bodyHash = c8abc5baf0a109d3365f90b1f783a9f71eaecd1746fcf39b9b4b1b3417b84cca // body encrypted with WILDFIRE_CALLBACK_KEY in .env from SHA256 algo

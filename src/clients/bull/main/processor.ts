@@ -22,6 +22,7 @@ import * as SendEmail from '../../../jobs/sendEmail';
 import * as UpdateBatchCompanyDataSources from '../../../jobs/updateBatchCompanyDataSources';
 import * as UpdateBatchCompanyParentChildrenRelationships from '../../../jobs/updateBatchCompanyParentChildrenRelationships';
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
+import * as UpdateWildfireMerchantsAndData from '../../../jobs/updateWildfireMerchantsAndData';
 import { INextJob } from '../base';
 
 const MongoClient = new _MongoClient();
@@ -141,6 +142,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);
+      break;
+    case JobNames.UpdateWildfireMerchantsAndData:
+      result = await UpdateWildfireMerchantsAndData.exec();
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

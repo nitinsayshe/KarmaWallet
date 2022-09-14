@@ -13,6 +13,7 @@ import { CompanyRating } from '../lib/constants/company';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 import { IJobReportDocument } from './jobReport';
+import { IShareableMerchant } from './merchant';
 
 export enum CompanyCreationStatus {
   Completed = 'completed',
@@ -60,6 +61,14 @@ export interface ICompanyHidden {
   lastModified: Date;
 }
 
+export interface IWildfireCompanyIntegration {
+  merchantId?: string;
+}
+
+export interface ICompanyIntegrations {
+  wildfire?: IWildfireCompanyIntegration;
+}
+
 export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -73,6 +82,7 @@ export interface IShareableCompany {
   logo: string;
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, IShareableCompany>;
+  merchant: IRef<ObjectId, IShareableMerchant>;
   rating: CompanyRating;
   sectors: ICompanySector[];
   slug: string;
@@ -175,6 +185,10 @@ const companySchema = new Schema(
       required: true,
     },
     lastModified: { type: Date },
+    merchant: {
+      type: Schema.Types.ObjectId,
+      ref: 'merchant',
+    },
   },
   {
     toJSON: { virtuals: true },

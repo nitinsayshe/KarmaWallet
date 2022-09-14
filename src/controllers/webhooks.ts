@@ -168,6 +168,9 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
       if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
       // do work here
       console.log('Wildfire webhook processed successfully.');
+      console.log('------- BEG WF Transaction -------\n');
+      console.log(JSON.stringify(body, null, 2));
+      console.log('\n------- END WF Transaction -------');
       api(req, res, { message: 'Wildfire comission processed successfully.' });
     } catch (e) {
       throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);

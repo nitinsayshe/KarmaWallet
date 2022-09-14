@@ -161,15 +161,17 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
 
 export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
   try {
-    const { body, headers } = req;
-    const wildfireSignature = headers['X-Wf-Signature'];
+    const { body } = req;
+    const wildfireSignature = req?.headers['x-wf-signature'];
     const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
-    console.log({
-      wildfireSignature,
-      bodyHash,
-    });
-    if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
-    console.log('wf check has passed. callback body: ', body);
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+      // do work here
+      console.log('Wildfire webhook processed successfully.');
+      api(req, res, { message: 'Wildfire comission processed successfully.' });
+    } catch (e) {
+      throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+    }
   } catch (e) {
     error(req, res, asCustomError(e));
   }

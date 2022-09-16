@@ -56,7 +56,7 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
     const total = await getUserCurrentAccrualsBalance(requestor._id);
     return { commissions: commissions.map(c => getShareableCommission(c)), total, date: getNextPayoutDate().date };
   }
-  const payout = await CommissionPayoutModel.findOne({ user: requestor._id, payout: id })
+  const payout = await CommissionPayoutModel.findOne({ user: requestor._id, _id: id })
     .select('commissions amount')
     .populate({ path: 'commissions', populate: defaultCommissionPopulation });
   const total = payout?.amount || 0;

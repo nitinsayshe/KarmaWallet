@@ -61,7 +61,7 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
     .populate({ path: 'commissions', populate: defaultCommissionPopulation });
   const total = payout?.amount || 0;
   const commissions = payout?.commissions || [];
-  return { total, commissions, date: payout.date };
+  return { total, commissions: commissions.map(c => getShareableCommission((c as any as IShareableCommission))), date: payout.date };
 };
 
 export const getCommissionDashboardSummary = async (req: IRequest) => {

@@ -8,7 +8,7 @@ const checkToken: IRequestHandler = (req, res, next) => {
     return next();
   }
 
-  if (req.headers['x-wf-signature'] && req.url === '/webhook/wildfire') {
+  if (req?.headers['x-wf-signature'] && req?.url === '/webhook/wildfire') {
     return next();
   }
 

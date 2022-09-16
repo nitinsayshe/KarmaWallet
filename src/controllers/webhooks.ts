@@ -162,7 +162,7 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
 export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
   try {
     const { body } = req;
-    const wildfireSignature = req?.headers['x-wf-signature'];
+    const wildfireSignature = req?.headers['x-wf-signature']?.replace('sha256=', '');
     const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
     try {
       if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);

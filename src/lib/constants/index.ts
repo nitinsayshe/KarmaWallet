@@ -144,3 +144,7 @@ export const sectorsToExclude = [
   '62192ef3f022c9e3fbff0ba2', // staging Nonprofits
   '621b9adb5f87e75f5366702e', // prod Nonprofits
 ];
+
+export const CommissionPayoutMonths = [0, 3, 6, 9];
+
+export const CommissionPayoutDayForUser = 15;

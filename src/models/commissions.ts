@@ -11,14 +11,14 @@ import { IShareableMerchant } from './merchant';
 import { IShareableCompany } from './company';
 import { IShareableUser } from './user';
 
-export enum WildfireComissionStatus {
+export enum WildfireCommissionStatus {
   Pending = 'PENDING',
   Paid = 'PAID',
   Disqualified = 'DISQUALIFIED',
   Ready = 'READY',
 }
 
-export enum KarmaComissionStatus {
+export enum KarmaCommissionStatus {
   Pending = 'pending',
   ConfirmedAndAwaitingVendorPayment = 'confirmed-and-awaiting-vendor-payment',
   ReceivedFromVendor = 'received-from-vendor',
@@ -26,7 +26,7 @@ export enum KarmaComissionStatus {
   Canceled = 'canceled',
 }
 
-export interface IWildfireComissionIntegration {
+export interface IWildfireCommissionIntegration {
   CommissionID: number,
   ApplicationID: number,
   MerchantID: number,
@@ -40,7 +40,7 @@ export interface IWildfireComissionIntegration {
     Currency: string
   },
   Commission: number,
-  Status: WildfireComissionStatus,
+  Status: WildfireCommissionStatus,
   EventDate: Date,
   CreatedDate: Date,
   ModifiedDate: Date,
@@ -48,11 +48,11 @@ export interface IWildfireComissionIntegration {
   MerchantSKU: string
 }
 
-export interface IComissionIntegrations {
-  wildfire?: IWildfireComissionIntegration;
+export interface ICommissionIntegrations {
+  wildfire?: IWildfireCommissionIntegration;
 }
 
-export interface IShareableComission {
+export interface IShareableCommission {
   _id: ObjectId;
   merchant: IRef<ObjectId, IShareableMerchant>;
   company: IRef<ObjectId, IShareableCompany>;
@@ -64,23 +64,23 @@ export interface IShareableComission {
     karma: number,
     user: number,
   };
-  status: KarmaComissionStatus;
+  status: KarmaCommissionStatus;
   lastModified: Date;
   createdOn: Date;
-  integrations: IComissionIntegrations;
+  integrations: ICommissionIntegrations;
 }
 
-export interface IComission extends IShareableComission {
+export interface ICommission extends IShareableCommission {
   _id: ObjectId;
 }
 
-export interface IComissionDocument extends IComission, Document {
+export interface ICommissionDocument extends ICommission, Document {
   _id: ObjectId;
 }
 
-export type IComissionModel = IModel<IComission>;
+export type IComissionModel = IModel<ICommission>;
 
-const comission = new Schema({
+const commission = new Schema({
   merchant: {
     type: Schema.Types.ObjectId,
     ref: 'merchant',
@@ -96,7 +96,7 @@ const comission = new Schema({
   // comission amount total from vendor (i.e. what Karma receives from vendor)
   amount: { type: Number },
   date: { type: Date },
-  status: { type: String, enum: Object.values(KarmaComissionStatus) },
+  status: { type: String, enum: Object.values(KarmaCommissionStatus) },
   lastStatusUpdate: { type: Date },
   allocation: {
     user: { type: Number },
@@ -119,7 +119,7 @@ const comission = new Schema({
         Currency: { type: String },
       },
       Commission: { type: Number },
-      Status: { type: String, enum: Object.values(WildfireComissionStatus) },
+      Status: { type: String, enum: Object.values(WildfireCommissionStatus) },
       EventDate: { type: Date },
       CreatedDate: { type: Date },
       ModifiedDate: { type: Date },
@@ -130,7 +130,7 @@ const comission = new Schema({
   },
 });
 
-export const ComissionModel = model<IComissionDocument, PaginateModel<IComission>>('comission', comission);
+export const CommissionModel = model<ICommissionDocument, PaginateModel<ICommission>>('commission', commission);
 
 /*
 {

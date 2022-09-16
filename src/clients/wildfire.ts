@@ -7,11 +7,6 @@ import { SdkClient } from './sdkClient';
 
 dayjs.extend(utc);
 
-interface IWildfireClient {
-  admin: string,
-  client: string
-}
-
 export interface IWildfireAdminCommissionParams {
   startDate: string,
   endDate?: string,

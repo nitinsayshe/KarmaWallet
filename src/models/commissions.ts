@@ -39,7 +39,6 @@ export interface IWildfireCommissionIntegration {
     Amount: string,
     Currency: string
   },
-  Commission: number,
   Status: WildfireCommissionStatus,
   EventDate: Date,
   CreatedDate: Date,
@@ -118,7 +117,6 @@ const commission = new Schema({
         Amount: { type: String },
         Currency: { type: String },
       },
-      Commission: { type: Number },
       Status: { type: String, enum: Object.values(WildfireCommissionStatus) },
       EventDate: { type: Date },
       CreatedDate: { type: Date },

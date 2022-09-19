@@ -27,7 +27,7 @@ export type IWildfireCommission = {
   ModifiedDate: Date,
   MerchantOrderID: string,
   MerchantSKU: string
-  TC: string,
+  TrackingCode: string,
 };
 
 export const getNextPayoutDate = (date: Date = getUtcDate().toDate()) => {
@@ -132,10 +132,10 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     MerchantID,
     Amount: AmountObject,
     Status,
-    TC,
+    TrackingCode,
   } = wildfireCommission;
 
-  if (!TC) throw new Error('TC is required');
+  if (!TrackingCode) throw new Error('TrackingCode is required');
 
   const Amount = parseFloat(AmountObject?.Amount);
   if (Number.isNaN(Amount)) throw new Error('Invalid amount');
@@ -160,7 +160,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     if (!merchant) throw new Error('Merchant not found');
     const company = await CompanyModel.findOne({ merchant: merchant?._id });
     if (!company) throw new Error('Company not found');
-    const user = await UserModel.findOne({ _id: TC });
+    const user = await UserModel.findOne({ _id: TrackingCode });
     if (!user) throw new Error('User not found');
     const newCommission = new CommissionModel({
       user: user?._id,

@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { CommissionModel, IShareableCommission } from '../../models/commissions';
+import { CommissionModel, ICommissionDocument, IShareableCommission } from '../../models/commissions';
 import { IRequest } from '../../types/request';
 import { CommissionPayoutDayForUser } from '../../lib/constants';
 import {
@@ -50,6 +50,7 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
   const { id } = req.query;
   if (!id) {
     const commissions = await CommissionModel.find({ user: requestor._id, ...currentAccurualsQuery })
+      .sort({ createdOn: -1 })
       .populate(defaultCommissionPopulation);
     const total = await getUserCurrentAccrualsBalance(requestor._id);
     return { commissions: commissions.map(c => getShareableCommission(c)), total, date: getNextPayoutDate().date };
@@ -58,7 +59,8 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
     .select('commissions amount date status')
     .populate({ path: 'commissions', populate: defaultCommissionPopulation });
   const total = payout?.amount || 0;
-  const commissions = payout?.commissions || [];
+  let commissions: ICommissionDocument[] = payout?.commissions as any as ICommissionDocument[];
+  commissions = commissions.sort((a, b) => b.createdOn.getTime() - a.createdOn.getTime());
   return { total, commissions: commissions.map(c => getShareableCommission((c as any as IShareableCommission))), date: payout.date };
 };
 
@@ -70,6 +72,7 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
     user: requestor._id,
     ...currentAccurualsQuery,
   })
+    .sort({ createdOn: -1 })
     .populate(defaultCommissionPopulation);
   const balance = await getUserCurrentAccrualsBalance(requestor._id);
   return {

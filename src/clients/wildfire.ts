@@ -24,12 +24,16 @@ const {
   WIDLFIRE_DEVICE_UUID,
 } = process.env;
 
-export const getWildfireAuthorization = (appId: string, appKey: string, deviceToken: string = '') => {
+export const getWildfireAuthorization = (
+  appId: string,
+  appKey: string,
+  deviceToken: string = '',
+) => {
   if (!appId || !appKey) throw new Error('Missing wildfire app id or app key');
   const wfTime = new Date().toISOString();
   const stringToSign = `${[wfTime, deviceToken, ''].join('\n')}\n`;
   const appSignature = CryptoJS.HmacSHA256(stringToSign, appKey).toString(CryptoJS.enc.Hex);
-  const authorization = `WFAV1 ${[appId, appSignature, '', ''].join(':')}`;
+  const authorization = `WFAV1 ${[appId, appSignature, deviceToken, ''].join(':')}`;
   return { authorization, wfTime };
 };
 
@@ -51,7 +55,10 @@ export class WildfireClient extends SdkClient {
       baseURL: `https://www.wildlink.me/data/${WILDFIRE_CLIENT_APP_ID}`,
     });
 
-    const { authorization: adminAuthorization, wfTime: adminWfTime } = getWildfireAuthorization(WILDFIRE_ADMIN_APP_ID, WILDFIRE_ADMIN_APP_KEY);
+    const {
+      authorization: adminAuthorization,
+      wfTime: adminWfTime,
+    } = getWildfireAuthorization(WILDFIRE_ADMIN_APP_ID, WILDFIRE_ADMIN_APP_KEY);
 
     this._adminClient = axios.create({
       headers: {
@@ -62,11 +69,35 @@ export class WildfireClient extends SdkClient {
       },
       baseURL: 'https://api.wfi.re',
     });
+
+    const {
+      authorization: clientAuthorization,
+      wfTime: clientWfTime,
+    } = getWildfireAuthorization(WILDFIRE_CLIENT_APP_ID, WILDFIRE_CLIENT_APP_KEY);
+
+    this._clientClient = axios.create({
+      headers: {
+        Authorization: clientAuthorization,
+        'Content-Type': 'application/json',
+        'X-WF-DateTime': clientWfTime,
+        Accept: 'application/json',
+      },
+      baseURL: 'https://api.wfi.re',
+    });
   }
 
   adminCreateDevice = async () => {
     try {
       const data = await this._adminClient.post('/v2/device', { data: { DeviceKey: '' } });
+      return data;
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  clientCreateDevice = async () => {
+    try {
+      const data = await this._clientClient.post('/v2/device', { data: { DeviceKey: '' } });
       return data;
     } catch (err) {
       console.log(err);

@@ -24,6 +24,7 @@ import * as UpdateBatchCompanyParentChildrenRelationships from '../../../jobs/up
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
 import * as UpdateWildfireMerchantsAndData from '../../../jobs/updateWildfireMerchantsAndData';
 import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayouts';
+import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
 import { INextJob } from '../base';
 
 const MongoClient = new _MongoClient();
@@ -149,6 +150,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.GenerateCommissionPayouts:
       result = await GenerateCommissionPayouts.exec();
+      break;
+    case JobNames.UpdateWildfireCommissions:
+      result = await UpdateWildfireCommissions.exec();
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

@@ -125,6 +125,7 @@ export const getKarmaCommissionStatusFromWildfireStatus = (wildfireStatus: Wildf
   }
 };
 
+// TODO: make sure user allocation is correct
 export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission: IWildfireCommission) => {
   const {
     CommissionID,

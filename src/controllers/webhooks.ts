@@ -17,6 +17,8 @@ import { UserModel } from '../models/user';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
+import { mapWildfireCommissionToKarmaCommission } from '../services/commission/utils';
+import { WildfireCommissionStatus } from '../models/commissions';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
@@ -35,20 +37,26 @@ interface IWildfireWebhookBody {
   Type: string,
   Action: string,
   Payload: {
-    ID: number,
+    CommissionID: number,
     ApplicationID: number,
     MerchantID: number,
     DeviceID: number,
-    SaleAmount: string,
-    Amount: string,
-    Status: string,
+    SaleAmount: {
+      Amount: string,
+      Currency: string,
+    },
+    Amount: {
+      Amount: string,
+      Currency: string,
+    },
+    Status: WildfireCommissionStatus,
     TrackingCode: string,
-    EventDate: string,
-    CreatedDate: string,
-    ModifiedDate: string,
+    EventDate: Date,
+    CreatedDate: Date,
+    ModifiedDate: Date,
     MerchantOrderID: string,
     MerchantSKU: string
-
+    TC: string,
   },
   CreatedDate: string
 }
@@ -171,6 +179,13 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
       console.log('------- BEG WF Transaction -------\n');
       console.log(JSON.stringify(body, null, 2));
       console.log('\n------- END WF Transaction -------');
+      try {
+        await mapWildfireCommissionToKarmaCommission(body.Payload);
+      } catch (e) {
+        console.log('Error mapping wildfire commission to karma commission');
+        console.log(e);
+        return error(req, res, new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE));
+      }
       api(req, res, { message: 'Wildfire comission processed successfully.' });
     } catch (e) {
       throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);

@@ -103,7 +103,7 @@ export const getUserCurrentAccrualsBalance = async (userId: IUserId) => {
     {
       $group: {
         _id: '$user',
-        total: { $sum: '$amount' },
+        total: { $sum: '$allocation.user' },
       },
     },
   ]);

@@ -144,8 +144,8 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     amount: Amount,
     allocation: {
       // TODO: this is hardcoded for now, but should be dynamic
-      user: Amount * 0.7,
-      karma: Amount * 0.3,
+      user: Amount * 0.75,
+      karma: Amount * 0.25,
     },
     lastStatusUpdate: getUtcDate().toDate(),
     integrations: {

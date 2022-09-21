@@ -144,3 +144,40 @@ export const sectorsToExclude = [
   '62192ef3f022c9e3fbff0ba2', // staging Nonprofits
   '621b9adb5f87e75f5366702e', // prod Nonprofits
 ];
+
+export const CommissionPayoutMonths = [0, 3, 6, 9];
+
+export const CommissionPayoutDayForUser = 15;
+
+export enum CollectionNames {
+  Card = 'cards',
+  CommissionPayout = 'commissionPayouts',
+  Commission = 'commissions',
+  Company = 'companies',
+  CompanyDataSource = 'company_data_sources',
+  CompanyUnsdg = 'company_unsdgs',
+  DataSourceMapping = 'data_source_mappings',
+  DataSource = 'data_sources',
+  Group = 'groups',
+  MatchedCompanyName = 'matched_company_names',
+  MerchantRate = 'merchant_rates',
+  Merchant = 'merchants',
+  Misc = 'miscs',
+  PlaidCategoriesToSectorMapping = 'plaid_categories_to_sector_mappings',
+  PlaidCategoryMapping = 'plaid_category_mappings',
+  Sector = 'sectors',
+  Statement = 'statements',
+  Transaction = 'transactions',
+  UnmatchedCompanyName = 'unmatched_company_names',
+  UnsdgCategory = 'unsdg_categories',
+  UnsdgSubcategory = 'unsdg_subcategories',
+  UnsdgTarget = 'unsdg_targets',
+  Unsdg = 'unsdgs',
+  UserGroup = 'user_groups',
+  UserImpactTotal = 'user_impact_totals',
+  UserMontlyImpactReport = 'user_monthly_impact_reports',
+  User = 'users',
+  ValueCompanyMapping = 'value_company_mappings',
+  ValueDataSourceMapping = 'value_data_source_mappings',
+  Value = 'values'
+}

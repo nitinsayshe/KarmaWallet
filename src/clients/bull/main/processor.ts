@@ -22,6 +22,9 @@ import * as SendEmail from '../../../jobs/sendEmail';
 import * as UpdateBatchCompanyDataSources from '../../../jobs/updateBatchCompanyDataSources';
 import * as UpdateBatchCompanyParentChildrenRelationships from '../../../jobs/updateBatchCompanyParentChildrenRelationships';
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
+import * as UpdateWildfireMerchantsAndData from '../../../jobs/updateWildfireMerchantsAndData';
+import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayouts';
+import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
 import { INextJob } from '../base';
 
 const MongoClient = new _MongoClient();
@@ -96,7 +99,7 @@ export default async (job: SandboxedJob) => {
       result = await GenerateUserTransactionTotals.exec();
       break;
     case JobNames.GlobalPlaidTransactionMapper:
-      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest, [], 90);
+      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest, [], 20);
 
       result = {
         nextJobs: [
@@ -141,6 +144,15 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UserPlaidTransactionMapper:
       result = await UserPlaidTransactionMapper.exec(data);
+      break;
+    case JobNames.UpdateWildfireMerchantsAndData:
+      result = await UpdateWildfireMerchantsAndData.exec();
+      break;
+    case JobNames.GenerateCommissionPayouts:
+      result = await GenerateCommissionPayouts.exec();
+      break;
+    case JobNames.UpdateWildfireCommissions:
+      result = await UpdateWildfireCommissions.exec();
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

@@ -1,6 +1,5 @@
 import { isValidObjectId, ObjectId, Types } from 'mongoose';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
@@ -10,7 +9,8 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes, UserRoles } from '../../lib/constants';
 import { getTopCompaniesOfAllSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import { SectorModel } from '../../models/sector';
-import { ICompanyDocument } from '../../models/company';
+import { ICompanyDocument, CompanyModel } from '../../models/company';
+import { MerchantModel } from '../../models/merchant';
 import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
@@ -18,8 +18,6 @@ import { IUserImpactMonthData, IUserImpactTotalScores, UserImpactTotalModel } fr
 import { TransactionModel } from '../../models/transaction';
 import { getCompanyRatingsThresholds, getRareProjectAverage } from '../misc';
 import { CompanyRating } from '../../lib/constants/company';
-
-dayjs.extend(utc);
 
 export enum TopCompaniesConfig {
   ShopBy = 'shop-by',
@@ -113,6 +111,43 @@ export const getImpactRatings = async (_req: IRequest) => {
         max: pos[1],
       },
     };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getFeaturedCashback = async () => {
+  try {
+    const companies = await CompanyModel
+      .find(
+        { _id: { $in: [
+          '621b993c5f87e75f5365a9a5', // Walmart
+          '621b993c5f87e75f5365a97d', // Verizon
+          '621b99545f87e75f5365b715', // Cotopaxi
+          '621b99be5f87e75f5365f54d', // Sams Club
+          '621b99be5f87e75f5365f4fd', // Under Armour
+          '621b99605f87e75f5365be85', // Happy Earth Apparel
+          '621b99435f87e75f5365ad95', // Prose
+          '621b99435f87e75f5365ad35', // Burton
+          '621b993e5f87e75f5365aa45', // Plant People
+          '621b99d45f87e75f536601ad', // Clinique
+          '621b99b35f87e75f5365eecd', // Banana Republic
+          '621b995a5f87e75f5365ba91', // West Paw
+        ] } },
+      )
+      .populate([
+        {
+          path: 'merchant',
+          model: MerchantModel,
+        },
+      ]);
+
+    const alphabeticallySorted = companies.sort((a, b) => {
+      const companyA = a.companyName.toUpperCase();
+      const companyB = b.companyName.toUpperCase();
+      return (companyA < companyB) ? -1 : (companyA > companyB) ? 1 : 0;
+    });
+    return alphabeticallySorted;
   } catch (err) {
     throw asCustomError(err);
   }

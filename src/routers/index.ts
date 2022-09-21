@@ -10,6 +10,7 @@ import impact from './impact';
 import company from './company';
 import sectors from './sectors';
 import webhook from './webhooks';
+import commission from './commission';
 import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
 import card from './card';
@@ -38,6 +39,7 @@ const routers = (app: Express) => {
   dataSource(app);
   userImpactReports(app);
   values(app);
+  commission(app);
   webhook(app);
   // notFound is a catch all and should be last
   notFound(app);

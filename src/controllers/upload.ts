@@ -20,3 +20,12 @@ export const uploadCsv: IRequestHandler<{}, {}, UploadService.ICsvUploadBody> = 
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const downloadImageFromUrlAndStoreInS3: IRequestHandler<{}, {}, UploadService.IDownloadImageAndUploadToS3RequestBody> = async (req, res) => {
+  try {
+    const imageUploadData = await UploadService.downloadImageFromUrlAndStoreInS3(req);
+    output.api(req, res, imageUploadData);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

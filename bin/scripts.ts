@@ -12,11 +12,11 @@ import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
+    // updateCompaniesUrls();
     // add mappers here...
     await calculateAvgScores({ writeToDisk: false });
     await MongoClient.disconnect();
   } catch (err) {
-    console.log('\n[-] something went wrong during the migration!');
     Logger.error(asCustomError(err));
     await MongoClient.disconnect();
   }

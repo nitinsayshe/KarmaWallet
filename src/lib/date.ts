@@ -6,6 +6,9 @@ import {
   addYears,
 } from 'date-fns';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
 
 export interface IGetDateFromData {
   months?: string | number;
@@ -17,6 +20,8 @@ export interface IGetDateFromData {
 }
 
 export const isValidDate = (dateObj: Date) => dateObj instanceof Date && !Number.isNaN(dateObj.valueOf());
+
+export const getUtcDate = (date?: Date) => dayjs(date).utc();
 
 export const getDateFrom = ({
   months,

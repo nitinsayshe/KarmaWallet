@@ -7,7 +7,10 @@ import { getRandomInt } from '../../lib/number';
 import { slugify } from '../../lib/slugify';
 import {
   CompanyCreationStatus,
-  CompanyModel, ICompany, ICompanyDocument, IShareableCompany,
+  CompanyModel,
+  ICompany,
+  ICompanyDocument,
+  IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { ISectorModel, SectorModel } from '../../models/sector';
@@ -24,6 +27,9 @@ import { Logger } from '../logger';
 import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { MainBullClient } from '../../clients/bull/main';
+import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
+import { getShareableMerchant } from '../merchant';
+import { MerchantRateModel } from '../../models/merchantRate';
 
 dayjs.extend(utc);
 
@@ -36,6 +42,7 @@ export interface ICompanyRequestParams {
 export interface IUpdateCompanyRequestBody {
   companyName: string;
   url: string;
+  logo: string;
 }
 
 export interface ICompanySampleRequest {
@@ -67,6 +74,10 @@ export const _getCompanies = (query: FilterQuery<ICompany> = {}, includeHidden =
   return CompanyModel
     .find({ $and: _query })
     .populate([
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
       {
         path: 'parentCompany',
         model: CompanyModel,
@@ -165,6 +176,10 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
     const company = await CompanyModel.findOne(query)
       .populate([
         {
+          path: 'merchant',
+          model: MerchantModel,
+        },
+        {
           path: 'parentCompany',
           model: CompanyModel,
           populate: [
@@ -203,6 +218,10 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
   const options = {
     projection: query?.projection || '',
     populate: query.population || [
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
       {
         path: 'parentCompany',
         model: CompanyModel,
@@ -386,6 +405,7 @@ export const getShareableCompany = ({
   url,
   createdAt,
   lastModified,
+  merchant,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -393,6 +413,9 @@ export const getShareableCompany = ({
   const _parentCompany: IRef<ObjectId, IShareableCompany> = (!!parentCompany && !!Object.keys(parentCompany).length)
     ? getShareableCompany(parentCompany as ICompanyDocument)
     : parentCompany as ObjectId;
+
+  const _merchant: IRef<ObjectId, IShareableMerchant> = (!!merchant && !!Object.keys(merchant).length) ? getShareableMerchant(merchant as IMerchantDocument)
+    : merchant as ObjectId;
 
   const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
     ? {
@@ -442,6 +465,7 @@ export const getShareableCompany = ({
     url,
     createdAt,
     lastModified,
+    merchant: _merchant,
   };
 };
 
@@ -502,10 +526,10 @@ export const initCompanyBatchJob = async (req: IRequest<{}, {}, IBatchedCompanyP
 export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
   try {
     const { companyId } = req.params;
-    const { companyName, url } = req.body;
+    const { companyName, url, logo } = req.body;
 
     if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
-    if (!companyName && !url) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
+    if (!companyName && !url && !logo) throw new CustomError('No updatable company data found.', ErrorTypes.INVALID_ARG);
 
     const updatedData: Partial<ICompany> = {
       lastModified: dayjs().utc().toDate(),
@@ -514,6 +538,7 @@ export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUp
     // TODO: add name sterilization
     if (companyName) updatedData.companyName = companyName.trim();
     if (url) updatedData.url = url.trim();
+    if (logo) updatedData.logo = logo.trim();
 
     // TODO: add change log for record keeping.
 
@@ -530,4 +555,15 @@ export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUp
 export const getCompanyScoreRange = async (_req: IRequest) => {
   const { positive, negative } = await getCompanyRatingsThresholds();
   return { min: negative.min, max: positive.max };
+};
+
+export const getMerchantRatesForCompany = async (req: IRequest<ICompanyRequestParams, {}, {}>) => {
+  const { companyId } = req.params;
+  if (!companyId) throw new CustomError('A company id is required.', ErrorTypes.INVALID_ARG);
+  const companyResponse = await getCompanyById(req, companyId);
+  const company = companyResponse?.company;
+  if (!company) throw new CustomError(`Company with id: ${companyId} could not be found.`, ErrorTypes.NOT_FOUND);
+  if (!company.merchant) throw new CustomError(`Company with id: ${companyId} does not have a merchant.`, ErrorTypes.NOT_FOUND);
+  const merchantRates = await MerchantRateModel.find({ merchant: company.merchant });
+  return merchantRates;
 };

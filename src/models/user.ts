@@ -31,8 +31,14 @@ export interface IRareUserIntegration {
   userId?: string;
 }
 
+export interface IPaypalUserIntegration {
+  payerId?: string;
+  email?: string;
+}
+
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
+  paypal?: IRareUserIntegration;
 }
 
 export interface IShareableUser {
@@ -85,6 +91,12 @@ const userSchema = new Schema({
     rare: {
       type: {
         userId: { type: String },
+      },
+    },
+    paypal: {
+      type: {
+        payerId: { type: String },
+        email: { type: String },
       },
     },
   },

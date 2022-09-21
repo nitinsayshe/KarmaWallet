@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+import crypto from 'crypto';
 import { mapTransactions } from '../integrations/rare';
 import { api, error } from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
@@ -16,8 +17,10 @@ import { UserModel } from '../models/user';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
+import { mapWildfireCommissionToKarmaCommission } from '../services/commission/utils';
+import { WildfireCommissionStatus } from '../models/commissions';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -27,6 +30,35 @@ const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE } = process.env;
 interface IRareTransactionBody {
   transaction: IRareTransaction;
   forwarded_query_params?: IRareRelayedQueryParams;
+}
+
+interface IWildfireWebhookBody {
+  ID: string,
+  Type: string,
+  Action: string,
+  Payload: {
+    CommissionID: number,
+    ApplicationID: number,
+    MerchantID: number,
+    DeviceID: number,
+    SaleAmount: {
+      Amount: string,
+      Currency: string,
+    },
+    Amount: {
+      Amount: string,
+      Currency: string,
+    },
+    Status: WildfireCommissionStatus,
+    TrackingCode: string,
+    EventDate: Date,
+    CreatedDate: Date,
+    ModifiedDate: Date,
+    MerchantOrderID: string,
+    MerchantSKU: string
+    TC: string,
+  },
+  CreatedDate: string
 }
 
 interface IUserPlaidTransactionsMapBody {
@@ -130,6 +162,34 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
       MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId: card.userId, accessToken: card.integrations.plaid.accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
     }
     api(req, res, { message: 'Plaid webhook processed successfully.' });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
+  try {
+    const { body } = req;
+    const wildfireSignature = req?.headers['x-wf-signature']?.replace('sha256=', '');
+    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+      // do work here
+      console.log('Wildfire webhook processed successfully.');
+      console.log('------- BEG WF Transaction -------\n');
+      console.log(JSON.stringify(body, null, 2));
+      console.log('\n------- END WF Transaction -------');
+      try {
+        await mapWildfireCommissionToKarmaCommission(body.Payload);
+      } catch (e) {
+        console.log('Error mapping wildfire commission to karma commission');
+        console.log(e);
+        return error(req, res, new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE));
+      }
+      api(req, res, { message: 'Wildfire comission processed successfully.' });
+    } catch (e) {
+      throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+    }
   } catch (e) {
     error(req, res, asCustomError(e));
   }

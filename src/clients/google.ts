@@ -26,6 +26,13 @@ export interface IGoogleClient {
   drive: GoogleApis.drive_v3.Drive;
 }
 
+// https://cloud.google.com/nodejs/docs/reference/google-auth-library/latest#json-web-tokens
+// https://console.cloud.google.com/iam-admin/serviceaccounts/details/111363174032168559414;edit=true/keys?project=gnoll-345218&supportedpurview=project
+const {
+  GOOGLE_CLIENT_EMAIL,
+  GOOGLE_CLIENT_PRIVATE_KEY,
+} = process.env;
+
 export class _GoogleClient extends ConnectionClient {
   private _client: IGoogleClient;
 
@@ -33,22 +40,12 @@ export class _GoogleClient extends ConnectionClient {
     super('Google');
   }
 
-  static getKeyfileJson() {
-    let keystring = process.env.GOOGLE_KEY_STRING;
-    if (!keystring) throw new CustomError('Environment variable \'GOOGLE_KEYSTRING\' is not set', ErrorTypes.NOT_FOUND);
-    keystring = keystring.replace(/\\\\n/gi, '\\n');
-    const keyFileJson = JSON.parse(keystring);
-    return keyFileJson;
-  }
-
   _connect = async () => {
     try {
       // https://cloud.google.com/nodejs/docs/reference/google-auth-library/latest#json-web-tokens
-      const keyFileJson = _GoogleClient.getKeyfileJson();
-
       const authClient = new google.auth.JWT({
-        email: keyFileJson.client_email,
-        key: keyFileJson.private_key,
+        email: GOOGLE_CLIENT_EMAIL,
+        key: GOOGLE_CLIENT_PRIVATE_KEY,
         scopes: ['https://www.googleapis.com/auth/drive'],
       });
 

@@ -7,6 +7,7 @@ import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector_scores';
+import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
 
 (async () => {
   try {
@@ -17,7 +18,7 @@ import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
-    await calculateAvgScores({ writeToDisk: false });
+    await checkCompanySectorsForMainTierSector();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

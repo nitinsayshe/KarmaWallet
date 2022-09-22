@@ -8,7 +8,12 @@ const checkToken: IRequestHandler = (req, res, next) => {
     return next();
   }
 
+  if (req?.headers['x-wf-signature'] && req?.url === '/webhook/wildfire') {
+    return next();
+  }
+
   const token = req.headers.authorization;
+
   if (!token || token.replace('Bearer ', '') !== process.env.PUBLIC_TOKEN) {
     error(req, res, new CustomError('Access denied. Invalid token.', ErrorTypes.AUTHENTICATION));
     return;

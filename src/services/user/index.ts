@@ -4,7 +4,7 @@ import { FilterQuery } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  IUser, IUserDocument, UserEmailStatus, UserModel,
+  IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel,
 } from '../../models/user';
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
@@ -188,17 +188,23 @@ export const getShareableUser = ({
   subscribedUpdates,
   role,
   legacyId,
-}: IUserDocument) => ({
-  _id,
-  email,
-  emails,
-  name,
-  dateJoined,
-  zipcode,
-  subscribedUpdates,
-  role,
-  legacyId,
-});
+  integrations,
+}: IUserDocument) => {
+  const _integrations: Partial<IUserIntegrations> = {};
+  if (integrations?.paypal) _integrations.paypal = integrations.paypal;
+  return {
+    _id,
+    email,
+    emails,
+    name,
+    dateJoined,
+    zipcode,
+    subscribedUpdates,
+    role,
+    legacyId,
+    integrations: _integrations,
+  };
+};
 
 export const logout = async (_: IRequest, authKey: string) => {
   await Session.revokeSession(authKey);

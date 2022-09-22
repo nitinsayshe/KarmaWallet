@@ -32,4 +32,7 @@ export enum JobNames {
   UpdateRareProjectAverage = 'update-rare-project-average',
   UploadCsvToGoogleDrive = 'upload-csv-to-google-drive',
   DeleteUserAndAssociatedData = 'delete-user-and-associated-data',
+  UpdateWildfireMerchantsAndData = 'update-wildfire-merchants-and-data',
+  GenerateCommissionPayouts = 'generate-commission-payouts',
+  UpdateWildfireCommissions = 'update-wildfire-commissions',
 }

@@ -44,7 +44,7 @@ export const calculateAllCompanyScores = async () => {
   let subcategories: IUnsdgSubcategoryDocument[];
 
   try {
-    companies = await CompanyModel.find({}).sort({ createdAt: -1 });
+    companies = await CompanyModel.find({}).sort({ createdAt: 1 });
     categories = await UnsdgCategoryModel.find({});
     subcategories = await UnsdgSubcategoryModel.find({})
       .populate([{

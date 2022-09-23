@@ -1,10 +1,17 @@
+/* eslint-disable unused-imports/no-unused-imports */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable camelcase */
+/* eslint-disable no-unused-vars */
 import 'dotenv/config';
+import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { WildfireClient } from '../src/clients/wildfire';
-import { mapWildfireCommissionToKarmaCommission } from '../src/services/commission/utils';
-import { MongoClient } from '../src/clients/mongo';
+import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector_scores';
+import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
+import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
+import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
+
+const BATCH_SIZE = 50000;
 
 (async () => {
   try {
@@ -15,17 +22,8 @@ import { MongoClient } from '../src/clients/mongo';
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
-    // await associateWildfireMatches();
-    // await GenerateGroupStatements.exec();
-    // await removeMerchant('63079ac5e33a266250fb7ce4');
-    // await removeDuplicateWildfireMerchants();
-    const wildfireClient = new WildfireClient();
-    const res = await wildfireClient.getAdminComissionDetails({ startDate: '2022-07-01', endDate: '2022-09-15' });
-
-    for (const commission of res.data.Commissions) {
-      await mapWildfireCommissionToKarmaCommission({ ...commission, TC: '62f6761cf5e3ffdae60ef249' });
-    }
-
+    // await singleBatchMatch(1, BATCH_SIZE);
+    await GenerateUserImpactTotals.exec();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

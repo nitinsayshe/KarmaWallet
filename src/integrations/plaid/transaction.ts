@@ -18,14 +18,20 @@ class Transaction {
   _plaidTransaction: IPlaidTransaction;
   _sector: Schema.Types.ObjectId = null;
   _date: Dayjs = null;
+  _existingTransactionId: Schema.Types.ObjectId = null;
 
-  constructor(userId: Schema.Types.ObjectId, cardId: Schema.Types.ObjectId, plaidTransaction: IPlaidTransaction) {
+  constructor(
+    userId: Schema.Types.ObjectId,
+    cardId: Schema.Types.ObjectId,
+    plaidTransaction: IPlaidTransaction,
+    _existingTransactionId?: Schema.Types.ObjectId,
+  ) {
     this._user = userId;
     this._card = cardId;
     this._plaidTransaction = plaidTransaction;
+    this._existingTransactionId = _existingTransactionId;
     // this._transaction = transaction;
-
-    this.steralize();
+    this.sterilize();
   }
 
   get amount() {
@@ -100,7 +106,7 @@ class Transaction {
     this._company = id;
   };
 
-  steralize = () => {
+  sterilize = () => {
     // removes lagacy company info from transaction
     if ((this._transaction as any)?.companyInfo) delete (this._transaction as any).companyInfo;
   };
@@ -111,6 +117,9 @@ class Transaction {
     if (this.isValid) {
       this._transaction = await TransactionModel.findOne({
         $or: [
+          {
+            _id: this._existingTransactionId,
+          },
           {
             $and: [
               { 'integrations.plaid.pending_transaction_id': this._plaidTransaction.pending_transaction_id },

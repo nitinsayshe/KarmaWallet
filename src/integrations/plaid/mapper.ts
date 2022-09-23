@@ -630,7 +630,10 @@ export class PlaidMapper {
 
   saveTransactions = async () => {
     console.log(`\nsaving ${this.transactions.length} transactions...`);
+    let count = 0;
     for (const transaction of this.transactions) {
+      console.log(`\n saving ${count} / ${this.transactions.length}`);
+      count += 1;
       await transaction.save(this.incrementSavedTransactionCount);
     }
     console.log('[+] transactions saved\n');

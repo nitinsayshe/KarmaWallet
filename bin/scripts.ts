@@ -8,6 +8,10 @@ import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector_scores';
 import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
+import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
+import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
+
+const BATCH_SIZE = 50000;
 
 (async () => {
   try {
@@ -18,7 +22,8 @@ import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/ch
     await MongoClient.init();
     // updateCompaniesUrls();
     // add mappers here...
-    await checkCompanySectorsForMainTierSector();
+    // await singleBatchMatch(1, BATCH_SIZE);
+    await GenerateUserImpactTotals.exec();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

@@ -94,7 +94,7 @@ export class PlaidMapper {
   }) => new Promise((res, rej) => {
     try {
       console.time('matching algo');
-      const process = spawn('python', [pythonScriptPath, '--matched_unique', path.join(__dirname, '.tmp', 'matchedUnique'), '--unmatched', path.join(__dirname, '.tmp', 'unmatched'), '--transaction_db', transactionsDb, '--brand_db', brandDb, '--Manual_match', manualMatch, '--False_pos', falsePos, '--threshold_1', `${thresh1}`, '--threshold_2', `${thresh2}`]);
+      const process = spawn('python3', [pythonScriptPath, '--matched_unique', path.join(__dirname, '.tmp', 'matchedUnique'), '--unmatched', path.join(__dirname, '.tmp', 'unmatched'), '--transaction_db', transactionsDb, '--brand_db', brandDb, '--Manual_match', manualMatch, '--False_pos', falsePos, '--threshold_1', `${thresh1}`, '--threshold_2', `${thresh2}`]);
 
       let out: string;
       if (process && process.stdout) {

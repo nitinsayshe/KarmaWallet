@@ -1,5 +1,6 @@
 import csv from 'csvtojson';
 import path from 'path';
+import { CompanyModel } from '../../models/company';
 import { TransactionModel } from '../../models/transaction';
 
 export const manuallyUpdateTransactionsFalsePositiveNegatives = async () => {
@@ -13,15 +14,17 @@ export const manuallyUpdateTransactionsFalsePositiveNegatives = async () => {
 
     try {
       if (companyId) {
+        const company = await CompanyModel.findOne({ _id: companyId });
+        if (!company) throw new Error(`Company ${companyId} not found in DB`);
         transaction.company = companyId;
-        console.log('Adding Company to Transaction:', transaction._id);
+        console.log('[info] Adding Company to Transaction:', transaction._id);
       } else {
         transaction.company = null;
-        console.log('Removing Company from Transaction:', transaction._id);
+        console.log('[info] Removing Company from Transaction:', transaction._id);
       }
       await transaction.save();
     } catch (err: any) {
-      console.log('Error updating transaction', err);
+      console.log('[info] Error updating transaction', err);
     }
   }
 };

@@ -2,9 +2,8 @@
 import 'dotenv/config';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { WildfireClient } from '../src/clients/wildfire';
-import { mapWildfireCommissionToKarmaCommission } from '../src/services/commission/utils';
 import { MongoClient } from '../src/clients/mongo';
+import { manuallyUpdateTransactionsFalsePositiveNegatives } from '../src/services/scripts/update_false_positive_negatives_transactions';
 
 (async () => {
   try {
@@ -19,13 +18,7 @@ import { MongoClient } from '../src/clients/mongo';
     // await GenerateGroupStatements.exec();
     // await removeMerchant('63079ac5e33a266250fb7ce4');
     // await removeDuplicateWildfireMerchants();
-    const wildfireClient = new WildfireClient();
-    const res = await wildfireClient.getAdminComissionDetails({ startDate: '2022-07-01', endDate: '2022-09-15' });
-
-    for (const commission of res.data.Commissions) {
-      await mapWildfireCommissionToKarmaCommission({ ...commission, TC: '62f6761cf5e3ffdae60ef249' });
-    }
-
+    await manuallyUpdateTransactionsFalsePositiveNegatives();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

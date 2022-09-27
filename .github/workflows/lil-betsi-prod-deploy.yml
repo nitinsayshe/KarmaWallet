@@ -8,12 +8,10 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, lil-betsi-prod]
-
     strategy:
       matrix:
-        node-version: [16.x]
-
+       api: [lil-betsi-prod, lil-betsi-prod-1]
+    runs-on: ${{ matrix.api }}
     steps:
     - uses: actions/checkout@v2
       with:
@@ -21,8 +19,9 @@ jobs:
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v2
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: 16.x
         cache: 'npm'
+    - run: echo 'PUBLIC_TOKEN=${{secrets.PRODUCTION_PUBLIC_TOKEN}}' >> .env
     - run: echo 'PUBLIC_TOKEN=${{secrets.PRODUCTION_PUBLIC_TOKEN}}' >> .env
     - run: echo 'NODE_ENV=production' >> .env
     - run: echo 'PORT=8012' >> .env

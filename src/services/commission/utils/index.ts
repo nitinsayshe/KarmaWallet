@@ -140,12 +140,16 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
   const Amount = parseFloat(AmountObject?.Amount);
   if (Number.isNaN(Amount)) throw new Error('Invalid amount');
 
+  // TODO: this is percentage is for now, but should be dynamic
+  // allocation is done on every update
+  const userAllocation = Math.floor((Amount * 0.75) * 100) / 100;
+  const karmaAllocation = Amount - userAllocation;
+
   const commissionData: Partial<IShareableCommission> = {
     amount: Amount,
     allocation: {
-      // TODO: this is hardcoded for now, but should be dynamic
-      user: Amount * 0.75,
-      karma: Amount * 0.25,
+      user: userAllocation,
+      karma: karmaAllocation,
     },
     lastStatusUpdate: getUtcDate().toDate(),
     integrations: {

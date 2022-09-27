@@ -15,6 +15,7 @@ export interface IUserImpactMonthData {
   positive: number;
   score: number;
   transactionCount: number;
+  totalAmount: number;
 }
 
 export interface IUserImpactRating {
@@ -65,6 +66,7 @@ export const userImpactMonthlyBreakdownDefinition = {
   positive: { type: Number },
   score: { type: Number },
   transactionCount: { type: Number },
+  totalAmount: { type: Number },
 };
 
 const userImpactTotalSchema = new Schema({

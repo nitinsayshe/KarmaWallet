@@ -92,6 +92,7 @@ export const getMonthlyImpactBreakdown = (transactions: ITransactionDocument[], 
 
     monthlyBreakdown.push({
       ...impactScores,
+      totalAmount: summary.total,
       date: monthlyTransactions.month.toDate(),
       transactionCount: monthlyTransactions.transactions.length,
     });

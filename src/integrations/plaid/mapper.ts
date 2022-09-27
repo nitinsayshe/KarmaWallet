@@ -405,7 +405,7 @@ export class PlaidMapper {
       if (!!match) {
         if (!match.manualMatch || !transaction.company) {
           transaction.setCompany(match.companyId || null);
-          const company = this._companies.find(c => c._id.toString() === match.companyId.toString());
+          const company = this._companies.find(c => c._id.toString() === match.companyId?.toString());
 
           if (!!company) {
             const sector = company.sectors.find(s => s.primary)?.sector as ObjectId;
@@ -630,7 +630,10 @@ export class PlaidMapper {
 
   saveTransactions = async () => {
     console.log(`\nsaving ${this.transactions.length} transactions...`);
+    let count = 0;
     for (const transaction of this.transactions) {
+      console.log(`\n saving ${count} / ${this.transactions.length}`);
+      count += 1;
       await transaction.save(this.incrementSavedTransactionCount);
     }
     console.log('[+] transactions saved\n');

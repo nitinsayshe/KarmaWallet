@@ -69,6 +69,7 @@ const getImpactTotalsForAllUsers = (allUserImpactData: IUserImpactTotalDocument[
           positive: 0,
           score: 0,
           transactionCount: 0,
+          totalAmount: 0,
         };
         _monthlyBreakdown.push(existing);
       }
@@ -83,6 +84,7 @@ const getImpactTotalsForAllUsers = (allUserImpactData: IUserImpactTotalDocument[
 
       existing.score += monthBreakdown.score;
       existing.transactionCount += monthBreakdown.transactionCount;
+      existing.totalAmount += monthBreakdown.totalAmount;
 
       if (!!monthBreakdown.transactionCount) {
         _monthlyBreakdownCounts[dayjs(monthBreakdown.date).format(dateFormat)] += 1;

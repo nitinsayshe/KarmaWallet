@@ -1,7 +1,5 @@
-import dayjs from 'dayjs';
 import { CommissionModel, ICommissionDocument, IShareableCommission } from '../../models/commissions';
 import { IRequest } from '../../types/request';
-import { CommissionPayoutDayForUser } from '../../lib/constants';
 import {
   CommissionPayoutModel,
   KarmaCommissionPayoutStatus,
@@ -80,6 +78,8 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
     payouts,
     accruals: accruals.map(c => getShareableCommission(c)),
     balance,
-    nextPayoutDate: dayjs(getNextPayoutDate().date).date(CommissionPayoutDayForUser).toDate(),
+    // hardcoding to Jan 15 2023 until after October 15th 2022
+    nextPayoutDate: new Date('2023-01-15'),
+    // nextPayoutDate: dayjs(getNextPayoutDate().date).date(CommissionPayoutDayForUser).toDate(),
   };
 };

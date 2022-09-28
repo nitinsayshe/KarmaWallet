@@ -9,20 +9,24 @@ export const manuallyUpdateTransactionsFalsePositiveNegatives = async () => {
 
   for (const data of dataJson) {
     const { _id, companyId } = data;
-    const transaction = await TransactionModel.findOne({ _id });
-    if (!transaction) throw new Error(`Transaction ${_id} not found in DB`);
 
     try {
       if (companyId) {
+        const transaction = await TransactionModel.findOne({ _id });
+        if (!transaction) throw new Error(`Transaction ${_id} not found in DB`);
         const company = await CompanyModel.findOne({ _id: companyId });
         if (!company) throw new Error(`Company ${companyId} not found in DB`);
         transaction.company = companyId;
         console.log('[info] Adding Company to Transaction:', transaction._id);
+        await transaction.save();
       } else {
-        transaction.company = null;
-        console.log('[info] Removing Company from Transaction:', transaction._id);
+        try {
+          await TransactionModel.updateOne({ _id }, { $unset: { company: '' } });
+          console.log('[info] Removing Company from Transaction:', _id);
+        } catch (err) {
+          console.log('[info] Error removing company from transaction:', _id);
+        }
       }
-      await transaction.save();
     } catch (err: any) {
       console.log('[info] Error updating transaction', err);
     }

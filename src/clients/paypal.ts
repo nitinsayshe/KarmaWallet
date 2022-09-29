@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { asCustomError } from '../lib/customError';
+import { IPaypalUserIntegration } from '../models/user';
 import { SdkClient } from './sdkClient';
 
 const {
@@ -41,7 +42,7 @@ export class PaypalClient extends SdkClient {
     }
   }
 
-  async getCustomerDataFromToken(accessToken: string) {
+  async getCustomerDataFromToken(accessToken: string): Promise<IPaypalUserIntegration> {
     const { data } = await this._client.get('/oauth2/token/userinfo?schema=openid', {
       headers: {
         'Content-Type': 'application/json',
@@ -49,6 +50,10 @@ export class PaypalClient extends SdkClient {
       },
     });
     // add error handling
-    return data;
+    const paypalUserIntegration: IPaypalUserIntegration = {
+      ...data,
+      payerId: data.payer_id,
+    };
+    return paypalUserIntegration;
   }
 }

@@ -32,8 +32,15 @@ export interface IRareUserIntegration {
 }
 
 export interface IPaypalUserIntegration {
-  payerId?: string;
-  email?: string;
+  user_id: string,
+  sub: string,
+  name: string,
+  middle_name: string,
+  email: string,
+  verified: Boolean,
+  payerId: string,
+  verified_account: Boolean,
+  email_verified: Boolean,
 }
 
 export interface IUserIntegrations {
@@ -97,6 +104,13 @@ const userSchema = new Schema({
       type: {
         payerId: { type: String },
         email: { type: String },
+        user_id: { type: String },
+        sub: { type: String },
+        name: { type: String },
+        middle_name: { type: String },
+        verified: { type: Boolean },
+        verified_account: { type: Boolean },
+        email_verified: { type: Boolean },
       },
     },
   },

@@ -20,6 +20,21 @@ export const updateCompaniesUrls = async () => {
   console.log(`[+] ${companies.length} companies updated`);
 };
 
+export const sanitizeUrls = async () => {
+  const companies = await CompanyModel.find({});
+
+  for (const company of companies) {
+    const endsInSlash = /\/$/;
+    let companyUrl = company.url;
+    console.log(`[+] company url before: ${companyUrl}`);
+    if (companyUrl.includes('?')) companyUrl = companyUrl.replace(/\?.*/, '');
+    if (companyUrl.indexOf('http:') > -1) companyUrl = companyUrl.replace('http:', 'https:');
+    if (endsInSlash.test(companyUrl)) companyUrl = companyUrl.replace(/\/$/, '');
+    company.url = companyUrl.toLowerCase();
+    await company.save();
+  }
+};
+
 // export const resetCompaniesUrls = async () => {
 //   const companiesJson = await csv().fromFile('./companies_prod.csv');
 

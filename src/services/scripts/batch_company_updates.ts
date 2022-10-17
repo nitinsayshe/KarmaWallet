@@ -205,7 +205,7 @@ export const handleAddParent = async (companyId: string, update: any): Promise<v
 
 export const updateCompanies = async (): Promise<void> => {
   const errors: any[] = [];
-  const updatePath = path.resolve(__dirname, '.tmp', 'batchCompanyUpdates.csv');
+  const updatePath = path.resolve(__dirname, '.tmp', 'company_url_updates_101422.csv');
   const updates = await csvtojson().fromFile(updatePath);
   let count = 0;
 

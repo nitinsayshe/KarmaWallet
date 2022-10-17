@@ -4,49 +4,15 @@ import { CompanyModel } from '../../models/company';
 import { CompanyDataSourceModel } from '../../models/companyDataSource';
 import { DataSourceMappingModel } from '../../models/dataSourceMapping';
 
-// export const getCompaniesWithCompleteData = async (threshold: number) => {
-//   let companyCount = 0;
-//   let companiesWithComplete = 0;
-//   let companiesNoDataSource = 0;
-//   let companiesWithNoUnsdgs = 0;
-//   const evaluatedCompanies = [];
+export const getCompaniesWithCompleteData = async (threshold: number) => {
+  const evaluatedCompanies = fs.readFileSync(path.resolve(__dirname, './.tmp', 'evaluated_companies.json'), 'utf8');
+  const parsedCompanies = JSON.parse(evaluatedCompanies);
+  const completeCompanies = parsedCompanies.filter((company: any) => company.evaluatedUnsdgCount >= threshold).length;
+  const incompleteCompanies = parsedCompanies.filter((company: any) => company.evaluatedUnsdgCount < threshold && company.evaluatedUnsdgCount > 0).length;
+  const companiesWithNoData = parsedCompanies.filter((company: any) => company.evaluatedUnsdgCount === 0).length;
 
-//   const companies = await CompanyModel.find({});
-
-//   for (const company of companies) {
-//     companyCount += 1;
-//     const unsdgs = {};
-
-//     if (companyCount < 2) {
-//       console.log(`[+] checking company ${company.companyName}`);
-//       const unsdgsCount = 0;
-//       // ensure data source not expired
-//       const companyDataSources = await CompanyDataSourceModel.find({ company: company._id, 'dateRange.start': { $lte: new Date() }, 'dateRange.end': { $gte: new Date() } });
-//       if (!companyDataSources) {
-//         companiesNoDataSource += 1;
-//         throw new Error('Company data sources not found');
-//       }
-
-//       for (const dataSource of companyDataSources) {
-//         const unsdgsMapping = await DataSourceMappingModel.findOne({ source: dataSource.source });
-//         console.log('/////// these are the mappings: ', unsdgsMapping);
-
-//         for (const unsdg of unsdgsMapping.unsdgs) {
-//           if (!!unsdg.exists) {
-
-//           }
-//         }
-//       }
-
-//       console.log(`[+] unsdgs count: ${unsdgsCount}`);
-
-//       if (unsdgsCount >= threshold) companiesWithComplete += 1;
-//       if (unsdgsCount === 0) companiesWithNoUnsdgs += 1;
-//     }
-//   }
-
-//   console.log(`[INFO]: There are ${companiesWithComplete} companies with complete data, ${companiesNoDataSource} companies with no data sources, and ${companiesWithNoUnsdgs} companies with no unsdgs`);
-// };
+  console.log(`\n[+] Threshold ${threshold} ${completeCompanies} companies have complete data, ${incompleteCompanies} companies have incomplete data, ${companiesWithNoData} companies have no data.`);
+};
 
 interface IEvaluatedCompany {
   companyName: string;

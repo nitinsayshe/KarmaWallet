@@ -13,6 +13,7 @@ import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals'
 import { getCompaniesWithCompleteData } from '../src/services/scripts/evaluate_companies_data';
 import { sanitizeUrls, updateUrls } from '../src/services/scripts/update_companies_urls';
 import { updateCompanies } from '../src/services/scripts/batch_company_updates';
+import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/generate_microsoft_wildfire_companies';
 
 (async () => {
   try {
@@ -25,7 +26,7 @@ import { updateCompanies } from '../src/services/scripts/batch_company_updates';
     // add mappers here...
     // await singleBatchMatch(1, BATCH_SIZE);
     // await updateCompanies();
-    await updateUrls();
+    await generateMicrosoftWildfireCompanies();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

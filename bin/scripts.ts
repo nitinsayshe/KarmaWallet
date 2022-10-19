@@ -11,7 +11,7 @@ import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/ch
 import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
 import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
 import { getCompaniesWithCompleteData } from '../src/services/scripts/evaluate_companies_data';
-import { sanitizeUrls } from '../src/services/scripts/update_companies_urls';
+import { sanitizeUrls, updateUrls } from '../src/services/scripts/update_companies_urls';
 import { updateCompanies } from '../src/services/scripts/batch_company_updates';
 
 (async () => {
@@ -25,7 +25,7 @@ import { updateCompanies } from '../src/services/scripts/batch_company_updates';
     // add mappers here...
     // await singleBatchMatch(1, BATCH_SIZE);
     // await updateCompanies();
-    await sanitizeUrls();
+    await updateUrls();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

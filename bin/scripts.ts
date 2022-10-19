@@ -7,6 +7,14 @@ import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { manuallyUpdateTransactionsFalsePositiveNegatives } from '../src/services/scripts/update_false_positive_negatives_transactions';
+import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector_scores';
+import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
+import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
+import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
+import { getCompaniesWithCompleteData } from '../src/services/scripts/evaluate_companies_data';
+import { sanitizeUrls, updateUrls } from '../src/services/scripts/update_companies_urls';
+import { updateCompanies } from '../src/services/scripts/batch_company_updates';
+import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/generate_microsoft_wildfire_companies';
 
 (async () => {
   try {
@@ -22,7 +30,9 @@ import { manuallyUpdateTransactionsFalsePositiveNegatives } from '../src/service
     // await removeMerchant('63079ac5e33a266250fb7ce4');
     // await removeDuplicateWildfireMerchants();
     await manuallyUpdateTransactionsFalsePositiveNegatives();
-
+    // await singleBatchMatch(1, BATCH_SIZE);
+    // await updateCompanies();
+    await generateMicrosoftWildfireCompanies();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

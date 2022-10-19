@@ -37,6 +37,7 @@ export const getImpactSummary = (transactions: ITransactionDocument[]): IImpactS
   let total = 0;
 
   for (const transaction of transactions) {
+    console.log('transaction company', transaction.company);
     const { amount } = transaction;
     const { combinedScore } = transaction.company as ICompanyDocument;
 
@@ -73,7 +74,7 @@ export const getMonthlyImpactBreakdown = (transactions: ITransactionDocument[], 
   const allMonthlyTransactions: { month: dayjs.Dayjs, transactions: ITransactionDocument[] }[] = [];
 
   for (const transaction of transactions) {
-    const transactionsDate = dayjs(transaction.date);
+    const transactionsDate = dayjs(transaction.date).utc();
     while (transactionsDate.format(dateFormat) !== date.format(dateFormat)) {
       date = date.subtract(1, 'month');
       allMonthlyTransactions.push({ month: getMonthStartDate(date), transactions: [] });

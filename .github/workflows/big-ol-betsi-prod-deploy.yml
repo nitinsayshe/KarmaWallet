@@ -9,11 +9,9 @@ on:
 jobs:
   build:
     runs-on: [self-hosted, big-ol-betsi-prod]
-
     strategy:
       matrix:
         node-version: [16.x]
-
     steps:
     - uses: actions/checkout@v2
       with:
@@ -69,4 +67,3 @@ jobs:
     - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env  
     - run: npm i
     - run: pm2 restart all
-    

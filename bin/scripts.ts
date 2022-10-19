@@ -11,10 +11,8 @@ import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector
 import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
 import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
 import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
-import { getCompaniesWithCompleteData } from '../src/services/scripts/evaluate_companies_data';
-import { sanitizeUrls, updateUrls } from '../src/services/scripts/update_companies_urls';
-import { updateCompanies } from '../src/services/scripts/batch_company_updates';
-import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/generate_microsoft_wildfire_companies';
+
+const BATCH_SIZE = 50000;
 
 (async () => {
   try {
@@ -31,8 +29,7 @@ import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/gene
     // await removeDuplicateWildfireMerchants();
     await manuallyUpdateTransactionsFalsePositiveNegatives();
     // await singleBatchMatch(1, BATCH_SIZE);
-    // await updateCompanies();
-    await generateMicrosoftWildfireCompanies();
+    await GenerateUserImpactTotals.exec();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

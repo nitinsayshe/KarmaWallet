@@ -1,5 +1,3 @@
-import path from 'path';
-import csvtojson from 'csvtojson';
 import { CompanyModel } from '../../models/company';
 
 // const fs = require('fs');
@@ -20,39 +18,6 @@ export const updateCompaniesUrls = async () => {
   }
 
   console.log(`[+] ${companies.length} companies updated`);
-};
-
-export const sanitizeUrls = async () => {
-  const companies = await CompanyModel.find({});
-
-  for (const company of companies) {
-    const endsInSlash = /\/$/;
-    let companyUrl = company.url;
-    console.log(`[+] company url before: ${companyUrl}`);
-    if (companyUrl.includes('?')) companyUrl = companyUrl.replace(/\?.*/, '');
-    if (companyUrl.indexOf('http:') > -1) companyUrl = companyUrl.replace('http:', 'https:');
-    if (endsInSlash.test(companyUrl)) companyUrl = companyUrl.replace(/\/$/, '');
-    company.url = companyUrl.toLowerCase();
-    await company.save();
-  }
-};
-
-export const updateUrls = async () => {
-  const updatePath = path.resolve(__dirname, '.tmp', 'urlsToUpdate.csv');
-  const updates = await csvtojson().fromFile(updatePath);
-
-  for (const update of updates) {
-    const company = await CompanyModel.findOne({ url: update.url });
-    if (!company) continue;
-    if (update.newUrl === 'null') {
-      console.log(`[+] setting url to null: ${company.companyName}`);
-      company.url = null;
-    } else {
-      console.log(`[+] updating url: ${company.companyName}`);
-      company.url = update.newUrl;
-    }
-    await company.save();
-  }
 };
 
 // export const resetCompaniesUrls = async () => {

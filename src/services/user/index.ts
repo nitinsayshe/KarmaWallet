@@ -261,7 +261,9 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const { requestor } = req;
   const updates = req.body;
+  console.log('///// these are the updates', updates);
   const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
+  console.log('//////// this is the legacyUser', legacyUser, requestor);
   if (updates?.email) {
     updates.email = updates?.email?.toLowerCase();
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
@@ -273,26 +275,23 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     switch (key) {
       case 'name':
         requestor.name = updates.name;
-        legacyUser.name = updates.name;
+        if (legacyUser) legacyUser.name = updates.name;
         break;
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
-        legacyUser.zipcode = updates.zipcode;
+        if (legacyUser) legacyUser.zipcode = updates.zipcode;
         break;
       case 'subscribedUpdates':
         requestor.subscribedUpdates = updates.subscribedUpdates;
-        legacyUser.subscribedUpdates = updates.subscribedUpdates;
+        if (legacyUser) legacyUser.subscribedUpdates = updates.subscribedUpdates;
         break;
       default:
         break;
     }
   }
 
-  await Promise.all([
-    requestor.save(),
-    legacyUser.save(),
-  ]);
-
+  if (legacyUser) await legacyUser.save();
+  await requestor.save();
   return requestor;
 };
 

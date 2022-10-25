@@ -249,12 +249,12 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
     user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
     // TODO: remove when legacy user is removed
-    legacyUser.emails = user.emails;
+    if (legacyUser) legacyUser.emails = user.emails;
     // updating requestor for access to new email
     resendEmailVerification({ ...req, requestor: user });
   } else {
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
-    legacyUser.emails = user.emails;
+    if (legacyUser) legacyUser.emails = user.emails;
   }
 };
 
@@ -273,26 +273,23 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     switch (key) {
       case 'name':
         requestor.name = updates.name;
-        legacyUser.name = updates.name;
+        if (legacyUser) legacyUser.name = updates.name;
         break;
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
-        legacyUser.zipcode = updates.zipcode;
+        if (legacyUser) legacyUser.zipcode = updates.zipcode;
         break;
       case 'subscribedUpdates':
         requestor.subscribedUpdates = updates.subscribedUpdates;
-        legacyUser.subscribedUpdates = updates.subscribedUpdates;
+        if (legacyUser) legacyUser.subscribedUpdates = updates.subscribedUpdates;
         break;
       default:
         break;
     }
   }
 
-  await Promise.all([
-    requestor.save(),
-    legacyUser.save(),
-  ]);
-
+  if (legacyUser) await legacyUser.save();
+  await requestor.save();
   return requestor;
 };
 

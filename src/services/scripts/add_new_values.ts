@@ -126,7 +126,7 @@ const createNewValues = async (data: IData) => {
   return data;
 };
 
-const mapValuesToDataSources = async (data: IData) => {
+export const mapValuesToDataSources = async (data: IData) => {
   console.log('mapping values to data sources...');
   const { values, dataSources, rawData } = data;
   let mappingCount = 0;
@@ -163,7 +163,53 @@ const mapValuesToDataSources = async (data: IData) => {
   console.log(`[+] ${mappingCount}/${totalCount} value to data source mappings created successfully`);
 };
 
-const mapValuesToCompanies = async (data: IData) => {
+export const mapValuesToCompanies = async (data: IData) => {
+  console.log('mapping values to companies...');
+  const companies = await CompanyModel.find({});
+  let count = 0;
+
+  for (const company of companies) {
+    const companyValues = await ValueCompanyMappingModel.find({ company });
+    const companyDataSources = await CompanyDataSourceModel.find({ company, status: { $gt: 0 } });
+
+    for (const companyDataSource of companyDataSources) {
+      const mapping = data.mappings.find(m => (m.dataSource as IDataSourceDocument)._id.toString() === companyDataSource.source.toString());
+
+      if (!mapping) continue;
+
+      const companyValue = companyValues.find(v => v.value.toString() === mapping.value.toString());
+
+      if (!!companyValue && companyValue.weightMultiplier !== ValueCompanyWeightMultiplier.DataSource) continue;
+
+      try {
+        if (!!companyValue) {
+          companyValue.weightMultiplier = ValueCompanyWeightMultiplier.DataSource;
+          companyValue.value = mapping.value;
+          await companyValue.save();
+        } else {
+          const newCompanyValue = new ValueCompanyMappingModel({
+            assignmentType: ValueCompanyAssignmentType.DataSourceInherited,
+            company,
+            value: mapping.value,
+            weightMultiplier: ValueCompanyWeightMultiplier.DataSource,
+          });
+
+          await newCompanyValue.save();
+        }
+
+        count += 1;
+      } catch (err) {
+        console.log('[-] error saving company value mapping');
+        console.log(err);
+        continue;
+      }
+    }
+  }
+
+  console.log(`[+] ${count} value to company mappings created successfully`);
+};
+
+export const mapValuesToCompanies = async (data: IData) => {
   console.log('mapping values to companies...');
   const companies = await CompanyModel.find({});
   let count = 0;

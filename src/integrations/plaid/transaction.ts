@@ -121,6 +121,9 @@ class Transaction {
             _id: this._existingTransactionId,
           },
           {
+            'integrations.plaid.transaction_id': this._plaidTransaction.transaction_id,
+          },
+          {
             $and: [
               { 'integrations.plaid.pending_transaction_id': this._plaidTransaction.pending_transaction_id },
               { 'integrations.plaid.pending_transaction_id': { $ne: null } },
@@ -132,9 +135,15 @@ class Transaction {
               { card: this._card },
               { company: this.company },
               { amount: this._plaidTransaction.amount },
+              {
+                $or: [
+                  { 'integrations.plaid.name': this._plaidTransaction.name },
+                  { 'integrations.plaid.merchant_name': this._plaidTransaction.merchant_name },
+                ],
+              },
               { date: this.date.toDate() },
               { 'integrations.plaid.merchant_name': this._plaidTransaction.merchant_name },
-              { 'integrations.plaid.authorized_date': this._plaidTransaction.authorized_date },
+              // { 'integrations.plaid.authorized_date': this._plaidTransaction.authorized_date },
             ],
           },
         ],

@@ -67,4 +67,3 @@ jobs:
     - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env  
     - run: npm i
     - run: pm2 restart all
-    

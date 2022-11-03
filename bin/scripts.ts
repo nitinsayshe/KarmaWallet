@@ -11,6 +11,10 @@ import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector
 import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
 import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
 import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
+import { updateCompanies, updateDataSources, updateCompanyDataSources, updateDataSourceMapping } from '../src/services/scripts/batch_company_updates';
+import { removeDuplicatePlaidTransactions } from '../src/services/scripts/remove_duplicate_plaid_transactions';
+import { CompanyDataSourceModel } from '../src/models/companyDataSource';
+import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch_update_effects';
 
 const BATCH_SIZE = 50000;
 
@@ -21,15 +25,7 @@ const BATCH_SIZE = 50000;
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    // updateCompaniesUrls();
-    // add mappers here...
-    // await associateWildfireMatches();
-    // await GenerateGroupStatements.exec();
-    // await removeMerchant('63079ac5e33a266250fb7ce4');
-    // await removeDuplicateWildfireMerchants();
-    await manuallyUpdateTransactionsFalsePositiveNegatives();
-    // await singleBatchMatch(1, BATCH_SIZE);
-    await GenerateUserImpactTotals.exec();
+    await monthlyBatchUpdateEffects();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

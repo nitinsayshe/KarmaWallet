@@ -18,9 +18,12 @@ export const hideCompaniesWithoutDataSources = async () => {
     const company = companies[i];
     console.log(`\n${i + 1}/${companies.length} - ${company.companyName}`);
     // if company has parent company, add ID to query
-    const companyQuery = { $or: [{ _id: company._id }] };
-    if (company.parentCompany) companyQuery.$or.push({ _id: (company.parentCompany as ObjectId) });
-    const dataSource = await CompanyDataSourceModel.findOne({ companyQuery, 'dateRange.start': { $lte: dayjs().utc().toDate() }, 'dateRange.end': { $gte: dayjs().utc().toDate() } });
+    const companyQuery = { $or: [{ company: company._id }] };
+    if (company.parentCompany) companyQuery.$or.push({ company: (company.parentCompany as ObjectId) });
+    const dataSource = await CompanyDataSourceModel.findOne({
+      ...companyQuery,
+      'dateRange.start': { $lte: dayjs().utc().toDate() },
+      'dateRange.end': { $gte: dayjs().utc().toDate() } });
     if (!dataSource && !company.hidden.status) {
       console.log(`${company.companyName} is being hidden`);
       company.hidden = {

@@ -3,6 +3,7 @@
 /* eslint-disable camelcase */
 /* eslint-disable no-unused-vars */
 import 'dotenv/config';
+import { K } from 'handlebars';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
@@ -11,10 +12,10 @@ import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector
 import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
 import { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
 import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
-import { updateCompanies, updateDataSources, updateCompanyDataSources, updateDataSourceMapping } from '../src/services/scripts/batch_company_updates';
 import { removeDuplicatePlaidTransactions } from '../src/services/scripts/remove_duplicate_plaid_transactions';
 import { CompanyDataSourceModel } from '../src/models/companyDataSource';
 import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch_update_effects';
+import { PaypalClient } from '../src/clients/paypal';
 
 const BATCH_SIZE = 50000;
 
@@ -24,11 +25,35 @@ const BATCH_SIZE = 50000;
     //   requestor: { },
     //   authKey: '',
     // } as IRequest);
-    await MongoClient.init();
-    await monthlyBatchUpdateEffects();
-    await MongoClient.disconnect();
+    // await MongoClient.init();
+    // await MongoClient.disconnect();
+    const client = new PaypalClient();
+    // const accessToken = await client.getClientAccessToken();
+    // const data = await client.sendPayout(
+    //   {
+    //     sender_batch_header: {
+    //       sender_batch_id: 'batch_1',
+    //       email_subject: 'You have a payment', // Cashback payout
+    //       email_message: 'You have received a payment', // more refined message
+    //     } },
+    //   [
+    //     {
+    //       recipient_type: 'PAYPAL_ID',
+    //       amount: {
+    //         value: '1.00',
+    //         currency: 'USD',
+    //       },
+    //       receiver: 'QRM44WQFN54TN', // paypalId
+    //       note: 'customized message for user with date/amount/commissions maybe?',
+    //       sender_item_id: 'payoutIdInDB',
+    //     },
+    //   ],
+    // );
+    const data = await client.getBalances();
+    console.log(data);
   } catch (err) {
     Logger.error(asCustomError(err));
-    await MongoClient.disconnect();
+    console.log(err);
+    // await MongoClient.disconnect();
   }
 })();

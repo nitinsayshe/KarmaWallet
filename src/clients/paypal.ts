@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import axios, { AxiosInstance } from 'axios';
 import { asCustomError } from '../lib/customError';
 import { IPaypalUserIntegration } from '../models/user';
@@ -8,6 +9,25 @@ const {
   PAYPAL_CLIENT_SECRET,
   PAYPAL_MODE,
 } = process.env;
+
+export interface ISendPayoutBatchHeader {
+  sender_batch_header: {
+    sender_batch_id: string;
+    email_subject: string;
+    email_message: string;
+  }
+}
+// https://developer.paypal.com/docs/api/payments.payouts-batch/v1/#definition-payout_item
+export interface ISendPayoutBatchItem {
+  recipient_type: 'PAYPAL_ID';
+  amount: {
+    value: string;
+    currency: string;
+  }
+  receiver: string;
+  note: string;
+  sender_item_id: string;
+}
 
 export class PaypalClient extends SdkClient {
   _client: AxiosInstance;
@@ -42,6 +62,19 @@ export class PaypalClient extends SdkClient {
     }
   }
 
+  async getClientAccessToken() {
+    const params = new URLSearchParams();
+    params.append('grant_type', 'client_credentials');
+    try {
+      const { data } = await this._client.post('/oauth2/token', params);
+      // add error handling
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
   async getCustomerDataFromToken(accessToken: string): Promise<IPaypalUserIntegration> {
     const { data } = await this._client.get('/oauth2/token/userinfo?schema=openid', {
       headers: {
@@ -56,5 +89,44 @@ export class PaypalClient extends SdkClient {
       payerId: data.payer_id,
     };
     return paypalUserIntegration;
+  }
+
+  async sendPayout(senderBatchHeader: ISendPayoutBatchHeader, items: ISendPayoutBatchItem[]) {
+    try {
+      const { access_token } = await this.getClientAccessToken();
+      const res = await this._client.post(
+        '/payments/payouts',
+        {
+          ...senderBatchHeader,
+          items,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${access_token}`,
+          },
+        },
+      );
+      return res;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  async getBalances() {
+    try {
+      const { access_token } = await this.getClientAccessToken();
+      const res = await this._client.get('/reporting/balances', {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      return res;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
   }
 }

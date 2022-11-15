@@ -30,10 +30,10 @@ export class PaypalClient extends SdkClient {
 
   async getAccessToken(code: string) {
     const params = new URLSearchParams();
-    params.append('grant_type', 'client_credentials');
+    params.append('grant_type', 'authorization_code');
     params.append('code', code);
     try {
-      const { data } = await this._client.post('/oauth2/token', params);
+      const { data } = await this._client.post('/identity/openidconnect/tokenservice', params);
       // add error handling
       return data;
     } catch (err) {
@@ -49,6 +49,7 @@ export class PaypalClient extends SdkClient {
         Authorization: `Bearer ${accessToken}`,
       },
     });
+
     // add error handling
     const paypalUserIntegration: IPaypalUserIntegration = {
       ...data,

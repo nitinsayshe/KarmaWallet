@@ -58,7 +58,6 @@ const buildFingerPrintQuery = (transaction: ITransactionDocument) => ({
       $and: [
         { user: transaction?.user },
         { card: transaction?.card },
-        { company: transaction?.company },
         { amount: transaction?.amount },
         {
           $or: [

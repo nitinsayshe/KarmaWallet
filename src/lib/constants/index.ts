@@ -177,6 +177,7 @@ export enum CollectionNames {
   Unsdg = 'unsdgs',
   UserGroup = 'user_groups',
   UserImpactTotal = 'user_impact_totals',
+  UserLog = 'user_logs',
   UserMontlyImpactReport = 'user_monthly_impact_reports',
   User = 'users',
   ValueCompanyMapping = 'value_company_mappings',

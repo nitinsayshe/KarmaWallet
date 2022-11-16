@@ -3,7 +3,9 @@ import { LegacySessionModel } from '../models/legacySession';
 import { IUserDocument, UserModel } from '../models/user';
 import * as UserService from '../services/user';
 import * as Session from '../services/session';
+import { UserLogModel } from '../models/userLog';
 import { IRequest } from '../types/request';
+import { areMoreThanOneDayApart } from '../lib/date';
 
 const identify = async (req: Request, _: Response, next: NextFunction) => {
   let authKey = req.header?.('authKey');
@@ -28,8 +30,14 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
 
     if (uid) {
       const user = await UserService.getUserById(req, uid);
-      (req as IRequest).requestor = (user as IUserDocument);
+      (req as IRequest).requestor = user as IUserDocument;
       (req as IRequest).authKey = authKey;
+
+      const now = new Date();
+      const latestUserLogin = await UserLogModel.findOne({ userId: user._id }).sort({ date: -1 });
+      if (!latestUserLogin || !latestUserLogin.date || areMoreThanOneDayApart(latestUserLogin.date, now)) {
+        await UserService.storeNewLogin(user._id.toString(), now);
+      }
     }
   } catch (e) {
     return next();

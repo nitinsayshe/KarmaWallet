@@ -20,6 +20,7 @@ import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
+import { UserLogModel } from '../../models/userLog';
 
 dayjs.extend(utc);
 
@@ -61,6 +62,14 @@ export interface IUpdateUserEmailParams {
 }
 
 type UserKeys = keyof IUserData;
+
+export const storeNewLogin = async (userId: string, loginDate: Date) => {
+  await UserLogModel.findOneAndUpdate(
+    { userId, date: loginDate },
+    { date: loginDate },
+    { upsert: true },
+  ).sort({ date: -1 });
+};
 
 export const register = async (req: IRequest, {
   password,
@@ -115,6 +124,8 @@ export const register = async (req: IRequest, {
 
     const authKey = await Session.createSession(newUser._id.toString());
 
+    await storeNewLogin(newUser._id.toString(), new Date());
+
     const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
     await resendEmailVerification(verificationEmailRequest);
 
@@ -135,6 +146,9 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
   const authKey = await Session.createSession(user._id.toString());
+
+  await storeNewLogin(user._id.toString(), new Date());
+
   return { user, authKey };
 };
 

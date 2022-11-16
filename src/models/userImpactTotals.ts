@@ -18,6 +18,8 @@ export interface IUserImpactMonthData {
   totalAmount: number;
 }
 
+export type UserImpactYearData = IUserImpactMonthData;
+
 export interface IUserImpactRating {
   min: number;
   max: number;

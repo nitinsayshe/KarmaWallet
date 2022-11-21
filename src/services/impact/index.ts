@@ -125,7 +125,7 @@ export const getFeaturedCashback = async () => {
           '621b993c5f87e75f5365a97d', // Verizon
           '621b99545f87e75f5365b715', // Cotopaxi
           '621b99be5f87e75f5365f54d', // Sams Club
-          '621b99be5f87e75f5365f4fd', // Under Armour
+          '621b994a5f87e75f5365b139', // AThleta
           '621b99605f87e75f5365be85', // Happy Earth Apparel
           '621b99435f87e75f5365ad95', // Prose
           '621b99435f87e75f5365ad35', // Burton

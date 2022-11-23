@@ -6,6 +6,7 @@ import {
   ObjectId,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
+import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser } from './user';
 
@@ -23,9 +24,7 @@ const userLogSchema = new Schema({
     ref: 'user',
     required: true,
   },
-  date: {
-    type: Date,
-  },
+  date: { type: Date, default: () => getUtcDate() },
 });
 userLogSchema.plugin(mongoosePaginate);
 

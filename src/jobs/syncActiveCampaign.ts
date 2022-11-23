@@ -9,6 +9,7 @@ import * as ActiveCampaignIntegration from '../integrations/activecampaign';
 import { ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { sectorsToExcludeFromTransactions } from '../lib/constants/transaction';
+import { getUtcDate } from '../lib/date';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../models/commissionPayout';
 import { CommissionModel, KarmaCommissionStatus } from '../models/commissions';
 import { CompanyModel } from '../models/company';
@@ -19,6 +20,7 @@ import { UserImpactYearData } from '../models/userImpactTotals';
 import { UserLogModel } from '../models/userLog';
 import { UserMontlyImpactReportModel } from '../models/userMonthlyImpactReport';
 import { getUserImpactRatings, getYearlyImpactBreakdown, getYearStartDate } from '../services/impact/utils';
+import { ActiveCampaignListId } from '../types/subscription';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes
@@ -573,6 +575,15 @@ const prepareBackfillSyncFields = async (
   return fieldValues;
 };
 
+const getBackfillSubscribeList = async (dateJoined: Date): Promise<ActiveCampaignListId[]> => {
+  const backfillSubscriberList = [ActiveCampaignListId.GeneralUpdates];
+  // add them to AccountUpdates list if registered within the last 45 days
+  if (dateJoined && dateJoined > getUtcDate().subtract(45, 'days').toDate()) {
+    backfillSubscriberList.push(ActiveCampaignListId.AccountUpdates);
+  }
+  return backfillSubscriberList;
+};
+
 const prepareSyncUsersRequest = async (
   users: Array<Partial<IUser>>,
   customFields: ActiveCampaignIntegration.FieldIds,
@@ -589,7 +600,8 @@ const prepareSyncUsersRequest = async (
       const contact: IContactsData = {
         email: user.emails.find(e => e.primary).email,
       };
-      let fields;
+      let fields: ActiveCampaignIntegration.FieldValues;
+      let subscribe: ActiveCampaignListId[];
       switch (syncType) {
         case ActiveCampaignSyncTypes.DAILY:
           fields = await prepareDailyUpdatedFields(user, customFields, []);
@@ -615,12 +627,14 @@ const prepareSyncUsersRequest = async (
           contact.first_name = user.name?.split(' ')[0];
           contact.last_name = user.name?.split(' ').pop();
           fields = await prepareBackfillSyncFields(user, customFields);
+          subscribe = await getBackfillSubscribeList(user.dateJoined);
           break;
         default:
           console.log('Invalid sync type');
           break;
       }
       contact.fields = fields;
+      contact.subscribe = subscribe.map((listId) => ({ listid: listId }));
       return contact;
     }),
   );

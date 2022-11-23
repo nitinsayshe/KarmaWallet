@@ -7,6 +7,7 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { UserGroupModel, IShareableUserGroup, IUserGroupDocument } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
+import { ActiveCampaignListId } from '../../types/subscription';
 
 export type FieldIds = Array<{ name: string; id: number }>
 export type FieldValues = Array<{ id: number; value: string }>
@@ -175,4 +176,25 @@ export const updateActiveCampaignTags = async (user: Partial<IUserDocument>) => 
   } catch (err) {
     console.log('error updating active campaign tags');
   }
+};
+
+export const updateActiveCampaignListStatus = async (email: string, subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]) => {
+  const ac = new ActiveCampaignClient();
+
+  subscribe = subscribe || [];
+  unsubscribe = unsubscribe || [];
+  const subscribeList = subscribe.map((listId) => ({
+    listid: listId,
+  }));
+  const unsubscribeList = unsubscribe.map((listId) => ({
+    listid: listId,
+  }));
+
+  const contacts = [{
+    email,
+    subscribe: subscribeList,
+    unsubscribe: unsubscribeList,
+  }];
+
+  await ac.importContacts({ contacts });
 };

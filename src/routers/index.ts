@@ -19,6 +19,7 @@ import upload from './upload';
 import userImpactReports from './userImpactReports';
 import dataSource from './dataSource';
 import values from './values';
+import visitor from './visitor';
 
 const routers = (app: Express) => {
   admin(app);
@@ -36,6 +37,7 @@ const routers = (app: Express) => {
   unsdgs(app);
   upload(app);
   user(app);
+  visitor(app);
   dataSource(app);
   userImpactReports(app);
   values(app);

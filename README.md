@@ -1,3 +1,3 @@
 # karmawallet-backend-ts
 
-deployment test 7
+deployment test 8

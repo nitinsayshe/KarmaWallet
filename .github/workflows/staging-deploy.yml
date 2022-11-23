@@ -72,6 +72,8 @@ jobs:
     - run: echo 'PAYPAL_CLIENT_ID=${{secrets.LIVE_PAYPAL_CLIENT_ID}}' >> .env
     - run: echo 'PAYPAL_MODE=live' >> .env
     - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env  
+    - run: echo 'ACTIVECAMPAIGN_API_URL=${{secrets.ACTIVECAMPAIGN_API_URL}}' >> .env
+    - run: echo 'ACTIVECAMPAIGN_API_KEY=${{secrets.ACTIVECAMPAIGN_API_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all
-    
+

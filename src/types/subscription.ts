@@ -8,6 +8,10 @@ export enum SubscriptionStatus {
   Cancelled = 'cancelled',
 }
 
+export enum HubspotFormId {
+  groupsInterest = 'f7e43f6a-0925-40a3-8241-6b87061e0fda',
+}
+
 // NOTE: if these lists are changed in Active Campaign, This code needs to be
 // updated accordingly.
 export enum ActiveCampaignListId {
@@ -30,4 +34,7 @@ export enum SubscriptionCode {
   accountUpdates = 'accountUpdates',
   monthlyNewsletters = 'monthlyNewsletters',
   generalUpdates = 'generalUpdates',
+  groupInterestsEmplpyerBenefit = 'groupInterestsEmplpyerBenefit',
+  groupInterestsNonProfit = 'groupInterestsNonProfit',
+  groupInterestsSocialMediaCommunity = 'groupInterestsSocialMediaCommunity',
 }

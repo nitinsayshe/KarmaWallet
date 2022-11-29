@@ -1,4 +1,5 @@
-import { SubscriptionCode, ActiveCampaignListId, ProviderProductName } from '../../types/subscription';
+import { InterestCategory } from '../../integrations/hubspot';
+import { SubscriptionCode, ActiveCampaignListId, ProviderProductName, HubspotFormId } from '../../types/subscription';
 
 export const SubscriptionCodeToProviderProductName = {
   [SubscriptionCode.accountUpdates]: ProviderProductName.AccountUpdates,
@@ -10,4 +11,13 @@ export const SubscriptionCodeToProviderProductId = {
   [SubscriptionCode.accountUpdates]: ActiveCampaignListId.AccountUpdates,
   [SubscriptionCode.monthlyNewsletters]: ActiveCampaignListId.MonthyNewsletters,
   [SubscriptionCode.generalUpdates]: ActiveCampaignListId.GeneralUpdates,
+  [SubscriptionCode.groupInterestsEmplpyerBenefit]: HubspotFormId.groupsInterest,
+  [SubscriptionCode.groupInterestsNonProfit]: HubspotFormId.groupsInterest,
+  [SubscriptionCode.groupInterestsSocialMediaCommunity]: HubspotFormId.groupsInterest,
+};
+
+export const InterestCategoryToSubscriptionCode = {
+  [InterestCategory.EmployerBenefit]: SubscriptionCode.groupInterestsEmplpyerBenefit,
+  [InterestCategory.NonProfit]: SubscriptionCode.groupInterestsNonProfit,
+  [InterestCategory.SocialMediaCommunity]: SubscriptionCode.groupInterestsSocialMediaCommunity,
 };

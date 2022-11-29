@@ -184,3 +184,5 @@ export enum CollectionNames {
   ValueDataSourceMapping = 'value_data_source_mappings',
   Value = 'values'
 }
+
+export const HubspotPortalId = '22346640';

@@ -40,7 +40,7 @@ export const getNextPayoutDate = (date: Date = getUtcDate().toDate()) => {
     }
   }
   if (!payoutDate) {
-    payoutDate = dayjs(date).month(CommissionPayoutMonths[0])
+    payoutDate = dayjs().month(CommissionPayoutMonths[0])
       .date(1)
       .add(1, 'year')
       .toDate();
@@ -51,7 +51,7 @@ export const getNextPayoutDate = (date: Date = getUtcDate().toDate()) => {
 export const getPrevPayoutDate = (date: Date = getUtcDate().toDate()) => {
   const currentMonth = getUtcDate(date).month();
   let payoutDate;
-  const arr = CommissionPayoutMonths.reverse();
+  const arr = [...CommissionPayoutMonths].reverse();
   for (let i = 0; i < arr.length; i++) {
     const month = arr[i];
     if (currentMonth >= month) {

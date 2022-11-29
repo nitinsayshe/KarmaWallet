@@ -1,4 +1,9 @@
-import { CommissionModel, ICommissionDocument, IShareableCommission } from '../../models/commissions';
+import {
+  CommissionModel,
+  ICommissionDocument,
+  IShareableCommission,
+  KarmaCommissionStatus,
+} from '../../models/commissions';
 import { IRequest } from '../../types/request';
 import {
   CommissionPayoutModel,
@@ -82,4 +87,21 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
     nextPayoutDate: new Date('2023-01-15'),
     // nextPayoutDate: dayjs(getNextPayoutDate().date).date(CommissionPayoutDayForUser).toDate(),
   };
+};
+
+export const getUsersWithCommissionsForPayout = async () => {
+  const users = await CommissionModel.aggregate([
+    {
+      $match: {
+        status: KarmaCommissionStatus.ReceivedFromVendor,
+      },
+    },
+    {
+      $group: {
+        _id: '$user',
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+  return users;
 };

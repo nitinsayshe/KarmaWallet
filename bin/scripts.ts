@@ -16,6 +16,7 @@ import { removeDuplicatePlaidTransactions } from '../src/services/scripts/remove
 import { CompanyDataSourceModel } from '../src/models/companyDataSource';
 import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch_update_effects';
 import { PaypalClient } from '../src/clients/paypal';
+import { getUsersWithCommissionsForPayout } from '../src/services/commission';
 
 const BATCH_SIZE = 50000;
 
@@ -25,8 +26,7 @@ const BATCH_SIZE = 50000;
     //   requestor: { },
     //   authKey: '',
     // } as IRequest);
-    // await MongoClient.init();
-    // await MongoClient.disconnect();
+    await MongoClient.init();
     const client = new PaypalClient();
     // const accessToken = await client.getClientAccessToken();
     // const data = await client.sendPayout(
@@ -49,8 +49,9 @@ const BATCH_SIZE = 50000;
     //     },
     //   ],
     // );
-    const data = await client.getBalances();
-    console.log(data);
+    const data = await getUsersWithCommissionsForPayout(new Date('2022-09-29'));
+    console.log(JSON.stringify(data, null, 2));
+    await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));
     console.log(err);

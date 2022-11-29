@@ -29,6 +29,23 @@ export interface ISendPayoutBatchItem {
   sender_item_id: string;
 }
 
+export interface IPaypalBalance {
+  currency: string,
+  primary?: boolean,
+  total_balance: {
+    currency_code: string,
+    value: string
+  },
+  available_balance: {
+    currency_code: string,
+    value: string
+  },
+  withheld_balance: {
+    currency_code: string,
+    value: string
+  }
+}
+
 export class PaypalClient extends SdkClient {
   _client: AxiosInstance;
 
@@ -117,16 +134,21 @@ export class PaypalClient extends SdkClient {
   async getBalances() {
     try {
       const { access_token } = await this.getClientAccessToken();
-      const res = await this._client.get('/reporting/balances', {
+      const { data } = await this._client.get('/reporting/balances', {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${access_token}`,
         },
       });
-      return res;
+      return data;
     } catch (err) {
       console.log(err);
       throw asCustomError(err);
     }
+  }
+
+  async getPrimaryBalance() {
+    const { balances } = await this.getBalances();
+    return balances.find((balance: IPaypalBalance) => balance.primary);
   }
 }

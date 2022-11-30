@@ -65,9 +65,9 @@ jobs:
     - run: echo 'PAYPAL_CLIENT_ID=${{secrets.LIVE_PAYPAL_CLIENT_ID}}' >> .env
     - run: echo 'PAYPAL_MODE=live' >> .env
     - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env     
-    - run: echo 'HUBSPOT_URL=${{secrets.HUBSPOT_URL}}'
-    - run: echo 'HUBSPOT_APP_TOKEN=${{secrets.HUBSPOT_APP_TOKEN}}'
     - run: echo 'ACTIVECAMPAIGN_API_URL=${{secrets.ACTIVECAMPAIGN_API_URL}}' >> .env
     - run: echo 'ACTIVECAMPAIGN_API_KEY=${{secrets.ACTIVECAMPAIGN_API_KEY}}' >> .env
+    - run: echo 'HUBSPOT_URL=${{secrets.HUBSPOT_URL}}' >> .env
+    - run: echo 'HUBSPOT_APP_TOKEN=${{secrets.HUBSPOT_APP_TOKEN}}' >> .env
     - run: npm i
     - run: pm2 restart all

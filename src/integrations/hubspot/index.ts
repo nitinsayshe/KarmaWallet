@@ -5,6 +5,7 @@ export enum InterestCategory {
   EmployerBenefit = 'employerBenefit',
   NonProfit = 'nonProfit',
   SocialMediaCommunity = 'socialMediaCommunity',
+  Other = 'other'
 }
 
 export interface InterestFormRequest {

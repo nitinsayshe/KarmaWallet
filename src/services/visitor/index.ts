@@ -160,7 +160,7 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
     data.email = email.toLowerCase();
 
     if (!(data.interestCategory as HubspotIntegration.InterestCategory)) {
-      throw new CustomError(shareableInterestFormSubmitError, ErrorTypes.INVALID_ARG);
+      throw new CustomError('Invalid interest category.', ErrorTypes.INVALID_ARG);
     }
 
     const code = InterestCategoryToSubscriptionCode[data.interestCategory];

@@ -37,4 +37,5 @@ export enum SubscriptionCode {
   groupInterestsEmplpyerBenefit = 'groupInterestsEmplpyerBenefit',
   groupInterestsNonProfit = 'groupInterestsNonProfit',
   groupInterestsSocialMediaCommunity = 'groupInterestsSocialMediaCommunity',
+  groupInterestsOther = 'groupInterestsOther',
 }

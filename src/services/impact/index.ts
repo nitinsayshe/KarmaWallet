@@ -130,7 +130,7 @@ export const getFeaturedCashback = async () => {
           '621b99435f87e75f5365ad95', // Prose
           '621b99435f87e75f5365ad35', // Burton
           '621b993e5f87e75f5365aa45', // Plant People
-          '621b99d45f87e75f536601ad', // Clinique
+          '621b995a5f87e75f5365bb05', // Beauty Counter
           '621b99b35f87e75f5365eecd', // Banana Republic
           '621b995a5f87e75f5365ba91', // West Paw
         ] } },

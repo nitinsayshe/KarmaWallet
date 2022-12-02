@@ -32,3 +32,17 @@ export const updateSubscriptionsIfUserWasVisitor = async (email: string, user: s
     await SubscriptionModel.updateMany({ visitor: visitor._id }, { $set: { user, lastModified: getUtcDate() } });
   }
 };
+
+export const updateUserSubscriptions = async (user: string, subscribe: Array<SubscriptionCode>, unsubscribe: Array<SubscriptionCode>) => {
+  if (subscribe?.length > 0) {
+    await Promise.all(
+      subscribe.map(async (code) => {
+        await SubscriptionModel.findOneAndUpdate({ user, code }, { user, code, lastModified: getUtcDate(), status: SubscriptionStatus.Active }, { upsert: true });
+      }),
+    );
+  }
+
+  if (unsubscribe?.length > 0) {
+    await SubscriptionModel.updateMany({ user, code: { $in: unsubscribe } }, { lastModified: getUtcDate(), status: SubscriptionStatus.Cancelled });
+  }
+};

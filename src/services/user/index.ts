@@ -22,7 +22,7 @@ import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
 import { UserLogModel } from '../../models/userLog';
 import { getUtcDate } from '../../lib/date';
-import { updateNewUserSubscriptions, updateSubscriptionIfUserWasAVisitor} from '../subscription';
+import { updateNewUserSubscriptions, updateSubscriptionsIfUserWasVisitor } from '../subscription';
 
 dayjs.extend(utc);
 
@@ -270,7 +270,7 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     // updating requestor for access to new email
     resendEmailVerification({ ...req, requestor: user });
     // If this is an existing email, this update should have already happened
-    await updateSubscriptionIfUserWasAVisitor(email, user._id.toString());
+    await updateSubscriptionsIfUserWasVisitor(email, user._id.toString());
   } else {
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
     if (legacyUser) legacyUser.emails = user.emails;

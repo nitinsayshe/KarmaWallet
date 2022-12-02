@@ -1,3 +1,4 @@
+import { InterestFormRequest } from '../integrations/hubspot';
 import { ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { verifyRequiredFields } from '../lib/requestData';
@@ -19,6 +20,25 @@ export const newsletterSignup: IRequestHandler<{}, {}, VisitorService.INewslette
     const { email, subscriptionCode } = body;
     if (NODE_ENV === 'staging') return output.api(req, res, null);
     await VisitorService.newsletterSignup(req, email, subscriptionCode);
+    output.api(req, res, null);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const submitInterestForm: IRequestHandler<{}, {}, InterestFormRequest> = async (req, res) => {
+  try {
+    const { body } = req;
+
+    const { email, firstName, lastName, organization, interestCategory } = body;
+    const submitFormReq = {
+      email,
+      firstName,
+      lastName,
+      organization,
+      interestCategory,
+    };
+    await VisitorService.submitInterestForm(req, submitFormReq);
     output.api(req, res, null);
   } catch (err) {
     output.error(req, res, asCustomError(err));

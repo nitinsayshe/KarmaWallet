@@ -119,6 +119,11 @@ const userSchema = new Schema({
         email_verified: { type: Boolean },
       },
     },
+    activecampaign: {
+      type: {
+        latestSyncDate: { type: Date },
+      },
+    },
   },
 });
 userSchema.plugin(mongoosePaginate);

@@ -1,9 +1,9 @@
 import path from 'path';
 import { Worker } from 'bullmq';
 import { JobNames, QueueNames, CsvReportTypes } from '../../../lib/constants/jobScheduler';
-import { ActiveCampaignSyncTypes } from '../../../lib/constants/activecampaign';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
+import { ActiveCampaignSyncTypes } from '../../../lib/constants/activecampaign';
 
 export class _MainBullClient extends _BullClient {
   constructor() {

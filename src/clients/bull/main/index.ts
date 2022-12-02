@@ -53,14 +53,14 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 * *' } });
     this.createJob(JobNames.UpdateWildfireCommissions, null, { jobId: `${JobNames.UpdateWildfireCommissions}-daily`, repeat: { cron: '0 5 * * *' } });
 
-    // active campaign sync
-    this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.DAILY }, { jobId: `${JobNames.SyncActiveCampaign}-daily`, repeat: { cron: '0 7 * * *' } });
-    this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.WEEKLY }, { jobId: `${JobNames.SyncActiveCampaign}-weekly`, repeat: { cron: '0 7 * * 0' } });
-    this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 7 1 * *' } });
-    this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
-    this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
-
     if (process.env.NODE_ENV === 'production') {
+      // active campaign sync
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.DAILY }, { jobId: `${JobNames.SyncActiveCampaign}-daily`, repeat: { cron: '0 7 * * *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.WEEKLY }, { jobId: `${JobNames.SyncActiveCampaign}-weekly`, repeat: { cron: '0 7 * * 0' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 7 1 * *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
+
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Transactions },

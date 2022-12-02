@@ -11,14 +11,14 @@ export const SubscriptionCodeToProviderProductId = {
   [SubscriptionCode.accountUpdates]: ActiveCampaignListId.AccountUpdates,
   [SubscriptionCode.monthlyNewsletters]: ActiveCampaignListId.MonthyNewsletters,
   [SubscriptionCode.generalUpdates]: ActiveCampaignListId.GeneralUpdates,
-  [SubscriptionCode.groupInterestsEmployerBenefit]: HubspotFormId.groupsInterest,
+  [SubscriptionCode.groupInterestsEmplpyerBenefit]: HubspotFormId.groupsInterest,
   [SubscriptionCode.groupInterestsNonProfit]: HubspotFormId.groupsInterest,
   [SubscriptionCode.groupInterestsSocialMediaCommunity]: HubspotFormId.groupsInterest,
   [SubscriptionCode.groupInterestsOther]: HubspotFormId.groupsInterest,
 };
 
 export const InterestCategoryToSubscriptionCode = {
-  [InterestCategory.EmployerBenefit]: SubscriptionCode.groupInterestsEmployerBenefit,
+  [InterestCategory.EmployerBenefit]: SubscriptionCode.groupInterestsEmplpyerBenefit,
   [InterestCategory.NonProfit]: SubscriptionCode.groupInterestsNonProfit,
   [InterestCategory.SocialMediaCommunity]: SubscriptionCode.groupInterestsSocialMediaCommunity,
   [InterestCategory.Other]: SubscriptionCode.groupInterestsOther,

@@ -25,7 +25,7 @@ const BATCH_SIZE = 50000;
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    await monthlyBatchUpdateEffects();
+    await updateDataSources();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

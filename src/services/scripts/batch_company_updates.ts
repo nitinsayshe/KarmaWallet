@@ -17,8 +17,13 @@ import { getUtcDate } from '../../lib/date';
 import { DataSourceMappingModel } from '../../models/dataSourceMapping';
 import { UnsdgModel } from '../../models/unsdg';
 
-// Data Source Mapping Updates
+// NOVEMBER ADDITION
+// 1) If company is updated and has sectors, overwrite all sectors on company
+// 2) Company Data Source can have status of 1 or -1
+// 3) Unhide company if ACTION is unhide
+// 4) Update false-positive false-negative logic (remove all manual match false)
 
+// Data Source Mapping Updates
 enum DataSourceMappingUpdateAction {
   Delete = 'DELETE',
   Update = 'UPDATE',
@@ -316,20 +321,11 @@ export const handleUpdateCompany = async (companyId: string, update: any): Promi
   } = update;
   // handle primary sector update
   if (primarySector) {
-    const doesCompanyHaveSector = company.sectors.find(s => s.sector.toString() === primarySector);
-    if (!doesCompanyHaveSector) company.sectors.push({ sector: primarySector, primary: true });
-    company.sectors.forEach(sector => {
-      if (sector.sector.toString() !== primarySector && sector.primary) sector.primary = false;
-      if (sector.sector.toString() === primarySector) sector.primary = true;
-    });
-  }
-  // handle other sectors update
-  if (update?.otherSector1) {
+    company.sectors = [{ sector: primarySector, primary: true }];
     for (let i = 1; i <= 100; i += 1) {
       const sector = update[`otherSector${i}`];
       if (!sector) break;
-      const doesCompanyHaveSector = company.sectors.find(s => s.sector.toString() === sector);
-      if (!doesCompanyHaveSector) company.sectors.push({ sector, primary: false });
+      company.sectors.push({ sector, primary: false });
     }
   }
   if (notes) company.notes += `; ${notes}`;

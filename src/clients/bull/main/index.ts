@@ -38,6 +38,7 @@ export class _MainBullClient extends _BullClient {
   };
 
   // https://crontab.cronhub.io/
+  // https://www.npmjs.com/package/cron-parser - Package BullMQ uses to parse these
   initCronJobs = () => {
     this.createJob(JobNames.CachedDataCleanup, null, { jobId: `${JobNames.CachedDataCleanup}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.CacheGroupOffsetData, null, { jobId: `${JobNames.CacheGroupOffsetData}-bihourly`, repeat: { cron: '0 */2 * * *' } });
@@ -50,7 +51,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 0 */6 * * *' } });
     // TODO: verify dates of Wildfire payment to Karma, adjust corn job accordingly
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
-    this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 * *' } });
+    this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 *' } });
     this.createJob(JobNames.UpdateWildfireCommissions, null, { jobId: `${JobNames.UpdateWildfireCommissions}-daily`, repeat: { cron: '0 5 * * *' } });
 
     if (process.env.NODE_ENV === 'production') {

@@ -31,6 +31,11 @@ export interface IRareUserIntegration {
   userId?: string;
 }
 
+export interface IActiveCampaignUserIntegration {
+  userId: string;
+  latestSync: Date;
+}
+
 export interface IPaypalUserIntegration {
   user_id: string,
   sub: string,
@@ -46,6 +51,7 @@ export interface IPaypalUserIntegration {
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IRareUserIntegration;
+  activecampaign?: IActiveCampaignUserIntegration;
 }
 
 export interface IShareableUser {
@@ -111,6 +117,11 @@ const userSchema = new Schema({
         verified: { type: Boolean },
         verified_account: { type: Boolean },
         email_verified: { type: Boolean },
+      },
+    },
+    activecampaign: {
+      type: {
+        latestSyncDate: { type: Date },
       },
     },
   },

@@ -20,6 +20,9 @@ import { ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
+import { UserLogModel } from '../../models/userLog';
+import { getUtcDate } from '../../lib/date';
+import { updateNewUserSubscriptions, updateSubscriptionsIfUserWasVisitor } from '../subscription';
 
 dayjs.extend(utc);
 
@@ -61,6 +64,14 @@ export interface IUpdateUserEmailParams {
 }
 
 type UserKeys = keyof IUserData;
+
+export const storeNewLogin = async (userId: string, loginDate: Date) => {
+  await UserLogModel.findOneAndUpdate(
+    { userId, date: loginDate },
+    { date: loginDate },
+    { upsert: true },
+  ).sort({ date: -1 });
+};
 
 export const register = async (req: IRequest, {
   password,
@@ -115,6 +126,9 @@ export const register = async (req: IRequest, {
 
     const authKey = await Session.createSession(newUser._id.toString());
 
+    await storeNewLogin(newUser._id.toString(), getUtcDate().toDate());
+    await updateNewUserSubscriptions(newUser);
+
     const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
     await resendEmailVerification(verificationEmailRequest);
 
@@ -135,6 +149,9 @@ export const login = async (_: IRequest, { email, password }: ILoginData) => {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
   const authKey = await Session.createSession(user._id.toString());
+
+  await storeNewLogin(user._id.toString(), getUtcDate().toDate());
+
   return { user, authKey };
 };
 
@@ -252,6 +269,8 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     if (legacyUser) legacyUser.emails = user.emails;
     // updating requestor for access to new email
     resendEmailVerification({ ...req, requestor: user });
+    // If this is an existing email, this update should have already happened
+    await updateSubscriptionsIfUserWasVisitor(email, user._id.toString());
   } else {
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
     if (legacyUser) legacyUser.emails = user.emails;

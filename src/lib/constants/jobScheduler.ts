@@ -35,4 +35,5 @@ export enum JobNames {
   UpdateWildfireMerchantsAndData = 'update-wildfire-merchants-and-data',
   GenerateCommissionPayouts = 'generate-commission-payouts',
   UpdateWildfireCommissions = 'update-wildfire-commissions',
+  SyncActiveCampaign = 'sync-active-campaign',
 }

@@ -19,6 +19,7 @@ dayjs.extend(isBetween);
 interface IUserImpactReportSummaryMonthData {
   date: Date;
   reportId?: string;
+  score?: number;
   withinDataRange: boolean;
 }
 
@@ -123,6 +124,7 @@ export const getUserImpactReportsSummary = async (req: IRequest): Promise<IUserI
 
       yearObj.data.push({
         date: currentDate.toDate(),
+        score: monthReport?.impact?.score ? monthReport.impact.score : null,
         // hasData is a flag that this month has data available
         reportId: monthReport?._id.toString(),
         // withinDataRange is a flag that this month is within the first month that a user

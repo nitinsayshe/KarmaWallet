@@ -71,3 +71,10 @@ export const toUTC = (date: Date) => new Date(
   date.getUTCMinutes(),
   date.getUTCSeconds(),
 );
+
+export const areMoreThanOneDayApart = (date1: Date, date2: Date): boolean => {
+  const msBetweenDates = Math.abs(date1.getTime() - date2.getTime());
+  // convert ms to hours                      min  sec   ms
+  const hoursBetweenDates = msBetweenDates / (60 * 60 * 1000);
+  return hoursBetweenDates >= 24;
+};

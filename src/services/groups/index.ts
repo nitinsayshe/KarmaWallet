@@ -42,6 +42,7 @@ import {
   ITransactionDocument, ITransactionMatch, MatchTypes,
 } from '../../models/transaction';
 import { UserGroupStatus } from '../../types/groups';
+import { updateActiveCampaignTags } from '../../integrations/activecampaign';
 
 dayjs.extend(utc);
 
@@ -1005,7 +1006,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     await user.save();
-
+    await updateActiveCampaignTags(user);
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
@@ -1051,6 +1052,7 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
+    await updateActiveCampaignTags(appUser);
   } catch (err) {
     throw asCustomError(err);
   }

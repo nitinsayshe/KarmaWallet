@@ -227,6 +227,7 @@ const handleAddCompanyDataSource = async (update: any) => {
   let { companyId } = update;
   if (!companyId && name) {
     const company = await CompanyModel.findOne({ companyName: name });
+    if (!company) await CompanyModel.findOne({ _id: companyId });
     if (!company) throw new Error(`No company found for update: ${JSON.stringify(update)}`);
     companyId = company._id;
   }

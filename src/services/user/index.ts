@@ -124,10 +124,8 @@ export const register = async (req: IRequest, {
     };
 
     if (shareASaleId) {
-      rawUser.integrations = {
-        shareasale: {
-          trackingId: shareASaleId,
-        },
+      rawUser.integrations.shareasale = {
+        trackingId: shareASaleId,
       };
     }
 

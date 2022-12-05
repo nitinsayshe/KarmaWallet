@@ -57,7 +57,6 @@ export interface IUserIntegrations {
   paypal?: IRareUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
   shareasale?: IShareASale;
-
 }
 
 export interface IShareableUser {

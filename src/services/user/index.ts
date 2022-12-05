@@ -47,6 +47,7 @@ export interface IUserData extends ILoginData {
   subscribedUpdates: boolean;
   role?: UserRoles;
   pw?: string;
+  shareASaleId?: string;
 }
 
 export interface IEmailVerificationData {
@@ -79,6 +80,7 @@ export const register = async (req: IRequest, {
   name,
   zipcode,
   subscribedUpdates,
+  shareASaleId,
 }: IUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -118,7 +120,16 @@ export const register = async (req: IRequest, {
       ...legacyUser.toObject(),
       emails,
       legacyId: legacyUser._id,
+      integrations: {},
     };
+
+    if (shareASaleId) {
+      rawUser.integrations = {
+        shareasale: {
+          trackingId: shareASaleId,
+        },
+      };
+    }
 
     delete rawUser._id;
     const newUser = new UserModel({ ...rawUser });

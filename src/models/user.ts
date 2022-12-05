@@ -31,6 +31,10 @@ export interface IRareUserIntegration {
   userId?: string;
 }
 
+export interface IShareASale {
+  trackingId?: string;
+}
+
 export interface IActiveCampaignUserIntegration {
   userId: string;
   latestSync: Date;
@@ -52,6 +56,8 @@ export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IRareUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
+  shareasale?: IShareASale;
+
 }
 
 export interface IShareableUser {
@@ -122,6 +128,11 @@ const userSchema = new Schema({
     activecampaign: {
       type: {
         latestSyncDate: { type: Date },
+      },
+    },
+    shareasale: {
+      type: {
+        trackingId: { type: String },
       },
     },
   },

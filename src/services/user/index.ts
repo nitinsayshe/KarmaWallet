@@ -47,7 +47,7 @@ export interface IUserData extends ILoginData {
   subscribedUpdates: boolean;
   role?: UserRoles;
   pw?: string;
-  shareASaleId?: string;
+  shareASaleId?: boolean;
 }
 
 export interface IEmailVerificationData {
@@ -124,9 +124,17 @@ export const register = async (req: IRequest, {
       integrations,
     };
 
-    if (shareASaleId) {
+    if (!!shareASaleId) {
+      let uniqueId = nanoid();
+      let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+      while (existingId) {
+        uniqueId = nanoid();
+        existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+      }
+
       rawUser.integrations.shareasale = {
-        trackingId: shareASaleId,
+        trackingId: uniqueId,
       };
     }
 
@@ -219,6 +227,7 @@ export const getShareableUser = ({
 }: IUserDocument) => {
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
+  if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
   return {
     _id,
     email,

@@ -100,6 +100,7 @@ export const register = async (req: IRequest, {
     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
 
     const emails = [{ email, verified: false, primary: true }];
+    const integrations: IUserIntegrations = {};
 
     // TODO: delete creating a new legacy user when able.
     const legacyUser = new LegacyUserModel({
@@ -120,7 +121,7 @@ export const register = async (req: IRequest, {
       ...legacyUser.toObject(),
       emails,
       legacyId: legacyUser._id,
-      integrations: {},
+      integrations,
     };
 
     if (shareASaleId) {

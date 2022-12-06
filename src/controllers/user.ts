@@ -17,10 +17,10 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
       return;
     }
     const {
-      password, email, name, zipcode, subscribedUpdates,
+      password, email, name, zipcode, subscribedUpdates, shareASaleId,
     } = body;
     const { user, authKey } = await UserService.register(req, {
-      password, email, name, zipcode, subscribedUpdates,
+      password, email, name, zipcode, subscribedUpdates, shareASaleId,
     });
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {

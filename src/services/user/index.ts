@@ -47,6 +47,7 @@ export interface IUserData extends ILoginData {
   subscribedUpdates: boolean;
   role?: UserRoles;
   pw?: string;
+  shareASaleId?: boolean;
 }
 
 export interface IEmailVerificationData {
@@ -79,6 +80,7 @@ export const register = async (req: IRequest, {
   name,
   zipcode,
   subscribedUpdates,
+  shareASaleId,
 }: IUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -98,6 +100,7 @@ export const register = async (req: IRequest, {
     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
 
     const emails = [{ email, verified: false, primary: true }];
+    const integrations: IUserIntegrations = {};
 
     // TODO: delete creating a new legacy user when able.
     const legacyUser = new LegacyUserModel({
@@ -118,7 +121,22 @@ export const register = async (req: IRequest, {
       ...legacyUser.toObject(),
       emails,
       legacyId: legacyUser._id,
+      integrations,
     };
+
+    if (!!shareASaleId) {
+      let uniqueId = nanoid();
+      let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+      while (existingId) {
+        uniqueId = nanoid();
+        existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+      }
+
+      rawUser.integrations.shareasale = {
+        trackingId: uniqueId,
+      };
+    }
 
     delete rawUser._id;
     const newUser = new UserModel({ ...rawUser });
@@ -209,6 +227,7 @@ export const getShareableUser = ({
 }: IUserDocument) => {
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
+  if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
   return {
     _id,
     email,

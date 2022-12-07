@@ -15,6 +15,7 @@ import { updateCompanies, updateDataSources, updateCompanyDataSources, updateDat
 import { removeDuplicatePlaidTransactions } from '../src/services/scripts/remove_duplicate_plaid_transactions';
 import { CompanyDataSourceModel } from '../src/models/companyDataSource';
 import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch_update_effects';
+import { sanitizeEmails } from '../src/services/scripts/sanitizeEmails';
 
 const BATCH_SIZE = 50000;
 
@@ -25,7 +26,7 @@ const BATCH_SIZE = 50000;
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    await monthlyBatchUpdateEffects();
+    await sanitizeEmails();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

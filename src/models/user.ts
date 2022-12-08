@@ -64,7 +64,6 @@ export interface IShareableUser {
   name: string;
   dateJoined: Date;
   zipcode: string;
-  subscribedUpdates: boolean;
   role: string; // cannot mark as UserRoles due to how mongoose treats enums
   legacyId: string;
 }
@@ -97,7 +96,6 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   dateJoined: { type: Date, default: new Date() },
   zipcode: { type: String },
-  subscribedUpdates: { type: Boolean, default: true },
   role: {
     type: String,
     default: 'none',

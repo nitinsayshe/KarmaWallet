@@ -50,7 +50,7 @@ export const exec = async ({
 
   if (type !== EmailTemplateTypes.Essential) {
     // marketing check for subscribed updates
-    if (type === EmailTemplateTypes.Marketing && !_user.subscribedUpdates) return;
+    if (type === EmailTemplateTypes.Marketing) return;
 
     // any email other than verification or essential, check verification status
     if (type !== EmailTemplateTypes.Verification && userEmailObject.status !== UserEmailStatus.Verified) return;

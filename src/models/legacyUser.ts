@@ -19,7 +19,6 @@ export interface ILegacyUser {
   transactions: object; // ??? what is this?
   dateJoined: Date;
   zipcode: string;
-  subscribedUpdates: boolean;
   role: string;
   integration: IUserIntegrations;
 }
@@ -48,7 +47,6 @@ const legacyUserSchema = new Schema({
   transactions: { type: Object, default: {} },
   dateJoined: { type: Date, default: () => Date.now() },
   zipcode: { type: String },
-  subscribedUpdates: { type: Boolean, default: true },
   role: {
     type: String,
     default: 'none',

@@ -44,7 +44,6 @@ export interface IUpdatePasswordBody {
 export interface IUserData extends ILoginData {
   name: string;
   zipcode: string;
-  subscribedUpdates: boolean;
   role?: UserRoles;
   pw?: string;
   shareASaleId?: boolean;
@@ -79,7 +78,6 @@ export const register = async (req: IRequest, {
   email,
   name,
   zipcode,
-  subscribedUpdates,
   shareASaleId,
 }: IUserData) => {
   try {
@@ -109,7 +107,6 @@ export const register = async (req: IRequest, {
       email,
       emails,
       password: hash,
-      subscribedUpdates,
       zipcode,
       role: UserRoles.None,
     });
@@ -220,7 +217,6 @@ export const getShareableUser = ({
   name,
   dateJoined,
   zipcode,
-  subscribedUpdates,
   role,
   legacyId,
   integrations,
@@ -235,7 +231,6 @@ export const getShareableUser = ({
     name,
     dateJoined,
     zipcode,
-    subscribedUpdates,
     role,
     legacyId,
     integrations: _integrations,
@@ -304,7 +299,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     updates.email = updates?.email?.toLowerCase();
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
-  const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
+  const allowedFields: UserKeys[] = ['name', 'zipcode'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
@@ -316,10 +311,6 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
-        break;
-      case 'subscribedUpdates':
-        requestor.subscribedUpdates = updates.subscribedUpdates;
-        if (legacyUser) legacyUser.subscribedUpdates = updates.subscribedUpdates;
         break;
       default:
         break;

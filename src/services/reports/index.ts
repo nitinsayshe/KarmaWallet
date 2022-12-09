@@ -4,14 +4,17 @@ import { ObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CardModel } from '../../models/card';
+import { CommissionModel } from '../../models/commissions';
 import { ReportModel } from '../../models/report';
 import { TransactionModel } from '../../models/transaction';
 import { UserModel } from '../../models/user';
+import { UserLogModel } from '../../models/userLog';
 import { IChart } from '../../types/chart';
 import { IRequest } from '../../types/request';
 import { getCarbonOffsetsReport } from './carbonOffsets';
 import { getCardsAddedReport } from './cardsAdded';
 import { getTransactionsMonitorReport } from './transactionMonitor';
+import { getLoginReport } from './userLogins';
 import { getUserSignUpsReport } from './userSignups';
 import { IReportRequestParams, ReportType } from './utils/types';
 
@@ -23,6 +26,8 @@ export const getReport = async (req:IRequest<IReportRequestParams, any>): Promis
     case ReportType.CarbonOffsets: return getCarbonOffsetsReport(req);
     case ReportType.TransactionMonitor: return getTransactionsMonitorReport(req);
     case ReportType.UserSignup: return getUserSignUpsReport(req);
+    case ReportType.UserLoginsSevenDays: return getLoginReport(req, 7);
+    case ReportType.UserLoginsThirtyDays: return getLoginReport(req, 30);
     default: throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
   }
 };
@@ -57,6 +62,18 @@ export const getAllReports = async (_: IRequest) => {
       reportId: ReportType.UserSignup,
       name: 'User Signups',
       description: 'A breakdown of user signups per day.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.UserLoginsThirtyDays,
+      name: 'Total Logins - 30 Days',
+      description: 'Total logins over the past thirty days.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.UserLoginsSevenDays,
+      name: 'Total Logins - 7 Days',
+      description: 'Total logins over the past seven days.',
       lastUpdated: dayjs().utc().toDate(),
     },
   ];
@@ -101,11 +118,38 @@ export const getSummary = async (_: IRequest) => {
       .sort({ createdOn: -1 })
       .lean();
 
+    let totalCommissions = 0;
+    const commissions = await CommissionModel.find({}).lean();
+    if (!!commissions && commissions.length > 0) {
+      totalCommissions = commissions.reduce(
+        (partialSum, commission) => partialSum + commission.amount,
+        0,
+      );
+    }
+
+    /* const loggedInLastSevenDays = await UserLogModel.find({ date: { $gte: dayjs().subtract(7, 'days').utc().toDate() } }).lean(); */
+    const loggedInLastSevenDays = await UserLogModel.aggregate([
+      { $match: { date: { $gte: dayjs().subtract(7, 'days').utc().toDate() } } },
+      { $group: { _id: '$userId' } },
+    ]);
+
+    const loggedInLastThirtyDays = await UserLogModel.aggregate([
+      { $match: { date: { $gte: dayjs().subtract(30, 'days').utc().toDate() } } },
+      { $group: { _id: '$userId' } },
+    ]);
+
+    const totalLoginsLastSevenDays = await UserLogModel.find({ date: { $gte: dayjs().subtract(7, 'days').utc().toDate() } }).count();
+    const totalLoginsLastThirtyDays = await UserLogModel.find({ date: { $gte: dayjs().subtract(30, 'days').utc().toDate() } }).count();
+
     return {
       users: {
         total: totalUsersCount,
         withCard: usersWithCards.size,
         withoutCard: totalUsersCount - usersWithCards.size,
+        loggedInLastSevenDays: loggedInLastSevenDays ? loggedInLastSevenDays.length : 0,
+        loggedInLastThirtyDays: loggedInLastThirtyDays ? loggedInLastThirtyDays.length : 0,
+        totalLoginsLastSevenDays,
+        totalLoginsLastThirtyDays,
       },
       cards: {
         total: cards.length,
@@ -116,6 +160,9 @@ export const getSummary = async (_: IRequest) => {
       totalOffsets: {
         dollars: totalOffsets.totalOffsetsForAllUsers.dollars,
         tons: totalOffsets.totalOffsetsForAllUsers.tons,
+      },
+      totalCommissionsEarned: {
+        total: totalCommissions,
       },
     };
   } catch (err) {

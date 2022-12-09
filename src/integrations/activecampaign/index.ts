@@ -713,3 +713,16 @@ export const updateActiveCampaignListStatus = async (email: string, subscribe: A
 
   await ac.importContacts({ contacts });
 };
+
+export const deleteContact = async (email: string) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    // get active campaign id for user
+    const rs = await ac.getContacts({ email });
+    if (rs?.contacts?.length > 0) {
+      return await ac.deleteContact(parseInt(rs.contacts[0].id, 10));
+    }
+  } catch (err) {
+    console.error('Error deleting contact', err);
+  }
+};

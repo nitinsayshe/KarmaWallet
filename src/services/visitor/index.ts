@@ -5,6 +5,7 @@ import * as HubspotIntegration from '../../integrations/hubspot';
 import { ErrorTypes } from '../../lib/constants';
 import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
+import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
@@ -16,7 +17,7 @@ const shareableInterestFormSubmitError = 'Error submitting the provided form dat
 
 export interface INewsletterSignupData {
   email: string;
-  subscriptionCode: SubscriptionCode;
+  subscriptionCodes: SubscriptionCode[];
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -46,6 +47,15 @@ const getSubscriptionByQuery = async (query: FilterQuery<ISubscription>): Promis
   }
 };
 
+const getSubscriptionsByQuery = async (query: FilterQuery<ISubscription>): Promise<ISubscription[]> => {
+  try {
+    return await SubscriptionModel.find(query);
+  } catch (err) {
+    console.error('Error searching for subscription:', err);
+    throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
+  }
+};
+
 const enrollInMonthlyNewsletterCampaign = async (email: string, subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]) => {
   try {
     await updateActiveCampaignListStatus(email, subscribe, unsubscribe);
@@ -64,6 +74,15 @@ const createVisitorWithEmail = async (email: string): Promise<IVisitorDocument> 
   }
 };
 
+const createSubscriptions = async (subscriptions: Partial<ISubscription>[]): Promise<ISubscription[]> => {
+  try {
+    return await SubscriptionModel.insertMany(subscriptions);
+  } catch (err) {
+    console.error('Error creating new subscription:', err);
+    throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
+  }
+};
+
 const createSubscription = async (subscription: Partial<ISubscription>): Promise<ISubscription> => {
   try {
     return await SubscriptionModel.create(subscription);
@@ -73,22 +92,43 @@ const createSubscription = async (subscription: Partial<ISubscription>): Promise
   }
 };
 
-export const newsletterSignup = async (_: IRequest, email: string, subscriptionCode: SubscriptionCode) => {
+export const getQueryFromSubscriptionCodes = (visitorId: string, codes: SubscriptionCode[]): FilterQuery<ISubscription> => {
+  const query: FilterQuery<ISubscription> = { $or: [] };
+  codes.forEach((code) => {
+    query.$or.push(
+      { $and: [
+        { visitor: visitorId },
+        { code },
+      ] },
+    );
+  });
+  return query;
+};
+
+export const newsletterSignup = async (_: IRequest, email: string, subscriptionCodes: SubscriptionCode[]) => {
   try {
     if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
       throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
     }
     email = email.toLowerCase();
 
-    const code = SubscriptionCode[subscriptionCode];
-    if (!code) {
+    if (!subscriptionCodes || !subscriptionCodes.length) {
       throw new CustomError(shareableSignupError, ErrorTypes.GEN);
     }
 
-    const productId = SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId;
-    if (!productId) {
-      throw new CustomError(shareableSignupError, ErrorTypes.GEN);
-    }
+    // Check that the subscription code is valid and maps to a valid provider product id
+    const productIds = subscriptionCodes.map((code) => {
+      const c = SubscriptionCode[code];
+      if (!c) {
+        throw new CustomError(shareableSignupError, ErrorTypes.GEN);
+      }
+
+      const productId = SubscriptionCodeToProviderProductId[c] as ActiveCampaignListId;
+      if (!productId) {
+        throw new CustomError(shareableSignupError, ErrorTypes.GEN);
+      }
+      return productId;
+    });
 
     const user = await getUserByEmail(email);
     if (!!user) {
@@ -97,14 +137,10 @@ export const newsletterSignup = async (_: IRequest, email: string, subscriptionC
 
     let visitor = await getVisitorByEmail(email);
     if (visitor) {
-      // if visitor has already subscribed to this newsletter, throw error
-      const previousSubscription = await getSubscriptionByQuery(
-        { $and: [
-          { visitor: visitor._id },
-          { code },
-        ] },
-      );
-      if (previousSubscription) {
+      // if visitor has already subscribed to these codes, throw error
+      const query = getQueryFromSubscriptionCodes(visitor._id, subscriptionCodes);
+      const previousSubscriptions = await getSubscriptionsByQuery(query);
+      if (!!previousSubscriptions && previousSubscriptions.length === subscriptionCodes.length) {
         throw new CustomError(shareableSignupError, ErrorTypes.GEN);
       }
     } else {
@@ -116,15 +152,17 @@ export const newsletterSignup = async (_: IRequest, email: string, subscriptionC
 
     // TODO: Eror handling... reconciliation process??? since this is using the bulk import endpoint under the hood?
     // We don't get  a succss/fail response from active campaign immediately
-    await enrollInMonthlyNewsletterCampaign(email, [productId], []);
+    await enrollInMonthlyNewsletterCampaign(email, productIds, []);
 
     // log this subscription in the db
-    const subscription = await createSubscription({
-      code: subscriptionCode,
-      visitor: visitor._id,
-      status: SubscriptionStatus.Active,
-    });
-    if (!subscription) {
+    const subscriptions = await createSubscriptions(
+      subscriptionCodes.map((c) => {
+        const sub: Partial<ISubscription> = { visitor: visitor._id, code: c, status: SubscriptionStatus.Active, lastModified: getUtcDate().toDate() };
+        return sub;
+      }),
+    );
+
+    if (!subscriptions || !subscriptions.length) {
       throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
     }
   } catch (err) {

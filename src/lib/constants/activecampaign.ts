@@ -6,4 +6,5 @@ export enum ActiveCampaignSyncTypes {
   YEARLY = 'yearly',
   INITIAL = 'initial',
   BACKFILL = 'backfill',
+  GROUP = 'group',
 }

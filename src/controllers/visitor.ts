@@ -11,15 +11,15 @@ const { NODE_ENV } = process.env;
 export const newsletterSignup: IRequestHandler<{}, {}, VisitorService.INewsletterSignupData> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['email', 'subscriptionCode'];
+    const requiredFields = ['email', 'subscriptionCodes'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const { email, subscriptionCode } = body;
+    const { email, subscriptionCodes } = body;
     if (NODE_ENV === 'staging') return output.api(req, res, null);
-    await VisitorService.newsletterSignup(req, email, subscriptionCode);
+    await VisitorService.newsletterSignup(req, email, subscriptionCodes);
     output.api(req, res, null);
   } catch (err) {
     output.error(req, res, asCustomError(err));

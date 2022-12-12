@@ -1,28 +1,33 @@
 import dayjs from 'dayjs';
-import { Schema, FilterQuery } from 'mongoose';
-import { ActiveCampaignClient } from '../../clients/activeCampaign';
+import { FilterQuery, Schema } from 'mongoose';
+import { ActiveCampaignClient, IContactsData, IContactsImportData } from '../../clients/activeCampaign';
+import { UserGroupRole } from '../../lib/constants';
+import { ProviderProductIdToSubscriptionCode } from '../../lib/constants/subscription';
 import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
-import { getUtcDate } from '../../lib/date';
 import { CardModel } from '../../models/card';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
 import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
 import { CompanyModel } from '../../models/company';
-import { IShareableGroup, IGroup, IGroupDocument, GroupModel } from '../../models/group';
+import { GroupModel, IGroup, IGroupDocument, IShareableGroup } from '../../models/group';
 import { SectorModel } from '../../models/sector';
 import { ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IUserDocument, UserModel } from '../../models/user';
-import { IUserGroupDocument, IShareableUserGroup, UserGroupModel } from '../../models/userGroup';
+import { IShareableUserGroup, IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
 import { UserImpactYearData } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../../services/impact/utils';
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
-import { ActiveCampaignListId } from '../../types/subscription';
+import { ActiveCampaignListId, SubscriptionCode } from '../../types/subscription';
 
 export type FieldIds = Array<{ name: string; id: number }>
 export type FieldValues = Array<{ id: number; value: string }>
 
+interface SubscriptionLists{
+  subscribe: Array<{listid: ActiveCampaignListId}>;
+  unsubscribe: Array<{listid: ActiveCampaignListId}>;
+}
 // duplicated code to avoid circular dependency
 const getShareableUserGroupFromUserGroupDocument = ({
   _id,
@@ -135,7 +140,7 @@ const getYearlyCommissionTotal = async (user: IUserDocument): Promise<number> =>
         { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('year').toDate() } },
       ],
-    });
+    }).lean();
     if (!commissions) {
       return 0;
     }
@@ -159,7 +164,7 @@ const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<number> =
         { date: { $gte: dayjs().subtract(1, 'month').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('month').toDate() } },
       ],
-    }).sort({ date: -1 });
+    }).lean().sort({ date: -1 });
     if (!commissions) {
       return 0;
     }
@@ -183,7 +188,7 @@ const getMonthlyPaidCommissionPayouts = async (user: IUserDocument): Promise<num
         { date: { $gte: dayjs().subtract(1, 'month').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('month').toDate() } },
       ],
-    });
+    }).lean();
     if (!commissionPayouts) {
       return 0;
     }
@@ -205,7 +210,7 @@ const getYearlyEmissionsTotal = async (user: IUserDocument): Promise<number> => 
         { user: user._id },
         { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('year').toDate() } },
-      ] });
+      ] }).lean();
 
     if (!impactReports) {
       return 0;
@@ -229,7 +234,7 @@ const getWeeklyLoginCount = async (user: IUserDocument): Promise<number> => {
         { date: { $gte: dayjs().subtract(1, 'week').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('week').toDate() } },
       ],
-    });
+    }).lean();
     return logins ? logins.length : 0;
   } catch (err) {
     console.error(err);
@@ -245,7 +250,7 @@ const getMonthlyLoginCount = async (user: IUserDocument): Promise<number> => {
         { date: { $gte: dayjs().subtract(1, 'month').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('month').toDate() } },
       ],
-    });
+    }).lean();
     return logins ? logins.length : 0;
   } catch (err) {
     console.error(err);
@@ -261,7 +266,7 @@ const getYearlyLoginCount = async (user: IUserDocument): Promise<number> => {
         { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
         { date: { $lte: dayjs().utc().endOf('year').toDate() } },
       ],
-    });
+    }).lean();
     return logins ? logins.length : 0;
   } catch (err) {
     console.error(err);
@@ -279,7 +284,7 @@ const getTotalLoginCount = async (user: IUserDocument): Promise<number> => {
         { $exists: { date: true } },
         { $ne: { date: null } },
       ],
-    });
+    }).lean();
     return logins ? logins.length : 0;
   } catch (err) {
     console.error(err);
@@ -302,19 +307,19 @@ export const prepareYearlyUpdatedFields = async (
   let customField = customFields.find((field) => field.name === 'cashbackDollarsEarnedYearly');
   if (!!customField) {
     const yearlyCommissionTotal = await getYearlyCommissionTotal(user);
-    fieldValues.push({ id: customField.id, value: yearlyCommissionTotal.toString() });
+    fieldValues.push({ id: customField.id, value: yearlyCommissionTotal.toFixed(2) });
   }
 
   customField = customFields.find((field) => field.name === 'carbonEmissionsYearly');
   if (!!customField) {
     const yearlyEmissionsTotal = await getYearlyEmissionsTotal(user);
-    fieldValues.push({ id: customField.id, value: yearlyEmissionsTotal.toString() });
+    fieldValues.push({ id: customField.id, value: yearlyEmissionsTotal.toFixed(2) });
   }
 
   customField = customFields.find((field) => field.name === 'karmaScoreYearly');
   if (!!customField) {
     const yearlyKarmaScore = await getYearlyKarmaScore(user);
-    fieldValues.push({ id: customField.id, value: yearlyKarmaScore.toString() });
+    fieldValues.push({ id: customField.id, value: yearlyKarmaScore.toFixed(0) });
   }
   return fieldValues;
 };
@@ -358,46 +363,53 @@ export const prepareMonthlyUpdatedFields = async (
   }
   customField = customFields.find((field) => field.name === 'monthsKarmaScore');
   if (!!customField && !!impactReport?.impact?.score) {
-    fieldValues.push({ id: customField.id, value: impactReport.impact.score.toString() });
+    const score = impactReport.impact.score.toFixed(0);
+    fieldValues.push({ id: customField.id, value: score });
   }
   customField = customFields.find((field) => field.name === 'impactneutral');
   if (!!customField && !!impactReport?.impact?.neutral) {
-    fieldValues.push({ id: customField.id, value: impactReport.impact.neutral.toString() });
+    const neutral = impactReport.impact.neutral.toFixed(0);
+    fieldValues.push({ id: customField.id, value: neutral });
   }
 
   customField = customFields.find((field) => field.name === 'impactpositive');
   if (!!customField && !!impactReport?.impact?.positive) {
-    fieldValues.push({ id: customField.id, value: impactReport.impact.positive.toString() });
+    const positive = impactReport.impact.positive.toFixed(0);
+    fieldValues.push({ id: customField.id, value: positive });
   }
   customField = customFields.find((field) => field.name === 'impactnegative');
   if (!!customField && !!impactReport?.impact?.negative) {
-    fieldValues.push({ id: customField.id, value: impactReport.impact.negative.toString() });
+    const negative = impactReport.impact.negative.toFixed(0);
+    fieldValues.push({ id: customField.id, value: negative });
   }
   customField = customFields.find((field) => field.name === 'carbonEmissionsMonthly');
   if (!!customField && !!impactReport?.carbon?.monthlyEmissions) {
-    fieldValues.push({ id: customField.id, value: impactReport.carbon.monthlyEmissions.toString() });
+    const monthlyEmissions = impactReport.carbon.monthlyEmissions.toFixed(2);
+    fieldValues.push({ id: customField.id, value: monthlyEmissions });
   }
 
   customField = customFields.find((field) => field.name === 'carbonOffsetTonnes');
   if (!!customField && !!impactReport?.carbon?.offsets?.totalOffset) {
-    fieldValues.push({ id: customField.id, value: impactReport.carbon.offsets.totalOffset.toString() });
+    const totalOffset = impactReport.carbon.offsets.totalOffset.toFixed(2);
+    fieldValues.push({ id: customField.id, value: totalOffset });
   }
 
   customField = customFields.find((field) => field.name === 'carbonOffsetDollars');
   if (!!customField && !!impactReport?.carbon?.offsets?.totalDonated) {
-    fieldValues.push({ id: customField.id, value: impactReport.carbon.offsets.totalDonated.toString() });
+    const totalDonated = impactReport.carbon.offsets.totalDonated.toFixed(2);
+    fieldValues.push({ id: customField.id, value: totalDonated });
   }
 
   customField = customFields.find((field) => field.name === 'cashbackDollarsEarnedMonthly');
   if (!!customField) {
     const monthlyCommissionTotal = await getMonthlyCommissionTotal(user);
-    fieldValues.push({ id: customField.id, value: monthlyCommissionTotal.toString() });
+    fieldValues.push({ id: customField.id, value: monthlyCommissionTotal.toFixed(2) });
   }
 
   customField = customFields.find((field) => field.name === 'cashbackDollarsAvailable');
   if (!!customField) {
     const monthlyPayouts = await getMonthlyPaidCommissionPayouts(user);
-    fieldValues.push({ id: customField.id, value: monthlyPayouts.toString() });
+    fieldValues.push({ id: customField.id, value: monthlyPayouts.toFixed(2) });
   }
 
   customField = customFields.find((field) => field.name === 'hasLinkedPaypal');
@@ -424,7 +436,7 @@ export const setLinkedCardData = async (userId: string, customFields: FieldIds, 
     const cards = await CardModel.find({
       userId,
       status: 'linked',
-    }).sort({ createdOn: 1 });
+    }).lean().sort({ createdOn: 1 });
 
     let customField = customFields.find((field) => field.name === 'hasLinkedCard');
     if (customField) {
@@ -468,7 +480,7 @@ export const prepareWeeklyUpdatedFields = async (
     fieldValues = [];
   }
 
-  fieldValues.concat(await setLinkedCardData(user._id, customFields, fieldValues));
+  fieldValues = await setLinkedCardData(user._id, customFields, fieldValues);
 
   let customField = customFields.find((field) => field.name === 'loginCountLastMonth');
   if (customField) {
@@ -534,23 +546,6 @@ export const prepareInitialSyncFields = async (
     fieldValues.push({ id: customField.id, value: user.dateJoined.toISOString() });
   }
 
-  customField = customFields.find((field) => field.name === 'madeCashbackEligiblePurchase');
-  if (!!customField) {
-    // set to false initially
-    fieldValues.push({ id: customField.id, value: 'false' });
-  }
-
-  customField = customFields.find((field) => field.name === 'hasLinkedPaypal');
-  if (!!customField) {
-    // set to false initially
-    fieldValues.push({ id: customField.id, value: 'false' });
-  }
-
-  customField = customFields.find((field) => field.name === 'hasLinkedCard');
-  if (!!customField) {
-    // set to false initially
-    fieldValues.push({ id: customField.id, value: 'false' });
-  }
   return fieldValues;
 };
 
@@ -599,9 +594,9 @@ export const updateMadeCashBackEligiblePurchaseStatus = async (user: IUserDocume
 // TODO: clean up duplicate code. This is here to avoid a circular dependency
 // with the Group service. We could make a 'usergroup' service that this and
 // the group service would use
-export const getUserGroups = async (user: IUserDocument): Promise<Array<string>> => {
+export const getUserGroups = async (userId: string): Promise<Array<string>> => {
   const userGroups = await UserGroupModel.find({
-    user: user._id,
+    user: userId,
     status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
   }).populate([
     {
@@ -628,28 +623,86 @@ export const getUserGroups = async (user: IUserDocument): Promise<Array<string>>
   return groupNames;
 };
 
-export const updateActiveCampaignTags = async (user: IUserDocument) => {
+const getActiveCampaignTags = async (userId: string) => {
+  try {
+    // get all group names this user is a part of
+    const groupNames = await getUserGroups(userId);
+    if (groupNames?.length === 0) {
+      groupNames.push('');
+    }
+    return groupNames;
+  } catch (err) {
+    console.error('error getting group names', err);
+  }
+};
+
+export const getSubscriptionLists = async (subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]): Promise<SubscriptionLists> => {
+  subscribe = !!subscribe ? subscribe : [];
+  unsubscribe = !!unsubscribe ? unsubscribe : [];
+  const subscribeList = subscribe.map((listId) => ({
+    listid: listId,
+  }));
+  const unsubscribeList = unsubscribe.map((listId) => ({
+    listid: listId,
+  }));
+  return { subscribe: subscribeList, unsubscribe: unsubscribeList };
+};
+
+export const updateActiveCampaignGroupSubscriptionsAndTags = async (user: IUserDocument): Promise<{
+  userId: string,
+  lists: {subscribe: SubscriptionCode[], unsubscribe: SubscriptionCode[]},
+}> => {
   try {
     const ac = new ActiveCampaignClient();
-    // get all group names this user is a part of
-    const groupNames = await getUserGroups(user);
+    const sub: Array<ActiveCampaignListId> = [];
+    const unsub: Array<ActiveCampaignListId> = [];
 
-    // add group as a tag in active campaign
+    const groupNames = await getActiveCampaignTags(user._id.toString());
+    if (!!groupNames && groupNames.length > 0) {
+      sub.push(ActiveCampaignListId.GroupMembers);
+    } else {
+      unsub.push(ActiveCampaignListId.GroupMembers);
+    }
+
+    const userGroups = await UserGroupModel.find({ $and: [
+      { user: user._id },
+      { role: { $in: [UserGroupRole.Owner, UserGroupRole.Admin, UserGroupRole.SuperAdmin] } },
+    ] }).lean();
+    if (!!userGroups && userGroups?.length > 0) {
+      sub.push(ActiveCampaignListId.GroupAdmins);
+    } else {
+      // TODO: push if they have an active subscription to the group admins list
+      // This check should be moved out of here. Maybe this function should just
+      // get the lists of subs an unsubs that have to be done
+    }
+
+    const { subscribe, unsubscribe } = await getSubscriptionLists(sub, unsub);
+
     const contacts = [{
       email: user.emails?.find(e => e.primary).email,
+      subscribe,
+      unsubscribe,
       tags: groupNames,
     }];
     await ac.importContacts({ contacts });
+    return {
+      userId: user._id.toString(),
+      lists: {
+        subscribe: sub.map((listId) => ProviderProductIdToSubscriptionCode[listId]),
+        unsubscribe: unsub.map((listId) => ProviderProductIdToSubscriptionCode[listId]),
+      },
+    };
   } catch (err) {
-    console.error('error updating active campaign tags', err);
+    console.error('error updating active campaign', err);
   }
 };
 
 export const prepareBackfillSyncFields = async (
   user: IUserDocument,
   customFields: FieldIds,
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
-  let fieldValues = await prepareInitialSyncFields(user, customFields, []);
+  fieldValues = fieldValues || [];
   fieldValues = await prepareDailyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareWeeklyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareMonthlyUpdatedFields(user, customFields, fieldValues);
@@ -658,18 +711,8 @@ export const prepareBackfillSyncFields = async (
 
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);
-  fieldValues = await setLinkedCardData(user._id, customFields, fieldValues);
 
   return fieldValues;
-};
-
-export const getBackfillSubscribeList = async (dateJoined: Date): Promise<ActiveCampaignListId[]> => {
-  const backfillSubscriberList = [ActiveCampaignListId.GeneralUpdates];
-  // add them to AccountUpdates list if registered within the last 45 days
-  if (dateJoined && dateJoined > getUtcDate().subtract(45, 'days').toDate()) {
-    backfillSubscriberList.push(ActiveCampaignListId.AccountUpdates);
-  }
-  return backfillSubscriberList;
 };
 
 export const getCustomFieldIDsAndUpdateLinkedCards = async (userId: string) => {
@@ -696,20 +739,46 @@ export const getCustomFieldIDsAndUpdateLinkedCards = async (userId: string) => {
 export const updateActiveCampaignListStatus = async (email: string, subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]) => {
   const ac = new ActiveCampaignClient();
 
-  subscribe = subscribe || [];
-  unsubscribe = unsubscribe || [];
-  const subscribeList = subscribe.map((listId) => ({
-    listid: listId,
-  }));
-  const unsubscribeList = unsubscribe.map((listId) => ({
-    listid: listId,
-  }));
+  const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
+  const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
   const contacts = [{
     email,
-    subscribe: subscribeList,
-    unsubscribe: unsubscribeList,
+    subscribe: sub,
+    unsubscribe: unsub,
   }];
 
   await ac.importContacts({ contacts });
+};
+
+export const deleteContact = async (email: string) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    // get active campaign id for user
+    const rs = await ac.getContacts({ email });
+    if (rs?.contacts?.length > 0) {
+      return await ac.deleteContact(parseInt(rs.contacts[0].id, 10));
+    }
+  } catch (err) {
+    console.error('Error deleting contact', err);
+  }
+};
+
+interface UserLists {
+  userId: string,
+  email: string,
+  lists: SubscriptionLists
+}
+
+export const prepareSubscriptionListsAndTags = async (userLists: UserLists[]): Promise<IContactsImportData> => {
+  const contacts = await Promise.all(userLists.map(async (list) => {
+    const contact: IContactsData = {
+      email: list.email,
+      subscribe: list.lists.subscribe,
+      unsubscribe: list.lists.unsubscribe,
+      tags: await getUserGroups(list.userId),
+    };
+    return contact;
+  }));
+  return { contacts };
 };

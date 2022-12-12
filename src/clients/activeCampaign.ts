@@ -54,6 +54,25 @@ export interface IContactsImportData {
   callback?: ICallbackData // lets you know when the import is complete
 }
 
+export interface IContact {
+  id: string,
+  email: string,
+  cdate?: Date,
+  phone?: string,
+  firstName?: string,
+  lastName?: string,
+  deleted?: string,
+}
+
+export interface Metadata {
+  total: string,
+}
+
+export interface IGetContactsResponse {
+  contacts: Array<IContact>,
+  meta: Metadata,
+}
+
 const customFieldsLimit = 100;
 
 export class ActiveCampaignClient extends SdkClient {
@@ -162,7 +181,7 @@ export class ActiveCampaignClient extends SdkClient {
   }
 
   /* list, search, and filter contacts - GET /contacts */
-  public async getContacts(contactsFilter: IGetContactsData) {
+  public async getContacts(contactsFilter: IGetContactsData): Promise<IGetContactsResponse> {
     try {
       const { data } = await this._client.get('/contacts', {
         params: contactsFilter,

@@ -88,7 +88,6 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
   }
 
   const lastMonthStart = getMonthStartDate(dayjs().utc().subtract(1, 'month'));
-  console.log(`\nlast month start: ${lastMonthStart.format('MMM, YYYY')}\n`);
 
   console.log(`\ngenerating user monthly impact reports ${generateFullHistory ? 'for entire history' : `for ${lastMonthStart.format('MMM, YYYY')}`}${!!uid ? ` for user: ${uid}` : ''}...\n`);
   const users = await UserModel.find(userQuery).lean();
@@ -97,8 +96,6 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
   let errorCount = 0;
 
   for (const user of users) {
-    const lastMonthEnd = lastMonthStart.endOf('month');
-
     const query: FilterQuery<ITransactionDocument> = {
       $and: [
         { user },
@@ -106,13 +103,14 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
         { sector: { $nin: sectorsToExcludeFromTransactions } },
         { amount: { $gt: 0 } },
         { reversed: { $ne: true } },
-        { date: { $lte: lastMonthEnd.toDate() } },
       ],
     };
 
     if (!generateFullHistory) {
       // only pull transactions from the last month
+      const lastMonthEnd = lastMonthStart.endOf('month');
       query.$and.push({ date: { $gte: lastMonthStart.toDate() } });
+      query.$and.push({ date: { $lte: lastMonthEnd.toDate() } });
     }
 
     let transactions: ITransactionDocument[];

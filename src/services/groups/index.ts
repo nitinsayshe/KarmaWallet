@@ -1284,7 +1284,9 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 
     const userSubscriptions = await getUpdatedGroupChangeSubscriptions(group);
     const uid = `id${(new Date()).getTime()}`;
-    MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-group-${uid}` });
+    if (process.env.NODE_ENV === 'production') {
+      MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-group-${uid}` });
+    }
     await updateUsersSubscriptions(userSubscriptions);
 
     return group;
@@ -1536,7 +1538,9 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
 
     const userSubscriptions = await getUpdatedGroupChangeSubscriptions(updatedMemberUserGroups[0]?.group as IGroupDocument);
     const uid = `id${(new Date()).getTime()}`;
-    MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-user-groups-${uid}` });
+    if (process.env.NODE_ENV === 'production') {
+      MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-user-groups-${uid}` });
+    }
     await updateUsersSubscriptions(userSubscriptions);
     return updatedMemberUserGroups;
   } catch (err) {

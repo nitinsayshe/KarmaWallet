@@ -1,28 +1,18 @@
 import isemail from 'isemail';
-import { FilterQuery, UpdateQuery } from 'mongoose';
-import {
-  getSubscribedLists,
-  updateActiveCampaignListStatus,
-} from '../../integrations/activecampaign';
+import { FilterQuery, ObjectId, UpdateQuery } from 'mongoose';
+import { getSubscribedLists, updateActiveCampaignListStatus } from '../../integrations/activecampaign';
 import { ErrorTypes, UserGroupRole } from '../../lib/constants';
-import {
-  ProviderProductIdToSubscriptionCode,
-  SubscriptionCodeToProviderProductId,
-} from '../../lib/constants/subscription';
+import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { IGroupDocument } from '../../models/group';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IUserDocument, UserModel } from '../../models/user';
-import { IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
+import { IEmail, IUser, IUserDocument, UserModel } from '../../models/user';
+import { IUserGroup, UserGroupModel } from '../../models/userGroup';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
-import {
-  ActiveCampaignListId,
-  SubscriptionCode,
-  SubscriptionStatus,
-} from '../../types/subscription';
+import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 
 export interface UserSubscriptions {
   userId: string;
@@ -165,6 +155,7 @@ export const cancelUserSubscriptions = async (userId: string) => {
 export const updateUsersSubscriptions = async (
   userSubs: UserSubscriptions[],
 ) => {
+  if (!userSubs || userSubs.length <= 0) return;
   Promise.all(
     userSubs.map(async (userSub) => {
       await updateUserSubscriptions(
@@ -176,50 +167,118 @@ export const updateUsersSubscriptions = async (
   );
 };
 
-export const getUpdatedGroupChangeSubscriptions = async (
-  group: IGroupDocument,
-): Promise<UserSubscriptions[]> => {
-  const subs: UserSubscriptions[] = [];
+const reconcileActiveCampaignListSubscriptions = async (userId: ObjectId, subs: ActiveCampaignListId[]) => {
+  // get a list of all active campaign subscription codes
+  const activeCampaignSubs = Object.values(ActiveCampaignListId).map((id) => ProviderProductIdToSubscriptionCode[id]);
+  /* update any activeCampaignSubs in subs to Active -- with upsert */
+  if (subs && subs.length > 0) {
+    await SubscriptionModel.updateMany(
+      {
+        user: userId,
+        code: { $in: subs.map((sub) => ProviderProductIdToSubscriptionCode[sub]) },
+      },
+      {
+        lastModified: getUtcDate(),
+        status: SubscriptionStatus.Active,
+      },
+      { upsert: true },
+    );
+  }
 
-  try {
-    // look up all admins in this group
-    const newAdminUserGroups = await UserGroupModel.find({
+  /* update any activeCampaignSubs not in subs to cancelled -- no upsert */
+  await SubscriptionModel.updateMany(
+    {
       $and: [
-        { group: group._id },
-        {
-          role: {
-            $in: [
-              UserGroupRole.Admin,
-              UserGroupRole.SuperAdmin,
-              UserGroupRole.Owner,
-            ],
-          },
-        },
-        {
-          status: {
-            $nin: [
-              UserGroupStatus.Left,
-              UserGroupStatus.Banned,
-              UserGroupStatus.Removed,
-            ],
-          },
-        },
+        { user: userId },
+        { code: { $in: activeCampaignSubs } },
+        { code: { $nin: subs } },
       ],
-    }).lean();
+    },
+    {
+      lastModified: getUtcDate(),
+      status: SubscriptionStatus.Cancelled,
+    },
+  );
+};
 
-    // add new admins to admin list
-    if (newAdminUserGroups?.length > 0) {
-      newAdminUserGroups.forEach((userGroup) => {
-        subs.push({
-          userId: userGroup.user.toString(),
-          subscribe: [SubscriptionCode.groupAdmins],
-          unsubscribe: [],
-        });
-      });
+const getActiveCampaignSubscriptions = async (email: string): Promise<ActiveCampaignListId[]> => {
+  try {
+    return await getSubscribedLists(email);
+  } catch (err) {
+    throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
+  }
+};
+
+export const getUserGroupSubscriptionsToUpdate = async (user: Partial<IUser & { _id: ObjectId }>, groupToBeDeleted?: ObjectId): Promise<UserSubscriptions> => {
+  try {
+    const userSub: UserSubscriptions = {
+      userId: user._id.toString(),
+      subscribe: [],
+      unsubscribe: [],
+    };
+
+    const email = user?.emails?.find((e: IEmail) => e.primary)?.email;
+    if (!email) {
+      console.log(JSON.stringify(user));
+      return userSub;
     }
 
-    // make sure all other users are subscribed to groupMembers
-    const usersToUpdate = await UserGroupModel.find({
+    // get active campaign subscrtiptions for this email
+    const activeCampaignListIds = await getActiveCampaignSubscriptions(email);
+    // update db with active campaign subscriptions
+    await reconcileActiveCampaignListSubscriptions(user._id, activeCampaignListIds);
+
+    /* Should the user be enrolled in the admin list? */
+    const adminQuery: FilterQuery<IUserGroup> = {
+      $and: [
+        { user: user._id },
+        { role: { $in: [UserGroupRole.Admin, UserGroupRole.SuperAdmin, UserGroupRole.Owner] } },
+        { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } },
+      ],
+    };
+
+    if (!!groupToBeDeleted) {
+      adminQuery.$and.push({ group: { $ne: groupToBeDeleted } });
+    }
+    const adminUserGroups = await UserGroupModel.find(adminQuery).lean();
+
+    if (!!adminUserGroups && adminUserGroups?.length > 0) {
+      if (!activeCampaignListIds || !activeCampaignListIds.includes(ActiveCampaignListId.GroupAdmins)) {
+        userSub.subscribe.push(SubscriptionCode.groupAdmins);
+      }
+    } else if (!!activeCampaignListIds && activeCampaignListIds.includes(ActiveCampaignListId.GroupAdmins)) {
+      userSub.unsubscribe.push(SubscriptionCode.groupAdmins);
+    }
+
+    // check if they are a member of any groups
+    const memberQuery: FilterQuery<IUserGroup> = {
+      $and: [
+        { user: user._id },
+        { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } },
+      ],
+    };
+    if (!!groupToBeDeleted) {
+      memberQuery.$and.push({ group: { $ne: groupToBeDeleted } });
+    }
+
+    const memberships = await UserGroupModel.find(memberQuery).lean();
+    if (!!memberships && memberships?.length > 0) {
+      if (!activeCampaignListIds && !activeCampaignListIds.includes(ActiveCampaignListId.GroupMembers)) {
+        userSub.subscribe.push(SubscriptionCode.groupMembers);
+      }
+    } else if (!!activeCampaignListIds && activeCampaignListIds.includes(ActiveCampaignListId.GroupMembers)) {
+      userSub.unsubscribe.push(SubscriptionCode.groupMembers);
+    }
+
+    return userSub;
+  } catch (err) {
+    console.error('Error generating subscription list', err);
+  }
+};
+
+export const getUpdatedGroupChangeSubscriptions = async (group: IGroupDocument, groupToBeDeleted: boolean): Promise<UserSubscriptions[]> => {
+  try {
+    const groupUsers = await UserGroupModel.find({
       $and: [
         { group: group._id },
         {
@@ -231,40 +290,18 @@ export const getUpdatedGroupChangeSubscriptions = async (
             ],
           },
         },
-        {
-          role: {
-            $nin: [
-              UserGroupRole.Admin,
-              UserGroupRole.SuperAdmin,
-              UserGroupRole.Owner,
-            ],
-          },
-        },
       ],
     }).lean();
-    await Promise.all(
-      usersToUpdate.map(async (userGroup: Partial<IUserGroupDocument>) => {
-        const userSub = await SubscriptionModel.findOne({
-          code: SubscriptionCode.groupMembers,
-          user: userGroup.user,
-        }).lean();
+    if (!groupUsers || groupUsers.length <= 0) {
+      return [];
+    }
 
-        const userSubscription = subs.find(
-          (s) => s.userId === userSub.user.toString(),
-        );
-        if (userSubscription) {
-          if (!userSubscription.subscribe) userSubscription.subscribe = [];
-          userSubscription.subscribe.push(SubscriptionCode.groupMembers);
-        } else {
-          subs.push({
-            userId: userGroup.user.toString(),
-            subscribe: [SubscriptionCode.groupMembers],
-            unsubscribe: [],
-          });
-        }
-      }),
+    let userSubscriptions = await Promise.all(
+      groupUsers.map(async (userGroup) => getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>, groupToBeDeleted ? group._id : undefined)),
     );
-    return subs;
+
+    userSubscriptions = userSubscriptions.filter((sub) => sub.subscribe.length > 0 || sub.unsubscribe.length > 0);
+    return userSubscriptions || [];
   } catch (err) {
     console.error('Error generating subscription list', err);
   }
@@ -317,14 +354,6 @@ const updateSubscriptionsByQuery = async (
     return await SubscriptionModel.updateMany(query, update);
   } catch (err) {
     console.error('Error searching for subscription:', err);
-    throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
-  }
-};
-
-const getActiveCampaignSubscriptions = async (email: string): Promise<ActiveCampaignListId[]> => {
-  try {
-    return await getSubscribedLists(email);
-  } catch (err) {
     throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
   }
 };

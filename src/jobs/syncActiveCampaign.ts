@@ -1,16 +1,14 @@
 import { SandboxedJob } from 'bullmq';
 import isemail from 'isemail';
 import { ActiveCampaignClient, IContactsData, IContactsImportData } from '../clients/activeCampaign';
-import { FieldIds, getUserGroups, prepareBackfillSyncFields, prepareDailyUpdatedFields, prepareInitialSyncFields, prepareMonthlyUpdatedFields, prepareSubscriptionListsAndTags, prepareWeeklyUpdatedFields, prepareYearlyUpdatedFields } from '../integrations/activecampaign';
-import { UserGroupRole } from '../lib/constants';
+import { FieldIds, getUserGroups, prepareBackfillSyncFields, prepareDailyUpdatedFields, prepareInitialSyncFields, prepareMonthlyUpdatedFields, prepareWeeklyUpdatedFields, prepareYearlyUpdatedFields, UserLists, UserSubscriptions } from '../integrations/activecampaign';
 import { ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { getUtcDate } from '../lib/date';
 import { sleep } from '../lib/misc';
 import { IUserDocument, UserModel } from '../models/user';
-import { UserGroupModel } from '../models/userGroup';
-import { updateUserSubscriptions, UserSubscriptions } from '../services/subscription';
+import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
 import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
 
 interface IJobData {
@@ -18,29 +16,23 @@ interface IJobData {
   userSubscriptions?: UserSubscriptions[]
 }
 
-const backfillSubscriberList = [ActiveCampaignListId.GeneralUpdates, ActiveCampaignListId.AccountUpdates];
+interface ISubscriptionLists {
+  subscribe: ActiveCampaignListId[],
+  unsubscribe: ActiveCampaignListId[],
+}
 
-const addGroupSubscriptionsToLists = async (user: IUserDocument, lists?: ActiveCampaignListId[]): Promise<ActiveCampaignListId[]> => {
-  lists = lists || [];
-  // if user is in any groups add them to the Group Members list
-  const userGroups = await UserGroupModel.find({ user: user._id }).lean();
-  if (!!userGroups && userGroups?.length > 0) {
-    lists.push(ActiveCampaignListId.GroupMembers);
-  }
+const backfillSubscribeList = [ActiveCampaignListId.GeneralUpdates, ActiveCampaignListId.AccountUpdates];
 
-  // if the user is a group admin, add them to the Group Admins list
-  const admins = await UserGroupModel.find({ $and: [
-    { user: user._id },
-    { role: { $in: [UserGroupRole.Owner, UserGroupRole.Admin, UserGroupRole.SuperAdmin] } },
-  ] }).lean();
-  if (!!admins && admins?.length > 0) {
-    lists.push(ActiveCampaignListId.GroupAdmins);
-  }
-
-  return lists;
+const getGroupSubscriptionListsToUpdate = async (user: IUserDocument):
+Promise<ISubscriptionLists> => {
+  const subs = await getUserGroupSubscriptionsToUpdate(user);
+  return {
+    subscribe: subs.subscribe.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+    unsubscribe: subs.unsubscribe.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+  };
 };
 
-const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ActiveCampaignListId[]> => addGroupSubscriptionsToLists(user, backfillSubscriberList);
+const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> => getGroupSubscriptionListsToUpdate(user);
 
 const prepareSyncUsersRequest = async (
   users: Array<IUserDocument>,
@@ -64,8 +56,8 @@ const prepareSyncUsersRequest = async (
         email: user.emails.find(e => e.primary).email.trim(),
       };
       let fields = await prepareInitialSyncFields(user, customFields, []);
-      let subscribe: ActiveCampaignListId[] = [];
       let tags: string[] = [];
+      let lists: ISubscriptionLists = { subscribe: [], unsubscribe: [] };
       contact.first_name = user.name?.split(' ')[0];
       contact.last_name = user.name?.split(' ').pop();
 
@@ -85,12 +77,10 @@ const prepareSyncUsersRequest = async (
         case ActiveCampaignSyncTypes.YEARLY:
           fields = await prepareYearlyUpdatedFields(user, customFields, fields);
           break;
-        case ActiveCampaignSyncTypes.INITIAL:
-          // this is always done
-          break;
         case ActiveCampaignSyncTypes.BACKFILL:
           fields = await prepareBackfillSyncFields(user, customFields, fields);
-          subscribe = await getBackfillSubscriptionLists(user);
+          lists = await getBackfillSubscriptionLists(user);
+          lists.subscribe = lists.subscribe.concat(backfillSubscribeList);
           tags = await getUserGroups(user._id);
           break;
         default:
@@ -98,12 +88,13 @@ const prepareSyncUsersRequest = async (
           break;
       }
       contact.fields = fields;
-      contact.subscribe = subscribe.map((listId) => ({ listid: listId }));
+      contact.subscribe = lists.subscribe.map((listId: ActiveCampaignListId) => ({ listid: listId }));
+      contact.unsubscribe = lists.unsubscribe.map((listId: ActiveCampaignListId) => ({ listid: listId }));
       contact.tags = tags;
       await updateUserSubscriptions(
         user._id,
-        subscribe.map((id) => (ProviderProductIdToSubscriptionCode[id])),
-        [],
+        lists.subscribe.map((id: ActiveCampaignListId) => (ProviderProductIdToSubscriptionCode[id])),
+        lists.unsubscribe.map((id: ActiveCampaignListId) => (ProviderProductIdToSubscriptionCode[id])),
       );
       return contact;
     }),
@@ -165,9 +156,22 @@ const syncAllUsers = async (syncType: ActiveCampaignSyncTypes) => {
   } while (users && users.length > 0);
 };
 
+export const prepareSubscriptionListsAndTags = async (userLists: UserLists[]): Promise<IContactsImportData> => {
+  const contacts = await Promise.all(userLists.map(async (list) => {
+    const contact: IContactsData = {
+      email: list.email,
+      subscribe: list.lists.subscribe,
+      unsubscribe: list.lists.unsubscribe,
+      tags: await getUserGroups(list.userId),
+    };
+    return contact;
+  }));
+  return { contacts };
+};
+
 const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions[]) => {
   if (!userSubscriptions || userSubscriptions.length === 0) {
-    throw new Error('No user subscriptions provided');
+    return; // nothing to do
   }
   const ac = new ActiveCampaignClient();
 
@@ -200,11 +204,19 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
   const numBatches = Math.ceil(userLists.length / maxBatchSize);
   for (let i = 0; i < numBatches; i++) {
     console.log(`Preparing batch ${i + 1} of ${numBatches}`);
-    const contacts = await prepareSubscriptionListsAndTags(userLists.slice(firstItemInCurrentBatch, lastItemInCurrentBatch + 1));
+    const currBatch = userLists.slice(firstItemInCurrentBatch, lastItemInCurrentBatch + 1);
+    const contacts = await prepareSubscriptionListsAndTags(currBatch);
 
     console.log(`Sending ${batchSize} contacts to ActiveCampaign`);
     console.log(JSON.stringify(contacts, null, 2));
     await ac.importContacts(contacts);
+
+    // log subscriptions in db
+    await Promise.all(currBatch.map(async (user) => updateUserSubscriptions(
+      user.userId,
+      user.lists.subscribe.map((id) => (ProviderProductIdToSubscriptionCode[id.listid])),
+      user.lists.unsubscribe.map((id) => (ProviderProductIdToSubscriptionCode[id.listid])),
+    )));
 
     sleep(msBetweenBatches);
 

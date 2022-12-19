@@ -1,8 +1,7 @@
 import dayjs from 'dayjs';
 import { FilterQuery, Schema } from 'mongoose';
-import { ActiveCampaignClient, IContactsData, IContactsImportData } from '../../clients/activeCampaign';
-import { UserGroupRole } from '../../lib/constants';
-import { ProviderProductIdToSubscriptionCode } from '../../lib/constants/subscription';
+import { ActiveCampaignClient } from '../../clients/activeCampaign';
+import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import { CardModel } from '../../models/card';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
@@ -24,10 +23,23 @@ import { ActiveCampaignListId, SubscriptionCode } from '../../types/subscription
 export type FieldIds = Array<{ name: string; id: number }>
 export type FieldValues = Array<{ id: number; value: string }>
 
-interface SubscriptionLists{
+interface ISubscriptionLists{
   subscribe: Array<{listid: ActiveCampaignListId}>;
   unsubscribe: Array<{listid: ActiveCampaignListId}>;
 }
+
+export interface UserLists {
+  userId: string,
+  email: string,
+  lists: ISubscriptionLists
+}
+
+export interface UserSubscriptions {
+  userId: string;
+  subscribe: Array<SubscriptionCode>;
+  unsubscribe: Array<SubscriptionCode>;
+}
+
 // duplicated code to avoid circular dependency
 const getShareableUserGroupFromUserGroupDocument = ({
   _id,
@@ -636,7 +648,7 @@ const getActiveCampaignTags = async (userId: string) => {
   }
 };
 
-export const getSubscriptionLists = async (subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]): Promise<SubscriptionLists> => {
+export const getSubscriptionLists = async (subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]): Promise<ISubscriptionLists> => {
   subscribe = !!subscribe ? subscribe : [];
   unsubscribe = !!unsubscribe ? unsubscribe : [];
   const subscribeList = subscribe.map((listId) => ({
@@ -648,50 +660,34 @@ export const getSubscriptionLists = async (subscribe: ActiveCampaignListId[], un
   return { subscribe: subscribeList, unsubscribe: unsubscribeList };
 };
 
-export const updateActiveCampaignGroupSubscriptionsAndTags = async (user: IUserDocument): Promise<{
+export const updateActiveCampaignGroupSubscriptionsAndTags = async (user: IUserDocument, subscriptions: {
+  userId: string;
+  subscribe: SubscriptionCode[],
+  unsubscribe:SubscriptionCode[],
+}): Promise<{
   userId: string,
   lists: {subscribe: SubscriptionCode[], unsubscribe: SubscriptionCode[]},
 }> => {
   try {
     const ac = new ActiveCampaignClient();
-    const sub: Array<ActiveCampaignListId> = [];
-    const unsub: Array<ActiveCampaignListId> = [];
-
-    const groupNames = await getActiveCampaignTags(user._id.toString());
-    if (!!groupNames && groupNames.length > 0) {
-      sub.push(ActiveCampaignListId.GroupMembers);
-    } else {
-      unsub.push(ActiveCampaignListId.GroupMembers);
+    if (!subscriptions) {
+      return;
     }
 
-    const userGroups = await UserGroupModel.find({ $and: [
-      { user: user._id },
-      { role: { $in: [UserGroupRole.Owner, UserGroupRole.Admin, UserGroupRole.SuperAdmin] } },
-    ] }).lean();
-    if (!!userGroups && userGroups?.length > 0) {
-      sub.push(ActiveCampaignListId.GroupAdmins);
-    } else {
-      // TODO: push if they have an active subscription to the group admins list
-      // This check should be moved out of here. Maybe this function should just
-      // get the lists of subs an unsubs that have to be done
-    }
-
-    const { subscribe, unsubscribe } = await getSubscriptionLists(sub, unsub);
+    const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = subscriptions;
+    const { subscribe, unsubscribe } = await getSubscriptionLists(
+      subscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+      unsubscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+    );
 
     const contacts = [{
       email: user.emails?.find(e => e.primary).email,
       subscribe,
       unsubscribe,
-      tags: groupNames,
+      tags: await getActiveCampaignTags(subscriptions.userId.toString()),
     }];
+
     await ac.importContacts({ contacts });
-    return {
-      userId: user._id.toString(),
-      lists: {
-        subscribe: sub.map((listId) => ProviderProductIdToSubscriptionCode[listId]),
-        unsubscribe: unsub.map((listId) => ProviderProductIdToSubscriptionCode[listId]),
-      },
-    };
   } catch (err) {
     console.error('error updating active campaign', err);
   }
@@ -764,21 +760,31 @@ export const deleteContact = async (email: string) => {
   }
 };
 
-interface UserLists {
-  userId: string,
-  email: string,
-  lists: SubscriptionLists
-}
+export const getSubscribedLists = async (email: string): Promise<ActiveCampaignListId[]> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      throw new Error('No contact found');
+    }
 
-export const prepareSubscriptionListsAndTags = async (userLists: UserLists[]): Promise<IContactsImportData> => {
-  const contacts = await Promise.all(userLists.map(async (list) => {
-    const contact: IContactsData = {
-      email: list.email,
-      subscribe: list.lists.subscribe,
-      unsubscribe: list.lists.unsubscribe,
-      tags: await getUserGroups(list.userId),
-    };
-    return contact;
-  }));
-  return { contacts };
+    const { id } = contactData.contacts[0];
+    const contact = await ac.getContact(parseInt(id));
+    if (!contact || !contact.contactLists || contact.contactLists.length <= 0) {
+      // not subscribed to any lists
+      return [];
+    }
+
+    return contact.contactLists
+      .filter((list) => {
+        if (!(Object.values(ActiveCampaignListId).includes(list.list as ActiveCampaignListId))) {
+          console.error('Unknown Active Campaign list: ', list.list);
+          return false;
+        }
+        return list.status === '1'; // return only active subscriptions
+      })
+      .map((list) => list.list as ActiveCampaignListId);
+  } catch (err) {
+    console.error('Error getting subscribed lists', err);
+  }
 };

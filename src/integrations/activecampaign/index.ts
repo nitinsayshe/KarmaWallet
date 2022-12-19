@@ -764,6 +764,35 @@ export const deleteContact = async (email: string) => {
   }
 };
 
+export const getSubscribedLists = async (email: string): Promise<ActiveCampaignListId[]> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      throw new Error('No contact found');
+    }
+
+    const { id } = contactData.contacts[0];
+    const contact = await ac.getContact(parseInt(id));
+    if (!contact || !contact.contactLists || contact.contactLists.length <= 0) {
+      // not subscribed to any lists
+      return [];
+    }
+
+    return contact.contactLists
+      .filter((list) => {
+        if (!(Object.values(ActiveCampaignListId).includes(list.list as ActiveCampaignListId))) {
+          console.error('Unknown Active Campaign list: ', list.list);
+          return false;
+        }
+        return list.status === '1'; // return only active subscriptions
+      })
+      .map((list) => list.list as ActiveCampaignListId);
+  } catch (err) {
+    console.error('Error getting subscribed lists', err);
+  }
+};
+
 interface UserLists {
   userId: string,
   email: string,

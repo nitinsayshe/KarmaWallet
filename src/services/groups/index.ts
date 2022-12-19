@@ -8,7 +8,6 @@ import {
 import { nanoid } from 'nanoid';
 import { MainBullClient } from '../../clients/bull/main';
 import { updateActiveCampaignGroupSubscriptionsAndTags } from '../../integrations/activecampaign';
-import { exec } from '../../jobs/syncActiveCampaign';
 import {
   emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
@@ -380,7 +379,6 @@ export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
     if (process.env.NODE_ENV === 'production' && userSubscriptions.length > 0) {
       MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-group-${uid}` });
     }
-    exec({ syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions });
     await updateUsersSubscriptions(userSubscriptions);
 
     await UserGroupModel.deleteMany({ group: groupId });
@@ -1280,7 +1278,6 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     if (process.env.NODE_ENV === 'production' && userSubscriptions.length > 0) {
       MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-group-${uid}` });
     }
-    exec({ syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions });
     await updateUsersSubscriptions(userSubscriptions);
 
     return group;
@@ -1534,10 +1531,10 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
 
     const userSubscriptions = await getUpdatedGroupChangeSubscriptions(updatedMemberUserGroups[0]?.group as IGroupDocument, false);
     const uid = `id${(new Date()).getTime()}`;
+
     if (process.env.NODE_ENV === 'production' && userSubscriptions.length > 0) {
       MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-user-groups-${uid}` });
     }
-    exec({ syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions });
     await updateUsersSubscriptions(userSubscriptions);
     return updatedMemberUserGroups;
   } catch (err) {

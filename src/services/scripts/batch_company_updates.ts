@@ -526,11 +526,11 @@ export const handleAddMatchedCompanyName = async (update: any): Promise<void> =>
       throw new Error(`Invalid update type: ${type}`);
   }
   const query: any = {
-    companyName,
     original,
     [typeKey]: true,
   };
 
+  if (companyName) query.companyName = companyName;
   if (company) query.companyId = companyId;
   await MatchedCompanyNameModel.findOneAndUpdate(
     {

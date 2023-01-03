@@ -34,6 +34,7 @@ export enum JobNames {
   DeleteUserAndAssociatedData = 'delete-user-and-associated-data',
   UpdateWildfireMerchantsAndData = 'update-wildfire-merchants-and-data',
   GenerateCommissionPayouts = 'generate-commission-payouts',
+  GenerateAdminSummaryReport = 'generate-admin-summary-report',
   UpdateWildfireCommissions = 'update-wildfire-commissions',
   SyncActiveCampaign = 'sync-active-campaign',
 }

@@ -1,17 +1,16 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { ObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { CardModel } from '../../models/card';
 import { ReportModel } from '../../models/report';
-import { TransactionModel } from '../../models/transaction';
-import { UserModel } from '../../models/user';
 import { IChart } from '../../types/chart';
 import { IRequest } from '../../types/request';
 import { getCarbonOffsetsReport } from './carbonOffsets';
 import { getCardsAddedReport } from './cardsAdded';
+import { getCardsAddedHistoryReport } from './cardsAddedHistory';
 import { getTransactionsMonitorReport } from './transactionMonitor';
+import { getUserReport } from './user';
+import { getLoginReport } from './userLogins';
 import { getUserSignUpsReport } from './userSignups';
 import { IReportRequestParams, ReportType } from './utils/types';
 
@@ -20,9 +19,13 @@ dayjs.extend(utc);
 export const getReport = async (req:IRequest<IReportRequestParams, any>): Promise<IChart> => {
   switch (req.params.reportId) {
     case ReportType.CardsAdded: return getCardsAddedReport(req);
+    case ReportType.CardsAddedHistory: return getCardsAddedHistoryReport();
     case ReportType.CarbonOffsets: return getCarbonOffsetsReport(req);
     case ReportType.TransactionMonitor: return getTransactionsMonitorReport(req);
     case ReportType.UserSignup: return getUserSignUpsReport(req);
+    case ReportType.User: return getUserReport(req);
+    case ReportType.UserLoginsSevenDays: return getLoginReport(req, 7);
+    case ReportType.UserLoginsThirtyDays: return getLoginReport(req, 30);
     default: throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
   }
 };
@@ -40,7 +43,13 @@ export const getAllReports = async (_: IRequest) => {
       // this shuld not change once set
       reportId: ReportType.CardsAdded,
       name: 'Cards Added',
-      description: 'A breakdown of the number of cards being added per day.',
+      description: 'A cumulative view of cards added to the platform over the past thirty days.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.CardsAddedHistory,
+      name: 'Cards Added History',
+      description: 'A cumulative view of cards added to the platform.',
       lastUpdated: dayjs().utc().toDate(),
     },
     {
@@ -56,7 +65,27 @@ export const getAllReports = async (_: IRequest) => {
       // this shuld not change once set
       reportId: ReportType.UserSignup,
       name: 'User Signups',
-      description: 'A breakdown of user signups per day.',
+      description: 'A cumulative view user signups per day.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      // a unique key for FE and BE to identify this report by.
+      // this shuld not change once set
+      reportId: ReportType.User,
+      name: 'User Metrics',
+      description: 'User signups and cards added to the platform over the past thirty days.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.UserLoginsThirtyDays,
+      name: 'Logins: 30 Days',
+      description: 'Daily login counts over the past thirty days.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.UserLoginsSevenDays,
+      name: 'Logins: 7 Days',
+      description: 'Daily login counts over the past seven days.',
       lastUpdated: dayjs().utc().toDate(),
     },
   ];
@@ -77,47 +106,18 @@ export const getAllReports = async (_: IRequest) => {
 
 export const getSummary = async (_: IRequest) => {
   try {
-    const totalUsersCount = await UserModel.find({}).count();
-    const cards = await CardModel.find({});
-    const transactions = await TransactionModel.find({}).count();
-    const usersWithCards = new Set();
+    const report = await ReportModel.findOne({
+      $and: [
+        { adminSummary: { $exists: true } },
+        { adminSummary: { $ne: null } },
+      ],
+    }).sort({ createdOn: -1 });
 
-    for (const card of cards) {
-      if (!card.userId) {
-        // TODO: remove this once new linked cards are created with the new user id.
-        const leanCard = await CardModel.findOne({ _id: card._id }).lean();
-        const user = await UserModel.findOne({ legacyId: leanCard.userId });
-        card.userId = user._id as unknown as ObjectId;
-        await card.save();
-      }
-
-      if (!usersWithCards.has(card.userId.toString())) {
-        usersWithCards.add(card.userId.toString());
-      }
+    if (!report) {
+      throw new CustomError('No report found.', ErrorTypes.NOT_FOUND);
     }
 
-    const totalOffsets = await ReportModel
-      .findOne({ totalOffsetsForAllUsers: { $exists: true } })
-      .sort({ createdOn: -1 })
-      .lean();
-
-    return {
-      users: {
-        total: totalUsersCount,
-        withCard: usersWithCards.size,
-        withoutCard: totalUsersCount - usersWithCards.size,
-      },
-      cards: {
-        total: cards.length,
-      },
-      transactions: {
-        total: transactions,
-      },
-      totalOffsets: {
-        dollars: totalOffsets.totalOffsetsForAllUsers.dollars,
-        tons: totalOffsets.totalOffsetsForAllUsers.tons,
-      },
-    };
+    return report.adminSummary;
   } catch (err) {
     throw asCustomError(err);
   }

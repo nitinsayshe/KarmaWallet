@@ -124,6 +124,8 @@ export const AllowedOrigins = [
   'http://frontend.karmawallet.io',
   'https://sandbox.karmawallet.io',
   'http://sandbox.karmawallet.io',
+  'https://cu.sandbox.karmawallet.io',
+  'http://cu.sandbox.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;
@@ -177,9 +179,12 @@ export enum CollectionNames {
   Unsdg = 'unsdgs',
   UserGroup = 'user_groups',
   UserImpactTotal = 'user_impact_totals',
+  UserLog = 'user_logs',
   UserMontlyImpactReport = 'user_monthly_impact_reports',
   User = 'users',
   ValueCompanyMapping = 'value_company_mappings',
   ValueDataSourceMapping = 'value_data_source_mappings',
   Value = 'values'
 }
+
+export const HubspotPortalId = '22346640';

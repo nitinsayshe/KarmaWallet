@@ -17,8 +17,13 @@ import { getUtcDate } from '../../lib/date';
 import { DataSourceMappingModel } from '../../models/dataSourceMapping';
 import { UnsdgModel } from '../../models/unsdg';
 
-// Data Source Mapping Updates
+// NOVEMBER ADDITION
+// 1) If company is updated and has sectors, overwrite all sectors on company
+// 2) Company Data Source can have status of 1 or -1
+// 3) Unhide company if ACTION is unhide
+// 4) Update false-positive false-negative logic (remove all manual match false)
 
+// Data Source Mapping Updates
 enum DataSourceMappingUpdateAction {
   Delete = 'DELETE',
   Update = 'UPDATE',
@@ -218,16 +223,24 @@ enum CompanyDataSourceUpdateActions {
 }
 
 const handleAddCompanyDataSource = async (update: any) => {
-  const { dataSourceId, name } = update;
+  const { name, nameDs } = update;
+  let { dataSourceId } = update;
   let { companyId } = update;
   if (!companyId && name) {
     const company = await CompanyModel.findOne({ companyName: name });
+    if (!company) await CompanyModel.findOne({ _id: companyId });
     if (!company) throw new Error(`No company found for update: ${JSON.stringify(update)}`);
     companyId = company._id;
+  }
+  if (!dataSourceId) {
+    const _dataSourceId = await DataSourceModel.findOne({ name: nameDs });
+    if (!_dataSourceId) throw new Error(`No data source found for update: ${JSON.stringify(update)}`);
+    dataSourceId = _dataSourceId._id;
   }
   const expiration = update?.expiration ? dayjs(update.expiration).toDate() : dayjs().add(1, 'year').toDate();
   const value = parseInt(update?.value, 10);
   if (!companyId || !dataSourceId || Number.isNaN(value)) throw new Error(`Invalid update: ${JSON.stringify(update)}`);
+
   const newCompanyDataSource = await CompanyDataSourceModel.findOneAndUpdate(
     {
       company: companyId,
@@ -249,7 +262,17 @@ const handleAddCompanyDataSource = async (update: any) => {
 };
 
 const handleDeleteCompanyDataSource = async (update: any) => {
-  const existingCompanyDataSource = await CompanyDataSourceModel.findOneAndDelete({ company: update.companyId, source: update.dataSourceId });
+  let _dataSourceId;
+  if (!update.dataSourceId) {
+    _dataSourceId = await DataSourceModel.findOne({ name: update.nameDs });
+    if (!_dataSourceId) throw new Error(`No data source found for update: ${JSON.stringify(update)}`);
+  }
+  let query: any = { company: update.companyId };
+  if (update.dataSourceId) query = { ...query, source: update.dataSourceId };
+  else query = { ...query, source: _dataSourceId._id.toString() };
+  console.log('query', query);
+  const existingCompanyDataSource = await CompanyDataSourceModel.findOne(query);
+  console.log({ existingCompanyDataSource });
   if (!existingCompanyDataSource) throw new Error(`No existing company data source found for update: ${JSON.stringify(update)}`);
 };
 
@@ -316,20 +339,11 @@ export const handleUpdateCompany = async (companyId: string, update: any): Promi
   } = update;
   // handle primary sector update
   if (primarySector) {
-    const doesCompanyHaveSector = company.sectors.find(s => s.sector.toString() === primarySector);
-    if (!doesCompanyHaveSector) company.sectors.push({ sector: primarySector, primary: true });
-    company.sectors.forEach(sector => {
-      if (sector.sector.toString() !== primarySector && sector.primary) sector.primary = false;
-      if (sector.sector.toString() === primarySector) sector.primary = true;
-    });
-  }
-  // handle other sectors update
-  if (update?.otherSector1) {
+    company.sectors = [{ sector: primarySector, primary: true }];
     for (let i = 1; i <= 100; i += 1) {
       const sector = update[`otherSector${i}`];
       if (!sector) break;
-      const doesCompanyHaveSector = company.sectors.find(s => s.sector.toString() === sector);
-      if (!doesCompanyHaveSector) company.sectors.push({ sector, primary: false });
+      company.sectors.push({ sector, primary: false });
     }
   }
   if (notes) company.notes += `; ${notes}`;
@@ -480,7 +494,7 @@ export const updateCompanies = async (): Promise<void> => {
 
 enum MatchedCompanyNamesActions {
   Update = 'UPDATE',
-  Delete = 'DELETE',
+  Remove = 'REMOVE',
   Add = 'ADD',
 }
 
@@ -491,12 +505,15 @@ enum MatchedCompanyNameUpdateType {
 
 export const handleAddMatchedCompanyName = async (update: any): Promise<void> => {
   const {
-    companyName,
     original,
     companyId,
     type,
   } = update;
-  if (!companyName || !type || !original || !companyId) throw new Error(`Invalid update: ${JSON.stringify(update)}`);
+  let company: any;
+  if (companyId) company = await CompanyModel.findOne({ _id: companyId });
+  let companyName = '';
+  if (company) companyName = company.companyName;
+  if (!type || !original) throw new Error(`Invalid update: ${JSON.stringify(update)}`);
   let typeKey = '';
   switch (type) {
     case MatchedCompanyNameUpdateType.Manual:
@@ -508,23 +525,48 @@ export const handleAddMatchedCompanyName = async (update: any): Promise<void> =>
     default:
       throw new Error(`Invalid update type: ${type}`);
   }
+  const query: any = {
+    original,
+    [typeKey]: true,
+  };
+
+  if (companyName) query.companyName = companyName;
+  if (company) query.companyId = companyId;
   await MatchedCompanyNameModel.findOneAndUpdate(
     {
-      companyName,
-      original,
-      companyId,
-      [typeKey]: true,
+      ...query,
     },
     {
-      companyName,
-      original,
-      companyId,
-      [typeKey]: true,
+      ...query,
     },
     {
       upsert: true,
     },
   );
+};
+
+export const handleRemoveMatchedCompanyName = async (update: any): Promise<void> => {
+  const {
+    original,
+    companyId,
+    type,
+  } = update;
+  let typeKey = '';
+  switch (type) {
+    case MatchedCompanyNameUpdateType.Manual:
+      typeKey = 'manualMatch';
+      break;
+    case MatchedCompanyNameUpdateType.FalsePositive:
+      typeKey = 'falsePositive';
+      break;
+    default:
+      throw new Error(`Invalid update type: ${type}`);
+  }
+  const query = { [typeKey]: true, original };
+  if (companyId) query.companyId = companyId;
+  const match = await MatchedCompanyNameModel.findOne(query);
+  if (!match) throw new Error(`Matched company name ${original} not found.`);
+  await MatchedCompanyNameModel.deleteOne({ _id: match._id });
 };
 
 export const updateMatchedCompanyNames = async (): Promise<void> => {
@@ -546,6 +588,10 @@ export const updateMatchedCompanyNames = async (): Promise<void> => {
       switch (action) {
         case MatchedCompanyNamesActions.Add:
           await handleAddMatchedCompanyName(update);
+          count += 1;
+          break;
+        case MatchedCompanyNamesActions.Remove:
+          await handleRemoveMatchedCompanyName(update);
           count += 1;
           break;
         default:

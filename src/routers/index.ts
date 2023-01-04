@@ -15,10 +15,12 @@ import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
 import card from './card';
 import notFound from './404';
+import subscription from './subscription';
 import upload from './upload';
 import userImpactReports from './userImpactReports';
 import dataSource from './dataSource';
 import values from './values';
+import visitor from './visitor';
 
 const routers = (app: Express) => {
   admin(app);
@@ -32,10 +34,12 @@ const routers = (app: Express) => {
   jobPostings(app);
   meta(app);
   sectors(app);
+  subscription(app);
   transaction(app);
   unsdgs(app);
   upload(app);
   user(app);
+  visitor(app);
   dataSource(app);
   userImpactReports(app);
   values(app);

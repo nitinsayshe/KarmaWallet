@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc';
 import { ICompanyDocument } from '../../../models/company';
 import { MiscModel } from '../../../models/misc';
 import { ITransactionDocument } from '../../../models/transaction';
-import { IUserImpactMonthData } from '../../../models/userImpactTotals';
+import { IUserImpactMonthData, UserImpactYearData } from '../../../models/userImpactTotals';
 import { getCompanyRating } from '../../company/utils';
 import { calculateCompanyScore } from '../../scripts/calculate_company_scores';
 
@@ -37,7 +37,7 @@ export const getImpactSummary = (transactions: ITransactionDocument[]): IImpactS
   let total = 0;
 
   for (const transaction of transactions) {
-    console.log('transaction company', transaction.company);
+    if (!transaction.company) continue;
     const { amount } = transaction;
     const { combinedScore } = transaction.company as ICompanyDocument;
 
@@ -59,6 +59,14 @@ export const getImpactSummary = (transactions: ITransactionDocument[]): IImpactS
     total,
   };
 };
+
+export const getYearStartDate = (date: dayjs.Dayjs) => date
+  .set('month', 1)
+  .set('date', 1)
+  .set('hours', 0)
+  .set('minutes', 0)
+  .set('seconds', 0)
+  .set('milliseconds', 0);
 
 export const getMonthStartDate = (date: dayjs.Dayjs) => date
   .set('date', 1)
@@ -100,6 +108,41 @@ export const getMonthlyImpactBreakdown = (transactions: ITransactionDocument[], 
   }
 
   return monthlyBreakdown;
+};
+
+export const getYearlyImpactBreakdown = (transactions: ITransactionDocument[], ratings: [number, number][]) => {
+  let date = dayjs().utc();
+  const dateFormat = 'YYYY';
+  const yearlyBreakdown: UserImpactYearData[] = [];
+  const allYearlyTransactions: {year: dayjs.Dayjs, transactions: ITransactionDocument[] }[] = [];
+
+  for (const transaction of transactions) {
+    const transactionsDate = dayjs(transaction.date).utc();
+    while (transactionsDate.format(dateFormat) !== date.format(dateFormat)) {
+      date = date.subtract(1, 'year');
+      allYearlyTransactions.push({ year: getYearStartDate(date), transactions: [] });
+    }
+
+    if (!allYearlyTransactions[allYearlyTransactions.length - 1]?.transactions) {
+      allYearlyTransactions.push({ year: getYearStartDate(date), transactions: [] });
+    }
+
+    allYearlyTransactions[allYearlyTransactions.length - 1].transactions.push(transaction);
+  }
+
+  for (const yearlyTransactions of allYearlyTransactions) {
+    const summary = getImpactSummary(yearlyTransactions.transactions);
+    const impactScores = getImpactScores(summary, ratings);
+
+    yearlyBreakdown.push({
+      ...impactScores,
+      totalAmount: summary.total,
+      date: yearlyTransactions.year.toDate(),
+      transactionCount: yearlyTransactions.transactions.length,
+    });
+  }
+
+  return yearlyBreakdown;
 };
 
 export const getUserImpactRatings = async (): Promise<[number, number][]> => {

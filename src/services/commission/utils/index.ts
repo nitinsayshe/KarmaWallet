@@ -13,6 +13,7 @@ import { CommissionPayoutModel } from '../../../models/commissionPayout';
 import { CommissionPayoutMonths } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { IRef } from '../../../types/model';
+import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
 
 export type IWildfireCommission = {
   CommissionID: number,
@@ -173,6 +174,12 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
       ...commissionData,
       status: getKarmaCommissionStatusFromWildfireStatus(Status, null),
     });
+    // update cash back eligible purchase status in active campaign if first commssion
+    const userCommissions = await CommissionModel.find({ user: user._id });
+    if (userCommissions && userCommissions.length === 0) {
+      await updateMadeCashBackEligiblePurchaseStatus(user);
+    }
+
     await newCommission.save();
     return;
   }

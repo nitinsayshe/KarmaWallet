@@ -31,6 +31,15 @@ export interface IRareUserIntegration {
   userId?: string;
 }
 
+export interface IShareASale {
+  trackingId?: string;
+}
+
+export interface IActiveCampaignUserIntegration {
+  userId: string;
+  latestSync: Date;
+}
+
 export interface IPaypalUserIntegration {
   user_id: string,
   sub: string,
@@ -46,6 +55,8 @@ export interface IPaypalUserIntegration {
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IRareUserIntegration;
+  activecampaign?: IActiveCampaignUserIntegration;
+  shareasale?: IShareASale;
 }
 
 export interface IShareableUser {
@@ -53,7 +64,6 @@ export interface IShareableUser {
   name: string;
   dateJoined: Date;
   zipcode: string;
-  subscribedUpdates: boolean;
   role: string; // cannot mark as UserRoles due to how mongoose treats enums
   legacyId: string;
 }
@@ -86,7 +96,6 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   dateJoined: { type: Date, default: new Date() },
   zipcode: { type: String },
-  subscribedUpdates: { type: Boolean, default: true },
   role: {
     type: String,
     default: 'none',
@@ -111,6 +120,16 @@ const userSchema = new Schema({
         verified: { type: Boolean },
         verified_account: { type: Boolean },
         email_verified: { type: Boolean },
+      },
+    },
+    activecampaign: {
+      type: {
+        latestSyncDate: { type: Date },
+      },
+    },
+    shareasale: {
+      type: {
+        trackingId: { type: String },
       },
     },
   },

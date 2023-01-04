@@ -25,11 +25,15 @@ export const singleBatchMatch = async (batchNumber: number, batchSize: number) =
   await mapper.saveSummary();
 };
 
-const matchExistingTransactions = async (startingIndex = 0) => {
+const matchExistingTransactions = async ({
+  startingIndex = 0,
+  endingIndex = null,
+  batchSize = 50000,
+}) => {
   const transactionCount = await TransactionModel.countDocuments({ 'integrations.plaid': { $ne: null } });
-  const batchSize = 50000;
   const batchCount = Math.ceil(transactionCount / batchSize);
-  for (let i = startingIndex; i < batchCount; i += 1) {
+  const endingBatch = endingIndex || batchCount;
+  for (let i = startingIndex; i < endingBatch; i += 1) {
     const transactionsInBatch = await TransactionModel.find({ 'integrations.plaid': { $ne: null } }, null, { skipSessions: true }).skip(i * batchSize).limit(batchSize).lean();
     const transactions = transactionsInBatch.map((t) => {
       const plaidTransaction = { amount: t.amount, ...t.integrations.plaid };

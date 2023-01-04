@@ -74,7 +74,6 @@ export const exec = async () => {
   const nextJobs: INextJob[] = [];
   for (const user of users) {
     try {
-      if (!user.subscribedUpdates) continue;
       // This check is redundant as it's also handled in sendEmail job
       // but this allows for accurate counting in the log below
       const recipientEmail = user.emails.find(e => e.primary && ![UserEmailStatus.Bounced, UserEmailStatus.Complained].includes(e.status))?.email;

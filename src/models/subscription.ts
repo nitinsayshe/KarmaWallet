@@ -9,7 +9,7 @@ import { IShareableUser, IUser } from './user';
 import { IShareableVisitor, IVisitor } from './visitor';
 
 export interface IShareableSubscription {
-  code: string;
+  code: SubscriptionCode;
   status: SubscriptionStatus;
   createdOn: Date;
 }

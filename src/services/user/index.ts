@@ -22,7 +22,7 @@ import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
 import { UserLogModel } from '../../models/userLog';
 import { getUtcDate } from '../../lib/date';
-import { updateNewUserSubscriptions, updateSubscriptionIfUserWasAVisitor} from '../subscription';
+import { updateNewUserSubscriptions, updateSubscriptionsIfUserWasVisitor } from '../subscription';
 
 dayjs.extend(utc);
 
@@ -44,9 +44,9 @@ export interface IUpdatePasswordBody {
 export interface IUserData extends ILoginData {
   name: string;
   zipcode: string;
-  subscribedUpdates: boolean;
   role?: UserRoles;
   pw?: string;
+  shareASaleId?: boolean;
 }
 
 export interface IEmailVerificationData {
@@ -78,7 +78,7 @@ export const register = async (req: IRequest, {
   email,
   name,
   zipcode,
-  subscribedUpdates,
+  shareASaleId,
 }: IUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -98,6 +98,7 @@ export const register = async (req: IRequest, {
     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
 
     const emails = [{ email, verified: false, primary: true }];
+    const integrations: IUserIntegrations = {};
 
     // TODO: delete creating a new legacy user when able.
     const legacyUser = new LegacyUserModel({
@@ -106,7 +107,6 @@ export const register = async (req: IRequest, {
       email,
       emails,
       password: hash,
-      subscribedUpdates,
       zipcode,
       role: UserRoles.None,
     });
@@ -118,7 +118,22 @@ export const register = async (req: IRequest, {
       ...legacyUser.toObject(),
       emails,
       legacyId: legacyUser._id,
+      integrations,
     };
+
+    if (!!shareASaleId) {
+      let uniqueId = nanoid();
+      let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+      while (existingId) {
+        uniqueId = nanoid();
+        existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+      }
+
+      rawUser.integrations.shareasale = {
+        trackingId: uniqueId,
+      };
+    }
 
     delete rawUser._id;
     const newUser = new UserModel({ ...rawUser });
@@ -202,13 +217,13 @@ export const getShareableUser = ({
   name,
   dateJoined,
   zipcode,
-  subscribedUpdates,
   role,
   legacyId,
   integrations,
 }: IUserDocument) => {
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
+  if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
   return {
     _id,
     email,
@@ -216,7 +231,6 @@ export const getShareableUser = ({
     name,
     dateJoined,
     zipcode,
-    subscribedUpdates,
     role,
     legacyId,
     integrations: _integrations,
@@ -270,7 +284,7 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     // updating requestor for access to new email
     resendEmailVerification({ ...req, requestor: user });
     // If this is an existing email, this update should have already happened
-    await updateSubscriptionIfUserWasAVisitor(email, user._id.toString());
+    await updateSubscriptionsIfUserWasVisitor(email, user._id.toString());
   } else {
     user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
     if (legacyUser) legacyUser.emails = user.emails;
@@ -285,7 +299,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     updates.email = updates?.email?.toLowerCase();
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
-  const allowedFields: UserKeys[] = ['name', 'zipcode', 'subscribedUpdates'];
+  const allowedFields: UserKeys[] = ['name', 'zipcode'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
@@ -297,10 +311,6 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
-        break;
-      case 'subscribedUpdates':
-        requestor.subscribedUpdates = updates.subscribedUpdates;
-        if (legacyUser) legacyUser.subscribedUpdates = updates.subscribedUpdates;
         break;
       default:
         break;

@@ -3,6 +3,8 @@ export enum ReportType {
   CardsAdded = 'cards-added',
   TransactionMonitor = 'transaction-monitor',
   UserSignup = 'user-signups',
+  UserLoginsSevenDays = 'user-logins-seven-days',
+  UserLoginsThirtyDays = 'user-logins-thirty-days',
 }
 
 export interface IReportRequestParams {

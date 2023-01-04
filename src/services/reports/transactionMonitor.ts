@@ -19,7 +19,7 @@ export const getTransactionsMonitorReport = async (req: IRequest<IReportRequestP
 
     const reportsAfterThreshold = await ReportModel
       .find({
-        transactionAnalysis: { $exists: true },
+        transactionsMonitor: { $exists: true },
         createdOn: { $gte: thresholdDate.toDate() },
       })
       .sort({ createdOn: 1 })

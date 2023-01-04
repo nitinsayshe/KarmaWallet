@@ -22,3 +22,8 @@ export const getSample = <T extends object & { _id: ObjectId }>(documents: T[], 
 export const sleep = (delay: number) => new Promise((resolve) => {
   setTimeout(() => resolve(null), delay);
 });
+
+export const roundToPercision = (value: number, precision: number) => {
+  const multiplier = 10 ** (precision || 0);
+  return Math.round(value * multiplier) / multiplier;
+};

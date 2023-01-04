@@ -1,52 +1,39 @@
 import aqp from 'api-query-params';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
 import {
   FilterQuery, isValidObjectId, Schema, UpdateQuery,
 } from 'mongoose';
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import { nanoid } from 'nanoid';
-import {
-  emailVerificationDays, TokenTypes,
-  ErrorTypes, UserGroupRole, UserRoles,
-} from '../../lib/constants';
-import { DOMAIN_REGEX } from '../../lib/constants/regex';
-import CustomError, { asCustomError } from '../../lib/customError';
-import { CompanyModel } from '../../models/company';
-import {
-  IUserDocument, UserEmailStatus, UserModel,
-} from '../../models/user';
-import {
-  IGroupDocument, GroupModel, IShareableGroup, IGroupSettings, GroupPrivacyStatus, IGroup, GroupStatus,
-} from '../../models/group';
-import {
-  IShareableUserGroup, IUserGroup, IUserGroupDocument, UserGroupModel,
-} from '../../models/userGroup';
-import { IRequest } from '../../types/request';
-import * as TokenService from '../token';
-import { sendGroupVerificationEmail } from '../email';
-import { getUser } from '../user';
-import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
-import {
-  getOffsetTransactionsTotal, getRareOffsetAmount, getEquivalencies, IEquivalencyObject,
-} from '../impact/utils/carbon';
-import { getRandomInt } from '../../lib/number';
-import { IRef } from '../../types/model';
-import { createCachedData, getCachedData } from '../cachedData';
-import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
-import {
-  IOffsetsStatement, IShareableStatementRef, IStatement, IStatementDocument,
-} from '../../models/statement';
-import { getStatements } from '../statements';
-import {
-  ITransactionDocument, ITransactionMatch, MatchTypes,
-} from '../../models/transaction';
-import { UserGroupStatus } from '../../types/groups';
-import { updateActiveCampaignGroupSubscriptionsAndTags } from '../../integrations/activecampaign';
-import { getUpdatedGroupChangeSubscriptions, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
 import { MainBullClient } from '../../clients/bull/main';
+import { updateActiveCampaignGroupSubscriptionsAndTags } from '../../integrations/activecampaign';
+import {
+  emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
+} from '../../lib/constants';
 import { ActiveCampaignSyncTypes } from '../../lib/constants/activecampaign';
 import { JobNames } from '../../lib/constants/jobScheduler';
+import { DOMAIN_REGEX } from '../../lib/constants/regex';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { getRandomInt } from '../../lib/number';
+import { CompanyModel } from '../../models/company';
+import { GroupModel, GroupPrivacyStatus, GroupStatus, IGroup, IGroupDocument, IGroupSettings, IShareableGroup } from '../../models/group';
+import { IStatementDocument, IShareableStatementRef, IStatement, IOffsetsStatement } from '../../models/statement';
+import { MatchTypes, ITransactionMatch, ITransactionDocument } from '../../models/transaction';
+import { IUserDocument, UserModel, UserEmailStatus } from '../../models/user';
+import { IUserGroupDocument, UserGroupModel, IUserGroup, IShareableUserGroup } from '../../models/userGroup';
+import { UserGroupStatus } from '../../types/groups';
+import { IRef } from '../../types/model';
+import { IRequest } from '../../types/request';
+import { createCachedData, getCachedData } from '../cachedData';
+import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
+import { sendGroupVerificationEmail } from '../email';
+import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
+import { getEquivalencies, getOffsetTransactionsTotal, getRareOffsetAmount, IEquivalencyObject } from '../impact/utils/carbon';
+import { getStatements } from '../statements';
+import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
+import * as TokenService from '../token';
+import { getUser } from '../user';
 
 dayjs.extend(utc);
 
@@ -357,8 +344,9 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
     await userGroup.save();
     const newGroup = await group.save();
 
-    const subscriptions = await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument);
-    await updateUserSubscriptions(subscriptions.userId, subscriptions.lists.subscribe, subscriptions.lists.unsubscribe);
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
     return newGroup;
   } catch (err) {
     throw asCustomError(err);
@@ -386,18 +374,18 @@ export const deleteGroup = async (req: IRequest<IGroupRequestParams>) => {
 
     if (!group) throw new CustomError(`Group with id: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
 
+    const userSubscriptions = await getUpdatedGroupChangeSubscriptions(group, true);
+    const uid = `id${(new Date()).getTime()}`;
+    if (process.env.NODE_ENV === 'production' && userSubscriptions.length > 0) {
+      MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-group-${uid}` });
+    }
+    await updateUsersSubscriptions(userSubscriptions);
+
     await UserGroupModel.deleteMany({ group: groupId });
 
     // TODO: delete all group statements
 
     await GroupModel.deleteOne({ _id: groupId });
-
-    // TODO: delete all group subscriptions and tags
-    // this function will always return empty arrays since the group was deleted
-    /* const userSubscriptions = await getUpdatedGroupChangeSubscriptions(group); */
-    /* const uid = `id${(new Date()).getTime()}`; */
-    /* MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-delete-group-${uid}` }); */
-    /* await updateUsersSubscriptions(userSubscriptions); */
 
     // ??? send notification to users that group has been deleted???
   } catch (err) {
@@ -638,16 +626,15 @@ export const getShareableGroup = ({
 
 export const getShareableGroupMember = ({
   user,
-  email,
   role,
   status,
   joinedOn,
 }: IUserGroupDocument) => {
-  const { name, _id } = (user as IUserDocument);
+  const { name, _id, emails } = (user as IUserDocument);
   return {
     _id,
     name,
-    email,
+    email: emails?.find((e) => e.primary)?.email || '',
     role,
     status,
     joinedOn,
@@ -1021,8 +1008,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     await user.save();
-    const subscriptions = await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument);
-    await updateUserSubscriptions(subscriptions.userId, subscriptions.lists.subscribe, subscriptions.lists.unsubscribe);
+
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
@@ -1069,8 +1058,10 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
-    const subscriptions = await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument);
-    await updateUserSubscriptions(subscriptions.userId, subscriptions.lists.subscribe, subscriptions.lists.unsubscribe);
+
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
   } catch (err) {
     throw asCustomError(err);
   }
@@ -1282,9 +1273,9 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
 
     await group.save();
 
-    const userSubscriptions = await getUpdatedGroupChangeSubscriptions(group);
+    const userSubscriptions = await getUpdatedGroupChangeSubscriptions(group, false);
     const uid = `id${(new Date()).getTime()}`;
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === 'production' && userSubscriptions.length > 0) {
       MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-group-${uid}` });
     }
     await updateUsersSubscriptions(userSubscriptions);
@@ -1419,9 +1410,11 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
 
     userGroup.lastModified = dayjs().utc().toDate();
     await userGroup.save();
-    const subscriptions = await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument);
-    await updateUserSubscriptions(subscriptions.userId, subscriptions.lists.subscribe, subscriptions.lists.unsubscribe);
-    // update all group member subscriptions and in active campaign
+
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
+
     return userGroup;
   } catch (err) {
     throw asCustomError(err);
@@ -1536,9 +1529,10 @@ export const updateUserGroups = async (req: IRequest<IGroupRequestParams, {}, IU
     // TODO: verify that all user groups were updated?
     // TODO: add to change log for group for record keeping and maintenance
 
-    const userSubscriptions = await getUpdatedGroupChangeSubscriptions(updatedMemberUserGroups[0]?.group as IGroupDocument);
+    const userSubscriptions = await getUpdatedGroupChangeSubscriptions(updatedMemberUserGroups[0]?.group as IGroupDocument, false);
     const uid = `id${(new Date()).getTime()}`;
-    if (process.env.NODE_ENV === 'production') {
+
+    if (process.env.NODE_ENV === 'production' && userSubscriptions.length > 0) {
       MainBullClient.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.GROUP, userSubscriptions }, { jobId: `${JobNames.SyncActiveCampaign}-group-update-user-groups-${uid}` });
     }
     await updateUsersSubscriptions(userSubscriptions);

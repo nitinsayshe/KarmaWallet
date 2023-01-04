@@ -39,6 +39,27 @@ export interface ICallbackData {
   headers?: Array<{ key: string; value: string }>
 }
 
+export interface IContactAutomation{
+  contact?: string, // contact id
+  seriesid?: string,
+  startid?: string,
+  status?: string,
+  bathid?: string, // TODO: restrict to an enum
+  automation?: string, // automation id
+}
+
+export interface IContactList {
+  contact?: string, // contact id
+  list?: string, // list ids
+  status?: string, // TODO: restrict to an enum
+}
+
+// Using this mainly to retrieve list status
+export interface IGetContactResponse {
+  contactAutomations?: Array<IContactAutomation>
+  contactLists?: Array<IContactList>
+}
+
 export interface IContactsData {
   email: string
   first_name?: string
@@ -49,6 +70,7 @@ export interface IContactsData {
   subscribe?: Array<{ listid: string}>
   unsubscribe?: Array<{ listid: string}>
 }
+
 export interface IContactsImportData {
   contacts: Array<IContactsData>
   callback?: ICallbackData // lets you know when the import is complete
@@ -173,6 +195,17 @@ export class ActiveCampaignClient extends SdkClient {
   public async getImportStatus(batchId: string) {
     try {
       const { data } = await this._client.get('/import/info', { params: { batchId } });
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  /* get contact lsits - GET /contacts/{id} */
+  public async getContact(id: number): Promise<IGetContactResponse> {
+    try {
+      const { data } = await this._client.get(`/contacts/${id}`);
       return data;
     } catch (err) {
       console.log(err);

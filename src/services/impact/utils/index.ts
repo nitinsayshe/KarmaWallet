@@ -37,7 +37,7 @@ export const getImpactSummary = (transactions: ITransactionDocument[]): IImpactS
   let total = 0;
 
   for (const transaction of transactions) {
-    console.log('transaction company', transaction.company);
+    if (!transaction.company) continue;
     const { amount } = transaction;
     const { combinedScore } = transaction.company as ICompanyDocument;
 

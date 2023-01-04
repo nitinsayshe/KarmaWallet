@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { ObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
+import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -113,10 +114,24 @@ export const getSummary = async (_: IRequest) => {
       }
     }
 
-    const totalOffsets = await ReportModel
-      .findOne({ totalOffsetsForAllUsers: { $exists: true } })
-      .sort({ createdOn: -1 })
-      .lean();
+    let totalOffsets: {dollars: number, tonnes: number}[] = await TransactionModel.aggregate()
+      .match({
+        $and: [
+          { sector: { $nin: sectorsToExcludeFromTransactions } },
+          { amount: { $gt: 0 } },
+          { reversed: { $ne: true } },
+          { 'integrations.rare': { $ne: null } },
+        ],
+
+      })
+      .group({
+        _id: null,
+        tonnes: { $sum: '$integrations.rare.tonnes_amt' },
+        dollars: { $sum: '$integrations.rare.subtotal_amt' },
+      });
+    if (!totalOffsets || totalOffsets.length === 0) {
+      totalOffsets = [{ dollars: 0, tonnes: 0 }];
+    }
 
     let totalCommissions = 0;
     const commissions = await CommissionModel.find({}).lean();
@@ -158,8 +173,8 @@ export const getSummary = async (_: IRequest) => {
         total: transactions,
       },
       totalOffsets: {
-        dollars: totalOffsets.totalOffsetsForAllUsers.dollars,
-        tons: totalOffsets.totalOffsetsForAllUsers.tons,
+        dollars: (totalOffsets[0].dollars / 100).toFixed(0),
+        tons: totalOffsets[0]?.tonnes.toFixed(0),
       },
       totalCommissionsEarned: {
         total: totalCommissions,

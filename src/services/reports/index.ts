@@ -24,6 +24,7 @@ export const getReport = async (req:IRequest<IReportRequestParams, any>): Promis
     case ReportType.TransactionMonitor: return getTransactionsMonitorReport(req);
     case ReportType.UserSignup: return getUserSignUpsReport(req);
     case ReportType.User: return getUserReport(req);
+    case ReportType.UserHistory: return getUserReport(req, true);
     case ReportType.UserLoginsSevenDays: return getLoginReport(req, 7);
     case ReportType.UserLoginsThirtyDays: return getLoginReport(req, 30);
     default: throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
@@ -33,14 +34,12 @@ export const getReport = async (req:IRequest<IReportRequestParams, any>): Promis
 export const getAllReports = async (_: IRequest) => {
   // TODO: figure out way to get latest of each individual report
   // so can get all reports last updated status in one request
-  const latestTransactionMonitor = await ReportModel
-    .findOne({ transactionMonitor: { $exists: true } })
-    .sort({ createdOn: -1 });
+  const latestTransactionMonitor = await ReportModel.findOne({ transactionMonitor: { $exists: true } }).sort({ createdOn: -1 });
 
+  // reportId is a unique key for FE and BE to identify this report by.
+  // this shuld not change once set
   const reports = [
     {
-      // a unique key for FE and BE to identify this report by.
-      // this shuld not change once set
       reportId: ReportType.CardsAdded,
       name: 'Cards Added',
       description: 'A cumulative view of cards added to the platform over the past thirty days.',
@@ -53,27 +52,28 @@ export const getAllReports = async (_: IRequest) => {
       lastUpdated: dayjs().utc().toDate(),
     },
     {
-      // a unique key for FE and BE to identify this report by.
-      // this shuld not change once set
       reportId: ReportType.CarbonOffsets,
       name: 'Carbon Offsets',
       description: 'A breakdown of user carbon offset purchases per day.',
       lastUpdated: dayjs().utc().toDate(),
     },
     {
-      // a unique key for FE and BE to identify this report by.
-      // this shuld not change once set
       reportId: ReportType.UserSignup,
       name: 'User Signups',
       description: 'A cumulative view user signups per day.',
       lastUpdated: dayjs().utc().toDate(),
     },
     {
-      // a unique key for FE and BE to identify this report by.
-      // this shuld not change once set
       reportId: ReportType.User,
       name: 'User Metrics',
-      description: 'User signups and cards added to the platform over the past thirty days.',
+      description:
+        'User signups and cards added to the platform over the past thirty days.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.UserHistory,
+      name: 'Historical User Metrics',
+      description: 'User signups and cards added to the platform.',
       lastUpdated: dayjs().utc().toDate(),
     },
     {

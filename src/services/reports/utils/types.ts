@@ -5,6 +5,7 @@ export enum ReportType {
   TransactionMonitor = 'transaction-monitor',
   UserSignup = 'user-signups',
   User = 'user',
+  UserHistory = 'user-history',
   UserLoginsSevenDays = 'user-logins-seven-days',
   UserLoginsThirtyDays = 'user-logins-thirty-days',
 }
@@ -15,4 +16,5 @@ export interface IReportRequestParams {
 
 export interface IReportRequestQuery {
   daysInPast: string;
+  fullHistory: boolean;
 }

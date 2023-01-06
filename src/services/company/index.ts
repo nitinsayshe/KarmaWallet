@@ -182,6 +182,14 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
         {
           path: 'evaluatedUnsdgs.unsdg',
           model: UnsdgModel,
+          populate: [{
+            path: 'subCategory',
+            model: UnsdgSubcategoryModel,
+            populate: [{
+              path: 'category',
+              model: UnsdgCategoryModel,
+            }],
+          }],
         },
         {
           path: 'parentCompany',

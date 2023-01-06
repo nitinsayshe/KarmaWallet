@@ -8,6 +8,11 @@ import {
 import { IModel, IRef } from '../types/model';
 import { IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
+export interface IUnsdgLogos {
+  outline: string;
+  solid: string;
+}
+
 export interface IUnsdg {
   title: string;
   subCategory: IRef<ObjectId, IUnsdgSubcategoryDocument>;
@@ -20,6 +25,7 @@ export interface IUnsdg {
   howToAcquire: string;
   createdOn: Date;
   lastModified: Date;
+  logos: IUnsdgLogos;
 }
 
 export interface IUnsdgDocument extends IUnsdg, Document {}
@@ -43,6 +49,12 @@ const usdgSchema = new Schema({
   howToAcquire: { type: String },
   createdOn: { type: Date },
   lastModified: { type: Date },
+  logos: {
+    type: {
+      outline: { type: String },
+      solid: { type: String },
+    },
+  },
 });
 
 export const UnsdgModel = model<IUnsdgDocument, Model<IUnsdg>>('unsdg', usdgSchema);

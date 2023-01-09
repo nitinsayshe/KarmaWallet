@@ -180,6 +180,18 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
           model: MerchantModel,
         },
         {
+          path: 'evaluatedUnsdgs.unsdg',
+          model: UnsdgModel,
+          populate: [{
+            path: 'subCategory',
+            model: UnsdgSubcategoryModel,
+            populate: [{
+              path: 'category',
+              model: UnsdgCategoryModel,
+            }],
+          }],
+        },
+        {
           path: 'parentCompany',
           model: CompanyModel,
           populate: [
@@ -406,6 +418,7 @@ export const getShareableCompany = ({
   createdAt,
   lastModified,
   merchant,
+  evaluatedUnsdgs,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -466,6 +479,7 @@ export const getShareableCompany = ({
     createdAt,
     lastModified,
     merchant: _merchant,
+    evaluatedUnsdgs,
   };
 };
 

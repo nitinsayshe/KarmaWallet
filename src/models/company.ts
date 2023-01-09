@@ -14,6 +14,7 @@ import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 import { IJobReportDocument } from './jobReport';
 import { IShareableMerchant } from './merchant';
+import { IUnsdg, IUnsdgDocument } from './unsdg';
 
 export enum CompanyCreationStatus {
   Completed = 'completed',
@@ -71,6 +72,12 @@ export interface ICompanyIntegrations {
   wildfire?: IWildfireCompanyIntegration;
 }
 
+export interface IEvaluatedCompanyUnsdg {
+  unsdg: IRef<ObjectId, IUnsdg | IUnsdgDocument>;
+  evaluated: boolean;
+  score: number;
+}
+
 export interface IShareableCompany {
   _id: ObjectId;
   combinedScore: number;
@@ -91,6 +98,7 @@ export interface IShareableCompany {
   url: string;
   createdAt: Date;
   lastModified: Date;
+  evaluatedUnsdgs: IEvaluatedCompanyUnsdg[];
 }
 
 export interface ICompany extends IShareableCompany {
@@ -191,6 +199,20 @@ const companySchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'merchant',
     },
+    evaluatedUnsdgs: [{
+      type: {
+        unsdg: {
+          type: Schema.Types.ObjectId,
+          ref: 'unsdg',
+        },
+        evaluated: {
+          type: Boolean,
+        },
+        score: {
+          type: Number,
+        },
+      },
+    }],
   },
   {
     toJSON: { virtuals: true },

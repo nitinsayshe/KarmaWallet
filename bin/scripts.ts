@@ -15,6 +15,9 @@ import { updateCompanies, updateDataSources, updateCompanyDataSources, updateDat
 import { removeDuplicatePlaidTransactions } from '../src/services/scripts/remove_duplicate_plaid_transactions';
 import { CompanyDataSourceModel } from '../src/models/companyDataSource';
 import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch_update_effects';
+import { sanitizeEmails } from '../src/services/scripts/sanitizeEmails';
+import { associateWildfireMatches, matchWildfireCompanies, searchResultsProcessing } from '../src/services/scripts/wildfire';
+import { updateCompaniesUrls } from '../src/services/scripts/update_companies_urls';
 import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/generate_microsoft_wildfire_companies';
 
 const BATCH_SIZE = 50000;
@@ -32,7 +35,6 @@ const STARTING_INDEX = 4;
     //   endingIndex: null,
     //   batchSize: BATCH_SIZE,
     // });
-    await removeDuplicatePlaidTransactions();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

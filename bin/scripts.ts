@@ -34,7 +34,6 @@ const STARTING_INDEX = 4;
     //   endingIndex: null,
     //   batchSize: BATCH_SIZE,
     // });
-    await uploadCsvToGoogleDrive.exec({ reportType: CsvReportTypes.Affiliates });
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

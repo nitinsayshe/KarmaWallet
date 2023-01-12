@@ -65,6 +65,12 @@ export class _MainBullClient extends _BullClient {
 
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
+        { reportType: CsvReportTypes.Affiliates },
+        { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Affiliates}-monthly`,
+          repeat: { cron: '0 5 2 * *' } },
+      );
+      this.createJob(
+        JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Transactions },
         { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Transactions}-daily`,
           repeat: { cron: '0 7 * * *' } },

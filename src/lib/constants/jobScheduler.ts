@@ -6,6 +6,7 @@ export enum QueueNames {
 export enum CsvReportTypes {
   Transactions = 'transactions',
   Users = 'users',
+  Affiliates = 'affiliates',
 }
 
 export enum JobNames {

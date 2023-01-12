@@ -18,6 +18,7 @@ import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch
 import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/generate_microsoft_wildfire_companies';
 import * as uploadCsvToGoogleDrive from '../src/jobs/uploadCsvToGoogleDrive';
 import { CsvReportTypes } from '../src/lib/constants/jobScheduler';
+import { deleteUser } from '../src/services/scripts/delete_user';
 
 const BATCH_SIZE = 50000;
 const STARTING_INDEX = 4;
@@ -34,7 +35,6 @@ const STARTING_INDEX = 4;
     //   endingIndex: null,
     //   batchSize: BATCH_SIZE,
     // });
-    await uploadCsvToGoogleDrive.exec({ reportType: CsvReportTypes.Affiliates });
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

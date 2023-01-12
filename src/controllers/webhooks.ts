@@ -88,7 +88,7 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
 
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
-    const { statementIds, groupId } = (req.body.forwarded_query_params || {});
+    const { groupId, statementIds } = (req.body.forwarded_query_params || {});
 
     let group;
     if (groupId) {
@@ -107,12 +107,12 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
     let statements: IStatementDocument[] = [];
     if (statementIds) {
       try {
-        // if only 1 statement id is received, shows up as a string
         const { APP_USER_ID } = process.env;
         if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
         const appUser = await UserModel.findOne({ _id: APP_USER_ID });
         req.requestor = appUser;
-        statements = await validateStatementList(req, typeof statementIds === 'string' ? [statementIds] : statementIds, group);
+        const statementIdsArray = statementIds?.split(',');
+        statements = await validateStatementList(req, statementIdsArray, group);
       } catch (e) {
         Logger.error(asCustomError(e));
       }

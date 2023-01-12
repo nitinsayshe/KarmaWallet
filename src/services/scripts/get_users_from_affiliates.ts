@@ -8,7 +8,15 @@ import { CardModel } from '../../models/card';
 
 dayjs.extend(utc);
 
-export const getUsersFromAffiliates = async (allTime?: boolean) => {
+export interface IGetUsersFromAffiliatesParams {
+  writeToDisk?: boolean;
+  allTime?: boolean;
+}
+
+export const getUsersFromAffiliates = async ({
+  writeToDisk = false,
+  allTime = true,
+}: IGetUsersFromAffiliatesParams) => {
   console.log('[+] Generating list of users from affiliates...');
 
   try {
@@ -57,7 +65,7 @@ export const getUsersFromAffiliates = async (allTime?: boolean) => {
     console.log(`[+] affilliate leads report generated successfully with ${data.length} users\n`);
 
     const _csv = parse(data);
-    fs.writeFileSync(path.join(__dirname, '.tmp', 'affiliate_leads.csv'), _csv);
+    if (writeToDisk) fs.writeFileSync(path.join(__dirname, '.tmp', 'affiliate_leads.csv'), _csv);
     return _csv;
   } catch (err: any) {
     console.log('[!] Error generating affiliate leads report: ', err.message);

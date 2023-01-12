@@ -49,7 +49,7 @@ export const exec = async ({ reportType = CsvReportTypes.Transactions }: ITransa
     }
     // generates a list of users from afilliates from the last full month
     case CsvReportTypes.Affiliates: {
-      csv = await getUsersFromAffiliates();
+      csv = await getUsersFromAffiliates({ writeToDisk: false, allTime: true });
       createFileRequest = {
         fileName: `affilliates_${timeString}.csv`,
         parents: [AFFILLIATES_DIR_ID],

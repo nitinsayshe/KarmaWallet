@@ -23,7 +23,7 @@ export const exec = async ({ reportType = CsvReportTypes.Transactions }: ITransa
   await GoogleClient.init();
   let csv: string;
   let createFileRequest: ICreateFileRequest;
-  const timeString = dayjs().format('DD-MM-YYYY-mm:ss');
+  const timeString = dayjs().utc().format('YYYY-MM-DD_HH-mm-ss');
   switch (reportType) {
     case CsvReportTypes.Transactions: {
       csv = await generateTransactionCsv({ writeToDisk: false });

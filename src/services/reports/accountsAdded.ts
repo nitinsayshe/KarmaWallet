@@ -8,7 +8,7 @@ import { IReportRequestParams, IReportRequestQuery } from './utils/types';
 
 dayjs.extend(utc);
 
-export const getCardsAddedReport = async (req: IRequest<IReportRequestParams, IReportRequestQuery>) => {
+export const getAccountsAddedReport = async (req: IRequest<IReportRequestParams, IReportRequestQuery>) => {
   try {
     const _daysInPast = getDaysInPast(req.query.daysInPast || '30', 365);
     const thresholdDate = dayjs(dayjs().utc().format('MMM DD, YYYY'))

@@ -16,7 +16,7 @@ import { UserLogModel } from '../models/userLog';
 dayjs.extend(utc);
 
 /**
- * a job to run twice hourly to generate a new admin summary report
+ * a job to run every two hors to generate a new admin summary report
  */
 
 export const exec = async () => {
@@ -29,13 +29,23 @@ export const exec = async () => {
     const removedCards = await CardModel.find({ status: CardStatus.Removed }).count();
     const usersWithLinkedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Linked })
-      .group({ _id: '$userId' }).count('count');
+      .group({ _id: '$userId' })
+      .count('count');
+
     const usersWithLinkedCardsCount = usersWithLinkedCards && usersWithLinkedCards.length > 0 ? usersWithLinkedCards[0].count : 0;
 
     const usersWithUnlinkedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Unlinked })
-      .group({ _id: '$userId' }).count('count');
+      .group({ _id: '$userId' })
+      .count('count');
+
     const usersWithUnlinkedCardsCount = usersWithUnlinkedCards && usersWithUnlinkedCards.length > 0 ? usersWithUnlinkedCards[0].count : 0;
+
+    const usersWithRemovedCards = await CardModel.aggregate()
+      .match({ status: CardStatus.Removed })
+      .group({ _id: '$userId' })
+      .count('count');
+    const usersWithRemovedCardsCount = usersWithRemovedCards && usersWithRemovedCards.length > 0 ? usersWithRemovedCards[0].count : 0;
 
     const linkeDepositoryCards = await CardModel.find({ type: 'depository', status: CardStatus.Linked }).count();
 
@@ -46,7 +56,7 @@ export const exec = async () => {
 
     /* Total matched transactions (count and absolute value) */
     const matchedTransactionData = await TransactionModel.aggregate()
-      .match({ $or: [{ company: { $exists: false } }, { company: null }] })
+      .match({ $and: [{ company: { $exists: true } }, { company: { $ne: null } }] })
       .group({ _id: null, totalAmount: { $sum: { $abs: '$amount' } }, count: { $sum: 1 } });
 
     let totalOffsets: {dollars: number, tonnes: number, count: number}[] = await TransactionModel.aggregate()
@@ -102,6 +112,7 @@ export const exec = async () => {
         total: totalUsersCount,
         withCard: usersWithLinkedCardsCount,
         withUnlinkedCard: usersWithUnlinkedCardsCount,
+        withRemovedCard: usersWithRemovedCardsCount,
         withoutCard: totalUsersCount - usersWithLinkedCardsCount,
         loggedInLastSevenDays: loggedInLastSevenDays ? loggedInLastSevenDays.length : 0,
         loggedInLastThirtyDays: loggedInLastThirtyDays ? loggedInLastThirtyDays.length : 0,
@@ -144,6 +155,7 @@ export const exec = async () => {
 
     await ReportModel.create({ adminSummary });
   } catch (err) {
+    console.error(`Error generating admin summary report: ${err}`);
     throw asCustomError(err);
   }
 };

@@ -12,9 +12,9 @@ import * as CreateBatchCompanies from '../../../jobs/createBatchCompanies';
 import * as CreateBatchedDataSources from '../../../jobs/createBatchDataSources';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotals';
+import * as GenerateUserReport from '../../../jobs/generateUserReport';
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
-import * as TransactionsMonitor from '../../../jobs/monitorTransactions';
 import * as UserMonthlyImpactReport from '../../../jobs/userMonthlyImpactReports';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
 import * as UpdateRareProjectAverage from '../../../jobs/updateRareProjectAverage';
@@ -113,9 +113,6 @@ export default async (job: SandboxedJob) => {
     case JobNames.TotalOffsetsForAllUsers:
       result = await TotalOffsetsForAllUsers.exec();
       break;
-    case JobNames.TransactionsMonitor:
-      result = await TransactionsMonitor.exec();
-      break;
     case JobNames.SendEmail:
       result = await SendEmail.exec(data);
       break;
@@ -155,6 +152,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.GenerateAdminSummaryReport:
       result = await GenerateAdminSummaryReport.exec();
+      break;
+    case JobNames.GenerateUserReport:
+      result = await GenerateUserReport.exec(data);
       break;
     case JobNames.UpdateWildfireCommissions:
       result = await UpdateWildfireCommissions.exec();

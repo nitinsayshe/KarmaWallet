@@ -18,12 +18,20 @@ export interface ITransactionsMonitor {
   missingCompany: number;
 }
 
+export interface IMultipleValueChartData {
+  data :{
+    label: string,
+    values: { value: string }[]
+  }[]
+}
+
 export interface IAdminSummary {
   users: {
     total: number;
     withCard: number;
-    withUnlinkedCard: number;
     withoutCard: number;
+    withUnlinkedCard: number;
+    withRemovedCard: number;
     loggedInLastSevenDays: number;
     loggedInLastThirtyDays: number;
   }
@@ -67,11 +75,43 @@ export interface IReport {
   adminSummary?: IAdminSummary;
   totalOffsetsForAllUsers?: ITotalOffsetsForAllUsers;
   transactionsMonitor?: ITransactionsMonitor;
+  userHistory?: IMultipleValueChartData;
+  userMetrics?: IMultipleValueChartData;
   createdOn: Date;
 }
 
 export interface IReportDocument extends IReport, Document {}
 export type IReportModel = IModel<IReport>;
+
+const userHistory = {
+  type: {
+    data: [{
+      type: {
+        label: String,
+        values: [{
+          type: {
+            value: String,
+          },
+        }],
+      },
+    }],
+  },
+};
+
+const userMetrics = {
+  type: {
+    data: [{
+      type: {
+        label: String,
+        values: [{
+          type: {
+            value: String,
+          },
+        }],
+      },
+    }],
+  },
+};
 
 const totalOffsetsForAllUsers = {
   type: {
@@ -94,6 +134,7 @@ const adminSummary = {
       total: Number,
       withCard: Number,
       withUnlinkedCard: Number,
+      withRemovedCard: Number,
       withoutCard: Number,
       loggedInLastSevenDays: Number,
       loggedInLastThirtyDays: Number,
@@ -156,6 +197,8 @@ const reportSchema = new Schema({
   adminSummary,
   totalOffsetsForAllUsers,
   transactionsMonitor,
+  userHistory,
+  userMetrics,
   createdOn: { type: Date, default: () => getUtcDate() },
 });
 

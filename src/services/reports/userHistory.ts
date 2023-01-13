@@ -9,23 +9,24 @@ import { IReportRequestParams, IReportRequestQuery } from './utils/types';
 
 dayjs.extend(utc);
 
-export const getUserReport = async (_: IRequest<IReportRequestParams, IReportRequestQuery>): Promise<IChart> => {
+export const getUserHistoryReport = async (_: IRequest<IReportRequestParams, IReportRequestQuery>): Promise<IChart> => {
   try {
-    const userMetricsReport = await ReportModel.findOne({
+    const userHistoryReport = await ReportModel.findOne({
       $and: [
-        { userMetrics: { $exists: true } },
-        { userMetrics: { $ne: null } },
+        { userHistory: { $exists: true } },
+        { userHistory: { $ne: null } },
       ],
     }).sort({ createdOn: -1 }).lean();
-    if (!userMetricsReport || !userMetricsReport.userMetrics) throw new CustomError('Error retrieving report data', ErrorTypes.SERVER);
-    const data = userMetricsReport.userMetrics.data.map((r) => ({
+    if (!userHistoryReport || !userHistoryReport.userHistory) throw new CustomError('Error retrieving report data', ErrorTypes.SERVER);
+    const data = userHistoryReport.userHistory.data.map((r) => ({
       label: r.label,
       values: [
         { value: r.values[0].value },
         { value: r.values[1].value },
       ],
     }));
-    return { data } as unknown as IChart;
+
+    return { data } as unknown as IChart<string>;
   } catch (err) {
     throw asCustomError(err);
   }

@@ -5,7 +5,7 @@ import { CardModel } from '../../models/card';
 
 dayjs.extend(utc);
 
-export const getCardsAddedHistoryReport = async () => {
+export const getAccountsAddedHistoryReport = async () => {
   try {
     let aggData = await CardModel.aggregate()
       .group({

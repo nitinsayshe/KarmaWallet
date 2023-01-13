@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { CardStatus } from '../lib/constants';
 import { JobNames } from '../lib/constants/jobScheduler';
+import { ExcludeCategories } from '../lib/constants/plaid';
 import { sectorsToExcludeFromTransactions } from '../lib/constants/transaction';
 import { asCustomError } from '../lib/customError';
 import { roundToPercision } from '../lib/misc';
@@ -52,12 +53,43 @@ export const exec = async () => {
     /* Total number of transactions captured (count) and total $s (absolute
     * value) for those transactions. */
     const transactionData = await TransactionModel.aggregate()
+      .match({ $and: [
+        { 'integrations.plaid': { $exists: true } },
+        { 'integrations.plaid': { $ne: null } },
+      ] })
       .group({ _id: null, totalAmount: { $sum: { $abs: '$amount' } }, count: { $sum: 1 } });
+
+    const transactionDataExcludingCategories = await TransactionModel.aggregate()
+      .match({ $and: [
+        { amount: { $gte: 0 } },
+        { 'integrations.plaid.category': { $exists: true } },
+        { 'integrations.plaid.category': { $ne: null } },
+        { 'integrations.plaid.category': { $nin: ExcludeCategories } }] })
+      .group({ _id: null, totalAmount: { $sum: '$amount' }, count: { $sum: 1 } });
 
     /* Total matched transactions (count and absolute value) */
     const matchedTransactionData = await TransactionModel.aggregate()
-      .match({ $and: [{ company: { $exists: true } }, { company: { $ne: null } }] })
+      .match({ $and: [
+        { 'integrations.plaid': { $exists: true } },
+        { 'integrations.plaid': { $ne: null } },
+        { company: { $exists: true } },
+        { company: { $ne: null } },
+      ] })
       .group({ _id: null, totalAmount: { $sum: { $abs: '$amount' } }, count: { $sum: 1 } });
+
+    const matchedTransactionsExcludingCategories = await TransactionModel.aggregate()
+      .match({ $and: [
+        { amount: { $gte: 0 } },
+        { company: { $exists: true } },
+        { company: { $ne: null } },
+        { 'integrations.plaid.category': { $exists: true } },
+        { 'integrations.plaid.category': { $ne: null } },
+        { 'integrations.plaid.category': { $nin: ExcludeCategories } }] })
+      .group({
+        _id: null,
+        totalAmount: { $sum: '$amount' },
+        count: { $sum: 1 },
+      });
 
     let totalOffsets: {dollars: number, tonnes: number, count: number}[] = await TransactionModel.aggregate()
       .match({
@@ -75,6 +107,7 @@ export const exec = async () => {
         dollars: { $sum: '$integrations.rare.subtotal_amt' },
         count: { $sum: 1 },
       });
+
     if (!totalOffsets || totalOffsets.length === 0) {
       totalOffsets = [{ dollars: 0, tonnes: 0, count: 0 }];
     }
@@ -136,20 +169,26 @@ export const exec = async () => {
       },
       transactions: {
         total: transactionData[0].count as number,
-        totalDollars: transactionData[0].totalAmount as number,
+        totalDollars: roundToPercision(transactionData[0].totalAmount as number, 0),
+        totalDollarsExcludingCategories: roundToPercision(transactionDataExcludingCategories[0].totalAmount as number, 0),
+        totalExcludingCategories: roundToPercision(transactionDataExcludingCategories[0].count as number, 0),
         matched: matchedTransactionData[0].count as number,
-        matchedDollars: matchedTransactionData[0].totalAmount as number,
+        matchedExcludingCategories: matchedTransactionsExcludingCategories[0].count as number,
+        matchedDollars: roundToPercision(matchedTransactionData[0].totalAmount as number, 0),
+        matchedDollarsExcludingCategories: roundToPercision(matchedTransactionsExcludingCategories[0].totalAmount as number, 0),
         matchedRatio: roundToPercision(matchedTransactionData[0].count as number / transactionData[0].count as number, 2),
+        matchedRatioExcludingCategories: roundToPercision(matchedTransactionsExcludingCategories[0].count as number / transactionDataExcludingCategories[0].count as number, 2),
         matchedDollarsRatio: roundToPercision(matchedTransactionData[0].totalAmount as number / transactionData[0].totalAmount as number, 2),
+        matchedDollarsRatioExcludingCategories: roundToPercision(matchedTransactionsExcludingCategories[0].totalAmount as number / transactionDataExcludingCategories[0].totalAmount as number, 2),
       },
       offsets: {
         total: totalOffsets[0].count,
-        dollars: roundToPercision((totalOffsets[0].dollars / 100), 2),
+        dollars: roundToPercision((totalOffsets[0].dollars / 100), 0),
         tons: roundToPercision(totalOffsets[0]?.tonnes, 2),
       },
       commissions: {
         total: totalCommissions,
-        dollars: roundToPercision(commissionDollars, 2),
+        dollars: roundToPercision(commissionDollars, 0),
       },
     };
 

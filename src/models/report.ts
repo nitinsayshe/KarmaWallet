@@ -55,10 +55,16 @@ export interface IAdminSummary {
   transactions: {
     total: number;
     totalDollars: number;
+    totalExcludingCategories: number;
+    totalDollarsExcludingCategories: number;
     matched: number;
+    matchedExcludingCategories: number;
     matchedDollars: number;
+    matchedDollarsExcludingCategories: number;
     matchedRatio: number;
+    matchedRatioExcludingCategories: number;
     matchedDollarsRatio: number;
+    matchedDollarsRatioExcludingCategories: number;
   }
   offsets: {
     total: number;
@@ -74,7 +80,6 @@ export interface IAdminSummary {
 export interface IReport {
   adminSummary?: IAdminSummary;
   totalOffsetsForAllUsers?: ITotalOffsetsForAllUsers;
-  transactionsMonitor?: ITransactionsMonitor;
   userHistory?: IMultipleValueChartData;
   userMetrics?: IMultipleValueChartData;
   createdOn: Date;
@@ -117,14 +122,6 @@ const totalOffsetsForAllUsers = {
   type: {
     dollars: Number,
     tons: Number,
-  },
-};
-
-const transactionsMonitor = {
-  type: {
-    totalTransactions: Number,
-    missingCarbonMultiplier: Number,
-    missingCompany: Number,
   },
 };
 
@@ -171,10 +168,16 @@ const adminSummary = {
     type: {
       total: Number,
       totalDollars: Number,
+      totalExcludingCategories: Number,
+      totalDollarsExcludingCategories: Number,
       matched: Number,
+      matchedExcludingCategories: Number,
       matchedDollars: Number,
+      matchedDollarsExcludingCategories: Number,
       matchedRatio: Number,
+      matchedRatioExcludingCategories: Number,
       matchedDollarsRatio: Number,
+      matchedDollarsRatioExcludingCategories: Number,
     },
   },
   offsets: {
@@ -196,7 +199,6 @@ const adminSummary = {
 const reportSchema = new Schema({
   adminSummary,
   totalOffsetsForAllUsers,
-  transactionsMonitor,
   userHistory,
   userMetrics,
   createdOn: { type: Date, default: () => getUtcDate() },

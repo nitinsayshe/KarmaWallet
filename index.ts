@@ -17,7 +17,7 @@ import routers from './src/routers';
 import { MainBullClient } from './src/clients/bull/main';
 import { EmailBullClient } from './src/clients/bull/email';
 
-EventEmitter.defaultMaxListeners = 30;
+EventEmitter.defaultMaxListeners = 50;
 
 const port = process.env.PORT || 8012;
 

@@ -14,11 +14,6 @@ export enum UserReportTypes {
   ThirtyDays = 'thirtyDays',
 }
 
-export enum UserReportTypes {
-  Historical = 'historical',
-  ThirtyDays = 'thirtyDays',
-}
-
 export enum JobNames {
   AssociationNegativeToPositiveTransactions = 'associate-negative-to-positive-transactions',
   CacheGroupOffsetData = 'cache-group-offset-data',

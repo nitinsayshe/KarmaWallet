@@ -1,6 +1,6 @@
 import path from 'path';
 import { Worker } from 'bullmq';
-import { JobNames, QueueNames, CsvReportTypes } from '../../../lib/constants/jobScheduler';
+import { JobNames, QueueNames, CsvReportTypes, UserReportTypes } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
 import { ActiveCampaignSyncTypes } from '../../../lib/constants/activecampaign';
@@ -43,10 +43,11 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.CachedDataCleanup, null, { jobId: `${JobNames.CachedDataCleanup}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.CacheGroupOffsetData, null, { jobId: `${JobNames.CacheGroupOffsetData}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.GenerateAdminSummaryReport, null, { jobId: `${JobNames.GenerateAdminSummaryReport}-bihourly`, repeat: { cron: '0 */2 * * *' } });
+    this.createJob(JobNames.GenerateUserReport, { reportType: UserReportTypes.Historical }, { jobId: `${JobNames.GenerateUserReport}-historical-bihourly`, repeat: { cron: '0 */2 * * *' } });
+    this.createJob(JobNames.GenerateUserReport, { reportType: UserReportTypes.ThirtyDays }, { jobId: `${JobNames.GenerateUserReport}-thirty-days-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.GenerateGroupOffsetStatements, null, { jobId: `${JobNames.GenerateGroupOffsetStatements}-monthly`, repeat: { cron: '0 3 1 * *' } });
     this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-daily`, repeat: { cron: '0 3 * * *' } });
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
-    this.createJob(JobNames.TransactionsMonitor, null, { jobId: JobNames.TransactionsMonitor, repeat: { cron: '0 3 * * *' } });
     this.createJob(JobNames.UpdateRareProjectAverage, null, { jobId: `${JobNames.UpdateRareProjectAverage}-daily`, repeat: { cron: '0 17 * * *' } });
     this.createJob(JobNames.UserMonthlyImpactReport, null, { jobId: `${JobNames.UserMonthlyImpactReport}-monthly`, repeat: { cron: '0 3 1 * *' } });
     this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 0 */6 * * *' } });

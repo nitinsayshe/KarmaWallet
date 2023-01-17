@@ -18,12 +18,20 @@ export interface ITransactionsMonitor {
   missingCompany: number;
 }
 
+export interface IMultipleValueChartData {
+  data :{
+    label: string,
+    values: { value: string }[]
+  }[]
+}
+
 export interface IAdminSummary {
   users: {
     total: number;
     withCard: number;
-    withUnlinkedCard: number;
     withoutCard: number;
+    withUnlinkedCard: number;
+    withRemovedCard: number;
     loggedInLastSevenDays: number;
     loggedInLastThirtyDays: number;
   }
@@ -47,10 +55,16 @@ export interface IAdminSummary {
   transactions: {
     total: number;
     totalDollars: number;
+    totalExcludingCategories: number;
+    totalDollarsExcludingCategories: number;
     matched: number;
+    matchedExcludingCategories: number;
     matchedDollars: number;
+    matchedDollarsExcludingCategories: number;
     matchedRatio: number;
+    matchedRatioExcludingCategories: number;
     matchedDollarsRatio: number;
+    matchedDollarsRatioExcludingCategories: number;
   }
   offsets: {
     total: number;
@@ -66,25 +80,48 @@ export interface IAdminSummary {
 export interface IReport {
   adminSummary?: IAdminSummary;
   totalOffsetsForAllUsers?: ITotalOffsetsForAllUsers;
-  transactionsMonitor?: ITransactionsMonitor;
+  userHistory?: IMultipleValueChartData;
+  userMetrics?: IMultipleValueChartData;
   createdOn: Date;
 }
 
 export interface IReportDocument extends IReport, Document {}
 export type IReportModel = IModel<IReport>;
 
+const userHistory = {
+  type: {
+    data: [{
+      type: {
+        label: String,
+        values: [{
+          type: {
+            value: String,
+          },
+        }],
+      },
+    }],
+  },
+};
+
+const userMetrics = {
+  type: {
+    data: [{
+      type: {
+        label: String,
+        values: [{
+          type: {
+            value: String,
+          },
+        }],
+      },
+    }],
+  },
+};
+
 const totalOffsetsForAllUsers = {
   type: {
     dollars: Number,
     tons: Number,
-  },
-};
-
-const transactionsMonitor = {
-  type: {
-    totalTransactions: Number,
-    missingCarbonMultiplier: Number,
-    missingCompany: Number,
   },
 };
 
@@ -94,6 +131,7 @@ const adminSummary = {
       total: Number,
       withCard: Number,
       withUnlinkedCard: Number,
+      withRemovedCard: Number,
       withoutCard: Number,
       loggedInLastSevenDays: Number,
       loggedInLastThirtyDays: Number,
@@ -130,10 +168,16 @@ const adminSummary = {
     type: {
       total: Number,
       totalDollars: Number,
+      totalExcludingCategories: Number,
+      totalDollarsExcludingCategories: Number,
       matched: Number,
+      matchedExcludingCategories: Number,
       matchedDollars: Number,
+      matchedDollarsExcludingCategories: Number,
       matchedRatio: Number,
+      matchedRatioExcludingCategories: Number,
       matchedDollarsRatio: Number,
+      matchedDollarsRatioExcludingCategories: Number,
     },
   },
   offsets: {
@@ -155,7 +199,8 @@ const adminSummary = {
 const reportSchema = new Schema({
   adminSummary,
   totalOffsetsForAllUsers,
-  transactionsMonitor,
+  userHistory,
+  userMetrics,
   createdOn: { type: Date, default: () => getUtcDate() },
 });
 

@@ -1,6 +1,5 @@
 /* eslint-disable camelcase */
-import { updateWildfireMerchants } from '../services/scripts/update_wildfire_merchants';
-import { updateWildfireMerchantRates } from '../services/scripts/update_wildfire_rates';
+import { updateWildfireMerchants, updateWildfireMerchantRates } from '../services/scripts/wildfire';
 
 /**
  * pulls wildfire data and updates the database
@@ -9,5 +8,5 @@ import { updateWildfireMerchantRates } from '../services/scripts/update_wildfire
 export const exec = async () => {
   await updateWildfireMerchants();
   await updateWildfireMerchantRates();
-  console.log('////////// Updated Wildfire Data //////////');
+  console.log('[+] wildfire data updated');
 };

@@ -12,7 +12,7 @@ import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid'
 import { LeanDocument, ObjectId } from 'mongoose';
 import { printTable } from '../logger';
 import User from './user';
-import { CompanyCreationStatus, CompanyModel, ICompany } from '../../models/company';
+import { CompanyCreationStatus, CompanyModel, ICompany, ICompanyDocument } from '../../models/company';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IMatchedCompanyNameDocument, MatchedCompanyNameModel } from '../../models/matchedCompanyName';
 import { IUnmatchedCompanyNameDocument, UnmatchedCompanyNameModel } from '../../models/unmatchedCompanyName';
@@ -666,11 +666,22 @@ export class PlaidMapper {
   };
 
   writeManualMatchesToCsv = async () => {
-    const manualDocuments: IMatchedCompanyNameDocument[] = await MatchedCompanyNameModel.find({ manualMatch: true }).lean();
+    const query = { manualMatch: true };
+    let manualDocuments: IMatchedCompanyNameDocument[] = await MatchedCompanyNameModel.find(query)
+      .populate([
+        {
+          path: 'companyId',
+          model: CompanyModel,
+        },
+      ])
+      .lean();
+
+    manualDocuments = manualDocuments.filter(m => (m.companyId as unknown as ICompanyDocument).hidden?.status === false);
+
     const manual = manualDocuments.map(m => ({
       original: m.original,
       companyName: m.companyName,
-      _id: m.companyId,
+      _id: (m.companyId as unknown as ICompanyDocument)._id,
     }));
 
     const fields = ['original', 'companyName', '_id'];

@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { CommissionModel, ICommissionDocument, IShareableCommission } from '../../models/commissions';
 import { IRequest } from '../../types/request';
 import {
@@ -10,6 +11,7 @@ import {
   getUserCurrentAccrualsBalance,
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
+import { CommissionPayoutDayForUser } from '../../lib/constants';
 
 export interface IGetCommissionsForUserQuery {
   id: string;
@@ -78,8 +80,6 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
     payouts,
     accruals: accruals.map(c => getShareableCommission(c)),
     balance,
-    // hardcoding to Jan 15 2023 until after October 15th 2022
-    nextPayoutDate: new Date('2023-01-15'),
-    // nextPayoutDate: dayjs(getNextPayoutDate().date).date(CommissionPayoutDayForUser).toDate(),
+    nextPayoutDate: dayjs(getNextPayoutDate().date).date(CommissionPayoutDayForUser).toDate(),
   };
 };

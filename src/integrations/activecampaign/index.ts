@@ -3,6 +3,7 @@ import { FilterQuery, Schema } from 'mongoose';
 import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import { roundToPercision } from '../../lib/misc';
 import { CardModel } from '../../models/card';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
 import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
@@ -23,9 +24,9 @@ import { ActiveCampaignListId, SubscriptionCode } from '../../types/subscription
 export type FieldIds = Array<{ name: string; id: number }>
 export type FieldValues = Array<{ id: number; value: string }>
 
-interface ISubscriptionLists{
-  subscribe: Array<{listid: ActiveCampaignListId}>;
-  unsubscribe: Array<{listid: ActiveCampaignListId}>;
+interface ISubscriptionLists {
+  subscribe: Array<{ listid: ActiveCampaignListId }>;
+  unsubscribe: Array<{ listid: ActiveCampaignListId }>;
 }
 
 export interface UserLists {
@@ -79,22 +80,8 @@ const getShareableUserGroupFromUserGroupDocument = ({
   };
 };
 
-const groupTransactionsByYear = (transactions: ITransactionDocument[]) => {
-  const yearlyBreakdown: { [key: string]: ITransactionDocument[] } = {};
-
-  for (const transaction of transactions) {
-    const date = dayjs(transaction.date).utc();
-    if (!yearlyBreakdown.hasOwnProperty(date.format('YYYY'))) {
-      yearlyBreakdown[date.format('YYYY')] = [];
-    }
-
-    yearlyBreakdown[date.format('YYYY')].push(transaction);
-  }
-
-  return yearlyBreakdown;
-};
-
 const getYearlyKarmaScore = async (user: IUserDocument): Promise<number> => {
+  const oneYearAgo = dayjs().utc().subtract(1, 'year');
   const query: FilterQuery<ITransactionDocument> = {
     $and: [
       { user },
@@ -102,14 +89,13 @@ const getYearlyKarmaScore = async (user: IUserDocument): Promise<number> => {
       { sector: { $nin: sectorsToExcludeFromTransactions } },
       { amount: { $gt: 0 } },
       { reversed: { $ne: true } },
-      { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
-      { date: { $lte: dayjs().utc().endOf('year').toDate() } },
+      { date: { $gte: oneYearAgo.startOf('year').toDate() } },
+      { date: { $lte: oneYearAgo.endOf('year').toDate() } },
     ],
   };
 
   let transactions: ITransactionDocument[];
   let ratings: [number, number][];
-  let yearlyBreakdown: { [key: string]: ITransactionDocument[] };
   let yearlyImpactBreakdown: UserImpactYearData[];
 
   try {
@@ -127,30 +113,29 @@ const getYearlyKarmaScore = async (user: IUserDocument): Promise<number> => {
       ])
       .sort({ date: -1 });
     ratings = await getUserImpactRatings();
-    yearlyBreakdown = groupTransactionsByYear(transactions);
     yearlyImpactBreakdown = getYearlyImpactBreakdown(transactions, ratings);
   } catch (err) {
     console.error(err);
     return 0;
   }
 
-  if (!yearlyBreakdown.length) {
+  if (!yearlyImpactBreakdown || !yearlyImpactBreakdown.length
+      || yearlyImpactBreakdown.length <= 0 || !yearlyImpactBreakdown[0].score) {
     return 0;
   }
-
-  const impactData = yearlyImpactBreakdown.find(data => dayjs(data.date).utc().format('YYYY') === dayjs(yearlyBreakdown[0][0].date).utc().format('YYYY'));
-  return impactData ? impactData.score : 0;
+  return roundToPercision(yearlyImpactBreakdown[0].score, 2);
 };
 
 // Gets all commissions from the previous year. Not rolling 365 days.
 const getYearlyCommissionTotal = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneYearAgo = dayjs().utc().subtract(1, 'year');
     const commissions = await CommissionModel.find({
       $and: [
         { user: user._id },
         { status: { $ne: KarmaCommissionStatus.Canceled } },
-        { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('year').toDate() } },
+        { date: { $gte: oneYearAgo.startOf('year').toDate() } },
+        { date: { $lte: oneYearAgo.endOf('year').toDate() } },
       ],
     }).lean();
     if (!commissions) {
@@ -169,12 +154,13 @@ const getYearlyCommissionTotal = async (user: IUserDocument): Promise<number> =>
 
 const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
     const commissions = await CommissionModel.find({
       $and: [
         { user: user._id },
         { status: { $ne: KarmaCommissionStatus.Canceled } },
-        { date: { $gte: dayjs().subtract(1, 'month').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('month').toDate() } },
+        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
       ],
     }).lean().sort({ date: -1 });
     if (!commissions) {
@@ -193,12 +179,13 @@ const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<number> =
 
 const getMonthlyPaidCommissionPayouts = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
     const commissionPayouts = await CommissionPayoutModel.find({
       $and: [
         { user: user._id },
         { status: KarmaCommissionPayoutStatus.Paid },
-        { date: { $gte: dayjs().subtract(1, 'month').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('month').toDate() } },
+        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
       ],
     }).lean();
     if (!commissionPayouts) {
@@ -217,12 +204,14 @@ const getMonthlyPaidCommissionPayouts = async (user: IUserDocument): Promise<num
 
 const getYearlyEmissionsTotal = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneYearAgo = dayjs().utc().subtract(1, 'year');
     const impactReports = await UserMontlyImpactReportModel.find({
       $and: [
         { user: user._id },
-        { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('year').toDate() } },
-      ] }).lean();
+        { date: { $gte: oneYearAgo.startOf('year').toDate() } },
+        { date: { $lte: oneYearAgo.endOf('year').toDate() } },
+      ],
+    }).lean();
 
     if (!impactReports) {
       return 0;
@@ -240,11 +229,12 @@ const getYearlyEmissionsTotal = async (user: IUserDocument): Promise<number> => 
 
 const getWeeklyLoginCount = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneWeekAgo = dayjs().utc().subtract(1, 'week');
     const logins = await UserLogModel.find({
       $and: [
         { userId: user._id },
-        { date: { $gte: dayjs().subtract(1, 'week').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('week').toDate() } },
+        { date: { $gte: oneWeekAgo.startOf('week').toDate() } },
+        { date: { $lte: oneWeekAgo.endOf('week').toDate() } },
       ],
     }).lean();
     return logins ? logins.length : 0;
@@ -256,11 +246,12 @@ const getWeeklyLoginCount = async (user: IUserDocument): Promise<number> => {
 
 const getMonthlyLoginCount = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
     const logins = await UserLogModel.find({
       $and: [
         { userId: user._id },
-        { date: { $gte: dayjs().subtract(1, 'month').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('month').toDate() } },
+        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
       ],
     }).lean();
     return logins ? logins.length : 0;
@@ -272,11 +263,12 @@ const getMonthlyLoginCount = async (user: IUserDocument): Promise<number> => {
 
 const getYearlyLoginCount = async (user: IUserDocument): Promise<number> => {
   try {
+    const oneYearAgo = dayjs().utc().subtract(1, 'year');
     const logins = await UserLogModel.find({
       $and: [
         { userId: user._id },
-        { date: { $gte: dayjs().subtract(1, 'year').utc().toDate() } },
-        { date: { $lte: dayjs().utc().endOf('year').toDate() } },
+        { date: { $gte: oneYearAgo.startOf('year').toDate() } },
+        { date: { $lte: oneYearAgo.endOf('year').toDate() } },
       ],
     }).lean();
     return logins ? logins.length : 0;
@@ -663,10 +655,10 @@ export const getSubscriptionLists = async (subscribe: ActiveCampaignListId[], un
 export const updateActiveCampaignGroupSubscriptionsAndTags = async (user: IUserDocument, subscriptions: {
   userId: string;
   subscribe: SubscriptionCode[],
-  unsubscribe:SubscriptionCode[],
+  unsubscribe: SubscriptionCode[],
 }): Promise<{
   userId: string,
-  lists: {subscribe: SubscriptionCode[], unsubscribe: SubscriptionCode[]},
+  lists: { subscribe: SubscriptionCode[], unsubscribe: SubscriptionCode[] },
 }> => {
   try {
     const ac = new ActiveCampaignClient();

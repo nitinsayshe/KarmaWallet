@@ -126,6 +126,8 @@ export const AllowedOrigins = [
   'http://sandbox.karmawallet.io',
   'https://cu.sandbox.karmawallet.io',
   'http://cu.sandbox.karmawallet.io',
+  'https://dev.cu.sandbox.karmawallet.io',
+  'http://dev.cu.sandbox.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;

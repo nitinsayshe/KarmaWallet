@@ -23,12 +23,12 @@ export interface IRareTransaction {
   transaction_id: string;
   amt: number;
   currency: string;
-  certificate_url: string;
+  certificate_url?: string;
   statement_descriptor: string;
   processed: boolean;
   processed_ts: string;
-  refunded: boolean;
-  refunded_ts: string;
+  refunded?: boolean;
+  refunded_ts?: string;
   user: IRareUser;
   card: IRareCard;
 }

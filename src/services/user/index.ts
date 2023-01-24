@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import isemail from 'isemail';
 import { nanoid } from 'nanoid';
 import { FilterQuery } from 'mongoose';
 import dayjs from 'dayjs';
@@ -83,8 +84,10 @@ export const register = async (req: IRequest, {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
-    if (!email) throw new CustomError('A email is required.', ErrorTypes.INVALID_ARG);
-    email = email?.toLowerCase();
+
+    email = email?.toLowerCase()?.trim();
+    if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
+
     const passwordValidation = validatePassword(password);
     if (!passwordValidation.valid) {
       throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
@@ -243,6 +246,13 @@ export const logout = async (_: IRequest, authKey: string) => {
 
 export const updateUser = async (_: IRequest, user: IUserDocument, updates: Partial<IUser>) => {
   try {
+    if (!!updates?.emails) {
+      updates.emails.forEach((email) => {
+        if (!isemail.validate(email.email)) throw new CustomError('Invalid email found.', ErrorTypes.INVALID_ARG);
+      });
+    }
+    const email = updates.email?.toLowerCase()?.trim();
+    if (!!email && !isemail.validate(email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: dayjs().utc().toDate() }, { new: true });
   } catch (err) {
     throw asCustomError(err);
@@ -295,8 +305,9 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const { requestor } = req;
   const updates = req.body;
   const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
-  if (updates?.email) {
-    updates.email = updates?.email?.toLowerCase();
+  if (!!updates?.email) {
+    updates.email = updates.email.toLowerCase()?.trim();
+    if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
   const allowedFields: UserKeys[] = ['name', 'zipcode'];

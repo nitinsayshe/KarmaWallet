@@ -16,6 +16,7 @@ import { MatchedCompanyNameModel } from '../../models/matchedCompanyName';
 import { getUtcDate } from '../../lib/date';
 import { DataSourceMappingModel } from '../../models/dataSourceMapping';
 import { UnsdgModel } from '../../models/unsdg';
+import { removeTrailingSlash } from './clean_company_urls';
 
 // NOVEMBER ADDITION
 // 1) If company is updated and has sectors, overwrite all sectors on company
@@ -349,7 +350,10 @@ export const handleUpdateCompany = async (companyId: string, update: any): Promi
   if (notes) company.notes += `; ${notes}`;
   // TODO: add some data validation to these
   if (logo) company.logo = logo;
-  if (url) company.url = url;
+  if (url) {
+    const cleanUrl = removeTrailingSlash(url);
+    company.url = cleanUrl;
+  }
   if (companyName) company.companyName = companyName;
   await company.save();
 };
@@ -377,10 +381,12 @@ export const handleAddCompany = async (update: any): Promise<void> => {
     parentCompany,
   } = update;
 
+  const cleanUrl = removeTrailingSlash(url);
+
   if (!companyName) throw new Error('company name is required.');
   const newCompany = new CompanyModel({
     companyName,
-    url,
+    url: cleanUrl,
     logo,
     notes,
     sectors: [{ sector: primarySector, primary: true }],

@@ -6,6 +6,12 @@ export enum QueueNames {
 export enum CsvReportTypes {
   Transactions = 'transactions',
   Users = 'users',
+  Affiliates = 'affiliates',
+}
+
+export enum UserReportTypes {
+  Historical = 'historical',
+  ThirtyDays = 'thirtyDays',
 }
 
 export enum JobNames {
@@ -22,7 +28,6 @@ export enum JobNames {
   GlobalPlaidTransactionMapper = 'global-plaid-transaction-mapper',
   SendEmail = 'send-email',
   TotalOffsetsForAllUsers = 'total-offsets-for-all-users',
-  TransactionsMonitor = 'transactions-monitor',
   UserMonthlyImpactReport = 'user-monthly-impact-report',
   UserPlaidTransactionMapper = 'user-plaid-transaction-mapper',
   UpdateBouncedEmails = 'update-bounced-emails',
@@ -35,6 +40,7 @@ export enum JobNames {
   UpdateWildfireMerchantsAndData = 'update-wildfire-merchants-and-data',
   GenerateCommissionPayouts = 'generate-commission-payouts',
   GenerateAdminSummaryReport = 'generate-admin-summary-report',
+  GenerateUserReport = 'generate-user-report',
   UpdateWildfireCommissions = 'update-wildfire-commissions',
   SyncActiveCampaign = 'sync-active-campaign',
 }

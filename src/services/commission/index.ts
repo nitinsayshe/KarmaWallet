@@ -43,11 +43,11 @@ export const getShareableCommission = ({
   lastModified,
   lastStatusUpdate,
   amount,
-  allocation: { user: allocation.user },
+  allocation: { user: allocation.user, karma: allocation.karma },
 });
 
 export const getCommissionsForAllUsers = async () => {
-  const commissions = await CommissionModel.find({ })
+  const commissions = await CommissionModel.find({})
     .sort({ createdOn: -1 })
     .populate(defaultCommissionPopulation);
   return commissions.map(c => getShareableCommission(c));

@@ -1,7 +1,7 @@
 import argon2 from 'argon2';
 import isemail from 'isemail';
 import { nanoid } from 'nanoid';
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
@@ -10,7 +10,7 @@ import {
 import CustomError, { asCustomError } from '../../lib/customError';
 import * as Session from '../session';
 import {
-  TokenTypes, passwordResetTokenMinutes, ErrorTypes, UserRoles,
+  TokenTypes, passwordResetTokenMinutes, ErrorTypes, UserRoles, CardStatus,
 } from '../../lib/constants';
 import * as TokenService from '../token';
 import { IRequest } from '../../types/request';
@@ -23,7 +23,16 @@ import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
 import { UserLogModel } from '../../models/userLog';
 import { getUtcDate } from '../../lib/date';
-import { updateNewUserSubscriptions, updateSubscriptionsIfUserWasVisitor } from '../subscription';
+import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsIfUserWasVisitor } from '../subscription';
+import { PlaidClient } from '../../clients/plaid';
+import { CardModel } from '../../models/card';
+import { TransactionModel } from '../../models/transaction';
+import { UserGroupModel } from '../../models/userGroup';
+import { UserImpactTotalModel } from '../../models/userImpactTotals';
+import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
+import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
+import { deleteContact } from '../../integrations/activecampaign';
+import { UserGroupStatus } from '../../types/groups';
 
 dayjs.extend(utc);
 
@@ -342,6 +351,30 @@ export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>)
   return changePassword(req, req.requestor._id, newPassword);
 };
 
+export const deleteLinkedCardData = async (userId: Types.ObjectId) => {
+  const plaidClient = new PlaidClient();
+
+  const cards = await CardModel.find({ userId, status: CardStatus.Linked });
+
+  // Unlinking Plaid Access Tokens
+  for (const card of cards) {
+    await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+  }
+
+  await CardModel.deleteMany({ userId });
+};
+
+export const deleteUserData = async (userId: Types.ObjectId) => {
+  // Removing Transacitons
+  await TransactionModel.findOne({ user: userId });
+  await deleteLinkedCardData(userId);
+  // Removing Other Data/Reports
+  await UserImpactTotalModel.deleteOne({ user: userId });
+  await UserLogModel.deleteMany({ userId });
+  await UserMontlyImpactReportModel.deleteMany({ user: userId });
+  await UserTransactionTotalModel.deleteMany({ user: userId });
+};
+
 export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>) => {
   const minutes = passwordResetTokenMinutes;
   let { email } = req.body;
@@ -380,5 +413,37 @@ export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyToke
     consumed: false,
   });
   if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
+  return { message: 'OK' };
+};
+
+export const deleteUser = async (req: IRequest<{}, {userId: string}, {}>) => {
+  try {
+    // validate user id
+    const { userId } = req.query;
+    if (!userId || !Types.ObjectId.isValid(userId)) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
+
+    // get user from db
+    const user = await UserModel.findById(userId).lean();
+    if (!user) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
+
+    // get user email
+    const email = user.emails.find(userEmail => userEmail.primary)?.email;
+
+    // throw error if user is enrolled in group
+    const userGroups = await UserGroupModel.countDocuments({ user: user._id, status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] } });
+    if (userGroups > 0) {
+      throw new CustomError('Cannot delete users enrolled in group(s).', ErrorTypes.INVALID_ARG);
+    }
+
+    // delete user from active campaign
+    if (email) await deleteContact(email);
+    await cancelUserSubscriptions(user._id.toString());
+
+    await deleteUserData(user._id);
+
+    await UserModel.deleteOne({ _id: user._id });
+  } catch (err) {
+    throw asCustomError(err);
+  }
   return { message: 'OK' };
 };

@@ -473,7 +473,6 @@ export const getAllGroupMembers = async (req: IRequest<IGroupRequestParams>) => 
 };
 
 export const getGroups = (__: IRequest, query: FilterQuery<IGroup>) => {
-  console.log('////// should be getting groups');
   // TODO: add support getting name by sub string
   // TODO: add not returning private groups unless requestor is karma member
 

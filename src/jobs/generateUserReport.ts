@@ -1,6 +1,7 @@
 import { SandboxedJob } from 'bullmq';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { CardStatus } from '../lib/constants';
 import { JobNames, UserReportTypes } from '../lib/constants/jobScheduler';
 import { asCustomError } from '../lib/customError';
 import { CardModel } from '../models/card';
@@ -70,6 +71,7 @@ const generateUserMetricsReport = async (daysBack: number) => {
           createdOn: {
             $lte: day.endOf('day').toDate(),
           },
+          status: CardStatus.Linked,
         })
         .group({
           _id: '$userId',
@@ -132,6 +134,7 @@ const generateUserHistoryReport = async () => {
           createdOn: {
             $lte: day.endOf('month').toDate(),
           },
+          status: CardStatus.Linked,
         })
         .group({
           _id: '$userId',

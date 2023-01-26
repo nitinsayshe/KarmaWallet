@@ -37,6 +37,10 @@ export interface IWildfireMerchantIntegration {
   Categories?: IWildfireCategory[],
 }
 
+export interface IKarmaMerchantIntegration {
+  companyId: ObjectId
+}
+
 export interface IMerchantIntegrations {
   wildfire?: IWildfireMerchantIntegration;
 }
@@ -85,6 +89,11 @@ const merchant = new Schema({
           Name: { type: String },
           ParentId: { type: Number },
         }],
+      },
+    },
+    karma: {
+      type: {
+        companyId: { type: Schema.Types.ObjectId, ref: 'company' },
       },
     },
   },

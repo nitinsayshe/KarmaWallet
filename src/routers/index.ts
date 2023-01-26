@@ -21,6 +21,7 @@ import userImpactReports from './userImpactReports';
 import dataSource from './dataSource';
 import values from './values';
 import visitor from './visitor';
+import promo from './promo';
 
 const routers = (app: Express) => {
   admin(app);
@@ -45,6 +46,7 @@ const routers = (app: Express) => {
   values(app);
   commission(app);
   webhook(app);
+  promo(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

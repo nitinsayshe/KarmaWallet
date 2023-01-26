@@ -3,28 +3,16 @@
 /* eslint-disable camelcase */
 /* eslint-disable no-unused-vars */
 import 'dotenv/config';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { manuallyUpdateTransactionsFalsePositiveNegatives } from '../src/services/scripts/update_false_positive_negatives_transactions';
-import { calculateAvgScores } from '../src/services/scripts/calculate_avg_sector_scores';
-import { checkCompanySectorsForMainTierSector } from '../src/services/scripts/check_company_sectors_for_main_tier_sector';
-import matchExistingTransactions, { singleBatchMatch } from '../src/services/scripts/match-existing-transactions';
-import * as GenerateUserImpactTotals from '../src/jobs/generateUserImpactTotals';
-import { updateCompanies, updateDataSources, updateCompanyDataSources, updateDataSourceMapping, updateMatchedCompanyNames } from '../src/services/scripts/batch_company_updates';
-import { removeDuplicatePlaidTransactions } from '../src/services/scripts/remove_duplicate_plaid_transactions';
-import { CompanyDataSourceModel } from '../src/models/companyDataSource';
-import { monthlyBatchUpdateEffects } from '../src/services/scripts/monthly_batch_update_effects';
-import { sanitizeEmails } from '../src/services/scripts/sanitizeEmails';
-import { associateWildfireMatches, matchWildfireCompanies, searchResultsProcessing } from '../src/services/scripts/wildfire';
-import { updateCompaniesUrls } from '../src/services/scripts/update_companies_urls';
-import { generateMicrosoftWildfireCompanies } from '../src/services/scripts/generate_microsoft_wildfire_companies';
-import * as uploadCsvToGoogleDrive from '../src/jobs/uploadCsvToGoogleDrive';
-import { CsvReportTypes } from '../src/lib/constants/jobScheduler';
-import { deleteUser } from '../src/services/scripts/delete_user';
+import { PromoModel } from '../src/models/promo';
+import { CommissionModel, KarmaCommissionStatus } from '../src/models/commissions';
+import { MerchantModel } from '../src/models/merchant';
 
-const BATCH_SIZE = 50000;
-const STARTING_INDEX = 4;
+dayjs.extend(utc);
 
 (async () => {
   try {
@@ -33,14 +21,37 @@ const STARTING_INDEX = 4;
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    // await matchExistingTransactions({
-    //   startingIndex: STARTING_INDEX,
-    //   endingIndex: null,
-    //   batchSize: BATCH_SIZE,
+    // await PromoModel.create({
+    //   name: 'facebook-january-10-dollar-link-bonus',
+    //   startDate: dayjs.utc('2021-01-01').toDate(),
+    //   endDate: dayjs.utc('2021-01-31').toDate(),
+    //   limit: 1,
+    //   amount: 10,
+    //   enabled: true,
     // });
+
+    await CommissionModel.create({
+      name: 'Impact Karma',
+      merchant: '63d2b2d148234101740ccdd0',
+      company: '62def0e77b212526d1e055ca',
+      user: '62f6761cf5e3ffdae60ef249',
+      amount: 10,
+      status: KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+      allocation: {
+        user: 10,
+        karma: 0,
+      },
+      integrations: {
+        karma: {
+          amount: 10,
+          promo: '63d2ae1a0ff74cb9d95bba55',
+        },
+      },
+    });
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));
-    await MongoClient.disconnect();
+    console.log(err);
+    // await MongoClient.disconnect();
   }
 })();

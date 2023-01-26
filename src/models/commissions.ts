@@ -11,6 +11,7 @@ import { IShareableMerchant } from './merchant';
 import { IShareableCompany } from './company';
 import { IShareableUser } from './user';
 
+// https://kb.wildfire-corp.com/article/ygwr-commission-history
 export enum WildfireCommissionStatus {
   Pending = 'PENDING',
   Paid = 'PAID',

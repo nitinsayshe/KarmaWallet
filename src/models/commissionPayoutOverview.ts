@@ -8,6 +8,8 @@ import {
 
 export enum KarmaCommissionPayoutOverviewStatus {
   Pending = 'pending',
+  AwaitingVerification = 'awaiting-verification',
+  Verified = 'verified',
   Sent = 'sent',
 }
 
@@ -30,8 +32,10 @@ export interface ICommissionPayoutOverviewDocument extends ICommissionPayoutOver
 const commissionPayoutOverview = new Schema({
   date: { type: Date },
   amount: { type: Number },
+  amountPaid: { type: Number },
   status: { type: String, enum: Object.values(KarmaCommissionPayoutOverviewStatus) },
   commissionPayouts: { type: [Schema.Types.ObjectId], ref: 'commissionPayouts' },
+  vendorPayments: { type: [Schema.Types.ObjectId], ref: 'vendorPayments' },
 });
 
 export const CommissionPayoutOverviewModel = model<ICommissionPayoutOverviewDocument, PaginateModel<IShareableCommissionPayoutOverview>>('commissionPayoutOverview', commissionPayoutOverview);

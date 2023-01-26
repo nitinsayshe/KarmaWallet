@@ -115,8 +115,8 @@ export const getKarmaCommissionStatusFromWildfireStatus = (wildfireStatus: Wildf
   if (currentKarmaStatus === KarmaCommissionStatus.ReceivedFromVendor && WildfireCommissionStatus.Paid === wildfireStatus) return KarmaCommissionStatus.ReceivedFromVendor;
   switch (wildfireStatus) {
     case WildfireCommissionStatus.Pending:
-      return KarmaCommissionStatus.Pending;
     case WildfireCommissionStatus.Ready:
+      return KarmaCommissionStatus.Pending;
     case WildfireCommissionStatus.Paid:
       return KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment;
     case WildfireCommissionStatus.Disqualified:

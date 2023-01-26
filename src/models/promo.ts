@@ -10,6 +10,9 @@ import { getUtcDate } from '../lib/date';
 
 export interface IPromo {
   name: string;
+  promoText: string;
+  disclaimerText: string;
+  enabled: boolean;
   startDate: Date;
   endDate: Date;
   limit: number;
@@ -24,6 +27,8 @@ export type IPromoModel = IModel<IPromo>;
 
 const promoSchema = new Schema({
   name: { type: String, required: true },
+  promoText: { type: String, required: true },
+  disclaimerText: { type: String, required: false },
   startDate: { type: Date, default: () => getUtcDate() },
   expiration: { type: Date },
   enabled: { type: Boolean, default: true },

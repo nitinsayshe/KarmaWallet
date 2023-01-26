@@ -8,6 +8,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { IShareableTransaction, ITransactionDocument } from './transaction';
+import { getUtcDate } from '../lib/date';
 
 export interface IOffsetData {
   dollars: number;
@@ -113,12 +114,12 @@ const statementSchema = new Schema({
   // the date this statement is for
   date: {
     type: Date,
-    default: new Date(),
+    default: () => getUtcDate(),
   },
   // the date this statement was generated
   // will usually be the 1st day of the month
   // after `date`
-  createdOn: { type: Date },
+  createdOn: { type: Date, default: () => getUtcDate() },
 });
 statementSchema.plugin(mongoosePaginate);
 

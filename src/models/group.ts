@@ -8,6 +8,7 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { UserGroupStatus } from '../types/groups';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser } from './user';
+import { getUtcDate } from '../lib/date';
 
 export enum GroupPrivacyStatus {
   Protected = 'protected',
@@ -91,11 +92,11 @@ const groupSchema = new Schema({
   },
   createdOn: {
     type: Date,
-    default: new Date(),
+    default: () => getUtcDate(),
   },
   lastModified: {
     type: Date,
-    default: new Date(),
+    default: () => getUtcDate(),
   },
   settings: {
     type: {
@@ -115,7 +116,7 @@ const groupSchema = new Schema({
           maxDollarAmount: { type: Number },
           lastModified: {
             type: Date,
-            default: new Date(),
+            default: () => getUtcDate(),
           },
         },
       },

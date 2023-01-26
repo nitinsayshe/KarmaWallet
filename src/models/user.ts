@@ -7,6 +7,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 import { UserRoles } from '../lib/constants';
+import { getUtcDate } from '../lib/date';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -94,14 +95,14 @@ const userSchema = new Schema({
   }],
   name: { type: String, required: true },
   password: { type: String, required: true },
-  dateJoined: { type: Date, default: new Date() },
+  dateJoined: { type: Date, default: () => getUtcDate() },
   zipcode: { type: String },
   role: {
     type: String,
     default: 'none',
     enum: Object.values(UserRoles),
   },
-  lastModified: { type: Date, default: new Date() },
+  lastModified: { type: Date, default: () => getUtcDate() },
   legacyId: { type: String },
   integrations: {
     rare: {

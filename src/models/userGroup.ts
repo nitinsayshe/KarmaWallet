@@ -12,6 +12,7 @@ import { IModel, IRef } from '../types/model';
 import { IGroup, IShareableGroup } from './group';
 import { ISubgroup } from './subgroup';
 import { IShareableUser, IUser } from './user';
+import { getUtcDate } from '../lib/date';
 
 export interface IShareableGroupMember {
   name: string;
@@ -60,11 +61,11 @@ const userGroupSchema = new Schema({
   },
   joinedOn: {
     type: Date,
-    default: new Date(),
+    default: () => getUtcDate(),
   },
   lastModified: {
     type: Date,
-    default: new Date(),
+    default: () => getUtcDate(),
   },
   subgroups: [{
     type: Schema.Types.ObjectId,

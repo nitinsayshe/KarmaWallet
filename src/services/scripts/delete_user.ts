@@ -19,7 +19,8 @@ export const deleteUser = async ({ userId, email }: IDeleteUserParams) => {
   const user = await UserModel.findOne({ $or: [{ _id: userId }, { 'emails.email': email }] });
   if (!user) throw new Error('User not found');
   console.log('/////// Found User', user.name);
-  cancelUserSubscriptions(user._id.toString());
+  await cancelUserSubscriptions(user._id.toString());
+
   const userGroups = await UserGroupModel.find({ user: user._id });
   if (userGroups.length) throw new Error('User is a member of a group');
   console.log('Deleting user', user._id);

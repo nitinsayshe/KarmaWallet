@@ -10,4 +10,7 @@ router.route('/dashboard')
 router.route('/payout')
   .get(authenticate, CommissionController.getCommissionsForUserByPayout);
 
+router.route('/getAll')
+  .get(authenticate, CommissionController.getCommissionsForAllUsers);
+
 export default (app: Express) => app.use('/commission', router);

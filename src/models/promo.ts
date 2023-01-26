@@ -17,6 +17,14 @@ export interface IPromo {
   endDate: Date;
   limit: number;
   amount: number;
+  // add slots array for FE to display (will use names like createAccountTop, createAccountBottom, etc)
+  // slots: string[];
+  // add text slots object with keys for these display slots
+  /*
+    {
+      createAccountTop: { description: 'Create Account Top', text: 'Create Account Top Text' },
+    }
+  */
 }
 
 export interface IPromoDocument extends IPromo, Document {

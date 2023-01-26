@@ -10,6 +10,7 @@ import { getUtcDate } from '../lib/date';
 import { IShareableMerchant } from './merchant';
 import { IShareableCompany } from './company';
 import { IShareableUser } from './user';
+import { IPromo } from './promo';
 
 // https://kb.wildfire-corp.com/article/ygwr-commission-history
 export enum WildfireCommissionStatus {
@@ -46,6 +47,12 @@ export interface IWildfireCommissionIntegration {
   ModifiedDate: Date,
   MerchantOrderID: string,
   MerchantSKU: string
+}
+
+export interface IKarmaInternalCommissionIntegration {
+  amount: number,
+  createdOn: Date,
+  promo: IRef<ObjectId, IPromo>,
 }
 
 export interface ICommissionIntegrations {
@@ -125,6 +132,11 @@ const commission = new Schema({
       MerchantOrderID: { type: String },
       MerchantSKU: { type: String },
       TrackingCode: { type: String },
+    },
+    karma: {
+      amount: { type: Number },
+      createdOn: { type: Date, default: () => getUtcDate() },
+      promo: { type: Schema.Types.ObjectId, ref: 'promo' },
     },
   },
 });

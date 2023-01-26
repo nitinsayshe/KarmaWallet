@@ -1,10 +1,10 @@
+import dayjs from 'dayjs';
 import {
   CommissionModel,
   ICommissionDocument,
   IShareableCommission,
   KarmaCommissionStatus,
 } from '../../models/commissions';
-import dayjs from 'dayjs';
 import { IRequest } from '../../types/request';
 import {
   CommissionPayoutModel,
@@ -101,7 +101,7 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
 export const getUsersWithCommissionsForPayout = async () => {
   const users = await CommissionModel.aggregate([
     {
-     aaaaaaaaaaaaaaaaaaaa $match: {
+      $match: {
         status: KarmaCommissionStatus.ReceivedFromVendor,
       },
     },

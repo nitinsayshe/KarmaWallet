@@ -29,3 +29,12 @@ export const getUsersPaginated: IRequestHandler = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const deleteUser: IRequestHandler<{}, {userId:string}, {}> = async (req, res) => {
+  try {
+    await UserService.deleteUser(req);
+    output.api(req, res, 'Success');
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

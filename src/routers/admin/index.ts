@@ -1,15 +1,15 @@
 import { Express, Router } from 'express';
-import usersRouter from './users';
 import accessControlRouter from './accessControl';
 import companyRouter from './company';
 import dataSourceRouter from './dataSource';
-import integrationsRouter from './integrations';
-import reportsRouter from './reports';
-import jobRouter from './job';
 import groupsRouter from './groups';
-import uploadRouter from './upload';
+import integrationsRouter from './integrations';
+import jobRouter from './job';
+import reportsRouter from './reports';
 import sectorsRouter from './sectors';
 import socketRouter from './socket';
+import uploadRouter from './upload';
+import usersRouter from './users';
 
 const adminRouter = Router();
 

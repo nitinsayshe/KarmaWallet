@@ -38,6 +38,7 @@ export const getShareableCommission = ({
   lastModified,
   lastStatusUpdate,
   allocation,
+  amount,
 }: IShareableCommission) => ({
   _id,
   merchant,
@@ -46,8 +47,16 @@ export const getShareableCommission = ({
   createdOn,
   lastModified,
   lastStatusUpdate,
-  allocation: { user: allocation.user },
+  amount,
+  allocation: { user: allocation.user, karma: allocation.karma },
 });
+
+export const getCommissionsForAllUsers = async () => {
+  const commissions = await CommissionModel.find({})
+    .sort({ createdOn: -1 })
+    .populate(defaultCommissionPopulation);
+  return commissions.map(c => getShareableCommission(c));
+};
 
 export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommissionsForUserQuery, {}>) => {
   const { requestor } = req;

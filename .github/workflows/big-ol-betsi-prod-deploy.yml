@@ -8,10 +8,10 @@ on:
 
 jobs:
   build:
-    runs-on: [self-hosted, big-ol-betsi-prod]
     strategy:
       matrix:
-        node-version: [16.x]
+       serverName: [big-ol-betsi-prod, betsi-jobs-1]
+    runs-on: ${{ matrix.serverName }}
     steps:
     - uses: actions/checkout@v2
       with:

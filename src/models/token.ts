@@ -7,6 +7,7 @@ import {
 import { TokenTypes } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser } from './user';
+import { getUtcDate } from '../lib/date';
 
 export interface IToken {
   type: TokenTypes;
@@ -26,7 +27,7 @@ export type ITokenModel = IModel<IToken>;
 const tokenSchema = new Schema({
   type: { type: String, required: true, enum: Object.values(TokenTypes) },
   value: { type: String, required: true },
-  createdOn: { type: Date, default: new Date() },
+  createdOn: { type: Date, default: () => getUtcDate() },
   expires: { type: Date, required: true },
   user: { type: Schema.Types.ObjectId, ref: 'user' },
   resource: {

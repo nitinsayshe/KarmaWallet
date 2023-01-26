@@ -21,7 +21,7 @@ export interface IGetDateFromData {
 
 export const isValidDate = (dateObj: Date) => dateObj instanceof Date && !Number.isNaN(dateObj.valueOf());
 
-export const getUtcDate = (date?: Date) => dayjs(date).utc();
+export const getUtcDate = (date?: Date) => dayjs(date).utc(false);
 
 export const getDateFrom = ({
   months,

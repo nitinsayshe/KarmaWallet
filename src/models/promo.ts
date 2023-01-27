@@ -41,7 +41,7 @@ const promoSchema = new Schema({
   expiration: { type: Date },
   enabled: { type: Boolean, default: true },
   limit: { type: Number, default: 1 },
-  rewardAmount: { type: Number, default: 0 },
+  amount: { type: Number, default: 0 },
 });
 
 export const PromoModel = model<IPromoDocument, Model<IPromo>>('promo', promoSchema);

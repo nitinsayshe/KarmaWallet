@@ -676,7 +676,7 @@ export class PlaidMapper {
       ])
       .lean();
 
-    manualDocuments = manualDocuments.filter(m => (m.companyId as unknown as ICompanyDocument).hidden?.status === false);
+    manualDocuments = manualDocuments.filter(m => (m.companyId as unknown as ICompanyDocument)?.hidden?.status === false);
 
     const manual = manualDocuments.map(m => ({
       original: m.original,

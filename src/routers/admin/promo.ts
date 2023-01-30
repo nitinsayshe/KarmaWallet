@@ -6,6 +6,13 @@ import protectedRequirements from '../../middleware/protected';
 
 const router = Router();
 
+router.route('/create')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminPromoController.createPromo,
+  );
+
 router.route('/:promoId')
   .put(
     authenticate,

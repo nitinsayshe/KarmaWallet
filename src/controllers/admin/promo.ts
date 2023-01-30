@@ -11,3 +11,12 @@ export const updatePromo: IRequestHandler<PromoService.IPromoRequestParams, {}, 
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const createPromo: IRequestHandler<PromoService.IPromoRequestParams, {}, PromoService.IPromoRequestBody> = async (req, res) => {
+  try {
+    const promo = await PromoService.createPromo(req);
+    output.api(req, res, promo);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

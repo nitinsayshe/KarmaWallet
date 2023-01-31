@@ -21,6 +21,7 @@ import { CommissionPayoutDayForUser } from '../../lib/constants';
 export enum CommissionType {
   'wildfire' = 'wildfire',
   'karma' = 'karma',
+  'all' = 'all'
 }
 
 export interface IGetCommissionsForUserQuery {

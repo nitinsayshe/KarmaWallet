@@ -51,12 +51,18 @@ export interface IUpdatePasswordBody {
   password: string;
 }
 
+export interface IUrlParam {
+  key: string;
+  value: string;
+}
+
 export interface IUserData extends ILoginData {
   name: string;
   zipcode: string;
   role?: UserRoles;
   pw?: string;
   shareASaleId?: boolean;
+  referralParams?: IUrlParam[];
 }
 
 export interface IEmailVerificationData {
@@ -89,6 +95,7 @@ export const register = async (req: IRequest, {
   name,
   zipcode,
   shareASaleId,
+  referralParams,
 }: IUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -144,6 +151,12 @@ export const register = async (req: IRequest, {
 
       rawUser.integrations.shareasale = {
         trackingId: uniqueId,
+      };
+    }
+
+    if (!!referralParams) {
+      rawUser.integrations.referrals = {
+        params: referralParams,
       };
     }
 

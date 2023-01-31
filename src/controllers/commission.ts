@@ -21,9 +21,9 @@ export const getCommissionDashboardSummary: IRequestHandler = async (req, res) =
   }
 };
 
-export const getCommissionsForAllUsers: IRequestHandler = async (req, res) => {
+export const getCommissionsForAllUsers: IRequestHandler< { type: CommissionService.CommissionType }> = async (req, res) => {
   try {
-    const commissions = await CommissionService.getCommissionsForAllUsers();
+    const commissions = await CommissionService.getCommissionsForAllUsers(req);
     output.api(req, res, commissions);
   } catch (err) {
     output.error(req, res, asCustomError(err));

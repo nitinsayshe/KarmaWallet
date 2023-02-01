@@ -93,6 +93,7 @@ export const register = async (req: IRequest, {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
+    name = name.replace(/\s/g, ' ').trim();
 
     email = email?.toLowerCase()?.trim();
     if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
@@ -323,10 +324,11 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
+    const name = updates?.name?.replace(/\s/g, ' ');
     switch (key) {
       case 'name':
-        requestor.name = updates.name;
-        if (legacyUser) legacyUser.name = updates.name;
+        requestor.name = name;
+        if (legacyUser) legacyUser.name = name;
         break;
       case 'zipcode':
         requestor.zipcode = updates.zipcode;

@@ -44,9 +44,7 @@ const promoSchema = new Schema({
   enabled: { type: Boolean, default: true },
   limit: { type: Number, default: 1 },
   amount: { type: Number, default: 0 },
-  campaign: { type: Schema.Types.ObjectId,
-    ref: 'campaign',
-  },
+  campaign: { type: Schema.Types.ObjectId, ref: 'campaign' },
 });
 
 export const PromoModel = model<IPromoDocument, Model<IPromo>>('promo', promoSchema);

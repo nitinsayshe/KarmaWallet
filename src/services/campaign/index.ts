@@ -16,6 +16,7 @@ export const getCampaigns = (__: IRequest, query: FilterQuery<ICampaign>) => {
     limit: query?.limit || 10,
   };
   const filter: FilterQuery<ICampaign> = { ...query.filter };
+
   return CampaignModel.paginate(filter, options);
 };
 

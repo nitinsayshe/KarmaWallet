@@ -5,6 +5,7 @@ import {
   ObjectId,
   PaginateModel,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 
 export interface ICampaign {
@@ -22,5 +23,7 @@ const campaignSchema = new Schema({
   name: { type: String, required: true },
   description: { type: String, required: false },
 });
+
+campaignSchema.plugin(mongoosePaginate);
 
 export const CampaignModel = model<ICampaignDocument, PaginateModel<ICampaign>>('capaign', campaignSchema);

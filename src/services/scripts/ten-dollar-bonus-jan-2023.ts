@@ -5,6 +5,7 @@ import { emailIds } from './emailIds';
 import { CardModel } from '../../models/card';
 import { UserModel } from '../../models/user';
 import { CardStatus } from '../../lib/constants';
+import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
 
 dayjs.extend(utc);
 
@@ -46,4 +47,38 @@ export const getBonusUsersFromEmailCampaign = async (startDate: string, endDate:
     }
   }
   return { users: uniqueIds, numberOfUsers: uniqueIds.length };
+};
+
+export const generateCommissionsForTenDollarBonus = async (startDate: string, endDate: string) => {
+  const { users: facebookUsers } = await getFacebookBonusUsers(startDate, endDate);
+  const { users: emailUsers } = await getBonusUsersFromEmailCampaign(startDate, endDate);
+  const uniqueUsers = [...facebookUsers, ...emailUsers];
+  console.log(`Found ${uniqueUsers.length} unique users`);
+  // const uniqueUsers = ['621b99235f87e75f53659b49', '621b99235f87e75f53659b9c'];
+  for (const userId of uniqueUsers) {
+    const commission = await CommissionModel.findOne({ user: userId, 'integrations.karma.promo': '63d2ae1a0ff74cb9d95bba55' });
+    if (commission) {
+      console.log(`Commission already exists for user ${userId}`);
+      continue;
+    }
+    console.log(`Creating commission for user ${userId}`);
+    await CommissionModel.create({
+      name: 'Impact Karma',
+      merchant: '63d2b2d148234101740ccdd0',
+      company: '62def0e77b212526d1e055ca',
+      user: userId,
+      amount: 10,
+      status: KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+      allocation: {
+        user: 10,
+        karma: 0,
+      },
+      integrations: {
+        karma: {
+          amount: 10,
+          promo: '63d2ae1a0ff74cb9d95bba55',
+        },
+      },
+    });
+  }
 };

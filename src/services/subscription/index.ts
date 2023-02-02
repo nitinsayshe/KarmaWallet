@@ -263,7 +263,7 @@ export const getUserGroupSubscriptionsToUpdate = async (user: Partial<IUser & { 
 
     const memberships = await UserGroupModel.find(memberQuery).lean();
     if (!!memberships && memberships?.length > 0) {
-      if (!activeCampaignListIds && !activeCampaignListIds.includes(ActiveCampaignListId.GroupMembers)) {
+      if (!activeCampaignListIds || !activeCampaignListIds.includes(ActiveCampaignListId.GroupMembers)) {
         userSub.subscribe.push(SubscriptionCode.groupMembers);
       }
     } else if (!!activeCampaignListIds && activeCampaignListIds.includes(ActiveCampaignListId.GroupMembers)) {

@@ -1,11 +1,11 @@
 import dayjs from 'dayjs';
 import { FilterQuery, Schema } from 'mongoose';
 import { ActiveCampaignClient } from '../../clients/activeCampaign';
+import { CardStatus } from '../../lib/constants';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import { roundToPercision } from '../../lib/misc';
 import { CardModel } from '../../models/card';
-import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
 import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
 import { CompanyModel } from '../../models/company';
 import { GroupModel, IGroup, IGroupDocument, IShareableGroup } from '../../models/group';
@@ -133,9 +133,15 @@ const getYearlyCommissionTotal = async (user: IUserDocument): Promise<number> =>
     const commissions = await CommissionModel.find({
       $and: [
         { user: user._id },
-        { status: { $ne: KarmaCommissionStatus.Canceled } },
-        { date: { $gte: oneYearAgo.startOf('year').toDate() } },
-        { date: { $lte: oneYearAgo.endOf('year').toDate() } },
+        {
+          status: {
+            $nin: [
+              KarmaCommissionStatus.Canceled,
+            ],
+          },
+        },
+        { createdOn: { $gte: oneYearAgo.startOf('year').toDate() } },
+        { createdOn: { $lte: oneYearAgo.endOf('year').toDate() } },
       ],
     }).lean();
     if (!commissions) {
@@ -158,11 +164,19 @@ const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<number> =
     const commissions = await CommissionModel.find({
       $and: [
         { user: user._id },
-        { status: { $ne: KarmaCommissionStatus.Canceled } },
-        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
-        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
+        {
+          status: {
+            $nin: [
+              KarmaCommissionStatus.Canceled,
+            ],
+          },
+        },
+        { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { createdOn: { $lte: oneMonthAgo.endOf('month').toDate() } },
       ],
-    }).lean().sort({ date: -1 });
+    })
+      .lean()
+      .sort({ date: -1 });
     if (!commissions) {
       return 0;
     }
@@ -177,32 +191,41 @@ const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<number> =
   }
 };
 
-const getMonthlyPaidCommissionPayouts = async (user: IUserDocument): Promise<number> => {
+const getAvailableCommissionPayouts = async (
+  user: IUserDocument,
+): Promise<number> => {
   try {
-    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
-    const commissionPayouts = await CommissionPayoutModel.find({
+    const commissions = await CommissionModel.find({
       $and: [
         { user: user._id },
-        { status: KarmaCommissionPayoutStatus.Paid },
-        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
-        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
+        {
+          status: {
+            $nin: [
+              KarmaCommissionStatus.PaidToUser,
+              KarmaCommissionStatus.Canceled,
+            ],
+          },
+        },
       ],
     }).lean();
-    if (!commissionPayouts) {
+    if (!commissions) {
       return 0;
     }
-    const commissionPayoutsSum = commissionPayouts.reduce(
-      (partialSum, payout) => partialSum + payout.amount,
+
+    const commissionSum = commissions.reduce(
+      (partialSum, commission) => partialSum + commission.amount,
       0,
     );
-    return commissionPayoutsSum;
+    return commissionSum;
   } catch (err) {
     console.error(err);
     return 0;
   }
 };
 
-const getYearlyEmissionsTotal = async (user: IUserDocument): Promise<number> => {
+const getYearlyEmissionsTotal = async (
+  user: IUserDocument,
+): Promise<number> => {
   try {
     const oneYearAgo = dayjs().utc().subtract(1, 'year');
     const impactReports = await UserMontlyImpactReportModel.find({
@@ -412,8 +435,8 @@ export const prepareMonthlyUpdatedFields = async (
 
   customField = customFields.find((field) => field.name === 'cashbackDollarsAvailable');
   if (!!customField) {
-    const monthlyPayouts = await getMonthlyPaidCommissionPayouts(user);
-    fieldValues.push({ id: customField.id, value: monthlyPayouts.toFixed(2) });
+    const availablePayouts = await getAvailableCommissionPayouts(user);
+    fieldValues.push({ id: customField.id, value: availablePayouts.toFixed(2) });
   }
 
   customField = customFields.find((field) => field.name === 'hasLinkedPaypal');
@@ -439,7 +462,7 @@ export const setLinkedCardData = async (userId: string, customFields: FieldIds, 
   try {
     const cards = await CardModel.find({
       userId,
-      status: 'linked',
+      status: CardStatus.Linked,
     }).lean().sort({ createdOn: 1 });
 
     let customField = customFields.find((field) => field.name === 'hasLinkedCard');
@@ -621,8 +644,8 @@ export const getUserGroups = async (userId: string): Promise<Array<string>> => {
   let groupNames: string[];
   if (userGroups) {
     groupNames = userGroups
-      .map(g => getShareableUserGroupFromUserGroupDocument(g))
-      .map(g => (g.group as IGroupDocument)?.name);
+      .map((g) => getShareableUserGroupFromUserGroupDocument(g))
+      .map((g) => (g.group as IGroupDocument)?.name);
   }
   return groupNames;
 };

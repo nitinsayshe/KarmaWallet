@@ -25,11 +25,16 @@ const backfillSubscribeList = [ActiveCampaignListId.GeneralUpdates, ActiveCampai
 
 const getGroupSubscriptionListsToUpdate = async (user: IUserDocument):
 Promise<ISubscriptionLists> => {
-  const subs = await getUserGroupSubscriptionsToUpdate(user);
-  return {
-    subscribe: subs.subscribe.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
-    unsubscribe: subs.unsubscribe.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
-  };
+  try {
+    const subs = await getUserGroupSubscriptionsToUpdate(user);
+    return {
+      subscribe: subs?.subscribe?.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+      unsubscribe: subs?.unsubscribe?.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+    };
+  } catch (err) {
+    console.error('Error getting group subscriptions to update', err);
+    return { subscribe: [], unsubscribe: [] };
+  }
 };
 
 const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> => getGroupSubscriptionListsToUpdate(user);
@@ -47,6 +52,7 @@ const prepareSyncUsersRequest = async (
         const isValid = isemail.validate(email, { minDomainAtoms: 2 });
         if (!isValid) {
           console.log('Skipping invalid email: ', email);
+          return false;
         }
         return isValid;
       }
@@ -58,8 +64,10 @@ const prepareSyncUsersRequest = async (
       let fields = await prepareInitialSyncFields(user, customFields, []);
       let tags: string[] = [];
       let lists: ISubscriptionLists = { subscribe: [], unsubscribe: [] };
-      contact.first_name = user.name?.split(' ')[0];
-      contact.last_name = user.name?.split(' ').pop();
+
+      const name = user.name?.replace(/\s/g, ' ');
+      contact.first_name = name?.split(' ')[0];
+      contact.last_name = name?.split(' ').pop();
 
       switch (syncType) {
         case ActiveCampaignSyncTypes.DAILY:
@@ -80,7 +88,7 @@ const prepareSyncUsersRequest = async (
         case ActiveCampaignSyncTypes.BACKFILL:
           fields = await prepareBackfillSyncFields(user, customFields, fields);
           lists = await getBackfillSubscriptionLists(user);
-          lists.subscribe = lists.subscribe.concat(backfillSubscribeList);
+          lists.subscribe = lists?.subscribe?.concat(backfillSubscribeList);
           tags = await getUserGroups(user._id);
           break;
         default:

@@ -17,7 +17,7 @@ import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
-import { ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { ALPHANUMERIC_REGEX, ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
@@ -156,9 +156,8 @@ export const register = async (req: IRequest, {
     }
 
     if (!!referralParams) {
-      rawUser.integrations.referrals = {
-        params: referralParams,
-      };
+      const validParams = referralParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+      if (validParams.length > 0) rawUser.integrations.referrals = { params: referralParams };
     }
 
     delete rawUser._id;

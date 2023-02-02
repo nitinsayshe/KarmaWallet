@@ -33,6 +33,10 @@ router.route('/batch/parent-child')
   );
 
 router.route('/:companyId')
-  .put(authenticate, protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }), AdminCompanyController.updateCompany);
+  .put(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminCompanyController.updateCompany,
+  );
 
 export default router;

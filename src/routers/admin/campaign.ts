@@ -12,4 +12,19 @@ router.route('/')
     protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminCampaignController.getCampaigns,
   );
+
+router.route('/')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminCampaignController.createCampaign,
+  );
+
+router.route('/:campaignId')
+  .put(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminCampaignController.updateCampaign,
+  );
+
 export default router;

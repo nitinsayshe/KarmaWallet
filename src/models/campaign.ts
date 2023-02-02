@@ -2,8 +2,8 @@ import {
   Schema,
   model,
   Document,
-  Model,
   ObjectId,
+  PaginateModel,
 } from 'mongoose';
 import { IModel } from '../types/model';
 
@@ -23,4 +23,4 @@ const campaignSchema = new Schema({
   description: { type: String, required: false },
 });
 
-export const CampaignModel = model<ICampaignDocument, Model<ICampaign>>('capaign', campaignSchema);
+export const CampaignModel = model<ICampaignDocument, PaginateModel<ICampaign>>('capaign', campaignSchema);

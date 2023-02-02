@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosError, AxiosInstance } from 'axios';
 import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
 
@@ -165,6 +165,9 @@ export class ActiveCampaignClient extends SdkClient {
       return data;
     } catch (err) {
       console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.log(`Bulk contact import request failed: ${JSON.stringify((err as AxiosError)?.response?.data?.failureReasons)}`);
+      }
       throw asCustomError(err);
     }
   }

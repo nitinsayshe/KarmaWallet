@@ -1,9 +1,7 @@
-import { ObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { CampaignModel, ICampaign } from '../../models/campaign';
+import { CampaignModel } from '../../models/campaign';
 import { PromoModel } from '../../models/promo';
-import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 
 export interface IPromoRequestBody {
@@ -34,7 +32,7 @@ export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
   if (campaign) {
     const campaignItem = await CampaignModel.findOne({ name: campaign });
     if (!campaignItem) throw new CustomError(`No campaign with id ${campaign} was found. Please check your spelling and try again.`, ErrorTypes.NOT_FOUND);
-    campaignId = campaignItem._id;
+    campaignId = campaignItem;
   }
 
   try {
@@ -61,12 +59,11 @@ export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoR
     const { name, enabled, limit, amount, disclaimerText, promoText, campaign } = req.body;
 
     if (!promoId) throw new CustomError('A promo id is required.', ErrorTypes.INVALID_ARG);
-    if (!name && !limit && !amount && !promoText && !disclaimerText && enabled === undefined) throw new CustomError('No promo fields were provided.', ErrorTypes.INVALID_ARG);
+    if (!name && !limit && !amount && !promoText && !disclaimerText && enabled === undefined && !campaign) throw new CustomError('No promo fields were provided.', ErrorTypes.INVALID_ARG);
 
     const promo = await PromoModel.findById(promoId);
-
     if (!promo) throw new CustomError(`No promo with id ${promoId} was found.`, ErrorTypes.NOT_FOUND);
-
+    // check for values and update
     if (name) promo.name = name;
     if (limit) promo.limit = limit;
     if (amount) promo.amount = amount;
@@ -78,8 +75,7 @@ export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoR
       if (!campaignItem) {
         throw new CustomError(`No campaign with id ${campaign} was found. Please check your spelling and try again.`, ErrorTypes.NOT_FOUND);
       }
-
-      promo.campaign = campaignItem._id as IRef<ObjectId, ICampaign>;
+      promo.campaign = campaignItem;
     }
 
     return promo.save();

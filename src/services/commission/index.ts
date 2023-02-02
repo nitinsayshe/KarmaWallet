@@ -18,8 +18,18 @@ import {
 } from './utils';
 import { CommissionPayoutDayForUser } from '../../lib/constants';
 
+export enum CommissionType {
+  'wildfire' = 'wildfire',
+  'karma' = 'karma',
+  'all' = 'all'
+}
+
 export interface IGetCommissionsForUserQuery {
   id: string;
+}
+
+export interface ICommissionsRequestParams {
+  type: CommissionType;
 }
 
 const defaultCommissionPopulation = [
@@ -51,10 +61,17 @@ export const getShareableCommission = ({
   allocation: { user: allocation.user, karma: allocation.karma },
 });
 
-export const getCommissionsForAllUsers = async () => {
-  const commissions = await CommissionModel.find({})
+export const getCommissionsForAllUsers = async (req: IRequest<ICommissionsRequestParams, {}, {}>) => {
+  const { type } = req.params;
+  let query = {};
+
+  if (type === CommissionType.wildfire) query = { 'integrations.wildfire': { $ne: null } };
+  if (type === CommissionType.karma) query = { 'integrations.karma': { $ne: null } };
+
+  const commissions = await CommissionModel.find(query)
     .sort({ createdOn: -1 })
     .populate(defaultCommissionPopulation);
+
   return commissions.map(c => getShareableCommission(c));
 };
 

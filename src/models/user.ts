@@ -41,6 +41,11 @@ export interface IActiveCampaignUserIntegration {
   latestSync: Date;
 }
 
+export interface IUrlParam {
+  key: string;
+  value: string;
+}
+
 export interface IPaypalUserIntegration {
   user_id: string,
   sub: string,
@@ -53,11 +58,16 @@ export interface IPaypalUserIntegration {
   email_verified: Boolean,
 }
 
+export interface IReferrals {
+  params: IUrlParam[];
+}
+
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IRareUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
   shareasale?: IShareASale;
+  referrals?: IReferrals;
 }
 
 export interface IShareableUser {
@@ -131,6 +141,11 @@ const userSchema = new Schema({
     shareasale: {
       type: {
         trackingId: { type: String },
+      },
+    },
+    referrals: {
+      type: {
+        params: { type: Array },
       },
     },
   },

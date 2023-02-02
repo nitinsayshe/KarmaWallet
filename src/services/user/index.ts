@@ -17,7 +17,7 @@ import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
-import { ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { ALPHANUMERIC_REGEX, ZIPCODE_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
@@ -51,12 +51,18 @@ export interface IUpdatePasswordBody {
   password: string;
 }
 
+export interface IUrlParam {
+  key: string;
+  value: string;
+}
+
 export interface IUserData extends ILoginData {
   name: string;
   zipcode: string;
   role?: UserRoles;
   pw?: string;
   shareASaleId?: boolean;
+  referralParams?: IUrlParam[];
 }
 
 export interface IEmailVerificationData {
@@ -89,6 +95,7 @@ export const register = async (req: IRequest, {
   name,
   zipcode,
   shareASaleId,
+  referralParams,
 }: IUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -146,6 +153,11 @@ export const register = async (req: IRequest, {
       rawUser.integrations.shareasale = {
         trackingId: uniqueId,
       };
+    }
+
+    if (!!referralParams) {
+      const validParams = referralParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+      if (validParams.length > 0) rawUser.integrations.referrals = { params: referralParams };
     }
 
     delete rawUser._id;

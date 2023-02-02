@@ -1,0 +1,26 @@
+import {
+  Schema,
+  model,
+  Document,
+  Model,
+  ObjectId,
+} from 'mongoose';
+import { IModel } from '../types/model';
+
+export interface ICampaign {
+  name: string;
+  description?: string;
+}
+
+export interface ICampaignDocument extends ICampaign, Document {
+  _id: ObjectId;
+}
+
+export type ICampaignModel = IModel<ICampaign>;
+
+const campaignSchema = new Schema({
+  name: { type: String, required: true },
+  description: { type: String, required: false },
+});
+
+export const CampaignModel = model<ICampaignDocument, Model<ICampaign>>('capaign', campaignSchema);

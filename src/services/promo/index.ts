@@ -18,7 +18,11 @@ export interface IPromoRequestParams {
   promoId: string;
 }
 
-export const getPromos = async (_req: IRequest) => PromoModel.find({});
+export const getPromos = async (_req: IRequest) => PromoModel.find({})
+  .populate({
+    path: 'campaign',
+    model: CampaignModel,
+  });
 
 export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
   const { name, enabled, limit, amount, disclaimerText, promoText, campaign } = req.body;

@@ -123,6 +123,46 @@ export const exec = async () => {
       totalCommissions = commissions.length;
     }
 
+    const totalWildfireCommissions = commissions.reduce(
+      (partialSum, commission) => {
+        if (!!commission?.integrations?.wildfire) {
+          return ++partialSum;
+        }
+        return partialSum;
+      },
+      0,
+    );
+
+    const totalWildfireCommissionDollars = commissions.reduce(
+      (partialSum, commission) => {
+        if (!!commission?.integrations?.wildfire) {
+          return partialSum + commission.amount;
+        }
+        return partialSum;
+      },
+      0,
+    );
+
+    const totalKarmaWalletCommissions = commissions.reduce(
+      (partialSum, commission) => {
+        if (!!commission?.integrations?.karma) {
+          return ++partialSum;
+        }
+        return partialSum;
+      },
+      0,
+    );
+
+    const totalKarmaWalletCommissionDollars = commissions.reduce(
+      (partialSum, commission) => {
+        if (!!commission?.integrations?.karma) {
+          return partialSum + commission.amount;
+        }
+        return partialSum;
+      },
+      0,
+    );
+
     const loggedInLastSevenDays = await UserLogModel.aggregate()
       .match({
         date: { $gte: dayjs().subtract(7, 'days').utc().toDate() },
@@ -189,6 +229,10 @@ export const exec = async () => {
       commissions: {
         total: totalCommissions,
         dollars: roundToPercision(commissionDollars, 0),
+        totalWildfire: totalWildfireCommissions,
+        totalWildfireDollars: roundToPercision(totalWildfireCommissionDollars, 0),
+        totalKarmaWallet: totalKarmaWalletCommissions,
+        totalKarmaWalletDollars: roundToPercision(totalKarmaWalletCommissionDollars, 0),
       },
     };
 

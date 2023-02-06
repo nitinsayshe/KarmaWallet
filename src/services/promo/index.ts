@@ -1,8 +1,9 @@
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CampaignModel } from '../../models/campaign';
-import { PromoModel } from '../../models/promo';
+import { IPromo, IShareablePromo, PromoModel } from '../../models/promo';
 import { IRequest } from '../../types/request';
+import { getShareableCampaign } from '../campaign';
 
 export interface IPromoRequestBody {
   name: string;
@@ -18,11 +19,42 @@ export interface IPromoRequestParams {
   promoId: string;
 }
 
-export const getPromos = async (_req: IRequest) => PromoModel.find({})
-  .populate({
-    path: 'campaign',
-    model: CampaignModel,
-  });
+export const getShareablePromo = ({
+  _id,
+  promoText,
+  disclaimerText,
+  amount,
+  limit,
+  enabled,
+  name,
+  campaign,
+}: IPromo) => {
+  const shareable: IShareablePromo = {
+    _id,
+    promoText,
+    disclaimerText,
+    amount,
+    limit,
+    enabled,
+    name,
+  };
+
+  if (campaign) {
+    shareable.campaign = getShareableCampaign(campaign);
+  }
+
+  return shareable;
+};
+
+export const getPromos = async (_req: IRequest) => {
+  const promos = await PromoModel.find({})
+    .populate({
+      path: 'campaign',
+      model: CampaignModel,
+    });
+
+  return promos.map(p => getShareablePromo(p));
+};
 
 export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
   const { name, enabled, limit, amount, disclaimerText, promoText, campaign } = req.body;
@@ -51,7 +83,8 @@ export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
       campaign: campaignId,
     });
 
-    return promo.save();
+    promo.save();
+    return getShareablePromo(promo);
   } catch (err) {
     throw asCustomError(err);
   }
@@ -82,7 +115,9 @@ export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoR
       promo.campaign = campaignItem;
     }
 
-    return promo.save();
+    promo.save();
+
+    return getShareablePromo(promo);
   } catch (err) {
     throw asCustomError(err);
   }

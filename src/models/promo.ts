@@ -5,11 +5,12 @@ import {
   Model,
   ObjectId,
 } from 'mongoose';
-import { IModel, IRef } from '../types/model';
+import { IModel } from '../types/model';
 import { getUtcDate } from '../lib/date';
-import { ICampaign } from './campaign';
+import { ICampaign, IShareableCampaign } from './campaign';
 
 export interface IPromo {
+  _id: ObjectId;
   name: string;
   promoText: string;
   disclaimerText: string;
@@ -18,7 +19,7 @@ export interface IPromo {
   endDate: Date;
   limit: number;
   amount: number;
-  campaign: IRef<ObjectId, ICampaign>;
+  campaign?: ICampaign;
   // add slots array for FE to display (will use names like createAccountTop, createAccountBottom, etc)
   // slots: string[];
   // add text slots object with keys for these display slots
@@ -27,6 +28,17 @@ export interface IPromo {
       createAccountTop: { description: 'Create Account Top', text: 'Create Account Top Text' },
     }
   */
+}
+
+export interface IShareablePromo {
+  _id: ObjectId;
+  name: string;
+  promoText: string;
+  disclaimerText: string;
+  enabled: boolean;
+  limit: number;
+  amount: number;
+  campaign?: IShareableCampaign;
 }
 
 export interface IPromoDocument extends IPromo, Document {

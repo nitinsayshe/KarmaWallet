@@ -57,6 +57,7 @@ export interface IKarmaInternalCommissionIntegration {
 
 export interface ICommissionIntegrations {
   wildfire?: IWildfireCommissionIntegration;
+  karma?: IKarmaInternalCommissionIntegration;
 }
 
 export interface IShareableCommission {

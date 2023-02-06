@@ -74,6 +74,10 @@ export interface IAdminSummary {
   commissions: {
     total: number;
     dollars: number;
+    totalWildfire: number,
+    totalWildfireDollars: number,
+    totalKarmaWallet: number,
+    totalKarmaWalletDollars: number,
   }
 }
 
@@ -191,6 +195,10 @@ const adminSummary = {
     type: {
       total: Number,
       dollars: Number,
+      totalWildfire: Number,
+      totalWildfireDollars: Number,
+      totalKarmaWallet: Number,
+      totalKarmaWalletDollars: Number,
     },
   },
 

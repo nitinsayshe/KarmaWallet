@@ -12,6 +12,7 @@ import uploadRouter from './upload';
 import usersRouter from './users';
 import commissionsRouter from './commissions';
 import promoRouter from './promo';
+import campaignRouter from './campaign';
 
 const adminRouter = Router();
 
@@ -28,5 +29,6 @@ adminRouter.use('/sectors', sectorsRouter);
 adminRouter.use('/socket', socketRouter);
 adminRouter.use('/commissions', commissionsRouter);
 adminRouter.use('/promo', promoRouter);
+adminRouter.use('/campaign', campaignRouter);
 
 export default (app: Express) => app.use('/admin', adminRouter);

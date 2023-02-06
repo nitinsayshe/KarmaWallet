@@ -3,6 +3,7 @@ import { IRequest } from '../../types/request';
 import { CampaignModel, ICampaign } from '../../models/campaign';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
+import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 
 export interface ICampaignRequestBody {
   name: string;
@@ -10,11 +11,17 @@ export interface ICampaignRequestBody {
 }
 
 export const getCampaigns = (__: IRequest, query: FilterQuery<ICampaign>) => {
+  const { projection, skip, limit } = query;
+  const invalidQuery = !ALPHANUMERIC_REGEX.test(projection) || !ALPHANUMERIC_REGEX.test(skip) || !ALPHANUMERIC_REGEX.test(limit);
+
+  if (invalidQuery) throw new CustomError('Invalid query parameters.', ErrorTypes.INVALID_ARG);
+
   const options = {
-    projection: query?.projection || '',
-    page: query?.skip || 1,
-    limit: query?.limit || 10,
+    projection: projection || '',
+    page: skip || 1,
+    limit: limit || 10,
   };
+
   const filter: FilterQuery<ICampaign> = { ...query.filter };
 
   return CampaignModel.paginate(filter, options);

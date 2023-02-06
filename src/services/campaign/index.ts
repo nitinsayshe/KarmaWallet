@@ -1,4 +1,4 @@
-import { FilterQuery } from 'mongoose';
+import { FilterQuery, PaginateResult } from 'mongoose';
 import { IRequest } from '../../types/request';
 import { CampaignModel, ICampaign } from '../../models/campaign';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -10,7 +10,45 @@ export interface ICampaignRequestBody {
   description?: string;
 }
 
-export const getCampaigns = (__: IRequest, query: FilterQuery<ICampaign>) => {
+export const getShareableCampaign = ({
+  _id,
+  description,
+  name,
+}: ICampaign) => ({
+  _id,
+  description,
+  name,
+});
+
+export const getShareablePaginatedCampaigns = ({
+  docs,
+  totalDocs,
+  limit,
+  hasPrevPage,
+  hasNextPage,
+  page,
+  totalPages,
+  offset,
+  prevPage,
+  nextPage,
+  pagingCounter,
+  meta,
+}: PaginateResult<ICampaign>) => ({
+  docs: docs.map(c => getShareableCampaign(c)),
+  totalDocs,
+  limit,
+  hasPrevPage,
+  hasNextPage,
+  page,
+  totalPages,
+  offset,
+  prevPage,
+  nextPage,
+  pagingCounter,
+  meta,
+});
+
+export const getCampaigns = async (__: IRequest, query: FilterQuery<ICampaign>) => {
   const { projection, skip, limit } = query;
   const invalidQuery = !ALPHANUMERIC_REGEX.test(projection) || !ALPHANUMERIC_REGEX.test(skip) || !ALPHANUMERIC_REGEX.test(limit);
 
@@ -23,8 +61,8 @@ export const getCampaigns = (__: IRequest, query: FilterQuery<ICampaign>) => {
   };
 
   const filter: FilterQuery<ICampaign> = { ...query.filter };
-
-  return CampaignModel.paginate(filter, options);
+  const paginatedCampaigns = await CampaignModel.paginate(filter, options);
+  return getShareablePaginatedCampaigns(paginatedCampaigns);
 };
 
 export const createCampaign = async (req: IRequest<{}, {}, ICampaignRequestBody>) => {

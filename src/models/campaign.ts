@@ -10,13 +10,51 @@ import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
 
 export interface ICampaign {
-  name: string;
-  description?: string;
   lastModified: Date;
   createdOn: Date;
+  name: string;
+  description?: string;
+  _id: ObjectId;
+}
+
+export interface IShareableCampaign {
+  _id: ObjectId;
+  name: string;
+  description: string;
+}
+
+export interface IShareablePaginatedCampaigns {
+  docs: IShareableCampaign[];
+  totalDocs: number;
+  limit: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  page?: number | undefined;
+  totalPages: number;
+  offset: number;
+  prevPage?: number | null | undefined;
+  nextPage?: number | null | undefined;
+  pagingCounter: number;
+  meta?: any;
+}
+
+export interface IPaginatedCampaigns {
+  docs: ICampaign[];
+  totalDocs: number;
+  limit: number;
+  hasPrevPage: boolean;
+  hasNextPage: boolean;
+  page?: number | undefined;
+  totalPages: number;
+  offset: number;
+  prevPage?: number | null | undefined;
+  nextPage?: number | null | undefined;
+  pagingCounter: number;
+  meta?: any;
 }
 
 export type ICampaignModel = IModel<ICampaign>;
+
 export interface ICampaignDocument extends ICampaign, Document {
   _id: ObjectId;
 }

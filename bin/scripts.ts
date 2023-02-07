@@ -11,6 +11,7 @@ import { Logger } from '../src/services/logger';
 import { PromoModel } from '../src/models/promo';
 import { CommissionModel, KarmaCommissionStatus } from '../src/models/commissions';
 import { MerchantModel } from '../src/models/merchant';
+import { getEvaluatedUNSDGsCountForCompanies } from '../src/services/scripts/generate_evaluated_UNSDGs_by_company';
 
 dayjs.extend(utc);
 
@@ -30,24 +31,7 @@ dayjs.extend(utc);
     //   enabled: true,
     // });
 
-    await CommissionModel.create({
-      name: 'Impact Karma',
-      merchant: '63d2b2d148234101740ccdd0',
-      company: '62def0e77b212526d1e055ca',
-      user: '62f6761cf5e3ffdae60ef249',
-      amount: 10,
-      status: KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
-      allocation: {
-        user: 10,
-        karma: 0,
-      },
-      integrations: {
-        karma: {
-          amount: 10,
-          promo: '63d2ae1a0ff74cb9d95bba55',
-        },
-      },
-    });
+    await getEvaluatedUNSDGsCountForCompanies('621b99375f87e75f5365a661');
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

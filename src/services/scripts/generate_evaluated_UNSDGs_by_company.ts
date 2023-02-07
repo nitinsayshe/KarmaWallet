@@ -137,11 +137,11 @@ export const ___getEvaluatedUNSDGsCountForCompanies = async () => {
   fs.writeFileSync(path.join(__dirname, '.tmp', 'evaluatedCompanies'), JSON.stringify(evaluatedCompanies, null, 2));
 };
 
-export const getEvaluatedUNSDGsCountForCompanies = async () => {
+export const getEvaluatedUNSDGsCountForCompanies = async (companyId: string) => {
   let count = 0;
   let errorCount = 0;
   const errorCompanies = [];
-  const companies = await CompanyModel.find({ });
+  const companies = companyId ? await CompanyModel.find({ _id: companyId }) : await CompanyModel.find({ });
   const now = dayjs().utc().toDate();
   const unsdgObjects = await UnsdgModel.find({}).sort({ goalNum: 1 });
 
@@ -227,6 +227,7 @@ export const getEvaluatedUNSDGsCountForCompanies = async () => {
     company.evaluatedUnsdgs = [];
 
     Object.keys(unsdgs).forEach((key: string, i) => {
+      // @ts-ignore
       const unsdgObject = unsdgObjects[i];
 
       company.evaluatedUnsdgs.push({
@@ -241,7 +242,9 @@ export const getEvaluatedUNSDGsCountForCompanies = async () => {
     for (const evaluatedUnsdg of company.evaluatedUnsdgs) {
       const { unsdg } = evaluatedUnsdg;
       const companyUnsdg = await CompanyUnsdgModel.findOne({ company: company._id, unsdg });
-      evaluatedUnsdg.score = companyUnsdg?.value || null;
+      if (!companyUnsdg) continue;
+      if (!!evaluatedUnsdg.evaluated) evaluatedUnsdg.score = companyUnsdg.value;
+      else evaluatedUnsdg.score = null;
     }
 
     await company.save();

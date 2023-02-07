@@ -31,7 +31,7 @@ dayjs.extend(utc);
     //   enabled: true,
     // });
 
-    await getEvaluatedUNSDGsCountForCompanies('621b99d45f87e75f536601ad');
+    await getEvaluatedUNSDGsCountForCompanies('621b99375f87e75f5365a661');
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

@@ -243,11 +243,8 @@ export const getEvaluatedUNSDGsCountForCompanies = async (companyId: string) => 
       const { unsdg } = evaluatedUnsdg;
       const companyUnsdg = await CompanyUnsdgModel.findOne({ company: company._id, unsdg });
       if (!companyUnsdg) continue;
-      if (!!evaluatedUnsdg.evaluated) {
-        evaluatedUnsdg.score = companyUnsdg.value;
-      } else {
-        evaluatedUnsdg.score = null;
-      }
+      if (!!evaluatedUnsdg.evaluated) evaluatedUnsdg.score = companyUnsdg.value;
+      else evaluatedUnsdg.score = null;
     }
 
     await company.save();

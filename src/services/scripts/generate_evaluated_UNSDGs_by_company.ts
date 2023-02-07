@@ -257,6 +257,6 @@ export const getEvaluatedUNSDGsCountForCompanies = async (companyId: string) => 
 
     console.log('/////// this is the company data', company);
 
-    // await company.save();
+    await company.save();
   }
 };

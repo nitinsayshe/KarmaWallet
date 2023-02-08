@@ -137,7 +137,7 @@ export const ___getEvaluatedUNSDGsCountForCompanies = async () => {
   fs.writeFileSync(path.join(__dirname, '.tmp', 'evaluatedCompanies'), JSON.stringify(evaluatedCompanies, null, 2));
 };
 
-export const getEvaluatedUNSDGsCountForCompanies = async (companyId: string) => {
+export const getEvaluatedUNSDGsCountForCompanies = async (companyId?: string) => {
   let count = 0;
   let errorCount = 0;
   const errorCompanies = [];

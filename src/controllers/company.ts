@@ -17,6 +17,7 @@ export const getCompanies: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const companies = await CompanyService.getCompanies(req, query);
+    console.log('////// Companies', companies);
     const sharableCompanies = {
       ...companies,
       docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),

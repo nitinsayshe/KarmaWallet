@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { FilterQuery, Types, ObjectId, Schema } from 'mongoose';
+import { FilterQuery, Types, ObjectId, isValidObjectId } from 'mongoose';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getRandomInt } from '../../lib/number';
@@ -226,16 +226,18 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
+export const getCompanies = (request: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
+  // @ts-ignore
+  const unsdgs = request.query?.evaluatedUnsdgs ? request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg)) : [];
   // console.log('///////// the request', request.query);
   // console.log('//////// Unsdg Filter', filter.evaluatedUnsdgs);
   // find companies that have evaluatedUnsdgs that match the unsdg query and have a score of .5 or greater
-  const unsdgQuery = filter.evaluatedUnsdgs ? {
+  const unsdgQuery = !!unsdgs ? {
     evaluatedUnsdgs: {
       $elemMatch: {
         $and: [
-          { unsdg: filter.evaluatedUnsdgs },
+          { unsdg: { $in: unsdgs } },
           { score: { $ne: null } },
           { score: { $gte: 0.5 } },
         ],
@@ -243,42 +245,35 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
     },
   } : {};
 
-  console.log('//////// UN SDG QUERY', JSON.stringify(unsdgQuery, null, 2));
-  // const sectorQuery = filter['sectors.sector'] ? { 'sectors.sector': query.filter['sectors.sector'] } : {};
-  // const ratingQuery = filter.rating ? { rating: query.filter.rating } : {};
-  // const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
-  // const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+  const sectorQuery = filter['sectors.sector'] ? { 'sectors.sector': query.filter['sectors.sector'] } : {};
+  const ratingQuery = filter.rating ? { rating: query.filter.rating } : {};
+  const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
+  const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
 
-  const companyAggregate = CompanyModel.aggregate()
-    .match(
-      // {
-      //   evaluatedUnsdgs: {
-      //     $elemMatch: {
-      //       $and: [
-      //         { unsd'629b9a6c91571911cc170f25'tId },
-      //         { score: { $ne: null } },
-      //         { score: { $gte: 0.5 } },
-      //
-      {
-        parentCompany: new Schema.Types.ObjectId('621b994a5f87e75f5365b179'),
+  const companyAggregate = CompanyModel.aggregate([
+    {
+      $match: {
+        $and: [
+          unsdgQuery,
+          sectorQuery,
+          ratingQuery,
+          hiddenQuery,
+          creationQuery,
+        ],
       },
-      //     },
-      //   },
-      // },
-      /// $and: [
-      //   unsdgQuery,
-      //   sectorQuery,
-      //   ratingQuery,
-      //   creationQuery,
-      //   hiddenQuery,
-      // ],
-    );
-    // .lookup({
-    //   from: 'companies',
-    //   localField: 'parentCompany',
-    //   foreignField: '_id',
-    //   as: 'parentCompany',
-    // });
+    },
+    {
+      $lookup: {
+        from: 'companies',
+        localField: 'parentCompany',
+        foreignField: '_id',
+        as: 'parentCompany',
+      },
+    },
+    {
+      $unwind: '$parentCompany',
+    },
+  ]);
 
   const options = {
     projection: query?.projection || '',
@@ -287,10 +282,6 @@ export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, include
     limit: query?.limit || 10,
   };
 
-  // const results = await CompanyModel.aggregatePaginate(companyAggregate, options);
-  // // filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
-  // console.log('/////////// RESULTS', results);
-  // return results;
   return CompanyModel.aggregatePaginate(companyAggregate, options);
 };
 

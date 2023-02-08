@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { FilterQuery, isValidObjectId, ObjectId, Types } from 'mongoose';
+import { FilterQuery, Types, ObjectId, Schema } from 'mongoose';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getRandomInt } from '../../lib/number';
@@ -227,36 +227,71 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 };
 
 export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
-  const options = {
-    projection: query?.projection || '',
-    populate: query.population || [
-      {
-        path: 'merchant',
-        model: MerchantModel,
-      },
-      {
-        path: 'parentCompany',
-        model: CompanyModel,
-        populate: [
-          {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
+  const { filter } = query;
+  // console.log('///////// the request', request.query);
+  // console.log('//////// Unsdg Filter', filter.evaluatedUnsdgs);
+  // find companies that have evaluatedUnsdgs that match the unsdg query and have a score of .5 or greater
+  const unsdgQuery = filter.evaluatedUnsdgs ? {
+    evaluatedUnsdgs: {
+      $elemMatch: {
+        $and: [
+          { unsdg: filter.evaluatedUnsdgs },
+          { score: { $ne: null } },
+          { score: { $gte: 0.5 } },
         ],
       },
+    },
+  } : {};
+
+  console.log('//////// UN SDG QUERY', JSON.stringify(unsdgQuery, null, 2));
+  // const sectorQuery = filter['sectors.sector'] ? { 'sectors.sector': query.filter['sectors.sector'] } : {};
+  // const ratingQuery = filter.rating ? { rating: query.filter.rating } : {};
+  // const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
+  // const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+
+  const companyAggregate = CompanyModel.aggregate()
+    .match(
+      // {
+      //   evaluatedUnsdgs: {
+      //     $elemMatch: {
+      //       $and: [
+      //         { unsd'629b9a6c91571911cc170f25'tId },
+      //         { score: { $ne: null } },
+      //         { score: { $gte: 0.5 } },
+      //
       {
-        path: 'sectors.sector',
-        model: SectorModel,
+        parentCompany: new Schema.Types.ObjectId('621b994a5f87e75f5365b179'),
       },
-    ],
+      //     },
+      //   },
+      // },
+      /// $and: [
+      //   unsdgQuery,
+      //   sectorQuery,
+      //   ratingQuery,
+      //   creationQuery,
+      //   hiddenQuery,
+      // ],
+    );
+    // .lookup({
+    //   from: 'companies',
+    //   localField: 'parentCompany',
+    //   foreignField: '_id',
+    //   as: 'parentCompany',
+    // });
+
+  const options = {
+    projection: query?.projection || '',
     page: query?.skip || 1,
     sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
     limit: query?.limit || 10,
   };
-  const filter: FilterQuery<ICompany> = { ...query.filter };
-  filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
-  if (!includeHidden) filter['hidden.status'] = false;
-  return CompanyModel.paginate(filter, options);
+
+  // const results = await CompanyModel.aggregatePaginate(companyAggregate, options);
+  // // filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
+  // console.log('/////////// RESULTS', results);
+  // return results;
+  return CompanyModel.aggregatePaginate(companyAggregate, options);
 };
 
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {

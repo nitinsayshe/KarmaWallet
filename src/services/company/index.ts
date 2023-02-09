@@ -230,10 +230,13 @@ export const getCompanies = (request: IRequest, query: FilterQuery<ICompany>, in
   const { filter } = query;
   // @ts-ignore
   const unsdgs = request.query?.evaluatedUnsdgs ? request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg)) : [];
+  // @ts-ignore
+  const sectors = request.query?.sectors ? request.query.sectors.split(',').map(sector => new Types.ObjectId(sector)) : [];
   // console.log('///////// the request', request.query);
   // console.log('//////// Unsdg Filter', filter.evaluatedUnsdgs);
   // find companies that have evaluatedUnsdgs that match the unsdg query and have a score of .5 or greater
-  const unsdgQuery = !!unsdgs ? {
+  console.log('////./. are there unsdg', unsdgs.length);
+  const unsdgQuery = !!unsdgs.length ? {
     evaluatedUnsdgs: {
       $elemMatch: {
         $and: [
@@ -245,22 +248,23 @@ export const getCompanies = (request: IRequest, query: FilterQuery<ICompany>, in
     },
   } : {};
 
-  const sectorQuery = filter['sectors.sector'] ? { 'sectors.sector': query.filter['sectors.sector'] } : {};
+  const sectorQuery = !!sectors.length ? { 'sectors.sector': sectors } : {};
   const ratingQuery = filter.rating ? { rating: query.filter.rating } : {};
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
-  const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+  // const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
 
   const companyAggregate = CompanyModel.aggregate([
     {
-      $match: {
-        $and: [
-          unsdgQuery,
-          sectorQuery,
-          ratingQuery,
-          hiddenQuery,
-          creationQuery,
-        ],
-      },
+      $match: sectorQuery,
+    },
+    {
+      $match: ratingQuery,
+    },
+    {
+      $match: hiddenQuery,
+    },
+    {
+      $match: unsdgQuery,
     },
     {
       $lookup: {

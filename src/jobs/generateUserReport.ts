@@ -2,7 +2,7 @@ import { SandboxedJob } from 'bullmq';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { CardStatus } from '../lib/constants';
-import { JobNames, UserReportTypes } from '../lib/constants/jobScheduler';
+import { JobNames, UserReportType } from '../lib/constants/jobScheduler';
 import { asCustomError } from '../lib/customError';
 import { CardModel } from '../models/card';
 import { ReportModel } from '../models/report';
@@ -11,12 +11,13 @@ import { UserModel } from '../models/user';
 dayjs.extend(utc);
 
 /**
- * jobs to run every two hors to generate a new user reports
+ * jobs to run every two hours to generate a new user reports
  */
 
 interface IJobData {
-  reportType: UserReportTypes;
+  reportType: UserReportType;
 }
+
 const MaxDaysBack = 200;
 
 const generateUserMetricsReport = async (daysBack: number) => {
@@ -164,9 +165,9 @@ const generateUserHistoryReport = async () => {
 export const exec = async (data?: IJobData) => {
   try {
     switch (data.reportType) {
-      case UserReportTypes.Historical:
+      case UserReportType.Historical:
         return await generateUserHistoryReport();
-      case UserReportTypes.ThirtyDays:
+      case UserReportType.ThirtyDays:
         return await generateUserMetricsReport(30);
       default:
         throw new Error('Invalid report type');

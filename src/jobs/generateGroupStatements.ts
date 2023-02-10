@@ -10,6 +10,11 @@ import { getAllGroupMembers } from '../services/groups';
 import { getOffsetTransactions } from '../services/impact/utils/carbon';
 import { IRef } from '../types/model';
 import { asCustomError } from '../lib/customError';
+import { StatementReportType } from '../lib/constants/jobScheduler';
+
+interface IJobData {
+  reportType: StatementReportType;
+}
 
 interface IToBeMatched {
   value: number;
@@ -35,7 +40,7 @@ const getMonthEnd = (d: Dayjs) => d
   .set('millisecond', 999);
 
 const getStartAndEndDates = () => {
-  const yearStart = getStartDate(dayjs()).set('month', 0);
+  const yearStart = getStartDate(dayjs()).startOf('year');
   const monthStart = getStartDate(dayjs()).subtract(1, 'month');
   const monthEnd = getMonthEnd(dayjs().subtract(1, 'month'));
 
@@ -91,7 +96,7 @@ const getMatchedTransactionsValueTotalForUserForYear = async (groupId: Types.Obj
   return result.length ? result[0].totalMatched : 0;
 };
 
-export const exec = async () => {
+export const exec = async (data?: IJobData) => {
   let statementCount = 0;
   try {
     console.log('\ngenerating monthly group offset statements...');
@@ -114,6 +119,18 @@ export const exec = async () => {
     console.log(`monthEnd: ${monthEnd.toISOString()}`);
 
     for (const group of groups) {
+      if (!!data && !!data.reportType) {
+        if (data.reportType === StatementReportType.MonthlyIdempotent) {
+          const latestStatement = await StatementModel.findOne({
+            group: group._id,
+            date: { $gte: monthStart.toDate(), $lte: monthEnd.toDate() },
+          });
+          if (!!latestStatement?._id) {
+            console.error(`statement already exists for ${group.name} for ${monthStart.format('MMMM YYYY')}`);
+            continue;
+          }
+        }
+      }
       let toBeMatchedForGroupDollars = 0;
       let toBeMatchedForGroupTonnes = 0;
       const toBeMatchedForGroupTransactions: IToBeMatched[] = [];
@@ -240,34 +257,3 @@ export const exec = async () => {
 
   // return: member offsets for the MONTH (total tonnes), member offsets for the MONTH to MATCH (may be the same as the month if the threshold hadn't been met), match dollar amount (offset to match * rare offset rate), status
 };
-
-/*
-{
-  group,
-  offsets: {
-    matchPercentage,
-    maxDollarAmount,
-    toBeMatched: {
-      dollars,
-      tonnes,
-      transactions: [
-        {
-          value,
-          transaction,
-        }
-      ],
-    },
-    matched: {
-      dollars,
-      tonnes,
-      transactor: {
-        user,
-        group,
-      },
-      date,
-  },
-  transactions,
-  date,
-  createdOn,
-}
-*/

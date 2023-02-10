@@ -9,9 +9,13 @@ export enum CsvReportTypes {
   Affiliates = 'affiliates',
 }
 
-export enum UserReportTypes {
+export enum UserReportType {
   Historical = 'historical',
   ThirtyDays = 'thirtyDays',
+}
+
+export enum StatementReportType {
+  MonthlyIdempotent = 'monthlyIdempotent',
 }
 
 export enum JobNames {

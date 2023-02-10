@@ -30,6 +30,7 @@ import { MainBullClient } from '../../clients/bull/main';
 import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
 import { getShareableMerchant } from '../merchant';
 import { MerchantRateModel } from '../../models/merchantRate';
+import { convertFilterToObjectId } from '../../lib/convertFilterToObjectId';
 
 dayjs.extend(utc);
 
@@ -37,6 +38,19 @@ const MAX_SAMPLE_SIZE = 25;
 
 export interface ICompanyRequestParams {
   companyId: string;
+}
+
+export interface ICompanyRequestQuery {
+  includeHidden?: boolean;
+  sectors?: string;
+  search?: string;
+  rating?: string;
+  evaluatedUnsdgs?: string;
+  cashback?: string;
+}
+
+export interface ICompanySearchRequest extends IRequest {
+  query: ICompanyRequestQuery;
 }
 
 export interface IUpdateCompanyRequestBody {
@@ -226,45 +240,42 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-export const getCompanies = (request: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
+export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
-  // @ts-ignore
-  const unsdgs = request.query?.evaluatedUnsdgs ? request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg)) : [];
-  // @ts-ignore
-  const sectors = request.query?.sectors ? request.query.sectors.split(',').map(sector => new Types.ObjectId(sector)) : [];
-  // console.log('///////// the request', request.query);
-  // console.log('//////// Unsdg Filter', filter.evaluatedUnsdgs);
-  // find companies that have evaluatedUnsdgs that match the unsdg query and have a score of .5 or greater
-  console.log('////./. are there unsdg', unsdgs.length);
-  const unsdgQuery = !!unsdgs.length ? {
-    evaluatedUnsdgs: {
-      $elemMatch: {
-        $and: [
-          { unsdg: { $in: unsdgs } },
-          { score: { $ne: null } },
-          { score: { $gte: 0.5 } },
-        ],
+  let unsdgQuery = {};
+  // do any work here that is special for the filter object
+  const unsdgs = filter?.evaluatedUnsdgs;
+  if (unsdgs) {
+    delete filter.evaluatedUnsdgs;
+    const unsdgsArray = request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg));
+    unsdgQuery = {
+      evaluatedUnsdgs: {
+        $elemMatch: {
+          $and: [
+            { unsdg: { $in: unsdgsArray } },
+            { score: { $ne: null } },
+            { score: { $gte: 0.5 } },
+          ],
+        },
       },
-    },
-  } : {};
+    };
+  }
 
-  const sectorQuery = !!sectors.length ? { 'sectors.sector': sectors } : {};
-  const ratingQuery = filter.rating ? { rating: query.filter.rating } : {};
+  const cleanedFilter = convertFilterToObjectId(filter);
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
-  // const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+  const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+
+  let matchQuery = {
+    ...creationQuery,
+    ...hiddenQuery,
+    ...unsdgQuery,
+  };
+
+  if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
 
   const companyAggregate = CompanyModel.aggregate([
     {
-      $match: sectorQuery,
-    },
-    {
-      $match: ratingQuery,
-    },
-    {
-      $match: hiddenQuery,
-    },
-    {
-      $match: unsdgQuery,
+      $match: matchQuery,
     },
     {
       $lookup: {
@@ -275,7 +286,10 @@ export const getCompanies = (request: IRequest, query: FilterQuery<ICompany>, in
       },
     },
     {
-      $unwind: '$parentCompany',
+      $unwind: {
+        path: '$parentCompany',
+        preserveNullAndEmptyArrays: true,
+      },
     },
   ]);
 

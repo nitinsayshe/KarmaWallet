@@ -242,9 +242,11 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 
 export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
-  let unsdgQuery = {};
   // do any work here that is special for the filter object
+  let unsdgQuery = {};
+  let searchQuery = {};
   const unsdgs = filter?.evaluatedUnsdgs;
+  const search = filter?.companyName;
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
     const unsdgsArray = request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg));
@@ -261,6 +263,11 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
     };
   }
 
+  if (search) {
+    delete filter.companyName;
+    searchQuery = { companyName: { $regex: search } };
+  }
+
   const cleanedFilter = convertFilterToObjectId(filter);
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
   const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
@@ -269,6 +276,7 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
     ...creationQuery,
     ...hiddenQuery,
     ...unsdgQuery,
+    ...searchQuery,
   };
 
   if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
@@ -296,7 +304,7 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
   const options = {
     projection: query?.projection || '',
     page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
+    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
     limit: query?.limit || 10,
   };
 

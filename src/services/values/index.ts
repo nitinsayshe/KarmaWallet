@@ -156,6 +156,6 @@ export const updateCompanyValues = async (req: IRequest<IUpdateCompanyValuesRequ
 };
 
 export const getValues = async () => {
-  const values = await ValueModel.find({});
+  const values = await ValueModel.find({}).populate('category');
   return values;
 };

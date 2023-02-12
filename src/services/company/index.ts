@@ -245,8 +245,11 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
   // do any work here that is special for the filter object
   let unsdgQuery = {};
   let searchQuery = {};
+  // const valuesQuery = {};
   const unsdgs = filter?.evaluatedUnsdgs;
   const search = filter?.companyName;
+  // const values = filter?.values;
+
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
     const unsdgsArray = request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg));
@@ -267,6 +270,16 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
     delete filter.companyName;
     searchQuery = { companyName: { $regex: search } };
   }
+
+  // if (values) {
+  //   delete filter.values;
+  //   valuesQuery = {
+  //     $or: [
+  //       { 'values.value': { $regex: values } },
+  //       { 'values.description': { $regex: values } },
+  //     ],
+  //   };
+  // }
 
   const cleanedFilter = convertFilterToObjectId(filter);
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};

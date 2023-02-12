@@ -9,4 +9,7 @@ router.route('/company/:companyId')
 router.route('/company')
   .get(ValuesController.getCompanyValues);
 
+router.route('/')
+  .get(ValuesController.getValues);
+
 export default (app: Express) => app.use('/values', router);

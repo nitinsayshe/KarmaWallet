@@ -68,6 +68,8 @@ export const calculateAllCompanyScores = async () => {
     let companyDataSources: ICompanyDataSourceModel[] = [];
     let unsdgMappings: IDataSourceMappingModel[] = [];
 
+    await CompanyUnsdgModel.deleteMany({ company: company._id });
+
     try {
       console.log(`[+] calculating scores for company ${company.companyName} (${companyIndex}/${companies.length})`);
       companyIndex += 1;

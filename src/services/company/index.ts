@@ -31,6 +31,7 @@ import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../mode
 import { getShareableMerchant } from '../merchant';
 import { MerchantRateModel } from '../../models/merchantRate';
 import { convertFilterToObjectId } from '../../lib/convertFilterToObjectId';
+import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 
 dayjs.extend(utc);
 
@@ -240,15 +241,13 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
+export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
   // do any work here that is special for the filter object
   let unsdgQuery = {};
   let searchQuery = {};
-  // const valuesQuery = {};
   const unsdgs = filter?.evaluatedUnsdgs;
   const search = filter?.companyName;
-  // const values = filter?.values;
 
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
@@ -271,21 +270,11 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
     searchQuery = { companyName: { $regex: search } };
   }
 
-  // if (values) {
-  //   delete filter.values;
-  //   valuesQuery = {
-  //     $or: [
-  //       { 'values.value': { $regex: values } },
-  //       { 'values.description': { $regex: values } },
-  //     ],
-  //   };
-  // }
-
   const cleanedFilter = convertFilterToObjectId(filter);
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
   const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
 
-  let matchQuery = {
+  let matchQuery: any = {
     ...creationQuery,
     ...hiddenQuery,
     ...unsdgQuery,
@@ -294,7 +283,7 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
 
   if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
 
-  const companyAggregate = CompanyModel.aggregate([
+  const aggregateSteps = [
     {
       $match: matchQuery,
     },
@@ -312,7 +301,43 @@ export const getCompanies = (request: ICompanySearchRequest, query: FilterQuery<
         preserveNullAndEmptyArrays: true,
       },
     },
-  ]);
+  ];
+
+  if (cleanedFilter?.['values.value']) {
+    const valuesQuery = cleanedFilter?.['values.value'];
+    delete cleanedFilter['values.value'];
+    delete matchQuery['values.value'];
+    matchQuery = { ...matchQuery, ...cleanedFilter };
+    aggregateSteps.shift();
+    aggregateSteps.unshift({ $match: matchQuery });
+    const companiesWithValues = await ValueCompanyMappingModel.aggregate([
+      {
+        $match: {
+          value: valuesQuery,
+        },
+      },
+      {
+        $group: {
+          _id: '$company',
+          company: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
+    const companiesWithValuesIds = companiesWithValues.map(c => c._id);
+
+    aggregateSteps.push({
+      $match: {
+        _id: {
+          $in: companiesWithValuesIds,
+        },
+      },
+    });
+  }
+
+  const companyAggregate = CompanyModel.aggregate(aggregateSteps);
 
   const options = {
     projection: query?.projection || '',

@@ -12,6 +12,7 @@ import { PromoModel } from '../src/models/promo';
 import { CommissionModel, KarmaCommissionStatus } from '../src/models/commissions';
 import { MerchantModel } from '../src/models/merchant';
 import { getEvaluatedUNSDGsCountForCompanies } from '../src/services/scripts/generate_evaluated_UNSDGs_by_company';
+import { getCurrentWildfireData, pullRecentFromDatabaseAndSave, associateWildfireMatches } from '../src/services/scripts/wildfire';
 
 dayjs.extend(utc);
 
@@ -30,8 +31,7 @@ dayjs.extend(utc);
     //   amount: 10,
     //   enabled: true,
     // });
-
-    await getEvaluatedUNSDGsCountForCompanies('621b99375f87e75f5365a661');
+    await associateWildfireMatches();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

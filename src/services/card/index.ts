@@ -52,7 +52,7 @@ export const getShareableCard = ({
     ? getShareableUser(userId as IUserDocument)
     : userId;
 
-  const info: any = {
+  return {
     _id,
     userId: _user,
     name,
@@ -65,14 +65,11 @@ export const getShareableCard = ({
     // logo property is added to cards.
     institutionId: integrations?.plaid?.institutionId,
     createdOn,
+    removedDate,
     lastModified,
     initialTransactionsProcessing,
     lastTransactionSync,
   };
-
-  if (removedDate) info.removedDate = removedDate;
-
-  return info;
 };
 
 export const _getCard = async (query: FilterQuery<ICard>) => CardModel.findOne(query);

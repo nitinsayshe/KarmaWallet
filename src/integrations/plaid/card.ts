@@ -127,7 +127,6 @@ class Card {
       card = new CardModel({
         ...this.toKarmaFormat(),
         createdOn: dayjs().utc().format(),
-        removedDate: null,
         initialTransactionsProcessing: true,
       });
       this._isNew = true;

@@ -99,6 +99,7 @@ const cardSchema = new Schema({
   createdOn: { type: Date },
   lastModified: { type: Date },
   lastTransactionSync: { type: Date },
+  removedDate: { type: Date },
 });
 
 export const CardModel = model<ICardDocument, Model<ICard>>('card', cardSchema);

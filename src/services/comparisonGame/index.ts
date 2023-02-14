@@ -247,7 +247,7 @@ export const getSwaps = async (previousSwaps: string[][] = [], reset = false, in
     };
     if (!includeHidden) query['hidden.status'] = false;
     const companies = await CompanyModel.find(query).lean();
-    [high, low] = splitCompanies(companies);
+    [high, low] = splitCompanies(companies as ICompany[]);
 
     if (high.length && low.length) {
       while ((!randomHighGradeCompany || !randomLowGradeCompany) && !!high.length) {

@@ -21,3 +21,12 @@ export const updateCompanyValues: IRequestHandler<ValuesService.IUpdateCompanyVa
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getValues: IRequestHandler = async (req, res) => {
+  try {
+    const result = await ValuesService.getValues();
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

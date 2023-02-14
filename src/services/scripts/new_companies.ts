@@ -131,7 +131,7 @@ export const mapCompaniesToV3 = async (_: IRequest) => {
         delete company.parentCompany;
         delete company.slug;
 
-        setLogo(company);
+        setLogo(company as ICompany);
         newCompany = new CompanyModel({ ...company });
         newCompany.legacyId = legacyId;
 

@@ -43,6 +43,7 @@ export interface IShareableCard {
   institution: string;
   createdOn: Date;
   lastModified: Date;
+  removedDate?: Date;
   initialTransactionsProcessing: boolean;
   lastTransactionSync: Date;
 }

@@ -54,10 +54,11 @@ export const createMerchantRates = async (merchant: any, merchantRates: any) => 
 
 // pulls the most recent merchants, domains, and rates from the Wildfire API and saves to file locally, run this before associating or matching
 export const pullRecentFromDatabaseAndSave = async () => {
-  const wildfireClient = new WildfireClient();
+  const wildfireClient = await new WildfireClient();
   const merchants = await wildfireClient.getMerchants();
   const rates = await wildfireClient.getMerchantRates();
   const domains = await wildfireClient.getActiveDomains();
+
   fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmerchants.json'), JSON.stringify(merchants));
   fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfrates.json'), JSON.stringify(rates));
   fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfdomains.json'), JSON.stringify(domains));
@@ -67,7 +68,7 @@ export const pullRecentFromDatabaseAndSave = async () => {
 export const associateWildfireMatches = async () => {
   const errors = [];
   // update to name of file that you are using, should have _id, domainId, and merchantId
-  const matchesRaw = fs.readFileSync(path.resolve(__dirname, './.tmp', 'wildfire_matches_121522.json'), 'utf8');
+  const matchesRaw = fs.readFileSync(path.resolve(__dirname, './.tmp', 'wildfireMatches.json'), 'utf8');
   const matches = JSON.parse(matchesRaw);
   const rawDomains = fs.readFileSync(path.resolve(__dirname, './.tmp', 'wfdomains.json'), 'utf8');
   const domains = JSON.parse(rawDomains);

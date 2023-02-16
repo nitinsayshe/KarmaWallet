@@ -2,10 +2,10 @@ import {
   Schema,
   model,
   Document,
-  PaginateModel,
   ObjectId,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
+import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { ISector, ISectorDocument } from './sector';
 import { slugify } from '../lib/slugify';
@@ -15,6 +15,7 @@ import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory
 import { IJobReportDocument } from './jobReport';
 import { IShareableMerchant } from './merchant';
 import { IUnsdg, IUnsdgDocument } from './unsdg';
+import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 
 export enum CompanyCreationStatus {
   Completed = 'completed',
@@ -113,6 +114,7 @@ export interface ICompany extends IShareableCompany {
 export interface ICompanyDocument extends ICompany, Document {
   _id: ObjectId;
 }
+
 export type ICompanyModel = IModel<ICompany>;
 
 const companySchema = new Schema(
@@ -219,11 +221,13 @@ const companySchema = new Schema(
     toObject: { virtuals: true },
   },
 );
+
 companySchema.plugin(mongoosePaginate);
+companySchema.plugin(mongooseAggregatePaginate);
 
 // eslint-disable-next-line func-names
 companySchema.virtual('slug').get(function (this: ICompanyDocument) {
   return slugify(this.companyName);
 });
 
-export const CompanyModel = model<ICompanyDocument, PaginateModel<ICompany>>('company', companySchema);
+export const CompanyModel = model<ICompanyDocument, IAggregatePaginateModel<ICompanyDocument>>('company', companySchema);

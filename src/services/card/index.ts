@@ -24,7 +24,6 @@ dayjs.extend(utc);
   createdOn: Date;
   lastModified: Date;
 */
-
 export interface IRemoveCardParams {
   card: IRef<ObjectId, ICard>;
 }
@@ -45,6 +44,7 @@ export const getShareableCard = ({
   integrations,
   createdOn,
   lastModified,
+  removedDate,
   initialTransactionsProcessing,
   lastTransactionSync,
 }: ICardDocument) => {
@@ -65,6 +65,7 @@ export const getShareableCard = ({
     // logo property is added to cards.
     institutionId: integrations?.plaid?.institutionId,
     createdOn,
+    removedDate,
     lastModified,
     initialTransactionsProcessing,
     lastTransactionSync,
@@ -94,6 +95,7 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
   }
   await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, {
     status: CardStatus.Removed,
+    removedDate: dayjs().utc().toDate(),
     'integrations.plaid.accessToken': null,
     $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
   });

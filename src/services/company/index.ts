@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { FilterQuery, isValidObjectId, ObjectId, Types } from 'mongoose';
+import { FilterQuery, Types, ObjectId, isValidObjectId } from 'mongoose';
 import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getRandomInt } from '../../lib/number';
@@ -30,6 +30,8 @@ import { MainBullClient } from '../../clients/bull/main';
 import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
 import { getShareableMerchant } from '../merchant';
 import { MerchantRateModel } from '../../models/merchantRate';
+import { convertFilterToObjectId } from '../../lib/convertFilterToObjectId';
+import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 
 dayjs.extend(utc);
 
@@ -37,6 +39,19 @@ const MAX_SAMPLE_SIZE = 25;
 
 export interface ICompanyRequestParams {
   companyId: string;
+}
+
+export interface ICompanyRequestQuery {
+  includeHidden?: boolean;
+  sectors?: string;
+  search?: string;
+  rating?: string;
+  evaluatedUnsdgs?: string;
+  cashback?: string;
+}
+
+export interface ICompanySearchRequest extends IRequest {
+  query: ICompanyRequestQuery;
 }
 
 export interface IUpdateCompanyRequestBody {
@@ -226,37 +241,112 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-export const getCompanies = (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
+export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
+  const { filter } = query;
+  // do any work here that is special for the filter object
+  let unsdgQuery = {};
+  let searchQuery = {};
+  const unsdgs = filter?.evaluatedUnsdgs;
+  const search = filter?.companyName;
+
+  if (unsdgs) {
+    delete filter.evaluatedUnsdgs;
+    const unsdgsArray = request.query.evaluatedUnsdgs.split(',').map(unsdg => new Types.ObjectId(unsdg));
+    unsdgQuery = {
+      evaluatedUnsdgs: {
+        $elemMatch: {
+          $and: [
+            { unsdg: { $in: unsdgsArray } },
+            { score: { $ne: null } },
+            { score: { $gte: 0.5 } },
+          ],
+        },
+      },
+    };
+  }
+
+  if (search) {
+    delete filter.companyName;
+    searchQuery = { companyName: { $regex: search } };
+  }
+
+  const cleanedFilter = convertFilterToObjectId(filter);
+  const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
+  const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+
+  let matchQuery: any = {
+    ...creationQuery,
+    ...hiddenQuery,
+    ...unsdgQuery,
+    ...searchQuery,
+  };
+
+  if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
+
+  const aggregateSteps = [
+    {
+      $match: matchQuery,
+    },
+    {
+      $lookup: {
+        from: 'companies',
+        localField: 'parentCompany',
+        foreignField: '_id',
+        as: 'parentCompany',
+      },
+    },
+    {
+      $unwind: {
+        path: '$parentCompany',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
+
+  if (cleanedFilter?.['values.value']) {
+    const valuesQuery = cleanedFilter?.['values.value'];
+    delete cleanedFilter['values.value'];
+    delete matchQuery['values.value'];
+    matchQuery = { ...matchQuery, ...cleanedFilter };
+    aggregateSteps.shift();
+    aggregateSteps.unshift({ $match: matchQuery });
+    const companiesWithValues = await ValueCompanyMappingModel.aggregate([
+      {
+        $match: {
+          value: valuesQuery,
+        },
+      },
+      {
+        $group: {
+          _id: '$company',
+          company: {
+            $sum: 1,
+          },
+        },
+      },
+    ]);
+
+    const companiesWithValuesIds = companiesWithValues.map(c => c._id);
+
+    aggregateSteps.push({
+      $match: {
+        _id: {
+          $in: companiesWithValuesIds,
+        },
+      },
+    });
+  }
+
+  const companyAggregate = CompanyModel.aggregate(aggregateSteps);
+
   const options = {
     projection: query?.projection || '',
-    populate: query.population || [
-      {
-        path: 'merchant',
-        model: MerchantModel,
-      },
-      {
-        path: 'parentCompany',
-        model: CompanyModel,
-        populate: [
-          {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
-        ],
-      },
-      {
-        path: 'sectors.sector',
-        model: SectorModel,
-      },
-    ],
     page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
+    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
     limit: query?.limit || 10,
   };
-  const filter: FilterQuery<ICompany> = { ...query.filter };
-  filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
-  if (!includeHidden) filter['hidden.status'] = false;
-  return CompanyModel.paginate(filter, options);
+
+  return CompanyModel.aggregatePaginate(companyAggregate, options);
 };
 
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {

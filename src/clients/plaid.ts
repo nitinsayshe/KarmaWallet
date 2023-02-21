@@ -253,6 +253,8 @@ export class PlaidClient extends SdkClient {
               card.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
               card.integrations.plaid.accessToken = null;
               card.lastTransactionSync = dayjs().utc().toDate();
+              card.lastModified = dayjs().utc().toDate();
+              card.unlinkedDate = dayjs().utc().toDate();
               await card.save();
             }
             // update card data in active campaign

@@ -43,6 +43,7 @@ export interface IShareableCard {
   institution: string;
   createdOn: Date;
   lastModified: Date;
+  unlinkedDate?: Date;
   removedDate?: Date;
   initialTransactionsProcessing: boolean;
   lastTransactionSync: Date;
@@ -99,6 +100,7 @@ const cardSchema = new Schema({
   createdOn: { type: Date },
   lastModified: { type: Date },
   lastTransactionSync: { type: Date },
+  unlinkedDate: { type: Date },
   removedDate: { type: Date },
 });
 

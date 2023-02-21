@@ -25,73 +25,110 @@ export const exec = async () => {
     console.log('generating admin summary report');
     const totalUsersCount = await UserModel.find({}).count();
 
-    const linkedCards = await CardModel.find({ status: CardStatus.Linked }).count();
-    const unlinkedCards = await CardModel.find({ status: CardStatus.Unlinked }).count();
-    const removedCards = await CardModel.find({ status: CardStatus.Removed }).count();
+    const linkedCards = await CardModel.find({
+      status: CardStatus.Linked,
+    }).count();
+    const unlinkedCards = await CardModel.find({
+      status: CardStatus.Unlinked,
+    }).count();
+    const removedCards = await CardModel.find({
+      status: CardStatus.Removed,
+    }).count();
     const usersWithLinkedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Linked })
       .group({ _id: '$userId' })
       .count('count');
 
-    const usersWithLinkedCardsCount = usersWithLinkedCards && usersWithLinkedCards.length > 0 ? usersWithLinkedCards[0].count : 0;
+    const usersWithLinkedCardsCount = usersWithLinkedCards && usersWithLinkedCards.length > 0
+      ? usersWithLinkedCards[0]?.count
+      : 0;
 
     const usersWithUnlinkedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Unlinked })
       .group({ _id: '$userId' })
       .count('count');
 
-    const usersWithUnlinkedCardsCount = usersWithUnlinkedCards && usersWithUnlinkedCards.length > 0 ? usersWithUnlinkedCards[0].count : 0;
+    const usersWithUnlinkedCardsCount = usersWithUnlinkedCards && usersWithUnlinkedCards.length > 0
+      ? usersWithUnlinkedCards[0]?.count
+      : 0;
 
     const usersWithRemovedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Removed })
       .group({ _id: '$userId' })
       .count('count');
-    const usersWithRemovedCardsCount = usersWithRemovedCards && usersWithRemovedCards.length > 0 ? usersWithRemovedCards[0].count : 0;
+    const usersWithRemovedCardsCount = usersWithRemovedCards && usersWithRemovedCards.length > 0
+      ? usersWithRemovedCards[0]?.count
+      : 0;
 
-    const linkeDepositoryCards = await CardModel.find({ type: 'depository', status: CardStatus.Linked }).count();
+    const linkeDepositoryCards = await CardModel.find({
+      type: 'depository',
+      status: CardStatus.Linked,
+    }).count();
 
     /* Total number of transactions captured (count) and total $s (absolute
-    * value) for those transactions. */
+     * value) for those transactions. */
     const transactionData = await TransactionModel.aggregate()
-      .match({ $and: [
-        { 'integrations.plaid': { $exists: true } },
-        { 'integrations.plaid': { $ne: null } },
-      ] })
-      .group({ _id: null, totalAmount: { $sum: { $abs: '$amount' } }, count: { $sum: 1 } });
+      .match({
+        $and: [
+          { 'integrations.plaid': { $exists: true } },
+          { 'integrations.plaid': { $ne: null } },
+        ],
+      })
+      .group({
+        _id: null,
+        totalAmount: { $sum: { $abs: '$amount' } },
+        count: { $sum: 1 },
+      });
 
     const transactionDataExcludingCategories = await TransactionModel.aggregate()
-      .match({ $and: [
-        { amount: { $gte: 0 } },
-        { 'integrations.plaid.category': { $exists: true } },
-        { 'integrations.plaid.category': { $ne: null } },
-        { 'integrations.plaid.category': { $nin: ExcludeCategories } }] })
-      .group({ _id: null, totalAmount: { $sum: '$amount' }, count: { $sum: 1 } });
-
-    /* Total matched transactions (count and absolute value) */
-    const matchedTransactionData = await TransactionModel.aggregate()
-      .match({ $and: [
-        { 'integrations.plaid': { $exists: true } },
-        { 'integrations.plaid': { $ne: null } },
-        { company: { $exists: true } },
-        { company: { $ne: null } },
-      ] })
-      .group({ _id: null, totalAmount: { $sum: { $abs: '$amount' } }, count: { $sum: 1 } });
-
-    const matchedTransactionsExcludingCategories = await TransactionModel.aggregate()
-      .match({ $and: [
-        { amount: { $gte: 0 } },
-        { company: { $exists: true } },
-        { company: { $ne: null } },
-        { 'integrations.plaid.category': { $exists: true } },
-        { 'integrations.plaid.category': { $ne: null } },
-        { 'integrations.plaid.category': { $nin: ExcludeCategories } }] })
+      .match({
+        $and: [
+          { amount: { $gte: 0 } },
+          { 'integrations.plaid.category': { $exists: true } },
+          { 'integrations.plaid.category': { $ne: null } },
+          { 'integrations.plaid.category': { $nin: ExcludeCategories } },
+        ],
+      })
       .group({
         _id: null,
         totalAmount: { $sum: '$amount' },
         count: { $sum: 1 },
       });
 
-    let totalOffsets: {dollars: number, tonnes: number, count: number}[] = await TransactionModel.aggregate()
+    /* Total matched transactions (count and absolute value) */
+    const matchedTransactionData = await TransactionModel.aggregate()
+      .match({
+        $and: [
+          { 'integrations.plaid': { $exists: true } },
+          { 'integrations.plaid': { $ne: null } },
+          { company: { $exists: true } },
+          { company: { $ne: null } },
+        ],
+      })
+      .group({
+        _id: null,
+        totalAmount: { $sum: { $abs: '$amount' } },
+        count: { $sum: 1 },
+      });
+
+    const matchedTransactionsExcludingCategories = await TransactionModel.aggregate()
+      .match({
+        $and: [
+          { amount: { $gte: 0 } },
+          { company: { $exists: true } },
+          { company: { $ne: null } },
+          { 'integrations.plaid.category': { $exists: true } },
+          { 'integrations.plaid.category': { $ne: null } },
+          { 'integrations.plaid.category': { $nin: ExcludeCategories } },
+        ],
+      })
+      .group({
+        _id: null,
+        totalAmount: { $sum: '$amount' },
+        count: { $sum: 1 },
+      });
+
+    let totalOffsets: { dollars: number; tonnes: number; count: number }[] = await TransactionModel.aggregate()
       .match({
         $and: [
           { sector: { $nin: sectorsToExcludeFromTransactions } },
@@ -99,7 +136,6 @@ export const exec = async () => {
           { reversed: { $ne: true } },
           { 'integrations.rare': { $ne: null } },
         ],
-
       })
       .group({
         _id: null,
@@ -166,19 +202,25 @@ export const exec = async () => {
     const loggedInLastSevenDays = await UserLogModel.aggregate()
       .match({
         date: { $gte: dayjs().subtract(7, 'days').utc().toDate() },
-      }).group({
+      })
+      .group({
         _id: '$userId',
       });
 
     const loggedInLastThirtyDays = await UserLogModel.aggregate()
       .match({
         date: { $gte: dayjs().subtract(30, 'days').utc().toDate() },
-      }).group({
+      })
+      .group({
         _id: '$userId',
       });
 
-    const totalLoginsLastSevenDays = await UserLogModel.find({ date: { $gte: dayjs().subtract(7, 'days').utc().toDate() } }).count();
-    const totalLoginsLastThirtyDays = await UserLogModel.find({ date: { $gte: dayjs().subtract(30, 'days').utc().toDate() } }).count();
+    const totalLoginsLastSevenDays = await UserLogModel.find({
+      date: { $gte: dayjs().subtract(7, 'days').utc().toDate() },
+    }).count();
+    const totalLoginsLastThirtyDays = await UserLogModel.find({
+      date: { $gte: dayjs().subtract(30, 'days').utc().toDate() },
+    }).count();
 
     const adminSummary: IAdminSummary = {
       users: {
@@ -187,8 +229,12 @@ export const exec = async () => {
         withUnlinkedCard: usersWithUnlinkedCardsCount,
         withRemovedCard: usersWithRemovedCardsCount,
         withoutCard: totalUsersCount - usersWithLinkedCardsCount,
-        loggedInLastSevenDays: loggedInLastSevenDays ? loggedInLastSevenDays.length : 0,
-        loggedInLastThirtyDays: loggedInLastThirtyDays ? loggedInLastThirtyDays.length : 0,
+        loggedInLastSevenDays: loggedInLastSevenDays
+          ? loggedInLastSevenDays.length
+          : 0,
+        loggedInLastThirtyDays: loggedInLastThirtyDays
+          ? loggedInLastThirtyDays.length
+          : 0,
       },
       cards: {
         linked: {
@@ -208,31 +254,99 @@ export const exec = async () => {
         thirtyDayTotal: totalLoginsLastThirtyDays,
       },
       transactions: {
-        total: transactionData[0].count as number,
-        totalDollars: roundToPercision(transactionData[0].totalAmount as number, 0),
-        totalDollarsExcludingCategories: roundToPercision(transactionDataExcludingCategories[0].totalAmount as number, 0),
-        totalExcludingCategories: roundToPercision(transactionDataExcludingCategories[0].count as number, 0),
-        matched: matchedTransactionData[0].count as number,
-        matchedExcludingCategories: matchedTransactionsExcludingCategories[0].count as number,
-        matchedDollars: roundToPercision(matchedTransactionData[0].totalAmount as number, 0),
-        matchedDollarsExcludingCategories: roundToPercision(matchedTransactionsExcludingCategories[0].totalAmount as number, 0),
-        matchedRatio: roundToPercision(matchedTransactionData[0].count as number / transactionData[0].count as number, 2),
-        matchedRatioExcludingCategories: roundToPercision(matchedTransactionsExcludingCategories[0].count as number / transactionDataExcludingCategories[0].count as number, 2),
-        matchedDollarsRatio: roundToPercision(matchedTransactionData[0].totalAmount as number / transactionData[0].totalAmount as number, 2),
-        matchedDollarsRatioExcludingCategories: roundToPercision(matchedTransactionsExcludingCategories[0].totalAmount as number / transactionDataExcludingCategories[0].totalAmount as number, 2),
+        total: !!transactionData[0]?.count
+          ? (transactionData[0].count as number)
+          : 0,
+        totalDollars: !!transactionData[0]?.totalAmount
+          ? roundToPercision(transactionData[0].totalAmount as number, 0)
+          : 0,
+        totalDollarsExcludingCategories: !!transactionDataExcludingCategories[0]
+          ?.totalAmount
+          ? roundToPercision(
+            transactionDataExcludingCategories[0].totalAmount as number,
+            0,
+          )
+          : 0,
+        totalExcludingCategories: !!transactionDataExcludingCategories[0]?.count
+          ? roundToPercision(
+            transactionDataExcludingCategories[0]?.count as number,
+            0,
+          )
+          : 0,
+        matched: !!matchedTransactionData[0]?.count
+          ? (matchedTransactionData[0]?.count as number)
+          : 0,
+        matchedExcludingCategories: !!matchedTransactionsExcludingCategories[0]
+          ? (matchedTransactionsExcludingCategories[0]?.count as number)
+          : 0,
+        matchedDollars: !!matchedTransactionData[0]?.totalAmount
+          ? roundToPercision(
+            matchedTransactionData[0]?.totalAmount as number,
+            0,
+          )
+          : 0,
+        matchedDollarsExcludingCategories:
+          !!matchedTransactionsExcludingCategories[0]?.totalAmount
+            ? roundToPercision(
+              matchedTransactionsExcludingCategories[0]
+                ?.totalAmount as number,
+              0,
+            )
+            : 0,
+        matchedRatio: roundToPercision(
+          !!matchedTransactionData[0]?.count && !!transactionData[0].count
+            ? (((matchedTransactionData[0].count as number)
+                / transactionData[0].count) as number)
+            : 0,
+          2,
+        ),
+        matchedRatioExcludingCategories: roundToPercision(
+          !!transactionDataExcludingCategories[0]?.count
+            && !!matchedTransactionsExcludingCategories[0]?.count
+            ? (((matchedTransactionsExcludingCategories[0].count as number)
+                / transactionDataExcludingCategories[0].count) as number)
+            : 0,
+          2,
+        ),
+        matchedDollarsRatio: roundToPercision(
+          !!matchedTransactionData[0]?.totalAmount
+            && !!transactionData[0]?.totalAmount
+            ? (((matchedTransactionData[0].totalAmount as number)
+                / transactionData[0].totalAmount) as number)
+            : 0,
+          2,
+        ),
+        matchedDollarsRatioExcludingCategories: roundToPercision(
+          !!matchedTransactionsExcludingCategories[0]?.totalAmount
+            && !!transactionDataExcludingCategories[0]?.totalAmount
+            ? (((matchedTransactionsExcludingCategories[0]
+              .totalAmount as number)
+                / transactionDataExcludingCategories[0].totalAmount) as number)
+            : 0,
+          2,
+        ),
       },
       offsets: {
-        total: totalOffsets[0].count,
-        dollars: roundToPercision((totalOffsets[0].dollars / 100), 0),
-        tons: roundToPercision(totalOffsets[0]?.tonnes, 2),
+        total: totalOffsets[0]?.count,
+        dollars: roundToPercision(
+          !!totalOffsets[0]?.dollars ? totalOffsets[0].dollars : 0 / 100,
+          0,
+        ),
+        tons: totalOffsets[0]?.tonnes
+          ? roundToPercision(totalOffsets[0]?.tonnes, 2)
+          : 0,
       },
       commissions: {
         total: totalCommissions,
-        dollars: roundToPercision(commissionDollars, 0),
+        dollars: commissionDollars ? roundToPercision(commissionDollars, 0) : 0,
         totalWildfire: totalWildfireCommissions,
-        totalWildfireDollars: roundToPercision(totalWildfireCommissionDollars, 0),
+        totalWildfireDollars: totalWildfireCommissionDollars
+          ? roundToPercision(totalWildfireCommissionDollars, 0)
+          : 0,
         totalKarmaWallet: totalKarmaWalletCommissions,
-        totalKarmaWalletDollars: roundToPercision(totalKarmaWalletCommissionDollars, 0),
+        totalKarmaWalletDollars: totalKarmaWalletCommissionDollars
+          ? roundToPercision(totalKarmaWalletCommissionDollars, 0)
+          : 0,
       },
     };
 

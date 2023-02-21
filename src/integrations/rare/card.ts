@@ -65,6 +65,8 @@ export class Card {
         userId: this._user.integrations?.rare?.userId,
       },
     },
+    unlinkedDate: this._card?.unlinkedDate,
+    removedDate: this._card?.removedDate,
   });
 
   save = async () => {

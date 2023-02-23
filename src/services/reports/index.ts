@@ -3,7 +3,6 @@ import utc from 'dayjs/plugin/utc';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ReportModel } from '../../models/report';
-import { IChart } from '../../types/chart';
 import { IRequest } from '../../types/request';
 import { getAccountTypesReport } from './accountTypes';
 import { getCarbonOffsetsReport } from './carbonOffsets';
@@ -14,12 +13,14 @@ import { getUserHistoryReport } from './userHistory';
 import { getLoginReport } from './userLogins';
 import { getUserSignUpsReport } from './userSignups';
 import { IReportRequestParams, ReportType } from './utils/types';
+import { getAccountsUnlinkedOrRemovedReport } from './accountsUnlinkedAndRemoved';
 
 dayjs.extend(utc);
 
-export const getReport = async (req:IRequest<IReportRequestParams, any>): Promise<IChart> => {
+export const getReport = async (req:IRequest<IReportRequestParams, any>) => {
   switch (req.params.reportId) {
     case ReportType.AccountsAdded: return getAccountsAddedReport(req);
+    case ReportType.AccountsUnlinkedOrRemoved: return getAccountsUnlinkedOrRemovedReport(req);
     case ReportType.AccountsAddedHistory: return getAccountsAddedHistoryReport();
     case ReportType.CarbonOffsets: return getCarbonOffsetsReport(req);
     case ReportType.AccountTypes: return getAccountTypesReport(req);
@@ -62,8 +63,14 @@ export const getAllReports = async (_: IRequest) => {
     },
     {
       reportId: ReportType.AccountsAdded,
-      name: 'Accounts Added ',
+      name: 'Accounts Added',
       description: 'A cumulative view of accounts added to the platform over the past thirty days.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.AccountsUnlinkedOrRemoved,
+      name: 'Accounts Unlinked or Removed',
+      description: 'A cumulative view of accounts unlinked or removed over the past thirty days.',
       lastUpdated: dayjs().utc().toDate(),
     },
     {

@@ -2,6 +2,7 @@ export enum ReportType {
   AccountTypes = 'account-types',
   CarbonOffsets = 'carbon-offsets',
   AccountsAdded = 'accounts-added',
+  AccountsUnlinkedOrRemoved = 'accounts-unlinked-or-removed',
   AccountsAddedHistory = 'accounts-added-history',
   TransactionMonitor = 'transaction-monitor',
   UserSignup = 'user-signups',

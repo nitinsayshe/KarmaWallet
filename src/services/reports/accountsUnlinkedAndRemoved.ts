@@ -131,7 +131,7 @@ export const getAccountsUnlinkedOrRemovedReport = async (
       || !totalRemovedCardsBeforeThreshold
       || !unlinkedAggData?.length
       || !removedAggData?.length) {
-      throw new Error('No missing data for report');
+      throw new Error('Missing data for report');
     }
 
     // adjust count to include data before threshold

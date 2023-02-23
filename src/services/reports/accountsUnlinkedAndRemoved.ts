@@ -58,9 +58,9 @@ const mergeAggData = (
 
   while (i < unlinkedAggData.length) {
     aggData.push({
-      removed: removedAggData[j].count,
+      removed: removedAggData[j - 1].count,
       unlinked: unlinkedAggData[i].count,
-      total: removedAggData[j].count + unlinkedAggData[i].count,
+      total: removedAggData[j - 1].count + unlinkedAggData[i].count,
       label: dayjs(unlinkedAggData[i].unlinkedDate).format('MMM DD'),
     });
     i++;
@@ -69,9 +69,9 @@ const mergeAggData = (
   while (j < removedAggData.length) {
     aggData.push({
       removed: removedAggData[j].count,
-      unlinked: unlinkedAggData[i].count,
-      total: removedAggData[j].count + unlinkedAggData[i].count,
-      label: dayjs(removedAggData[i].removedDate).format('MMM DD'),
+      unlinked: unlinkedAggData[i - 1].count,
+      total: removedAggData[j].count + unlinkedAggData[i - 1].count,
+      label: dayjs(removedAggData[j].removedDate).format('MMM DD'),
     });
     j++;
   }
@@ -126,6 +126,13 @@ export const getAccountsUnlinkedOrRemovedReport = async (
     const totalRemovedCardsBeforeThreshold = cardData[1];
     let unlinkedAggData = cardData[2];
     let removedAggData = cardData[3];
+
+    if (!totalUnlinkedCardsBeforeThreshold
+      || !totalRemovedCardsBeforeThreshold
+      || !unlinkedAggData?.length
+      || !removedAggData?.length) {
+      throw new Error('No missing data for report');
+    }
 
     // adjust count to include data before threshold
     let cumulator = totalUnlinkedCardsBeforeThreshold;

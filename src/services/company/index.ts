@@ -48,6 +48,7 @@ export interface ICompanyRequestQuery {
   rating?: string;
   evaluatedUnsdgs?: string;
   cashback?: string;
+  'sectors.sector': string;
 }
 
 export interface ICompanySearchRequest extends IRequest {
@@ -283,7 +284,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
 
   if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
 
-  const aggregateSteps = [
+  const aggregateSteps: any = [
     {
       $match: matchQuery,
     },
@@ -337,14 +338,73 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     });
   }
 
+  if (cleanedFilter?.['sectors.sector']) {
+    delete cleanedFilter['sectors.sector'];
+    delete matchQuery['sectors.sector'];
+    matchQuery = { ...matchQuery, ...cleanedFilter };
+    aggregateSteps.shift();
+    aggregateSteps.unshift({ $match: matchQuery });
+    const sectors = request.query['sectors.sector'].split(',');
+    const sectorsArray = sectors.map(sector => new Types.ObjectId(sector));
+    const addFieldsQuery = {
+      $addFields: {},
+    };
+    const sectorsSortQuery = {
+      $sort: {},
+    };
+
+    const sectorsMatch = {
+      $match: {
+        'sectors.sector': {
+          $in: sectorsArray,
+        },
+      },
+    };
+
+    aggregateSteps.push(sectorsMatch);
+
+    for (const sector of sectors) {
+      // @ts-ignore
+      addFieldsQuery.$addFields[sector] = {
+        $reduce: {
+          input: '$sectors',
+          initialValue: 0,
+          in: {
+            $cond: [
+              {
+                $eq: [
+                  '$$this.sector', new Types.ObjectId(sector),
+                ],
+              }, 1, '$$value',
+            ],
+          },
+        },
+      };
+
+      // @ts-ignore
+      sectorsSortQuery.$sort[sector] = 1;
+    }
+
+    aggregateSteps.push(addFieldsQuery);
+
+    console.log('/////// this is the sectorsSortQuery', sectorsSortQuery);
+    aggregateSteps.push(sectorsSortQuery);
+    // aggregateSteps.push({
+    //   $sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
+    // });
+  }
+
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
 
-  const options = {
+  const options: any = {
     projection: query?.projection || '',
     page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
     limit: query?.limit || 10,
   };
+
+  if (!filter['sectors.sector']) {
+    options.sort = query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 };
+  }
 
   return CompanyModel.aggregatePaginate(companyAggregate, options);
 };

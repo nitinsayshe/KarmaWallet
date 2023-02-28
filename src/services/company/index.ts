@@ -243,7 +243,6 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 
 export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
-  // do any work here that is special for the filter object
   let unsdgQuery = {};
   let searchQuery = {};
   const unsdgs = filter?.evaluatedUnsdgs;
@@ -278,7 +277,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     projection: query?.projection || '',
     page: query?.skip || 1,
     limit: query?.limit || 10,
-    sort: {},
+    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
   };
 
   let matchQuery: any = {
@@ -353,11 +352,11 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     const sectors = request.query['sectors.sector'].split(',');
     const sectorsArray = sectors.map(sector => new Types.ObjectId(sector));
 
-    const addFieldsQuery = {
+    const addFieldsQuery: any = {
       $addFields: {},
     };
 
-    const sectorsSortQuery = {
+    const sectorsSortQuery: any = {
       $sort: {},
     };
 
@@ -372,7 +371,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     aggregateSteps.push(sectorsMatch);
 
     for (const sector of sectors) {
-      // @ts-ignore
       addFieldsQuery.$addFields[sector] = {
         $reduce: {
           input: '$sectors',
@@ -388,25 +386,15 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
           },
         },
       };
-      options.sort = { ...options.sort, [sector]: -1 };
-      // @ts-ignore
+      options.sort = { [sector]: -1, ...options.sort };
       sectorsSortQuery.$sort[sector] = -1;
     }
 
     aggregateSteps.push(addFieldsQuery);
-
     aggregateSteps.push(sectorsSortQuery);
-    // aggregateSteps.push({
-    //   $sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
-    // });
   }
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
-
-  if (!filter['sectors.sector']) {
-    options.sort = query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 };
-  }
-
   return CompanyModel.aggregatePaginate(companyAggregate, options);
 };
 

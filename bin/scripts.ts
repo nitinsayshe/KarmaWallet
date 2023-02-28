@@ -23,15 +23,6 @@ dayjs.extend(utc);
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    // await PromoModel.create({
-    //   name: 'facebook-january-10-dollar-link-bonus',
-    //   startDate: dayjs.utc('2021-01-01').toDate(),
-    //   endDate: dayjs.utc('2021-01-31').toDate(),
-    //   limit: 1,
-    //   amount: 10,
-    //   enabled: true,
-    // });
-    await associateWildfireMatches();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

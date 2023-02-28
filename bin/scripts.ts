@@ -13,6 +13,7 @@ import { CommissionModel, KarmaCommissionStatus } from '../src/models/commission
 import { MerchantModel } from '../src/models/merchant';
 import { getEvaluatedUNSDGsCountForCompanies } from '../src/services/scripts/generate_evaluated_UNSDGs_by_company';
 import { getCurrentWildfireData, pullRecentFromDatabaseAndSave, associateWildfireMatches } from '../src/services/scripts/wildfire';
+import { findCompaniesWithDupeSectorsAndClear } from '../src/services/scripts/findAndRemoveDupeSectors';
 
 dayjs.extend(utc);
 
@@ -23,6 +24,7 @@ dayjs.extend(utc);
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
+    await findCompaniesWithDupeSectorsAndClear();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

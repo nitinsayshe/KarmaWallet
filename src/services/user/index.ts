@@ -163,14 +163,19 @@ export const register = async (req: IRequest, {
     delete rawUser._id;
     const newUser = new UserModel({ ...rawUser });
     await newUser.save();
+    let authKey = '';
 
-    const authKey = await Session.createSession(newUser._id.toString());
-
-    await storeNewLogin(newUser._id.toString(), getUtcDate().toDate());
-    await updateNewUserSubscriptions(newUser);
-
-    const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-    await resendEmailVerification(verificationEmailRequest);
+    try {
+      authKey = await Session.createSession(newUser._id.toString());
+      await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+      await updateNewUserSubscriptions(newUser);
+      const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
+      await resendEmailVerification(verificationEmailRequest);
+    } catch (afterCreationError) {
+      // undo user creation
+      await UserModel.deleteOne({ _id: newUser?._id });
+      throw new CustomError('error creating user', ErrorTypes.SERVER);
+    }
 
     return { user: newUser, authKey };
   } catch (err) {

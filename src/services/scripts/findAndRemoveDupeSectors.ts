@@ -17,7 +17,6 @@ export const findCompaniesWithDupeSectorsAndClear = async () => {
   try {
     for (const company of companies) {
       count += 1;
-      if (count < 345) continue;
       console.log(`[+] ${count} of ${companies.length}: ${company.companyName}`);
       const sectorIndexesToDelete = [];
       const sectors = company.sectors.map(s => s?.sector.toString());

@@ -13,6 +13,7 @@ import { CommissionModel, KarmaCommissionStatus } from '../src/models/commission
 import { MerchantModel } from '../src/models/merchant';
 import { getEvaluatedUNSDGsCountForCompanies } from '../src/services/scripts/generate_evaluated_UNSDGs_by_company';
 import { getCurrentWildfireData, pullRecentFromDatabaseAndSave, associateWildfireMatches } from '../src/services/scripts/wildfire';
+import { findCompaniesWithDupeSectorsAndClear } from '../src/services/scripts/findAndRemoveDupeSectors';
 
 dayjs.extend(utc);
 
@@ -23,15 +24,7 @@ dayjs.extend(utc);
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    // await PromoModel.create({
-    //   name: 'facebook-january-10-dollar-link-bonus',
-    //   startDate: dayjs.utc('2021-01-01').toDate(),
-    //   endDate: dayjs.utc('2021-01-31').toDate(),
-    //   limit: 1,
-    //   amount: 10,
-    //   enabled: true,
-    // });
-    await associateWildfireMatches();
+    await findCompaniesWithDupeSectorsAndClear();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

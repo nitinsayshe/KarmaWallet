@@ -43,6 +43,7 @@ export const exec = async () => {
           case 'BOUNCE':
             if (email.status === UserEmailStatus.Bounced) return;
             email.status = UserEmailStatus.Bounced;
+            email.bouncedDate = dayjs().utc().toDate();
             userHasBeenUpdated = true;
             break;
           case 'COMPLAINT':

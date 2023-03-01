@@ -26,6 +26,7 @@ export interface IEmail {
   email: string;
   status: UserEmailStatus;
   primary: boolean;
+  bouncedDate?: Date;
 }
 
 export interface IRareUserIntegration {
@@ -100,6 +101,7 @@ const userSchema = new Schema({
         enum: Object.values(UserEmailStatus),
         default: UserEmailStatus.Unverified,
       },
+      bouncedDate: { type: Date },
       primary: { type: Boolean, default: false },
     },
   }],

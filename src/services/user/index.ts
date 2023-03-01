@@ -33,6 +33,7 @@ import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactRepor
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { deleteContact } from '../../integrations/activecampaign';
 import { UserGroupStatus } from '../../types/groups';
+import { CommissionModel } from '../../models/commissions';
 
 dayjs.extend(utc);
 
@@ -447,6 +448,12 @@ export const deleteUser = async (req: IRequest<{}, {userId: string}, {}>) => {
 
     // get user email
     const email = user.emails.find(userEmail => userEmail.primary)?.email;
+
+    // throw error if user has commissions
+    const commissions = await CommissionModel.countDocuments({ user: user._id });
+    if (commissions > 0) {
+      throw new CustomError('Cannot delete users with commissions.', ErrorTypes.INVALID_ARG);
+    }
 
     // throw error if user is enrolled in group
     const userGroups = await UserGroupModel.countDocuments({ user: user._id, status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] } });

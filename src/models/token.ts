@@ -8,13 +8,15 @@ import { TokenTypes } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser } from './user';
 import { getUtcDate } from '../lib/date';
+import { IShareableVisitor, IVisitor } from './visitor';
 
 export interface IToken {
   type: TokenTypes;
   value: string;
   createdOn: Date;
   expires: Date;
-  user: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
+  user?: IRef<Schema.Types.ObjectId, (IShareableUser | IUser)>;
+  visitor?: IRef<Schema.Types.ObjectId, (IShareableVisitor | IVisitor)>;
   resource: {
     email: string,
   },
@@ -30,6 +32,7 @@ const tokenSchema = new Schema({
   createdOn: { type: Date, default: () => getUtcDate() },
   expires: { type: Date, required: true },
   user: { type: Schema.Types.ObjectId, ref: 'user' },
+  visitor: { type: Schema.Types.ObjectId, ref: 'visitor' },
   resource: {
     email: { type: String },
   },

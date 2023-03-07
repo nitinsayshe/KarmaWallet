@@ -1,5 +1,6 @@
 // values for EmailTemplates should map to the directory names in /src/templates/email/
 export enum EmailTemplateKeys {
+  CreateAccountEmailVerification = 'createAccountEmailVerification',
   GroupVerification = 'groupVerification',
   EmailVerification = 'emailVerification',
   Welcome = 'welcome',
@@ -14,6 +15,7 @@ export enum EmailTemplateTypes {
   Marketing = 'marketing',
   Password = 'password',
   Verification = 'verification',
+  CreateAccountVerification = 'createAccountVerification',
   Essential = 'essential',
 }
 
@@ -29,6 +31,10 @@ export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
   },
   GroupVerification: {
     name: EmailTemplateKeys.GroupVerification,
+    type: EmailTemplateTypes.Verification,
+  },
+  CreateAccountEmailVerification: {
+    name: EmailTemplateKeys.CreateAccountEmailVerification,
     type: EmailTemplateTypes.Verification,
   },
   EmailVerification: {

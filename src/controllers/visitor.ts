@@ -44,3 +44,20 @@ export const submitInterestForm: IRequestHandler<{}, {}, InterestFormRequest> = 
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const createAccountForm: IRequestHandler<{}, {}, VisitorService.ICreateAccountRequest> = async (req, res) => {
+  try {
+    const { body } = req;
+    const { email, groupCode, params, shareASale } = body;
+    const createAccountFormReq = {
+      email,
+      groupCode,
+      params,
+      shareASale,
+    };
+    await VisitorService.createAccountForm(req, createAccountFormReq);
+    output.api(req, res, null);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

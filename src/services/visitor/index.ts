@@ -2,7 +2,8 @@ import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
 import { updateActiveCampaignListStatus } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
-import { ErrorTypes } from '../../lib/constants';
+import * as TokenService from '../token';
+import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constants';
 import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -11,6 +12,7 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
+import { sendAccountCreationVerificationEmail } from '../email';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -18,6 +20,13 @@ const shareableInterestFormSubmitError = 'Error submitting the provided form dat
 export interface INewsletterSignupData {
   email: string;
   subscriptionCodes: SubscriptionCode[];
+}
+
+export interface ICreateAccountRequest {
+  email: string;
+  groupCode?: string;
+  shareASale?: boolean;
+  params?: [];
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -65,6 +74,47 @@ const enrollInMonthlyNewsletterCampaign = async (email: string, subscribe: Activ
   }
 };
 
+// send email to confirm email for account creationg
+export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email: string) => {
+  email = email?.toLowerCase();
+  const days = emailVerificationDays;
+  email = email?.toLowerCase();
+  if (!isemail.validate(email, { minDomainAtoms: 2 })) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+  try {
+    const token = await TokenService.createVisitorToken({ visitor, days, type: TokenTypes.Email, resource: { email } });
+    console.log('//////// this is the token', token);
+    await sendAccountCreationVerificationEmail({ token: token.value, recipientEmail: email, name: 'createAccount' });
+    return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
+  } catch (err) {
+    console.log('Error creating token for email verification', err);
+    throw err;
+  }
+};
+
+// Endpoint for user to request account creation
+const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+  try {
+    const visitorInfo: any = {
+      email: info.email,
+    };
+
+    if (!!info.groupCode || !!info.params.length || !!info.shareASale) {
+      visitorInfo.integrations = {};
+      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
+      if (!!info.params) visitorInfo.integrations.params = info.params;
+      if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
+    }
+
+    console.log('//////// this is the visitorIndo to save', visitorInfo);
+
+    const visitor = await VisitorModel.create(visitorInfo);
+    console.log('/////// this is the visitor', visitor);
+    return visitor;
+  } catch (err) {
+    throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.SERVER);
+  }
+};
+
 const createVisitorWithEmail = async (email: string): Promise<IVisitorDocument> => {
   try {
     return await VisitorModel.create({ email });
@@ -103,6 +153,49 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
     );
   });
   return query;
+};
+
+export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest) => {
+  try {
+    console.log('[+] Create Account', data);
+    const { groupCode, shareASale, params } = data;
+    let { email } = data;
+
+    if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
+      throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+    }
+
+    email = email.toLowerCase();
+    const user = await getUserByEmail(email);
+
+    if (!!user) {
+      throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.GEN);
+    }
+
+    let visitor = await getVisitorByEmail(email);
+
+    if (!!visitor) {
+      throw new CustomError('This email has already requested an account. Please check your email to verify and finish account creation.', ErrorTypes.GEN);
+    } else {
+      visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
+      console.log('/////// should have create a user', visitor);
+      if (!visitor) {
+        throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
+      } else {
+        try {
+          const emailSent = await sendAccountCreationEmail(visitor, email);
+          console.log('/////// this is the email sent', emailSent);
+        } catch (err) {
+          console.log('/////// there was an error sending an email', err);
+        }
+
+        return 'A verification email has been sent. Please check your email to finish account creation.';
+      }
+    }
+  } catch (err) {
+    console.log('Error sending email to validate account.', err);
+    throw err;
+  }
 };
 
 export const newsletterSignup = async (_: IRequest, email: string, subscriptionCodes: SubscriptionCode[]) => {

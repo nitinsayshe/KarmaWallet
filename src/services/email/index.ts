@@ -27,7 +27,7 @@ interface ICreateSentEmailParams {
 }
 
 interface IEmailTemplateParams {
-  user: Types.ObjectId
+  user?: Types.ObjectId;
   name: string;
   recipientEmail: string;
   senderEmail?: string;
@@ -56,7 +56,7 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
 
 export interface IEmailJobData {
   template: string;
-  user: Types.ObjectId | string;
+  user?: Types.ObjectId | string;
   subject: string;
   senderEmail: string;
   recipientEmail: string;
@@ -151,6 +151,27 @@ export const sendEmailVerification = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'KarmaWallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendAccountCreationVerificationEmail = async ({
+  name,
+  domain = process.env.FRONTEND_DOMAIN,
+  token,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.EmailVerification;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  // TODO: verify param FE/UI will be using to verify
+  const verificationLink = `${domain}/account?emailVerification=${token}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
+  const subject = 'KarmaWallet Email Verification';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

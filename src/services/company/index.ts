@@ -356,10 +356,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       $addFields: {},
     };
 
-    const sectorsSortQuery: any = {
-      $sort: {},
-    };
-
     const sectorsMatch = {
       $match: {
         'sectors.sector': {
@@ -387,11 +383,9 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
         },
       };
       options.sort = { [sector]: -1, ...options.sort };
-      sectorsSortQuery.$sort[sector] = -1;
     }
 
     aggregateSteps.push(addFieldsQuery);
-    aggregateSteps.push(sectorsSortQuery);
   }
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);

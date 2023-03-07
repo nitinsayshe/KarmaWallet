@@ -43,11 +43,11 @@ export interface ICompanyRequestParams {
 
 export interface ICompanyRequestQuery {
   includeHidden?: boolean;
-  sectors?: string;
   search?: string;
   rating?: string;
   evaluatedUnsdgs?: string;
   cashback?: string;
+  'sectors.sector'?: string;
 }
 
 export interface ICompanySearchRequest extends IRequest {
@@ -243,7 +243,6 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 
 export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
-  // do any work here that is special for the filter object
   let unsdgQuery = {};
   let searchQuery = {};
   const unsdgs = filter?.evaluatedUnsdgs;
@@ -274,6 +273,13 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
   const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
 
+  const options: any = {
+    projection: query?.projection || '',
+    page: query?.skip || 1,
+    limit: query?.limit || 10,
+    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
+  };
+
   let matchQuery: any = {
     ...creationQuery,
     ...hiddenQuery,
@@ -283,7 +289,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
 
   if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
 
-  const aggregateSteps = [
+  const aggregateSteps: any = [
     {
       $match: matchQuery,
     },
@@ -337,15 +343,52 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     });
   }
 
+  if (cleanedFilter?.['sectors.sector']) {
+    delete cleanedFilter['sectors.sector'];
+    delete matchQuery['sectors.sector'];
+    matchQuery = { ...matchQuery, ...cleanedFilter };
+    aggregateSteps.shift();
+    aggregateSteps.unshift({ $match: matchQuery });
+    const sectors = request.query['sectors.sector'].split(',');
+    const sectorsArray = sectors.map(sector => new Types.ObjectId(sector));
+
+    const addFieldsQuery: any = {
+      $addFields: {},
+    };
+
+    const sectorsMatch = {
+      $match: {
+        'sectors.sector': {
+          $in: sectorsArray,
+        },
+      },
+    };
+
+    aggregateSteps.push(sectorsMatch);
+
+    for (const sector of sectors) {
+      addFieldsQuery.$addFields[sector] = {
+        $reduce: {
+          input: '$sectors',
+          initialValue: 0,
+          in: {
+            $cond: [
+              {
+                $eq: [
+                  '$$this.sector', new Types.ObjectId(sector),
+                ],
+              }, 1, '$$value',
+            ],
+          },
+        },
+      };
+      options.sort = { [sector]: -1, ...options.sort };
+    }
+
+    aggregateSteps.push(addFieldsQuery);
+  }
+
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
-
-  const options = {
-    projection: query?.projection || '',
-    page: query?.skip || 1,
-    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
-    limit: query?.limit || 10,
-  };
-
   return CompanyModel.aggregatePaginate(companyAggregate, options);
 };
 

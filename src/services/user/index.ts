@@ -33,6 +33,7 @@ import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactRepor
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { deleteContact } from '../../integrations/activecampaign';
 import { UserGroupStatus } from '../../types/groups';
+import { CommissionModel } from '../../models/commissions';
 
 dayjs.extend(utc);
 
@@ -163,14 +164,19 @@ export const register = async (req: IRequest, {
     delete rawUser._id;
     const newUser = new UserModel({ ...rawUser });
     await newUser.save();
+    let authKey = '';
 
-    const authKey = await Session.createSession(newUser._id.toString());
-
-    await storeNewLogin(newUser._id.toString(), getUtcDate().toDate());
-    await updateNewUserSubscriptions(newUser);
-
-    const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-    await resendEmailVerification(verificationEmailRequest);
+    try {
+      authKey = await Session.createSession(newUser._id.toString());
+      await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+      await updateNewUserSubscriptions(newUser);
+      const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
+      await resendEmailVerification(verificationEmailRequest);
+    } catch (afterCreationError) {
+      // undo user creation
+      await UserModel.deleteOne({ _id: newUser?._id });
+      throw new CustomError('error creating user', ErrorTypes.SERVER);
+    }
 
     return { user: newUser, authKey };
   } catch (err) {
@@ -442,6 +448,12 @@ export const deleteUser = async (req: IRequest<{}, {userId: string}, {}>) => {
 
     // get user email
     const email = user.emails.find(userEmail => userEmail.primary)?.email;
+
+    // throw error if user has commissions
+    const commissions = await CommissionModel.countDocuments({ user: user._id });
+    if (commissions > 0) {
+      throw new CustomError('Cannot delete users with commissions.', ErrorTypes.INVALID_ARG);
+    }
 
     // throw error if user is enrolled in group
     const userGroups = await UserGroupModel.countDocuments({ user: user._id, status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] } });

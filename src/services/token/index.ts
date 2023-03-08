@@ -16,10 +16,12 @@ export interface ICreateTokenDataBase {
   type: TokenTypes;
   resource?: Object
 }
+
 export interface ICreateTokenData extends ICreateTokenDataBase {
   user: IUserDocument;
 
 }
+
 export interface ICreateVisitorTokenData extends ICreateTokenDataBase {
   visitor: IVisitor;
 }

@@ -165,7 +165,7 @@ export const register = async (req: IRequest, {
         authKey = await Session.createSession(newUser._id.toString());
         await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
         await updateNewUserSubscriptions(newUser);
-        // await visitor.delete();
+        // should we delete the token after this?
       } catch (afterCreationError) {
         // undo user creation
         await UserModel.deleteOne({ _id: newUser?._id });
@@ -180,100 +180,6 @@ export const register = async (req: IRequest, {
     throw new CustomError('Error creating user.', ErrorTypes.INVALID_ARG);
   }
 };
-
-// export const register = async (req: IRequest, {
-//   password,
-//   email,
-//   name,
-//   zipcode,
-//   shareASaleId,
-//   referralParams,
-// }: IUserData) => {
-//   try {
-//     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
-//     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
-//     name = name.replace(/\s/g, ' ').trim();
-
-//     email = email?.toLowerCase()?.trim();
-//     if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
-
-//     const passwordValidation = validatePassword(password);
-//     if (!passwordValidation.valid) {
-//       throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
-//     }
-//     const hash = await argon2.hash(password);
-//     const emailExists = await UserModel.findOne({ 'emails.email': email });
-//     if (emailExists) {
-//       throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
-//     }
-
-//     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
-
-//     const emails = [{ email, verified: false, primary: true }];
-//     const integrations: IUserIntegrations = {};
-
-//     // TODO: delete creating a new legacy user when able.
-//     const legacyUser = new LegacyUserModel({
-//       _id: nanoid(),
-//       name,
-//       email,
-//       emails,
-//       password: hash,
-//       zipcode,
-//       role: UserRoles.None,
-//     });
-
-//     await legacyUser.save();
-
-//     // map new legacy user to new user
-//     const rawUser = {
-//       ...legacyUser.toObject(),
-//       emails,
-//       legacyId: legacyUser._id,
-//       integrations,
-//     };
-
-//     if (!!shareASaleId) {
-//       let uniqueId = nanoid();
-//       let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
-
-//       while (existingId) {
-//         uniqueId = nanoid();
-//         existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
-//       }
-
-//       rawUser.integrations.shareasale = {
-//         trackingId: uniqueId,
-//       };
-//     }
-
-//     if (!!referralParams) {
-//       const validParams = referralParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
-//       if (validParams.length > 0) rawUser.integrations.referrals = { params: referralParams };
-//     }
-
-//     delete rawUser._id;
-//     const newUser = new UserModel({ ...rawUser });
-//     await newUser.save();
-//     let authKey = '';
-
-//     try {
-//       authKey = await Session.createSession(newUser._id.toString());
-//       await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
-//       await updateNewUserSubscriptions(newUser);
-//       const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-//       await resendEmailVerification(verificationEmailRequest);
-//     } catch (afterCreationError) {
-//       // undo user creation
-//       await UserModel.deleteOne({ _id: newUser?._id });
-//       throw new CustomError('error creating user', ErrorTypes.SERVER);
-//     }
-
-//     return { user: newUser, authKey };
-//   } catch (err) {
-//     throw asCustomError(err);
-//   }
-// };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
   email = email?.toLowerCase();

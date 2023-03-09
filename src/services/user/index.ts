@@ -17,7 +17,7 @@ import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
-import { ALPHANUMERIC_REGEX, ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
@@ -34,6 +34,8 @@ import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { deleteContact } from '../../integrations/activecampaign';
 import { UserGroupStatus } from '../../types/groups';
 import { CommissionModel } from '../../models/commissions';
+import { TokenModel } from '../../models/token';
+import { VisitorModel } from '../../models/visitor';
 
 dayjs.extend(utc);
 
@@ -59,11 +61,17 @@ export interface IUrlParam {
 
 export interface IUserData extends ILoginData {
   name: string;
-  zipcode: string;
+  zipcode?: string;
   role?: UserRoles;
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
+}
+
+export interface IRegisterUserData {
+  name: string;
+  token: string;
+  password: string;
 }
 
 export interface IEmailVerificationData {
@@ -92,97 +100,180 @@ export const storeNewLogin = async (userId: string, loginDate: Date) => {
 
 export const register = async (req: IRequest, {
   password,
-  email,
   name,
-  zipcode,
-  shareASaleId,
-  referralParams,
-}: IUserData) => {
+  token,
+}: IRegisterUserData) => {
   try {
     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
+    if (!token) throw new CustomError('A token is required.', ErrorTypes.INVALID_ARG);
+    let visitor;
     name = name.replace(/\s/g, ' ').trim();
 
-    email = email?.toLowerCase()?.trim();
-    if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
+    try {
+      // find token, then visitor that has that token to get the additional info for account creation
+      const tokenInfo = await TokenModel.findOne({ value: token });
+      visitor = await VisitorModel.findOne({ _id: tokenInfo.visitor });
+      // check password is valid
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.valid) throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+      const hash = await argon2.hash(password);
 
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
-    }
-    const hash = await argon2.hash(password);
-    const emailExists = await UserModel.findOne({ 'emails.email': email });
-    if (emailExists) {
-      throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
-    }
+      // check that email is valid (should have already checked when visitor was created, but just in case)
+      const email = visitor.email?.toLowerCase()?.trim();
+      if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
 
-    if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
+      // confirm email does not already belong to another user
+      const emailExists = await UserModel.findOne({ 'emails.email': email });
+      const { params, shareASale } = visitor.integrations;
+      if (emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+      // start building the user information
+      const emails = [{ email, verified: true, primary: true }];
+      const integrations: IUserIntegrations = {};
+      const newUserData: any = {
+        name,
+        email,
+        emails,
+        password: hash,
+        role: UserRoles.None,
+      };
 
-    const emails = [{ email, verified: false, primary: true }];
-    const integrations: IUserIntegrations = {};
+      if (!!shareASale) {
+        let uniqueId = nanoid();
+        let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
 
-    // TODO: delete creating a new legacy user when able.
-    const legacyUser = new LegacyUserModel({
-      _id: nanoid(),
-      name,
-      email,
-      emails,
-      password: hash,
-      zipcode,
-      role: UserRoles.None,
-    });
+        while (existingId) {
+          uniqueId = nanoid();
+          existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+        }
 
-    await legacyUser.save();
-
-    // map new legacy user to new user
-    const rawUser = {
-      ...legacyUser.toObject(),
-      emails,
-      legacyId: legacyUser._id,
-      integrations,
-    };
-
-    if (!!shareASaleId) {
-      let uniqueId = nanoid();
-      let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
-
-      while (existingId) {
-        uniqueId = nanoid();
-        existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+        integrations.shareasale = {
+          trackingId: uniqueId,
+        };
       }
 
-      rawUser.integrations.shareasale = {
-        trackingId: uniqueId,
-      };
+      if (!!params && params.length > 0) {
+        const validParams = params.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+        if (validParams.length > 0) integrations.referrals = { params };
+      }
+
+      newUserData.integrations = integrations;
+      const newUser = await UserModel.create(newUserData);
+      let authKey = '';
+
+      try {
+        authKey = await Session.createSession(newUser._id.toString());
+        await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+        await updateNewUserSubscriptions(newUser);
+        // await visitor.delete();
+      } catch (afterCreationError) {
+        // undo user creation
+        await UserModel.deleteOne({ _id: newUser?._id });
+        throw new CustomError('error creating user', ErrorTypes.SERVER);
+      }
+
+      return { user: newUser, authKey };
+    } catch (err) {
+      throw asCustomError(err);
     }
-
-    if (!!referralParams) {
-      const validParams = referralParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
-      if (validParams.length > 0) rawUser.integrations.referrals = { params: referralParams };
-    }
-
-    delete rawUser._id;
-    const newUser = new UserModel({ ...rawUser });
-    await newUser.save();
-    let authKey = '';
-
-    try {
-      authKey = await Session.createSession(newUser._id.toString());
-      await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
-      await updateNewUserSubscriptions(newUser);
-      const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-      await resendEmailVerification(verificationEmailRequest);
-    } catch (afterCreationError) {
-      // undo user creation
-      await UserModel.deleteOne({ _id: newUser?._id });
-      throw new CustomError('error creating user', ErrorTypes.SERVER);
-    }
-
-    return { user: newUser, authKey };
   } catch (err) {
-    throw asCustomError(err);
+    throw new CustomError('Error creating user.', ErrorTypes.INVALID_ARG);
   }
 };
+
+// export const register = async (req: IRequest, {
+//   password,
+//   email,
+//   name,
+//   zipcode,
+//   shareASaleId,
+//   referralParams,
+// }: IUserData) => {
+//   try {
+//     if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
+//     if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
+//     name = name.replace(/\s/g, ' ').trim();
+
+//     email = email?.toLowerCase()?.trim();
+//     if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
+
+//     const passwordValidation = validatePassword(password);
+//     if (!passwordValidation.valid) {
+//       throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+//     }
+//     const hash = await argon2.hash(password);
+//     const emailExists = await UserModel.findOne({ 'emails.email': email });
+//     if (emailExists) {
+//       throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+//     }
+
+//     if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
+
+//     const emails = [{ email, verified: false, primary: true }];
+//     const integrations: IUserIntegrations = {};
+
+//     // TODO: delete creating a new legacy user when able.
+//     const legacyUser = new LegacyUserModel({
+//       _id: nanoid(),
+//       name,
+//       email,
+//       emails,
+//       password: hash,
+//       zipcode,
+//       role: UserRoles.None,
+//     });
+
+//     await legacyUser.save();
+
+//     // map new legacy user to new user
+//     const rawUser = {
+//       ...legacyUser.toObject(),
+//       emails,
+//       legacyId: legacyUser._id,
+//       integrations,
+//     };
+
+//     if (!!shareASaleId) {
+//       let uniqueId = nanoid();
+//       let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+//       while (existingId) {
+//         uniqueId = nanoid();
+//         existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+//       }
+
+//       rawUser.integrations.shareasale = {
+//         trackingId: uniqueId,
+//       };
+//     }
+
+//     if (!!referralParams) {
+//       const validParams = referralParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+//       if (validParams.length > 0) rawUser.integrations.referrals = { params: referralParams };
+//     }
+
+//     delete rawUser._id;
+//     const newUser = new UserModel({ ...rawUser });
+//     await newUser.save();
+//     let authKey = '';
+
+//     try {
+//       authKey = await Session.createSession(newUser._id.toString());
+//       await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+//       await updateNewUserSubscriptions(newUser);
+//       const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
+//       await resendEmailVerification(verificationEmailRequest);
+//     } catch (afterCreationError) {
+//       // undo user creation
+//       await UserModel.deleteOne({ _id: newUser?._id });
+//       throw new CustomError('error creating user', ErrorTypes.SERVER);
+//     }
+
+//     return { user: newUser, authKey };
+//   } catch (err) {
+//     throw asCustomError(err);
+//   }
+// };
 
 export const login = async (_: IRequest, { email, password }: ILoginData) => {
   email = email?.toLowerCase();

@@ -13,7 +13,7 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
-import { IUrlParam } from '../user';
+import { IUrlParam, IVerifyTokenBody } from '../user';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -77,7 +77,7 @@ const enrollInMonthlyNewsletterCampaign = async (email: string, subscribe: Activ
   }
 };
 
-// send email to confirm email for account creationg
+// send email to confirm email for account creation
 export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email: string) => {
   const days = emailVerificationDays;
   email = email?.toLowerCase();
@@ -95,14 +95,12 @@ export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email:
 // Endpoint for user to request account creation
 const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
-    console.log('////// this is the visitor info', info);
     const visitorInfo: any = {
       email: info.email,
     };
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
       visitorInfo.integrations = {};
-      console.log('////// there are params');
       if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
       if (!!info.params) visitorInfo.integrations.params = info.params;
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
@@ -110,7 +108,22 @@ const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<
     const visitor = await VisitorModel.create(visitorInfo);
     return visitor;
   } catch (err) {
-    throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.SERVER);
+    throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.GEN);
+  }
+};
+
+const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+  try {
+    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
+      visitor.integrations = {};
+      if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
+      if (!!info.params) visitor.integrations.params = info.params;
+      if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+    }
+    visitor.save();
+    return visitor;
+  } catch (err) {
+    throw new CustomError(`Error updating visitor: ${err} `, ErrorTypes.GEN);
   }
 };
 
@@ -158,7 +171,6 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
 
 export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest) => {
   try {
-    console.log('[+] Create Account', data);
     const { groupCode, shareASale, params } = data;
     let { email } = data;
 
@@ -167,35 +179,29 @@ export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest)
     }
 
     email = email.toLowerCase();
+    // check if existing user with this email
     const user = await getUserByEmail(email);
 
     if (!!user) {
       throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.GEN);
     }
 
+    // check if exisiting visitor with this email, if so resend the verification email
     let visitor = await getVisitorByEmail(email);
 
-    if (!!visitor) {
-      throw new CustomError('This email has already requested an account. Please check your email to verify and finish account creation.', ErrorTypes.GEN);
-    } else {
-      visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
-      console.log('/////// should have created a visitor', visitor);
-      if (!visitor) {
-        throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
-      } else {
-        try {
-          const emailSent = await sendAccountCreationEmail(visitor, email);
-          console.log('/////// this is the email sent', emailSent);
-        } catch (err) {
-          console.log('/////// there was an error sending an email', err);
-        }
+    if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, shareASale, params, email });
+    else visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
 
-        return 'A verification email has been sent. Please check your email to finish account creation.';
+    if (!!visitor) {
+      try {
+        await sendAccountCreationEmail(visitor, email);
+        return { message: 'An email has been sent to your provided email address. Please follow the instructions to complete your account creation.' };
+      } catch (err) {
+        throw new CustomError('Error (1) sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.GEN);
       }
     }
   } catch (err) {
-    console.log('Error sending email to validate account.', err);
-    throw err;
+    throw new CustomError('Error (2) sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.GEN);
   }
 };
 
@@ -339,4 +345,18 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
     console.log('Error submitting form', err);
     throw err;
   }
+};
+
+export const verifyAccountToken = async (req: IRequest<{}, {}, IVerifyTokenBody>) => {
+  const { token } = req.body;
+  if (!token) throw new CustomError('Token required', ErrorTypes.INVALID_ARG);
+
+  const _token = await TokenService.getToken({
+    value: token,
+    type: TokenTypes.Email,
+    consumed: false,
+  });
+  if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
+
+  return { message: 'Token successfully verified.' };
 };

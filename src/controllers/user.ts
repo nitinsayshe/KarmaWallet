@@ -9,7 +9,7 @@ import * as UserVerificationService from '../services/user/verification';
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['password', 'email', 'name'];
+    const requiredFields = ['password', 'token', 'name'];
 
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
@@ -17,10 +17,10 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
       return;
     }
     const {
-      password, email, name, zipcode, shareASaleId, referralParams,
+      password, name, token,
     } = body;
     const { user, authKey } = await UserService.register(req, {
-      password, email, name, zipcode, shareASaleId, referralParams,
+      password, name, token,
     });
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {

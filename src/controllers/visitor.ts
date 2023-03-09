@@ -3,6 +3,7 @@ import { ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { verifyRequiredFields } from '../lib/requestData';
 import * as output from '../services/output';
+import { IVerifyTokenBody } from '../services/user';
 import * as VisitorService from '../services/visitor';
 import { IRequestHandler } from '../types/request';
 
@@ -58,6 +59,15 @@ export const createAccountForm: IRequestHandler<{}, {}, VisitorService.ICreateAc
     };
     await VisitorService.createAccountForm(req, createAccountFormReq);
     output.api(req, res, null);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const verifyAccountToken: IRequestHandler<{}, {}, IVerifyTokenBody> = async (req, res) => {
+  try {
+    const data = await VisitorService.verifyAccountToken(req);
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

@@ -4,7 +4,7 @@ import { error } from '../services/output';
 import { IRequestHandler } from '../types/request';
 
 const authenticate: IRequestHandler = async (req, res, next) => {
-  if (!req.requestor) {
+  if (!req.requestor && !req.apiRequestor) {
     error(req, res, new CustomError('Authentication failed.', ErrorTypes.AUTHENTICATION));
     return;
   }

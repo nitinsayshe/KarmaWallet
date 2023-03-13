@@ -15,7 +15,7 @@ export default () => cors({
     }
     return callback(null, true);
   },
-  allowedHeaders: ['Authorization', 'authkey', 'content-type', 'X-Requested-With', 'serviceName'],
+  allowedHeaders: ['Authorization', 'authkey', 'content-type', 'X-Requested-With', 'serviceName', 'X-KW-API-ID', 'X-KW-API-Key'],
   exposedHeaders: ['API-Token-Expiry'],
   credentials: true,
 });

@@ -73,6 +73,11 @@ export interface ICompanyIntegrations {
   wildfire?: IWildfireCompanyIntegration;
 }
 
+export interface ICompanyPartnerStatus {
+  active: boolean;
+  description: string;
+}
+
 export interface IEvaluatedCompanyUnsdg {
   unsdg: IRef<ObjectId, IUnsdg | IUnsdgDocument>;
   evaluated: boolean;
@@ -100,6 +105,7 @@ export interface IShareableCompany {
   createdAt: Date;
   lastModified: Date;
   evaluatedUnsdgs: IEvaluatedCompanyUnsdg[];
+  partnerStatus: ICompanyPartnerStatus;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -215,6 +221,15 @@ const companySchema = new Schema(
         },
       },
     }],
+    partnerStatus: {
+      active: {
+        type: Boolean,
+        default: false,
+      },
+      description: {
+        type: String,
+      },
+    },
   },
   {
     toJSON: { virtuals: true },

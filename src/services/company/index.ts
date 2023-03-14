@@ -947,6 +947,10 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
         path: 'subcategoryScores.subcategory',
         model: UnsdgSubcategoryModel,
       },
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
     ]);
     if (!partner) throw new CustomError('Partner not found', ErrorTypes.NOT_FOUND);
     return partner;
@@ -959,6 +963,13 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
     }, {
       $sample: {
         size: 1,
+      },
+    }, {
+      $lookup: {
+        from: 'merchants',
+        localField: 'merchant',
+        foreignField: '_id',
+        as: 'merchant',
       },
     },
   ]);

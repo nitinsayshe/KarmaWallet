@@ -56,6 +56,7 @@ export interface IUserGroupRequest {
 
 export interface IGroupRequestParams {
   groupId?: string;
+  userId?: string;
 }
 
 export interface IUpdateUserGroupRequestParams {
@@ -907,10 +908,11 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+    console.log('/////// a user was found');
 
     // confirm that user has not been banned from group
-    const existingUserGroups: IUserGroupDocument[] = await UserGroupModel
-      .find({ group })
+    const usersUserGroup: IUserGroupDocument = await UserGroupModel
+      .findOne({ group: group._id.toString(), user: user._id.toString() })
       .populate([
         {
           path: 'group',
@@ -918,7 +920,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         },
       ]);
 
-    const usersUserGroup = existingUserGroups.find(g => g.user.toString() === user._id.toString());
+    console.log('/////// the matching user we are concerned with right now', usersUserGroup);
 
     if (usersUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
@@ -989,12 +991,13 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       : UserGroupStatus.Unverified;
 
     let userGroup: IUserGroupDocument = null;
+
     if (!!usersUserGroup) {
       usersUserGroup.email = validEmail;
       usersUserGroup.role = UserGroupRole.Member;
       usersUserGroup.status = defaultStatus;
-
       await usersUserGroup.save();
+      userGroup = usersUserGroup;
     } else {
       userGroup = new UserGroupModel({
         user,
@@ -1003,10 +1006,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         role: UserGroupRole.Member,
         status: defaultStatus,
       });
-
       await userGroup.save();
     }
-
     await user.save();
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
@@ -1023,16 +1024,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   }
 };
 
-export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
-  const { groupId } = req.params;
-
+export const leaveGroup = async (req: IRequest, {
+  groupId,
+  userId,
+}: IGroupRequestParams) => {
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
     const userGroup = await UserGroupModel.findOne({
       group: groupId,
-      user: req.requestor,
-      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+      user: userId,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned] },
     });
 
     // only a user that is a member of a group can leave it.
@@ -1056,7 +1058,8 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
     await userGroup.save();
 
     // busting cache for group dashboard
-    const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
+    const appUser = await getUser(req, { _id: userId });
+    console.log('//////// this is the user', appUser);
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);

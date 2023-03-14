@@ -125,7 +125,7 @@ export const register = async (req: IRequest, {
 
       // confirm email does not already belong to another user
       const emailExists = await UserModel.findOne({ 'emails.email': email });
-      const { params, shareASale } = visitor.integrations;
+      const { params, shareASale, groupCode } = visitor.integrations;
       if (emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
       // start building the user information
       const emails = [{ email, verified: true, primary: true }];
@@ -158,21 +158,33 @@ export const register = async (req: IRequest, {
       }
 
       newUserData.integrations = integrations;
-      const newUser = await UserModel.create(newUserData);
-      let authKey = '';
 
       try {
-        authKey = await Session.createSession(newUser._id.toString());
-        await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
-        await updateNewUserSubscriptions(newUser);
-        // should we delete the token after this?
-      } catch (afterCreationError) {
-        // undo user creation
-        await UserModel.deleteOne({ _id: newUser?._id });
-        throw new CustomError('error creating user', ErrorTypes.SERVER);
-      }
+        const newUser = await UserModel.create(newUserData);
+        try {
+          let authKey = '';
+          authKey = await Session.createSession(newUser._id.toString());
+          await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+          await updateNewUserSubscriptions(newUser);
+          const responseInfo: any = {
+            user: newUser,
+            authKey,
+          };
 
-      return { user: newUser, authKey };
+          if (!!groupCode) {
+            responseInfo.groupCode = groupCode;
+          }
+
+          return responseInfo;
+          // should we delete the token after this?
+        } catch (afterCreationError) {
+          // undo user creation
+          await UserModel.deleteOne({ _id: newUser?._id });
+          throw new CustomError('error creating user', ErrorTypes.SERVER);
+        }
+      } catch (err) {
+        throw new CustomError('Error creating user.', ErrorTypes.INVALID_ARG);
+      }
     } catch (err) {
       throw asCustomError(err);
     }
@@ -213,10 +225,13 @@ export const getUsersPaginated = (_: IRequest, query: FilterQuery<IUser>) => {
 export const getUsers = async (_: IRequest, query = {}) => UserModel.find(query);
 
 export const getUser = async (_: IRequest, query = {}) => {
+  console.log('////////user query', query);
   try {
+    console.log('////// should be finding user');
     const user = await UserModel
       .findOne(query);
 
+    console.log('//////// the USER!', user);
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
     return user;

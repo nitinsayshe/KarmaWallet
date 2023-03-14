@@ -19,10 +19,10 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
     const {
       password, name, token,
     } = body;
-    const { user, authKey } = await UserService.register(req, {
+    const { user, authKey, groupCode } = await UserService.register(req, {
       password, name, token,
     });
-    output.api(req, res, UserService.getShareableUser(user), authKey);
+    output.api(req, res, { user: UserService.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

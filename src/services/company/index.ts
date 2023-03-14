@@ -971,12 +971,16 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
         foreignField: '_id',
         as: 'merchant',
       },
+    }, {
+      $unwind: {
+        path: '$merchant',
+        preserveNullAndEmptyArrays: false,
+      },
     },
   ]);
 
   if (!partners.length) throw new CustomError('No partners found', ErrorTypes.NOT_FOUND);
   const partner: ICompanyDocument = partners[0];
-
   // TODO: This is a hack to get the populated fields to show up in the response. Find a better way to do this.
 
   const _sectors = await SectorModel.find({ _id: { $in: partner.sectors.map((s: any) => s.sector) } });

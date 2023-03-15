@@ -904,6 +904,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     } else {
       // requestor must be a Karma member to add another user to a group
       if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
+      console.log('//////// this is the user being used to get user', userId);
       user = await getUser(req, { _id: userId });
     }
 
@@ -990,35 +991,35 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       ? UserGroupStatus.Verified
       : UserGroupStatus.Unverified;
 
-    let userGroup: IUserGroupDocument = null;
+    let userUserGroupDocument:IUserGroupDocument = null;
 
     if (!!usersUserGroup) {
       usersUserGroup.email = validEmail;
       usersUserGroup.role = UserGroupRole.Member;
       usersUserGroup.status = defaultStatus;
-      await usersUserGroup.save();
-      userGroup = usersUserGroup;
+      userUserGroupDocument = await usersUserGroup.save();
     } else {
-      userGroup = new UserGroupModel({
+      const userGroup = new UserGroupModel({
         user,
         group,
         email: validEmail,
         role: UserGroupRole.Member,
         status: defaultStatus,
       });
-      await userGroup.save();
+
+      userUserGroupDocument = await userGroup.save();
     }
     await user.save();
 
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupSubscriptionsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
-    // busting cache for group dashboard
-    const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
-    await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
+    // busting cache for group dashboard // REVISIT THIS WITH JOHN
+    // const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
+    // await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
 
-    return userGroup ?? usersUserGroup;
+    return userUserGroupDocument;
   } catch (err) {
     throw asCustomError(err);
   }
@@ -1057,10 +1058,9 @@ export const leaveGroup = async (req: IRequest, {
 
     await userGroup.save();
 
-    // busting cache for group dashboard
-    const appUser = await getUser(req, { _id: userId });
-    console.log('//////// this is the user', appUser);
-    await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
+    // busting cache for group dashboard // this appears to be breaking when the person leaving the group is just a regular member
+    // const appUser = await getUser(req, { _id: userId });
+    // await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
     await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);

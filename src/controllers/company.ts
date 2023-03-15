@@ -113,3 +113,30 @@ export const getMerchantRatesForCompany: IRequestHandler<{ companyId: string }> 
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getPartnersCount: IRequestHandler = async (req, res) => {
+  try {
+    const result = await CompanyService.getPartnersCount(req);
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getAllPartners: IRequestHandler = async (req, res) => {
+  try {
+    const result = await CompanyService.getAllPartners(req);
+    output.api(req, res, result.map(c => CompanyService.getShareableCompany(c)));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getPartner: IRequestHandler<{}, CompanyService.IGetPartnerQuery, {}> = async (req, res) => {
+  try {
+    const result = await CompanyService.getPartner(req);
+    output.api(req, res, CompanyService.getShareableCompany(result));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

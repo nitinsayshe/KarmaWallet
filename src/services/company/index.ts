@@ -974,7 +974,7 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
     }, {
       $unwind: {
         path: '$merchant',
-        preserveNullAndEmptyArrays: false,
+        preserveNullAndEmptyArrays: true,
       },
     },
   ]);

@@ -1,7 +1,7 @@
 import aqp from 'api-query-params';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import mongoose, { FilterQuery, isValidObjectId, ObjectId, PaginateDocument, PaginateResult, Types } from 'mongoose';
+import { FilterQuery, isValidObjectId, ObjectId, PaginateDocument, PaginateResult, Types } from 'mongoose';
 import { MainBullClient } from '../../clients/bull/main';
 import { DefaultPaginationLimit, DefaultPaginationPage, ErrorTypes, MaxPaginationLimit, sectorsToExclude } from '../../lib/constants';
 import { WildfireApiIds } from '../../lib/constants/client';
@@ -931,7 +931,7 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
   const { companyId } = req.query;
 
   if (companyId) {
-    const _validObjectId = mongoose.Types.ObjectId.isValid(companyId);
+    const _validObjectId = Types.ObjectId.isValid(companyId);
     if (!_validObjectId) throw new CustomError('Invalid company id', ErrorTypes.INVALID_ARG);
 
     const partner = await CompanyModel.findOne({ _id: companyId, 'partnerStatus.active': true }).populate([

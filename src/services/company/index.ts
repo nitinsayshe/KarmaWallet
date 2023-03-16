@@ -83,7 +83,9 @@ export interface IGetCompanyDataParams {
   page: string;
   limit: string;
 }
-
+export interface IGetPartnerQuery {
+  companyId: string;
+}
 interface ISubcategoryScore {
   subcategory: string;
   score: number;
@@ -646,6 +648,7 @@ export const getShareableCompany = ({
   lastModified,
   merchant,
   evaluatedUnsdgs,
+  partnerStatus,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -707,6 +710,7 @@ export const getShareableCompany = ({
     lastModified,
     merchant: _merchant,
     evaluatedUnsdgs,
+    partnerStatus,
   };
 };
 
@@ -897,3 +901,103 @@ export async function getCompaniesUsingClientSettings(req: IRequest<{}, IGetComp
     throw new CustomError('Our servers encountered trouble processing this request. Please retry or reach out for help.', ErrorTypes.SERVER);
   }
 }
+
+export const getPartnersCount = async (_req: IRequest) => {
+  const count = await CompanyModel.countDocuments({ 'partnerStatus.active': true });
+  return { count };
+};
+
+export const getAllPartners = async (_req: IRequest) => {
+  const partners = await CompanyModel.find({ 'partnerStatus.active': true }).populate([
+    {
+      path: 'sectors.sector',
+      model: SectorModel,
+    },
+    {
+      path: 'categoryScores.category',
+      model: UnsdgCategoryModel,
+    },
+    {
+      path: 'subcategoryScores.subcategory',
+      model: UnsdgSubcategoryModel,
+    },
+  ]);
+  return partners;
+};
+
+export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
+  const { companyId } = req.query;
+
+  if (companyId) {
+    const _validObjectId = Types.ObjectId.isValid(companyId);
+    if (!_validObjectId) throw new CustomError('Invalid company id', ErrorTypes.INVALID_ARG);
+
+    const partner = await CompanyModel.findOne({ _id: companyId, 'partnerStatus.active': true }).populate([
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+      {
+        path: 'categoryScores.category',
+        model: UnsdgCategoryModel,
+      },
+      {
+        path: 'subcategoryScores.subcategory',
+        model: UnsdgSubcategoryModel,
+      },
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+    ]);
+    if (!partner) throw new CustomError('Partner not found', ErrorTypes.NOT_FOUND);
+    return partner;
+  }
+  const partners = await CompanyModel.aggregate([
+    {
+      $match: {
+        'partnerStatus.active': true,
+      },
+    }, {
+      $sample: {
+        size: 1,
+      },
+    }, {
+      $lookup: {
+        from: 'merchants',
+        localField: 'merchant',
+        foreignField: '_id',
+        as: 'merchant',
+      },
+    }, {
+      $unwind: {
+        path: '$merchant',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ]);
+
+  if (!partners.length) throw new CustomError('No partners found', ErrorTypes.NOT_FOUND);
+  const partner: ICompanyDocument = partners[0];
+  // TODO: This is a hack to get the populated fields to show up in the response. Find a better way to do this.
+
+  const _sectors = await SectorModel.find({ _id: { $in: partner.sectors.map((s: any) => s.sector) } });
+  _sectors.forEach((s: any) => {
+    const sector = (partner).sectors.find((p: any) => p.sector.toString() === s._id.toString());
+    sector.sector = getShareableSector(s);
+  });
+
+  const _unsdgCategories = await UnsdgCategoryModel.find({ _id: { $in: partner.categoryScores.map((c: any) => c.category) } });
+  _unsdgCategories.forEach((c: any) => {
+    const category = (partner).categoryScores.find((p: any) => p.category.toString() === c._id.toString());
+    category.category = c;
+  });
+
+  const _unsdgSubcategories = await UnsdgSubcategoryModel.find({ _id: { $in: partner.subcategoryScores.map((s: any) => s.subcategory) } });
+  _unsdgSubcategories.forEach((s: any) => {
+    const subcategory = (partner).subcategoryScores.find((p: any) => p.subcategory.toString() === s._id.toString());
+    subcategory.subcategory = s;
+  });
+
+  return partner;
+};

@@ -11,8 +11,6 @@ interface ICompareQuery {
   companies: string;
 }
 
-interface IGetPartnersQuery extends ICompareQuery {}
-
 export const getCompanies: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
@@ -70,22 +68,6 @@ export const compare: IRequestHandler<{}, ICompareQuery> = async (req, res) => {
   }
 };
 
-export const getPartners: IRequestHandler<{}, IGetPartnersQuery> = async (req, res) => {
-  try {
-    const { companies } = req.query;
-
-    // return all partners if `companies` is not specified
-    const _companies = !!companies ? parseInt(companies) : 999;
-
-    if (isNaN(_companies)) throw new Error('Invalid companies. Please provide a number.');
-
-    const data = await CompanyService.getPartners(req, _companies);
-    output.api(req, res, data);
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
 export const getUNSDGs: IRequestHandler<{ _id: string }> = async (req, res) => {
   try {
     const { _id } = req.params;
@@ -109,6 +91,33 @@ export const getMerchantRatesForCompany: IRequestHandler<{ companyId: string }> 
   try {
     const result = await CompanyService.getMerchantRatesForCompany(req);
     output.api(req, res, result.map(mr => getShareableMerchantRate(mr)));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getPartnersCount: IRequestHandler = async (req, res) => {
+  try {
+    const result = await CompanyService.getPartnersCount(req);
+    output.api(req, res, result);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getAllPartners: IRequestHandler = async (req, res) => {
+  try {
+    const result = await CompanyService.getAllPartners(req);
+    output.api(req, res, result.map(c => CompanyService.getShareableCompany(c)));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getPartner: IRequestHandler<{}, CompanyService.IGetPartnerQuery, {}> = async (req, res) => {
+  try {
+    const result = await CompanyService.getPartner(req);
+    output.api(req, res, CompanyService.getShareableCompany(result));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

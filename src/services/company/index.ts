@@ -650,7 +650,6 @@ export const getShareableCompany = ({
   lastModified,
   merchant,
   evaluatedUnsdgs,
-  partnerStatus,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -712,7 +711,6 @@ export const getShareableCompany = ({
     lastModified,
     merchant: _merchant,
     evaluatedUnsdgs,
-    partnerStatus,
   };
 };
 

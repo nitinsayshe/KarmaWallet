@@ -5,6 +5,7 @@ export default () => cors({
   origin: (origin, callback) => {
     // allow requests with no origin
     // (like mobile apps or curl requests)
+    console.log('origin', origin);
     if (!origin) return callback(null, true);
     if (AllowedOrigins.indexOf(origin) === -1) {
       console.log('cors blocked', origin, AllowedOrigins);

@@ -126,7 +126,9 @@ export const register = async (req: IRequest, {
       // confirm email does not already belong to another user
       const emailExists = await UserModel.findOne({ 'emails.email': email });
       const { params, shareASale, groupCode } = visitor.integrations;
-      if (emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+      if (!!emailExists) {
+        throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+      }
       // start building the user information
       const emails = [{ email, verified: true, primary: true }];
       const integrations: IUserIntegrations = {};
@@ -161,6 +163,7 @@ export const register = async (req: IRequest, {
 
       try {
         const newUser = await UserModel.create(newUserData);
+
         try {
           let authKey = '';
           authKey = await Session.createSession(newUser._id.toString());
@@ -180,7 +183,7 @@ export const register = async (req: IRequest, {
         } catch (afterCreationError) {
           // undo user creation
           await UserModel.deleteOne({ _id: newUser?._id });
-          throw new CustomError('error creating user', ErrorTypes.SERVER);
+          throw new CustomError('Error creating user', ErrorTypes.SERVER);
         }
       } catch (err) {
         throw new CustomError('Error creating user.', ErrorTypes.INVALID_ARG);

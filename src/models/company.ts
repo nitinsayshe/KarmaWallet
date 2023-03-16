@@ -33,6 +33,11 @@ export enum CompanyHideReasons {
   NoWorkingWebsite = 'no-working-website',
 }
 
+export interface ICompanyPartnerStatus {
+  active: boolean;
+  description: string;
+}
+
 export interface IHiddenCompany {
   status: boolean;
   reason: CompanyHideReasons;
@@ -100,6 +105,7 @@ export interface IShareableCompany {
   createdAt: Date;
   lastModified: Date;
   evaluatedUnsdgs: IEvaluatedCompanyUnsdg[];
+  partnerStatus: ICompanyPartnerStatus;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -215,6 +221,15 @@ const companySchema = new Schema(
         },
       },
     }],
+    partnerStatus: {
+      active: {
+        type: Boolean,
+        default: false,
+      },
+      description: {
+        type: String,
+      },
+    },
   },
   {
     toJSON: { virtuals: true },

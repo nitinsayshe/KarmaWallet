@@ -1,11 +1,10 @@
-import { Parser } from "json2csv";
-import fs from "fs";
-import { CardStatus } from "../../lib/constants";
-import { CardModel } from "../../models/card";
-import { TransactionModel } from "../../models/transaction";
-import { roundToPercision } from "../../lib/misc";
-import { id } from "date-fns/locale";
-import { UserModel } from "../../models/user";
+import { Parser } from 'json2csv';
+import fs from 'fs';
+import { CardStatus } from '../../lib/constants';
+import { CardModel } from '../../models/card';
+import { TransactionModel } from '../../models/transaction';
+import { roundToPercision } from '../../lib/misc';
+import { UserModel } from '../../models/user';
 
 interface IFinancialInstitutionReport {
   name: string;
@@ -33,16 +32,14 @@ export const generateFIUserReport = async (institutions: string[]) => {
   }
 
   try {
-    console.log("generating finanacial institutin user report...");
+    console.log('generating finanacial institution user report...');
     const report: IFinancialInstitutionUserReportRow[] = [];
 
     const cards = await CardModel.aggregate()
       .match({ institution: { $in: institutions } })
-      .group({ _id: "$userId" });
+      .group({ _id: '$userId' });
 
-    const userIds = cards.map((id: { _id: string }) => {
-      return id._id;
-    });
+    const userIds = cards.map((id: { _id: string }) => id._id);
 
     await Promise.all(
       userIds.map(async (id) => {
@@ -74,35 +71,35 @@ export const generateFIUserReport = async (institutions: string[]) => {
           numUnlinkedCards: notLinkedCards?.length || 0,
         };
         report.push(userReport);
-      })
+      }),
     );
 
-    const fileName = `FI_User_Report_${institutions.join("_").toUpperCase()}${new Date().toISOString()}.csv`;
-    console.log("Writing data to ", fileName);
+    const fileName = `FI_User_Report_${institutions.join('_').toUpperCase()}${new Date().toISOString()}.csv`;
+    console.log('Writing data to ', fileName);
 
     const parser = new Parser({
       fields: [
-        "userId",
-        "financialInstitutions",
-        "numLinkedCards",
-        "numUnlinkedCards",
+        'userId',
+        'financialInstitutions',
+        'numLinkedCards',
+        'numUnlinkedCards',
       ],
     });
     const csv = parser.parse(report);
 
     fs.writeFileSync(fileName, csv);
 
-    console.log("report generated successfully!");
+    console.log('report generated successfully!');
   } catch (err) {
     console.log(err);
   }
 };
 
 export const generateFIReport = async (
-  linkedAccountsReport: boolean
+  linkedAccountsReport: boolean,
 ): Promise<IFinancialInstitutionReport[]> => {
   try {
-    console.log("generating financial institution report...");
+    console.log('generating financial institution report...');
     // get a list of transactions grouped by financial institution - breakdown by debit/credit and include total
     const report: IFinancialInstitutionReport[] = [];
 
@@ -110,7 +107,7 @@ export const generateFIReport = async (
       $and: [
         { institution: { $exists: true } },
         { institution: { $ne: null } },
-        { institution: { $ne: "" } },
+        { institution: { $ne: '' } },
         {
           status: linkedAccountsReport
             ? CardStatus.Linked
@@ -123,7 +120,7 @@ export const generateFIReport = async (
     const financialInstitutions = await CardModel.aggregate()
       .match(institutionMatchQuery)
       .group({
-        _id: "$institution",
+        _id: '$institution',
       });
 
     // financialInstitutions[n]._id = financial institution name
@@ -131,8 +128,8 @@ export const generateFIReport = async (
     await Promise.all(
       financialInstitutions.map(async (institution) => {
         console.log(
-          "retrieving card and transaction data for ",
-          institution._id
+          'retrieving card and transaction data for ',
+          institution._id,
         );
 
         const reportItem: IFinancialInstitutionReport = {
@@ -171,17 +168,17 @@ export const generateFIReport = async (
           reportItem.transactionsAmount = roundToPercision(
             transactions.reduce(
               (acc, transaction) => acc + Math.abs(transaction.amount),
-              0
+              0,
             ),
-            2
+            2,
           );
         }
 
         // debit cards and transactions
         const depositoryAccountsQuery: any = { ...cardQuery };
-        depositoryAccountsQuery.type = "depository";
+        depositoryAccountsQuery.type = 'depository';
         const depositoryAccounts = await CardModel.find(
-          depositoryAccountsQuery
+          depositoryAccountsQuery,
         );
         reportItem.depositoryAccounts = depositoryAccounts?.length || 0;
 
@@ -194,15 +191,15 @@ export const generateFIReport = async (
           reportItem.debitTransactionsAmount = roundToPercision(
             debitTransactions.reduce(
               (acc, transaction) => acc + Math.abs(transaction.amount),
-              0
+              0,
             ),
-            2
+            2,
           );
         }
 
         // credit accounts
         const creditAccountsQuery: any = { ...cardQuery };
-        creditAccountsQuery.type = { $ne: "depository" };
+        creditAccountsQuery.type = { $ne: 'depository' };
         const creditAccounts = await CardModel.find(creditAccountsQuery);
         reportItem.creditAccounts = creditAccounts?.length || 0;
 
@@ -215,39 +212,39 @@ export const generateFIReport = async (
           reportItem.creditTransactionsAmount = roundToPercision(
             creditTransactions.reduce(
               (acc, transaction) => acc + Math.abs(transaction.amount),
-              0
+              0,
             ),
-            2
+            2,
           );
         }
-        console.log("done retrieving data for ", institution._id);
+        console.log('done retrieving data for ', institution._id);
         report.push(reportItem);
-      })
+      }),
     );
 
-    const fileName = `FI_Report_${linkedAccountsReport ? "" : "Unlinked_And_Removed_"
-      }${new Date().toISOString()}.csv`;
-    console.log("Writing data to ", fileName);
+    const fileName = `FI_Report_${linkedAccountsReport ? '' : 'Unlinked_And_Removed_'
+    }${new Date().toISOString()}.csv`;
+    console.log('Writing data to ', fileName);
 
     const parser = new Parser({
       fields: [
-        "name",
-        "cards",
-        "depositoryAccounts",
-        "creditAccounts",
-        "transactions",
-        "transactionsAmount",
-        "debitTransactions",
-        "debitTransactionsAmount",
-        "creditTransactions",
-        "creditTransactionsAmount",
+        'name',
+        'cards',
+        'depositoryAccounts',
+        'creditAccounts',
+        'transactions',
+        'transactionsAmount',
+        'debitTransactions',
+        'debitTransactionsAmount',
+        'creditTransactions',
+        'creditTransactionsAmount',
       ],
     });
     const csv = parser.parse(report);
 
     fs.writeFileSync(fileName, csv);
 
-    console.log("report generated successfully!");
+    console.log('report generated successfully!');
     return report;
   } catch (err) {
     console.error(err);

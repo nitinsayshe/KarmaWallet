@@ -1,10 +1,17 @@
+import aqp from 'api-query-params';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { FilterQuery, Types, ObjectId, isValidObjectId } from 'mongoose';
-import { ErrorTypes, sectorsToExclude } from '../../lib/constants';
+import { FilterQuery, isValidObjectId, ObjectId, PaginateDocument, PaginateResult, Types } from 'mongoose';
+import { MainBullClient } from '../../clients/bull/main';
+import { DefaultPaginationLimit, DefaultPaginationPage, ErrorTypes, MaxPaginationLimit, sectorsToExclude } from '../../lib/constants';
+import { WildfireApiIds } from '../../lib/constants/client';
+import { CompanyRating } from '../../lib/constants/company';
+import { JobNames } from '../../lib/constants/jobScheduler';
+import { convertFilterToObjectId } from '../../lib/convertFilterToObjectId';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getRandomInt } from '../../lib/number';
 import { slugify } from '../../lib/slugify';
+import { IApp } from '../../models/app';
 import {
   CompanyCreationStatus,
   CompanyModel,
@@ -13,25 +20,22 @@ import {
   IShareableCompany,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
-import { ISectorModel, SectorModel } from '../../models/sector';
+import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
+import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
+import { MerchantRateModel } from '../../models/merchantRate';
+import { ISectorAverageScores, ISectorDocument, ISectorModel, SectorModel } from '../../models/sector';
 import { IUnsdgDocument, UnsdgModel } from '../../models/unsdg';
 import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { IUnsdgSubcategoryDocument, UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
+import { IValueDocument, ValueModel } from '../../models/value';
+import { IValueCompanyMapping, ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+import { Logger } from '../logger';
+import { getShareableMerchant } from '../merchant';
 import { getCompanyRatingsThresholds } from '../misc';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
-import { CompanyRatings } from './utils';
-import { Logger } from '../logger';
-import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
-import { JobNames } from '../../lib/constants/jobScheduler';
-import { MainBullClient } from '../../clients/bull/main';
-import { IMerchantDocument, IShareableMerchant, MerchantModel } from '../../models/merchant';
-import { getShareableMerchant } from '../merchant';
-import { MerchantRateModel } from '../../models/merchantRate';
-import { convertFilterToObjectId } from '../../lib/convertFilterToObjectId';
-import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 
 dayjs.extend(utc);
 
@@ -74,6 +78,98 @@ export interface IBatchedCompaniesRequestBody {
 export interface IBatchedCompanyParentChildRelationshipsRequestBody extends IBatchedCompaniesRequestBody {
   jobReportId?: string;
 }
+
+export interface IGetCompanyDataParams {
+  page: string;
+  limit: string;
+}
+export interface IGetPartnerQuery {
+  companyId: string;
+}
+interface ISubcategoryScore {
+  subcategory: string;
+  score: number;
+}
+
+interface ICategoryScore {
+  category: string;
+  score: number;
+}
+
+interface ISectorScores {
+  avgScore: number;
+  avgPlanetScore: number;
+  avgPeopleScore: number;
+  avgSustainabilityScore: number;
+  avgClimateActionScore: number;
+  avgCommunityWelfareScore: number;
+  avgDiversityInclusionScore: number;
+}
+
+interface ISector {
+  name: string;
+  scores: ISectorScores;
+}
+
+interface ICompanyProtocol {
+  companyName: string;
+  values: string[];
+  rating: CompanyRating;
+  score: number;
+  karmaWalletUrl: string;
+  companyUrl: string;
+  subcategoryScores: ISubcategoryScore[];
+  categoryScores: ICategoryScore[];
+  wildfireId: number;
+  sector: ISector;
+
+}
+
+interface IPagination {
+  page: number;
+  totalPages: number;
+  limit: number;
+  totalCompanies: number;
+}
+
+export interface IGetCompaniesResponse {
+  companies: ICompanyProtocol[];
+  pagination: IPagination;
+}
+
+export const _getPaginatedCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
+  const options = {
+    projection: query?.projection || '',
+    populate: query?.population || [
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+      {
+        path: 'parentCompany',
+        model: CompanyModel,
+        populate: [
+          {
+            path: 'sectors.sector',
+            model: SectorModel,
+          },
+        ],
+      },
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+    ],
+    page: query?.skip || 1,
+    sort: query?.sort ? { ...query.sort, _id: 1 } : { companyName: 1, _id: 1 },
+    limit: query?.limit || 10,
+  };
+
+  const filter: FilterQuery<ICompany> = { ...query.filter };
+  filter['creation.status'] = { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] };
+  if (!includeHidden) filter['hidden.status'] = false;
+  return CompanyModel.paginate(filter, options);
+};
 
 /**
  * this function should only be used internally. for anything client
@@ -356,10 +452,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       $addFields: {},
     };
 
-    const sectorsSortQuery: any = {
-      $sort: {},
-    };
-
     const sectorsMatch = {
       $match: {
         'sectors.sector': {
@@ -387,11 +479,9 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
         },
       };
       options.sort = { [sector]: -1, ...options.sort };
-      sectorsSortQuery.$sort[sector] = -1;
     }
 
     aggregateSteps.push(addFieldsQuery);
-    aggregateSteps.push(sectorsSortQuery);
   }
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
@@ -477,7 +567,7 @@ export const getSample = async (req: IRequest<{}, ICompanySampleRequest>) => {
 
     if (!!ratings) {
       _ratings = (ratings || '').split(',');
-      const invalidRatings = _ratings.filter(r => !Object.values(CompanyRatings).find(cr => cr === r));
+      const invalidRatings = _ratings.filter(r => !Object.values(CompanyRating).find(cr => cr === r));
       if (!!invalidRatings.length) {
         throw new CustomError(`${invalidRatings.length > 1 ? 'Some of' : 'One of'} the ratings found ${invalidRatings.length > 1 ? 'are' : 'is'} invalid.`, ErrorTypes.INVALID_ARG);
       }
@@ -558,6 +648,7 @@ export const getShareableCompany = ({
   lastModified,
   merchant,
   evaluatedUnsdgs,
+  partnerStatus,
 }: ICompanyDocument): IShareableCompany => {
   // since these are refs, they could be id's or a populated
   // value. have to check if they are populated, and if so
@@ -619,6 +710,7 @@ export const getShareableCompany = ({
     lastModified,
     merchant: _merchant,
     evaluatedUnsdgs,
+    partnerStatus,
   };
 };
 
@@ -719,4 +811,193 @@ export const getMerchantRatesForCompany = async (req: IRequest<ICompanyRequestPa
   if (!company.merchant) throw new CustomError(`Company with id: ${companyId} does not have a merchant.`, ErrorTypes.NOT_FOUND);
   const merchantRates = await MerchantRateModel.find({ merchant: company.merchant });
   return merchantRates;
+};
+
+const isWildfireApp = (app: IApp): boolean => (!!Object.values(WildfireApiIds).filter(v => v === app?.apiId).length);
+
+// Takes mongoose paginated output and converts it to a response object
+const convertCompanyModelsToGetCompaniesResponse = async (
+  companies: PaginateResult<PaginateDocument<ICompanyDocument, unknown, unknown>>,
+  app: IApp,
+): Promise<IGetCompaniesResponse> => {
+  // get all company values for the requested companies
+  const companyValues = await ValueCompanyMappingModel
+    .find({ company: { $in: companies?.docs?.map(c => c._id) } })
+    .populate([
+      {
+        path: 'value',
+        model: ValueModel,
+        populate: [
+          {
+            path: 'category',
+            model: UnsdgCategoryModel,
+          },
+        ],
+      },
+    ]);
+
+  const companiesProtocol: ICompanyProtocol[] = await Promise.all(companies?.docs?.map(async (company) => {
+    if (!company || !company.companyName) return null;
+    const c = company as any as IShareableCompany;
+    const merchant = c.merchant as IShareableMerchant;
+    const values = companyValues.filter((v: IValueCompanyMapping) => v.company.toString() === c?._id?.toString())
+      .map((valueMapping: IValueCompanyMapping) => valueMapping.value as IValueDocument);
+
+    const primarySector = company.sectors.find(s => s.primary)?.sector as any as ISectorDocument;
+    delete primarySector?.averageScores?.numCompanies;
+
+    return {
+      companyName: company.companyName,
+      values: values.map(v => (v as IValueDocument).name),
+      rating: company.rating,
+      score: company.combinedScore,
+      karmaWalletUrl: `https://karmawallet.io/company/${company._id}/${company.slug}`,
+      evaluatedUnsdgs: company.evaluatedUnsdgs?.filter((unsdg) => unsdg.evaluated).length || 0,
+      companyUrl: company.url,
+      subcategoryScores: company.subcategoryScores.map(subcategory => ({
+        subcategory: (subcategory.subcategory as any).name as string,
+        score: subcategory.score,
+      })),
+      categoryScores: company.categoryScores.map(category => ({
+        category: (category.category as any).name as string,
+        score: category.score,
+      })),
+      wildfireId: isWildfireApp(app) ? merchant?.integrations?.wildfire?.merchantId : undefined,
+      sector: {
+        name: primarySector?.name,
+        scores: primarySector?.averageScores as ISectorAverageScores,
+      },
+    };
+  }));
+
+  return {
+    companies: companiesProtocol.filter(c => !!c),
+    pagination: {
+      page: companies.page || 0,
+      limit: companies.limit,
+      totalPages: parseInt(companies.totalPages.toString(), 10) || 0,
+      totalCompanies: companies.totalDocs,
+    },
+  };
+};
+
+export async function getCompaniesUsingClientSettings(req: IRequest<{}, IGetCompanyDataParams, {}>): Promise<IGetCompaniesResponse> {
+  // validate input
+  let page = parseInt(req.query.page, 10);
+  page = !!req.query.page && !isNaN(parseInt(req.query.page, 10)) ? page : DefaultPaginationPage;
+  if (page <= 0) throw new CustomError(`page: "${req.query.page}" must be greater than 0.`, ErrorTypes.INVALID_ARG);
+
+  let limit = parseInt(req.query.limit, 10);
+  limit = !!req.query.limit && !isNaN(limit) ? limit : DefaultPaginationLimit;
+  if (limit <= 0 || limit > MaxPaginationLimit) throw new CustomError(`limit: "${req.query.limit}" must be greater than 0 and less than ${MaxPaginationLimit}.`, ErrorTypes.INVALID_ARG);
+
+  // generate db pagination query
+  const query = aqp(`skip=${page.toString()}&limit=${limit.toString()}`);
+
+  try {
+    const companies = await _getPaginatedCompanies(query);
+    return convertCompanyModelsToGetCompaniesResponse(companies, req.apiRequestor);
+  } catch (err) {
+    throw new CustomError('Our servers encountered trouble processing this request. Please retry or reach out for help.', ErrorTypes.SERVER);
+  }
+}
+
+export const getPartnersCount = async (_req: IRequest) => {
+  const count = await CompanyModel.countDocuments({ 'partnerStatus.active': true });
+  return { count };
+};
+
+export const getAllPartners = async (_req: IRequest) => {
+  const partners = await CompanyModel.find({ 'partnerStatus.active': true }).populate([
+    {
+      path: 'sectors.sector',
+      model: SectorModel,
+    },
+    {
+      path: 'categoryScores.category',
+      model: UnsdgCategoryModel,
+    },
+    {
+      path: 'subcategoryScores.subcategory',
+      model: UnsdgSubcategoryModel,
+    },
+  ]);
+  return partners;
+};
+
+export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
+  const { companyId } = req.query;
+
+  if (companyId) {
+    const _validObjectId = Types.ObjectId.isValid(companyId);
+    if (!_validObjectId) throw new CustomError('Invalid company id', ErrorTypes.INVALID_ARG);
+
+    const partner = await CompanyModel.findOne({ _id: companyId, 'partnerStatus.active': true }).populate([
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+      {
+        path: 'categoryScores.category',
+        model: UnsdgCategoryModel,
+      },
+      {
+        path: 'subcategoryScores.subcategory',
+        model: UnsdgSubcategoryModel,
+      },
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+    ]);
+    if (!partner) throw new CustomError('Partner not found', ErrorTypes.NOT_FOUND);
+    return partner;
+  }
+  const partners = await CompanyModel.aggregate([
+    {
+      $match: {
+        'partnerStatus.active': true,
+      },
+    }, {
+      $sample: {
+        size: 1,
+      },
+    }, {
+      $lookup: {
+        from: 'merchants',
+        localField: 'merchant',
+        foreignField: '_id',
+        as: 'merchant',
+      },
+    }, {
+      $unwind: {
+        path: '$merchant',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ]);
+
+  if (!partners.length) throw new CustomError('No partners found', ErrorTypes.NOT_FOUND);
+  const partner: ICompanyDocument = partners[0];
+  // TODO: This is a hack to get the populated fields to show up in the response. Find a better way to do this.
+
+  const _sectors = await SectorModel.find({ _id: { $in: partner.sectors.map((s: any) => s.sector) } });
+  _sectors.forEach((s: any) => {
+    const sector = (partner).sectors.find((p: any) => p.sector.toString() === s._id.toString());
+    sector.sector = getShareableSector(s);
+  });
+
+  const _unsdgCategories = await UnsdgCategoryModel.find({ _id: { $in: partner.categoryScores.map((c: any) => c.category) } });
+  _unsdgCategories.forEach((c: any) => {
+    const category = (partner).categoryScores.find((p: any) => p.category.toString() === c._id.toString());
+    category.category = c;
+  });
+
+  const _unsdgSubcategories = await UnsdgSubcategoryModel.find({ _id: { $in: partner.subcategoryScores.map((s: any) => s.subcategory) } });
+  _unsdgSubcategories.forEach((s: any) => {
+    const subcategory = (partner).subcategoryScores.find((p: any) => p.subcategory.toString() === s._id.toString());
+    subcategory.subcategory = s;
+  });
+
+  return partner;
 };

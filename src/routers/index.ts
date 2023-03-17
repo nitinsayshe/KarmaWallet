@@ -5,6 +5,7 @@ import unsdgs from './unsdgs';
 import meta from './meta';
 import admin from './admin';
 import integrations from './integrations';
+import api from './api';
 import transaction from './transaction';
 import impact from './impact';
 import company from './company';
@@ -32,6 +33,7 @@ const routers = (app: Express) => {
   groups(app);
   impact(app);
   integrations(app);
+  api(app);
   jobPostings(app);
   meta(app);
   sectors(app);

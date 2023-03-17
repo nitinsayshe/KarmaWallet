@@ -1,21 +1,21 @@
-import {
-  Request,
-  Response,
-  NextFunction,
-} from 'express-serve-static-core';
+import { Request, Response, NextFunction } from 'express-serve-static-core';
+import { IAppDocument } from '../models/app';
 import { IUserDocument } from '../models/user';
 
 /**
- * adds requestor and authKey to the request
- * object. generic type allows specifying
- * what type the params, query, and body
- * will be.
+ * adds:
+ *  - requestor
+ *  - authKey
+ *  - appId
+ *  to the request object.
+ *  generic type allows specifying what type the params, query, and body will be.
  */
 export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
-  params: P,
+  params: P;
   query: Q;
   body: B;
   requestor?: IUserDocument;
+  apiRequestor?: IAppDocument;
   authKey?: string;
 }
 
@@ -23,4 +23,8 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
  * a request handler that replaces express.Request
  * as this uses the IRequest object instead.
  */
-export type IRequestHandler<P = {}, Q = {}, B = {}> = (req: IRequest<P, Q, B>, res: Response, next?: NextFunction) => void
+export type IRequestHandler<P = {}, Q = {}, B = {}> = (
+  req: IRequest<P, Q, B>,
+  res: Response,
+  next?: NextFunction
+) => void;

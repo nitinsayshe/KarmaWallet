@@ -18,12 +18,7 @@ dayjs.extend(utc);
     //   requestor: { },
     //   authKey: '',
     // } as IRequest);
-
     await MongoClient.init();
-    const existingGroupUsers = await UserGroupModel
-      .findOne({ group: '640f2767a659f141fb9b95b0', user: '62f6761cf5e3ffdae60ef249' });
-
-    console.log(existingGroupUsers);
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

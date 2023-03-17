@@ -1016,8 +1016,8 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
     // busting cache for group dashboard // REVISIT THIS WITH JOHN
-    // const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
-    // await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
+    const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
+    await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
 
     return userUserGroupDocument;
   } catch (err) {
@@ -1059,8 +1059,8 @@ export const leaveGroup = async (req: IRequest, {
     await userGroup.save();
 
     // busting cache for group dashboard // this appears to be breaking when the person leaving the group is just a regular member
-    // const appUser = await getUser(req, { _id: userId });
-    // await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
+    const appUser = await getUser(req, { _id: userId });
+    await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
     await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);

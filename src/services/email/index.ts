@@ -15,6 +15,7 @@ import { SentEmailModel } from '../../models/sentEmail';
 import { EmailTemplateKeys, EmailTemplateConfigs, IEmailTemplateConfig } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
+import { IVisitorDocument } from '../../models/visitor';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -23,7 +24,8 @@ dayjs.extend(utc);
 interface ICreateSentEmailParams {
   key: EmailTemplateKeys;
   email: string;
-  user: Types.ObjectId;
+  user?: Types.ObjectId;
+  visitor?: Types.ObjectId;
 }
 
 interface IEmailTemplateParams {
@@ -42,6 +44,7 @@ interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
 
 interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
+  visitor?: Types.ObjectId | IVisitorDocument;
 }
 
 interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
@@ -57,6 +60,7 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
 export interface IEmailJobData {
   template: string;
   user?: Types.ObjectId | string;
+  visitor?: IVisitorDocument | Types.ObjectId | string;
   subject: string;
   senderEmail: string;
   recipientEmail: string;
@@ -158,6 +162,7 @@ export const sendEmailVerification = async ({
 
 export const sendAccountCreationVerificationEmail = async ({
   name,
+  visitor,
   domain = process.env.FRONTEND_DOMAIN,
   token,
   recipientEmail,
@@ -172,8 +177,8 @@ export const sendAccountCreationVerificationEmail = async ({
   const verificationLink = `${domain}?verifyaccount=${token}`;
   console.log('//////// this is the verification link', verificationLink);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
-  const subject = 'Finish Creating Your Karma Wallet Account';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig };
+  const subject = 'Verify your Email Address';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -307,11 +312,12 @@ export const sendPasswordResetEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-export const createSentEmailDocument = async ({ user, key, email }: ICreateSentEmailParams) => {
-  if (!user || !key || !email) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
+export const createSentEmailDocument = async ({ user, key, email, visitor }: ICreateSentEmailParams) => {
+  if ((!user && !visitor) || !key || !email) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   const sentEmailDocument = new SentEmailModel({
     sentAt: dayjs().utc().toDate(),
     user,
+    visitor,
     key,
     email,
   });

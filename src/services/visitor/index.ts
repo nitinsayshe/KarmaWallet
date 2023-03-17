@@ -84,11 +84,11 @@ export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email:
   if (!isemail.validate(email, { minDomainAtoms: 2 })) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
   try {
     const token = await TokenService.createVisitorToken({ visitor, days, type: TokenTypes.Email, resource: { email } });
-    await sendAccountCreationVerificationEmail({ token: token.value, recipientEmail: email, name: 'createAccount' });
+    await sendAccountCreationVerificationEmail({ token: token.value, recipientEmail: email, name: 'createAccount', visitor });
     return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
   } catch (err) {
     console.log('Error creating token for email verification', err);
-    throw err;
+    throw new CustomError('shareableSignupError', ErrorTypes.SERVER);
   }
 };
 
@@ -170,38 +170,35 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
 };
 
 export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest) => {
-  try {
-    const { groupCode, shareASale, params } = data;
-    let { email } = data;
+  const { groupCode, shareASale, params } = data;
+  let { email } = data;
 
-    if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
-      throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+  if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
+    throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
+  }
+
+  email = email.toLowerCase();
+  // check if existing user with this email
+  const user = await getUserByEmail(email);
+  console.log('////// user', user);
+  if (!!user) {
+    console.log('////// this is the user', user);
+    throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.GEN);
+  }
+
+  // check if exisiting visitor with this email, if so resend the verification email
+  let visitor = await getVisitorByEmail(email);
+
+  if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, shareASale, params, email });
+  else visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
+
+  if (!!visitor) {
+    try {
+      await sendAccountCreationEmail(visitor, email);
+      return { message: 'An email has been sent to your provided email address. Please follow the instructions to complete your account creation.' };
+    } catch (err) {
+      throw new CustomError('Error (1) sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.GEN);
     }
-
-    email = email.toLowerCase();
-    // check if existing user with this email
-    const user = await getUserByEmail(email);
-
-    if (!!user) {
-      throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.GEN);
-    }
-
-    // check if exisiting visitor with this email, if so resend the verification email
-    let visitor = await getVisitorByEmail(email);
-
-    if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, shareASale, params, email });
-    else visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
-
-    if (!!visitor) {
-      try {
-        await sendAccountCreationEmail(visitor, email);
-        return { message: 'An email has been sent to your provided email address. Please follow the instructions to complete your account creation.' };
-      } catch (err) {
-        throw new CustomError('Error (1) sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.GEN);
-      }
-    }
-  } catch (err) {
-    throw new CustomError('Error (2) sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.GEN);
   }
 };
 

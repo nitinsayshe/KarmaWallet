@@ -18,7 +18,6 @@ export interface IDeleteUserParams {
 export const deleteUser = async ({ userId, email }: IDeleteUserParams) => {
   const user = await UserModel.findOne({ $or: [{ _id: userId }, { 'emails.email': email }] });
   if (!user) throw new Error('User not found');
-  console.log('/////// Found User', user.name);
   await cancelUserSubscriptions(user._id.toString());
 
   const userGroups = await UserGroupModel.find({ user: user._id });

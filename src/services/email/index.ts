@@ -97,7 +97,6 @@ const defaultEmailJobOptions = {
 export const buildTemplate = ({ templateName, data, templatePath, stylePath }: IBuildTemplateParams) => {
   const _templatePath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
   const _stylePath = stylePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
-  console.log('/////// this is the template', _templatePath);
   if (!fs.existsSync(_templatePath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
   const templateString = fs.readFileSync(_templatePath, 'utf8');
   if (fs.existsSync(_stylePath)) {
@@ -175,7 +174,6 @@ export const sendAccountCreationVerificationEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}?verifyaccount=${token}`;
-  console.log('//////// this is the verification link', verificationLink);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'Verify your Email Address';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };

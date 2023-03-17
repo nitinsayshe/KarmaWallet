@@ -904,12 +904,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     } else {
       // requestor must be a Karma member to add another user to a group
       if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
-      console.log('//////// this is the user being used to get user', userId);
       user = await getUser(req, { _id: userId });
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
-    console.log('/////// a user was found');
 
     // confirm that user has not been banned from group
     const usersUserGroup: IUserGroupDocument = await UserGroupModel
@@ -920,8 +918,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
           ref: GroupModel,
         },
       ]);
-
-    console.log('/////// the matching user we are concerned with right now', usersUserGroup);
 
     if (usersUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);

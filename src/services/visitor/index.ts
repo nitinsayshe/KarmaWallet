@@ -180,9 +180,7 @@ export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest)
   email = email.toLowerCase();
   // check if existing user with this email
   const user = await getUserByEmail(email);
-  console.log('////// user', user);
   if (!!user) {
-    console.log('////// this is the user', user);
     throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.GEN);
   }
 

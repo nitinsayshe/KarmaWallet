@@ -228,13 +228,10 @@ export const getUsersPaginated = (_: IRequest, query: FilterQuery<IUser>) => {
 export const getUsers = async (_: IRequest, query = {}) => UserModel.find(query);
 
 export const getUser = async (_: IRequest, query = {}) => {
-  console.log('////////user query', query);
   try {
-    console.log('////// should be finding user');
     const user = await UserModel
       .findOne(query);
 
-    console.log('//////// the USER!', user);
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
     return user;

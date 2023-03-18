@@ -1011,7 +1011,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     await updateActiveCampaignGroupSubscriptionsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
-    // busting cache for group dashboard // REVISIT THIS WITH JOHN
+    // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
 

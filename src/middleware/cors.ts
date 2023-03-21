@@ -5,7 +5,6 @@ export default () => cors({
   origin: (origin, callback) => {
     // allow requests with no origin
     // (like mobile apps or curl requests)
-    console.log('origin', origin);
     if (!origin) return callback(null, true);
     if (AllowedOrigins.indexOf(origin) === -1) {
       console.log('cors blocked', origin, AllowedOrigins);
@@ -15,7 +14,7 @@ export default () => cors({
     }
     return callback(null, true);
   },
-  allowedHeaders: ['Authorization', 'authkey', 'content-type', 'X-Requested-With', 'serviceName'],
+  allowedHeaders: ['Authorization', 'authkey', 'content-type', 'X-Requested-With', 'serviceName', 'X-KW-API-ID', 'X-KW-API-Key'],
   exposedHeaders: ['API-Token-Expiry'],
   credentials: true,
 });

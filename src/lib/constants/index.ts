@@ -3,6 +3,11 @@ export interface ICustomErrorBody {
   code: number;
 }
 
+export enum ApiKeyStatus {
+  Active = 'active',
+  Inactive = 'inactive',
+}
+
 export interface IErrorType {
   AUTHENTICATION: ICustomErrorBody
   CONFLICT: ICustomErrorBody;
@@ -189,4 +194,11 @@ export enum CollectionNames {
   Value = 'values'
 }
 
+export const MaxPaginationLimit = 200;
+export const DefaultPaginationLimit = 10;
+export const DefaultPaginationPage = 1;
+
 export const HubspotPortalId = '22346640';
+
+export const KwApiKeyHeader = 'X-KW-API-KEY';
+export const KwApiIdHeader = 'X-KW-API-ID';

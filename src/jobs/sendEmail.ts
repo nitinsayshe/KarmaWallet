@@ -8,6 +8,7 @@ import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { createSentEmailDocument } from '../services/email';
 import { UserEmailStatus, UserModel } from '../models/user';
+import { IVisitorDocument } from '../models/visitor';
 
 /**
  * !IMPORTANT!
@@ -26,12 +27,14 @@ export interface ISendEmailParams {
   subject: string;
   replyToAddresses: string[];
   recipientEmail: string;
-  user: Types.ObjectId;
+  user?: Types.ObjectId;
+  visitor?: IVisitorDocument;
   emailTemplateConfig: IEmailTemplateConfig;
 }
 
 export const exec = async ({
   user,
+  visitor,
   emailTemplateConfig,
   template,
   senderEmail,
@@ -40,21 +43,25 @@ export const exec = async ({
   replyToAddresses,
 }: ISendEmailParams) => {
   const { name, type } = emailTemplateConfig;
-  const _user = await UserModel.findOne({ _id: user });
-  const userEmailObject = _user.emails.find(u => u.email === recipientEmail);
+  if (!user && !visitor) throw new Error('Must provide either user or visitor');
+  let _user;
+  let userEmailObject;
 
-  if (!userEmailObject) return;
-
-  // no emails should be sent with these statuses
-  if (userEmailObject.status === UserEmailStatus.Bounced || userEmailObject.status === UserEmailStatus.Complained) return;
-
-  if (type !== EmailTemplateTypes.Essential) {
-    // marketing check for subscribed updates
-    if (type === EmailTemplateTypes.Marketing) return;
-
-    // any email other than verification or essential, check verification status
-    if (type !== EmailTemplateTypes.Verification && userEmailObject.status !== UserEmailStatus.Verified) return;
+  if (!!user) {
+    _user = await UserModel.findOne({ _id: user });
+    userEmailObject = _user.emails.find(u => u.email === recipientEmail);
+    if (!userEmailObject) return;
+    // no emails should be sent with these statuses
+    if (userEmailObject.status === UserEmailStatus.Bounced || userEmailObject.status === UserEmailStatus.Complained) return;
+    if (type !== EmailTemplateTypes.Essential) {
+      // marketing check for subscribed updates
+      if (type === EmailTemplateTypes.Marketing) return;
+      // any email other than verification or essential, check verification status
+      if (type !== EmailTemplateTypes.Verification && userEmailObject.status !== UserEmailStatus.Verified) return;
+    }
   }
+
+  if (!!visitor && (visitor.emailStatus === UserEmailStatus.Bounced || visitor.emailStatus === UserEmailStatus.Complained)) return;
 
   if (DEV_TEST) {
     console.log({
@@ -80,7 +87,7 @@ export const exec = async ({
     });
   }
 
-  createSentEmailDocument({ user, key: name, email: recipientEmail });
+  createSentEmailDocument({ user, visitor: visitor._id, key: name, email: recipientEmail });
 
   return emailResponse;
 };

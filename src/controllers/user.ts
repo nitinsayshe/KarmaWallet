@@ -9,20 +9,16 @@ import * as UserVerificationService from '../services/user/verification';
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['password', 'email', 'name'];
+    const requiredFields = ['password', 'token', 'name'];
 
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const {
-      password, email, name, zipcode, shareASaleId, referralParams,
-    } = body;
-    const { user, authKey } = await UserService.register(req, {
-      password, email, name, zipcode, shareASaleId, referralParams,
-    });
-    output.api(req, res, UserService.getShareableUser(user), authKey);
+    const { password, name, token } = body;
+    const { user, authKey, groupCode } = await UserService.register(req, { password, name, token });
+    output.api(req, res, { user: UserService.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

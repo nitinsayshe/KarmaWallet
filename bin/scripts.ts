@@ -8,12 +8,7 @@ import utc from 'dayjs/plugin/utc';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
-import { PromoModel } from '../src/models/promo';
-import { CommissionModel, KarmaCommissionStatus } from '../src/models/commissions';
-import { MerchantModel } from '../src/models/merchant';
-import { getEvaluatedUNSDGsCountForCompanies } from '../src/services/scripts/generate_evaluated_UNSDGs_by_company';
-import { getCurrentWildfireData, pullRecentFromDatabaseAndSave, associateWildfireMatches } from '../src/services/scripts/wildfire';
-import { findCompaniesWithDupeSectorsAndClear } from '../src/services/scripts/findAndRemoveDupeSectors';
+import { UserGroupModel } from '../src/models/userGroup';
 
 dayjs.extend(utc);
 
@@ -24,7 +19,6 @@ dayjs.extend(utc);
     //   authKey: '',
     // } as IRequest);
     await MongoClient.init();
-    await findCompaniesWithDupeSectorsAndClear();
     await MongoClient.disconnect();
   } catch (err) {
     Logger.error(asCustomError(err));

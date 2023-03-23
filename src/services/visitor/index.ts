@@ -181,7 +181,7 @@ export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest)
   // check if existing user with this email
   const user = await getUserByEmail(email);
   if (!!user) {
-    throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.GEN);
+    throw new CustomError('Email already associated with a user. Please sign in or request a password reset.', ErrorTypes.CONFLICT);
   }
 
   // check if exisiting visitor with this email, if so resend the verification email

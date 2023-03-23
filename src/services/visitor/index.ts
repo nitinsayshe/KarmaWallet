@@ -102,7 +102,7 @@ const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
       visitorInfo.integrations = {};
       if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
-      if (!!info.params) visitorInfo.integrations.params = info.params;
+      if (!!info.params) visitorInfo.integrations.urlParams = info.params;
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
     }
     const visitor = await VisitorModel.create(visitorInfo);
@@ -117,7 +117,7 @@ const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICrea
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
       visitor.integrations = {};
       if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-      if (!!info.params) visitor.integrations.params = info.params;
+      if (!!info.params) visitor.integrations.urlParams = info.params;
       if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
     }
     visitor.save();

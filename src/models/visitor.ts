@@ -8,7 +8,7 @@ import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
 
 export interface IVisitorIntegrations {
   groupCode?: string;
-  params?: IUrlParam[];
+  urlParams?: IUrlParam[];
   shareASale?: boolean;
 }
 
@@ -49,7 +49,7 @@ const visitorSchema = new Schema({
   },
   integrations: {
     groupCode: String,
-    params: { type: Array },
+    urlParams: { type: Array },
     shareASale: Boolean,
   },
   createdOn: { type: Date, default: () => getUtcDate() },

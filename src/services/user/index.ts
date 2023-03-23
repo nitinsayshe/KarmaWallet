@@ -126,7 +126,7 @@ export const register = async (req: IRequest, {
   if (!!emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
 
   // start building the user information
-  const { params, shareASale, groupCode } = visitor.integrations;
+  const { urlParams, shareASale, groupCode } = visitor.integrations;
   const emails = [{ email, verified: true, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
   const integrations: IUserIntegrations = {};
@@ -154,9 +154,9 @@ export const register = async (req: IRequest, {
   }
 
   // save any params that the user came to our site
-  if (!!params && params.length > 0) {
-    const validParams = params.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
-    if (validParams.length > 0) integrations.referrals = { params };
+  if (!!urlParams && urlParams.length > 0) {
+    const validParams: IUrlParam[] = urlParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+    if (validParams.length > 0) integrations.referrals = { params: validParams };
   }
 
   newUserData.integrations = integrations;

@@ -130,7 +130,7 @@ const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICrea
 const createVisitorWithEmail = async (email: string, params: IUrlParam[]): Promise<IVisitorDocument> => {
   try {
     const data: any = { email };
-    if (!!params && !!params.length) data.integrations = { params };
+    if (!!params && !!params.length) data.integrations = { urlParams: params };
     return await VisitorModel.create(data);
   } catch (err) {
     console.error(`Error creating visitor with email ${email}:`, err);

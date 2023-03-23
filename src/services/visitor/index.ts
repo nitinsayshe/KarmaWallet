@@ -195,7 +195,7 @@ export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest)
       await sendAccountCreationEmail(visitor, email);
       return { message: 'An email has been sent to your provided email address. Please follow the instructions to complete your account creation.' };
     } catch (err) {
-      throw new CustomError('Error sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.GEN);
+      throw new CustomError('Error sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.SERVER);
     }
   }
 };

@@ -263,7 +263,6 @@ const buildGetMemberQuery = async (req: IRequest<IGroupRequestParams>, karmaAllo
 
   // user must be a member of this group or a karma member
   // to view its members
-  console.log('//////// req.requestor.role', req.requestor, req.requestor.role);
   if (!karmaAllowList.includes(req.requestor.role as UserRoles)) {
     requestorUserGroup = await UserGroupModel.findOne({
       group: groupId,

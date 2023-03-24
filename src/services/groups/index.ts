@@ -1055,7 +1055,7 @@ export const leaveGroup = async (req: IRequest, {
     await userGroup.save();
 
     // busting cache for group dashboard // this appears to be breaking when the person leaving the group is just a regular member
-    const appUser = await getUser(req, { _id: userId });
+    const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);

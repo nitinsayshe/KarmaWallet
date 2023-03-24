@@ -70,7 +70,7 @@ export const exec = async ({
       templateName: emailTemplateConfig.name,
       templateType: emailTemplateConfig.type,
     });
-    createSentEmailDocument({ user, key: name, email: recipientEmail });
+    createSentEmailDocument({ user, visitor: visitor?._id, key: name, email: recipientEmail });
     return `\nMock email sent to ${recipientEmail}`;
   }
 
@@ -87,8 +87,7 @@ export const exec = async ({
     });
   }
 
-  createSentEmailDocument({ user, visitor: visitor._id, key: name, email: recipientEmail });
-
+  createSentEmailDocument({ user, visitor: visitor?._id, key: name, email: recipientEmail });
   return emailResponse;
 };
 

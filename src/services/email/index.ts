@@ -120,6 +120,7 @@ export const sendGroupVerificationEmail = async ({
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
 }: IGroupVerificationTemplateParams) => {
+  console.log('//////// sending group verification email');
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'groupName', 'recipientEmail'], {
     name, domain, token, groupName, recipientEmail,
   });
@@ -131,7 +132,7 @@ export const sendGroupVerificationEmail = async ({
     templateName: EmailTemplateConfigs.EmailVerification.name,
     data: { verificationLink, name, token, groupName },
   });
-  const subject = 'KarmaWallet Email Verification';
+  const subject = 'Karma Wallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -147,13 +148,14 @@ export const sendEmailVerification = async ({
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
+  console.log('/////// sending email verification email');
   const emailTemplateConfig = EmailTemplateConfigs.EmailVerification;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}/account?emailVerification=${token}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
-  const subject = 'KarmaWallet Email Verification';
+  const subject = 'Karma Wallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -195,7 +197,7 @@ export const sendWelcomeEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
-  const subject = `Welcome to your KarmaWallet, ${name} 💚`;
+  const subject = `Welcome to your Karma Wallet, ${name} 💚`;
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -220,7 +222,7 @@ export const sendWelcomeGroupEmail = async ({
     templateName: EmailTemplateConfigs.Welcome.name,
     data: { name, domain, groupName },
   });
-  const subject = `Welcome to your KarmaWallet, ${name} 💚`;
+  const subject = `Welcome to your Karma Wallet, ${name} 💚`;
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -284,7 +286,7 @@ export const sendTransactionsProcessedEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name'], { domain, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain, name, isSuccess } });
-  const subject = 'Your KarmaWallet Impact';
+  const subject = 'Your Karma Wallet Impact';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess, name };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -304,7 +306,7 @@ export const sendPasswordResetEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const passwordResetLink = `${domain}/?createpassword=${token}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
-  const subject = 'Reset your KarmaWallet Password';
+  const subject = 'Reset your Karma Wallet Password';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };

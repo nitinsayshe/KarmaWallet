@@ -44,6 +44,7 @@ interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
 
 interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
+  groupName?: string;
   visitor?: Types.ObjectId | IVisitorDocument;
 }
 
@@ -120,7 +121,6 @@ export const sendGroupVerificationEmail = async ({
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
 }: IGroupVerificationTemplateParams) => {
-  console.log('//////// sending group verification email');
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'groupName', 'recipientEmail'], {
     name, domain, token, groupName, recipientEmail,
   });
@@ -144,17 +144,19 @@ export const sendEmailVerification = async ({
   domain = process.env.FRONTEND_DOMAIN,
   token,
   recipientEmail,
+  groupName,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
-  console.log('/////// sending email verification email');
   const emailTemplateConfig = EmailTemplateConfigs.EmailVerification;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}/account?emailVerification=${token}`;
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
+  const data: any = { verificationLink, name, token };
+  if (groupName) data.groupName = groupName;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data });
   const subject = 'Karma Wallet Email Verification';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);

@@ -9,10 +9,19 @@ import { IModel } from '../types/model';
 import { getUtcDate } from '../lib/date';
 import { ICampaign, IShareableCampaign } from './campaign';
 
+export enum IPromoTypes {
+  CASHBACK = 'cashback',
+  GIFTCARD = 'giftcard',
+  OTHER = 'other',
+}
+
 export interface IPromo {
   _id: ObjectId;
   name: string;
+  headerText: string;
   promoText: string;
+  successText: string;
+  type: IPromoTypes;
   disclaimerText: string;
   enabled: boolean;
   startDate: Date;
@@ -33,6 +42,9 @@ export interface IPromo {
 export interface IShareablePromo {
   _id: ObjectId;
   name: string;
+  type: IPromoTypes;
+  headerText: string;
+  successText: string;
   promoText: string;
   disclaimerText: string;
   enabled: boolean;
@@ -50,7 +62,10 @@ export type IPromoModel = IModel<IPromo>;
 const promoSchema = new Schema({
   name: { type: String, required: true },
   promoText: { type: String, required: true },
+  headerText: { type: String, required: true },
+  successText: { type: String, required: true },
   disclaimerText: { type: String, required: false },
+  type: { type: String, required: true, enum: Object.values(IPromoTypes) },
   startDate: { type: Date, default: () => getUtcDate() },
   expiration: { type: Date },
   enabled: { type: Boolean, default: true },

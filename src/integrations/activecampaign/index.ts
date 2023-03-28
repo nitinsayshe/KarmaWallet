@@ -1,23 +1,17 @@
-import dayjs from 'dayjs';
-import { FilterQuery, Schema } from 'mongoose';
+import { Schema } from 'mongoose';
 import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
+import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
-import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
-import CustomError from '../../lib/customError';
-import { roundToPercision } from '../../lib/misc';
+import { getAvailableCommissionPayouts, getMonthlyCommissionTotal, getMonthlyLoginCount, getTotalLoginCount, getWeeklyLoginCount, getYearlyCommissionTotal, getYearlyEmissionsTotal, getYearlyKarmaScore, getYearlyLoginCount } from '../../lib/userMetrics';
 import { CardModel } from '../../models/card';
-import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
+import { CommissionModel } from '../../models/commissions';
 import { CompanyModel } from '../../models/company';
 import { GroupModel, IGroup, IGroupDocument, IShareableGroup } from '../../models/group';
-import { SectorModel } from '../../models/sector';
-import { ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IShareableUserGroup, IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
-import { UserImpactYearData } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
-import { getUserImpactRatings, getYearlyImpactBreakdown } from '../../services/impact/utils';
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
 import { ActiveCampaignListId, SubscriptionCode } from '../../types/subscription';
@@ -81,245 +75,6 @@ const getShareableUserGroupFromUserGroupDocument = ({
   };
 };
 
-const getYearlyKarmaScore = async (user: IUserDocument): Promise<number> => {
-  const oneYearAgo = dayjs().utc().subtract(1, 'year');
-  const query: FilterQuery<ITransactionDocument> = {
-    $and: [
-      { user },
-      { company: { $ne: null } },
-      { sector: { $nin: sectorsToExcludeFromTransactions } },
-      { amount: { $gt: 0 } },
-      { reversed: { $ne: true } },
-      { date: { $gte: oneYearAgo.startOf('year').toDate() } },
-      { date: { $lte: oneYearAgo.endOf('year').toDate() } },
-    ],
-  };
-
-  let transactions: ITransactionDocument[];
-  let ratings: [number, number][];
-  let yearlyImpactBreakdown: UserImpactYearData[];
-
-  try {
-    transactions = await TransactionModel
-      .find(query)
-      .populate([
-        {
-          path: 'company',
-          model: CompanyModel,
-          populate: {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
-        },
-      ])
-      .sort({ date: -1 });
-    ratings = await getUserImpactRatings();
-    yearlyImpactBreakdown = getYearlyImpactBreakdown(transactions, ratings);
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-
-  if (!yearlyImpactBreakdown || !yearlyImpactBreakdown.length
-    || yearlyImpactBreakdown.length <= 0 || !yearlyImpactBreakdown[0].score) {
-    return 0;
-  }
-  return roundToPercision(yearlyImpactBreakdown[0].score, 2);
-};
-
-// Gets all commissions from the previous year. Not rolling 365 days.
-const getYearlyCommissionTotal = async (user: IUserDocument): Promise<number> => {
-  try {
-    const oneYearAgo = dayjs().utc().subtract(1, 'year');
-    const commissions = await CommissionModel.find({
-      $and: [
-        { user: user._id },
-        {
-          status: {
-            $nin: [
-              KarmaCommissionStatus.Canceled,
-            ],
-          },
-        },
-        { createdOn: { $gte: oneYearAgo.startOf('year').toDate() } },
-        { createdOn: { $lte: oneYearAgo.endOf('year').toDate() } },
-      ],
-    }).lean();
-    if (!commissions) {
-      return 0;
-    }
-    const commissionSum = commissions.reduce(
-      (partialSum, commission) => partialSum + commission.amount,
-      0,
-    );
-    return commissionSum;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<number> => {
-  try {
-    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
-    const commissions = await CommissionModel.find({
-      $and: [
-        { user: user._id },
-        {
-          status: {
-            $nin: [
-              KarmaCommissionStatus.Canceled,
-            ],
-          },
-        },
-        { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
-        { createdOn: { $lte: oneMonthAgo.endOf('month').toDate() } },
-      ],
-    })
-      .lean()
-      .sort({ date: -1 });
-    if (!commissions) {
-      return 0;
-    }
-    const commissionSum = commissions.reduce(
-      (partialSum, commission) => partialSum + commission.amount,
-      0,
-    );
-    return commissionSum;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-const getAvailableCommissionPayouts = async (
-  user: IUserDocument,
-): Promise<number> => {
-  try {
-    const commissions = await CommissionModel.find({
-      $and: [
-        { user: user._id },
-        {
-          status: {
-            $nin: [
-              KarmaCommissionStatus.PaidToUser,
-              KarmaCommissionStatus.Canceled,
-            ],
-          },
-        },
-      ],
-    }).lean();
-    if (!commissions) {
-      return 0;
-    }
-
-    const commissionSum = commissions.reduce(
-      (partialSum, commission) => partialSum + commission.amount,
-      0,
-    );
-    return commissionSum;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-const getYearlyEmissionsTotal = async (
-  user: IUserDocument,
-): Promise<number> => {
-  try {
-    const oneYearAgo = dayjs().utc().subtract(1, 'year');
-    const impactReports = await UserMontlyImpactReportModel.find({
-      $and: [
-        { user: user._id },
-        { date: { $gte: oneYearAgo.startOf('year').toDate() } },
-        { date: { $lte: oneYearAgo.endOf('year').toDate() } },
-      ],
-    }).lean();
-
-    if (!impactReports) {
-      return 0;
-    }
-    const emissionsSum = impactReports.reduce(
-      (partialSum, report) => partialSum + report.carbon.monthlyEmissions,
-      0,
-    );
-    return emissionsSum;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-const getWeeklyLoginCount = async (user: IUserDocument): Promise<number> => {
-  try {
-    const oneWeekAgo = dayjs().utc().subtract(1, 'week');
-    const logins = await UserLogModel.find({
-      $and: [
-        { userId: user._id },
-        { date: { $gte: oneWeekAgo.startOf('week').toDate() } },
-        { date: { $lte: oneWeekAgo.endOf('week').toDate() } },
-      ],
-    }).lean();
-    return logins ? logins.length : 0;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-const getMonthlyLoginCount = async (user: IUserDocument): Promise<number> => {
-  try {
-    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
-    const logins = await UserLogModel.find({
-      $and: [
-        { userId: user._id },
-        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
-        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
-      ],
-    }).lean();
-    return logins ? logins.length : 0;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-const getYearlyLoginCount = async (user: IUserDocument): Promise<number> => {
-  try {
-    const oneYearAgo = dayjs().utc().subtract(1, 'year');
-    const logins = await UserLogModel.find({
-      $and: [
-        { userId: user._id },
-        { date: { $gte: oneYearAgo.startOf('year').toDate() } },
-        { date: { $lte: oneYearAgo.endOf('year').toDate() } },
-      ],
-    }).lean();
-    return logins ? logins.length : 0;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
-// Gets all logins for a given user
-// NOTE: Multiple "logins" within a 24 hour period are counted as one login
-const getTotalLoginCount = async (user: IUserDocument): Promise<number> => {
-  try {
-    const logins = await UserLogModel.find({
-      $and: [
-        { userId: user._id },
-        { $exists: { date: true } },
-        { $ne: { date: null } },
-      ],
-    }).lean();
-    return logins ? logins.length : 0;
-  } catch (err) {
-    console.error(err);
-    return 0;
-  }
-};
-
 export const prepareYearlyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
@@ -332,19 +87,19 @@ export const prepareYearlyUpdatedFields = async (
   if (!fieldValues) {
     fieldValues = [];
   }
-  let customField = customFields.find((field) => field.name === 'cashbackDollarsEarnedYearly');
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.cashbackDollarsEarnedYearly);
   if (!!customField) {
     const yearlyCommissionTotal = await getYearlyCommissionTotal(user);
     fieldValues.push({ id: customField.id, value: yearlyCommissionTotal.toFixed(2) });
   }
 
-  customField = customFields.find((field) => field.name === 'carbonEmissionsYearly');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.carbonEmissionsYearly);
   if (!!customField) {
     const yearlyEmissionsTotal = await getYearlyEmissionsTotal(user);
     fieldValues.push({ id: customField.id, value: yearlyEmissionsTotal.toFixed(2) });
   }
 
-  customField = customFields.find((field) => field.name === 'karmaScoreYearly');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.karmaScoreYearly);
   if (!!customField) {
     const yearlyKarmaScore = await getYearlyKarmaScore(user);
     fieldValues.push({ id: customField.id, value: yearlyKarmaScore.toFixed(0) });
@@ -383,64 +138,64 @@ export const prepareMonthlyUpdatedFields = async (
     { user },
   ).sort({ date: -1 });
 
-  let customField = customFields.find((field) => field.name === 'loginCountLastYear');
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.loginCountLastYear);
 
   if (!!customField) {
     const yearlyLoginCount = await getYearlyLoginCount(user);
     fieldValues.push({ id: customField.id, value: yearlyLoginCount.toString() });
   }
-  customField = customFields.find((field) => field.name === 'monthsKarmaScore');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.monthsKarmaScore);
   if (!!customField && !!impactReport?.impact?.score) {
     const score = impactReport.impact.score.toFixed(0);
     fieldValues.push({ id: customField.id, value: score });
   }
-  customField = customFields.find((field) => field.name === 'impactneutral');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.impactneutral);
   if (!!customField && !!impactReport?.impact?.neutral) {
     const neutral = impactReport.impact.neutral.toFixed(0);
     fieldValues.push({ id: customField.id, value: neutral });
   }
 
-  customField = customFields.find((field) => field.name === 'impactpositive');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.impactpositive);
   if (!!customField && !!impactReport?.impact?.positive) {
     const positive = impactReport.impact.positive.toFixed(0);
     fieldValues.push({ id: customField.id, value: positive });
   }
-  customField = customFields.find((field) => field.name === 'impactnegative');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.impactnegative);
   if (!!customField && !!impactReport?.impact?.negative) {
     const negative = impactReport.impact.negative.toFixed(0);
     fieldValues.push({ id: customField.id, value: negative });
   }
-  customField = customFields.find((field) => field.name === 'carbonEmissionsMonthly');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.carbonEmissionsMonthly);
   if (!!customField && !!impactReport?.carbon?.monthlyEmissions) {
     const monthlyEmissions = impactReport.carbon.monthlyEmissions.toFixed(2) || "0";;
     fieldValues.push({ id: customField.id, value: monthlyEmissions });
   }
 
-  customField = customFields.find((field) => field.name === 'carbonOffsetTonnes');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.carbonOffsetTonnes);
   if (!!customField && !!impactReport?.carbon?.offsets?.totalOffset) {
     const totalOffset = impactReport.carbon.offsets.totalOffset.toFixed(2) || "0";
     fieldValues.push({ id: customField.id, value: totalOffset });
   }
 
-  customField = customFields.find((field) => field.name === 'carbonOffsetDollars');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.carbonOffsetDollars);
   if (!!customField && !!impactReport?.carbon?.offsets?.totalDonated) {
     const totalDonated = impactReport.carbon.offsets.totalDonated.toFixed(2) || "0";;
     fieldValues.push({ id: customField.id, value: totalDonated });
   }
 
-  customField = customFields.find((field) => field.name === 'cashbackDollarsEarnedMonthly');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.cashbackDollarsEarnedMonthly);
   if (!!customField) {
     const monthlyCommissionTotal = await getMonthlyCommissionTotal(user);
     fieldValues.push({ id: customField.id, value: monthlyCommissionTotal.toFixed(2) });
   }
 
-  customField = customFields.find((field) => field.name === 'cashbackDollarsAvailable');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.cashbackDollarsAvailable);
   if (!!customField) {
     const availablePayouts = await getAvailableCommissionPayouts(user);
     fieldValues.push({ id: customField.id, value: availablePayouts.toFixed(2) });
   }
 
-  customField = customFields.find((field) => field.name === 'hasLinkedPaypal');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasLinkedPaypal);
   if (!!customField && !!user.integrations?.paypal) {
     fieldValues.push({ id: customField.id, value: 'true' });
   } else {
@@ -466,17 +221,17 @@ export const setLinkedCardData = async (userId: string, customFields: FieldIds, 
       status: CardStatus.Linked,
     }).lean().sort({ createdOn: 1 });
 
-    let customField = customFields.find((field) => field.name === 'hasLinkedCard');
+    let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasLinkedCard);
     if (customField) {
       if (cards.length > 0) {
         fieldValues.push({ id: customField.id, value: 'true' });
 
-        customField = customFields.find((field) => field.name === 'lastLinkedCardDate');
+        customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.lastLinkedCardDate);
         if (!!customField && cards[cards.length - 1]?.createdOn) {
           fieldValues.push({ id: customField.id, value: cards[cards.length - 1].createdOn.toISOString() });
         }
 
-        customField = customFields.find((field) => field.name === 'firstLinkedCardDate');
+        customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.firstLinkedCardDate);
         if (!!customField && cards[0]?.createdOn) {
           fieldValues.push({ id: customField.id, value: cards[0].createdOn.toISOString() });
         }
@@ -485,7 +240,7 @@ export const setLinkedCardData = async (userId: string, customFields: FieldIds, 
       }
     }
 
-    customField = customFields.find((field) => field.name === 'numLinkedCards');
+    customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.numLinkedCards);
     if (!!customField) {
       fieldValues.push({ id: customField.id, value: cards.length.toString() });
     }
@@ -510,20 +265,20 @@ export const prepareWeeklyUpdatedFields = async (
 
   fieldValues = await setLinkedCardData(user._id, customFields, fieldValues);
 
-  let customField = customFields.find((field) => field.name === 'loginCountLastMonth');
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.loginCountLastMonth);
   if (customField) {
     const monthlyLoginCount = await getMonthlyLoginCount(user);
     fieldValues.push({ id: customField.id, value: monthlyLoginCount.toString() });
   }
 
-  customField = customFields.find((field) => field.name === 'loginCountLastWeek');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.loginCountLastWeek);
   if (customField) {
     const weeklyLoginCount = await getWeeklyLoginCount(user);
     fieldValues.push({ id: customField.id, value: weeklyLoginCount.toString() });
   }
 
   const latestLogin = await UserLogModel.findOne({ userId: user._id }).sort({ date: -1 });
-  customField = customFields.find((field) => field.name === 'lastLogin');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.lastLogin);
   if (customField && latestLogin) {
     fieldValues.push({ id: customField.id, value: latestLogin.date.toISOString() });
   }
@@ -543,7 +298,7 @@ export const prepareDailyUpdatedFields = async (
   if (!fieldValues) {
     fieldValues = [];
   }
-  const customField = customFields.find((field) => field.name === 'loginCountTotal');
+  const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.loginCountTotal);
   if (!!customField) {
     const totalLoginCount = await getTotalLoginCount(user);
     fieldValues.push({ id: customField.id, value: totalLoginCount.toString() });
@@ -564,12 +319,12 @@ export const prepareInitialSyncFields = async (
     fieldValues = [];
   }
 
-  let customField = customFields.find((field) => field.name === 'userId');
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userId);
   if (!!customField) {
     fieldValues.push({ id: customField.id, value: user._id.toString() });
   }
 
-  customField = customFields.find((field) => field.name === 'dateJoined');
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.dateJoined);
   if (!!customField && !!user.dateJoined) {
     fieldValues.push({ id: customField.id, value: user.dateJoined.toISOString() });
   }
@@ -589,7 +344,7 @@ const setBackfillCashBackEligiblePurchase = async (user: IUserDocument, customFi
 
   try {
     const userCommissions = await CommissionModel.find({ user: user._id });
-    const customField = customFields.find((field) => field.name === 'madeCashbackEligiblePurchase');
+    const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase);
     if (!!userCommissions && userCommissions.length >= 1 && !!customField) {
       fieldValues.push({ id: customField.id, value: 'true' });
     }
@@ -605,7 +360,7 @@ export const updateMadeCashBackEligiblePurchaseStatus = async (user: IUserDocume
     const customFields = await ac.getCustomFieldIDs();
 
     const fields = [];
-    const customField = customFields.find((field) => field.name === 'madeCashbackEligiblePurchase');
+    const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase);
     if (customField) {
       fields.push({ id: customField.id, value: 'true' });
     }

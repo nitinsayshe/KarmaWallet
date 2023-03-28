@@ -13,6 +13,7 @@ import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
 import { IShareableUser, IUserDocument } from './user';
 import { IAggregatePaginateModel } from '../sockets/types/aggregations';
+import { getUtcDate } from '../lib/date';
 
 export enum MatchTypes {
   Offset = 'offset',
@@ -254,7 +255,7 @@ export const transactionSchemaDefinition = {
       },
     },
   },
-  createdOn: { type: Date },
+  createdOn: { type: Date, default: () => getUtcDate() },
   /**
    * transactions can be made on behalf of others...setting
    * this specifies who this transaction was made for.

@@ -2,7 +2,7 @@ import { IRequestHandler } from '../../types/request';
 import * as PlaidService from '../../integrations/plaid';
 import * as output from '../../services/output';
 import { asCustomError } from '../../lib/customError';
-import { getCustomFieldIDsAndUpdateLinkedCards } from '../../integrations/activecampaign';
+import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../../integrations/activecampaign';
 
 export const createLinkToken: IRequestHandler<{}, {}, PlaidService.ICreateLinkTokenBody> = async (req, res) => {
   try {
@@ -18,7 +18,7 @@ export const exchangePublicToken: IRequestHandler<{}, {}, PlaidService.IExchange
     const response = await PlaidService.exchangePublicToken(req);
     if (req.requestor?._id) {
       // update linked cards in ActiveCampaign
-      await getCustomFieldIDsAndUpdateLinkedCards(req.requestor._id.toString());
+      await getCustomFieldIDsAndUpdateSetFields(req.requestor._id.toString(), setLinkedCardData);
     }
     output.api(req, res, response);
   } catch (err) {

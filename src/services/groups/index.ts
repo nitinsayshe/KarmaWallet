@@ -56,6 +56,7 @@ export interface IUserGroupRequest {
 
 export interface IGroupRequestParams {
   groupId?: string;
+  userId?: string;
 }
 
 export interface IUpdateUserGroupRequestParams {
@@ -909,16 +910,14 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
     // confirm that user has not been banned from group
-    const existingUserGroups: IUserGroupDocument[] = await UserGroupModel
-      .find({ group })
+    const usersUserGroup: IUserGroupDocument = await UserGroupModel
+      .findOne({ group: group._id.toString(), user: user._id.toString() })
       .populate([
         {
           path: 'group',
           ref: GroupModel,
         },
       ]);
-
-    const usersUserGroup = existingUserGroups.find(g => g.user.toString() === user._id.toString());
 
     if (usersUserGroup?.status === UserGroupStatus.Banned) {
       throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
@@ -988,15 +987,15 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       ? UserGroupStatus.Verified
       : UserGroupStatus.Unverified;
 
-    let userGroup: IUserGroupDocument = null;
+    let userUserGroupDocument:IUserGroupDocument = null;
+
     if (!!usersUserGroup) {
       usersUserGroup.email = validEmail;
       usersUserGroup.role = UserGroupRole.Member;
       usersUserGroup.status = defaultStatus;
-
-      await usersUserGroup.save();
+      userUserGroupDocument = await usersUserGroup.save();
     } else {
-      userGroup = new UserGroupModel({
+      const userGroup = new UserGroupModel({
         user,
         group,
         email: validEmail,
@@ -1004,35 +1003,35 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         status: defaultStatus,
       });
 
-      await userGroup.save();
+      userUserGroupDocument = await userGroup.save();
     }
-
     await user.save();
 
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupSubscriptionsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
 
-    return userGroup ?? usersUserGroup;
+    return userUserGroupDocument;
   } catch (err) {
     throw asCustomError(err);
   }
 };
 
-export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
-  const { groupId } = req.params;
-
+export const leaveGroup = async (req: IRequest, {
+  groupId,
+  userId,
+}: IGroupRequestParams) => {
   try {
     if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
 
     const userGroup = await UserGroupModel.findOne({
       group: groupId,
-      user: req.requestor,
-      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+      user: userId,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned] },
     });
 
     // only a user that is a member of a group can leave it.
@@ -1055,7 +1054,7 @@ export const leaveGroup = async (req: IRequest<IGroupRequestParams>) => {
 
     await userGroup.save();
 
-    // busting cache for group dashboard
+    // busting cache for group dashboard // this appears to be breaking when the person leaving the group is just a regular member
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
 

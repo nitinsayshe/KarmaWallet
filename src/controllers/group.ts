@@ -1,9 +1,11 @@
 import aqp from 'api-query-params';
 import * as GroupService from '../services/groups';
 import * as output from '../services/output';
-import { asCustomError } from '../lib/customError';
+import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import { IGroupDocument } from '../models/group';
+import { verifyRequiredFields } from '../lib/requestData';
+import { ErrorTypes } from '../lib/constants';
 
 export const checkCode: IRequestHandler<{}, GroupService.ICheckCodeRequest> = async (req, res) => {
   try {
@@ -104,9 +106,17 @@ export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> 
   }
 };
 
-export const leaveGroup: IRequestHandler<GroupService.IGroupRequestParams> = async (req, res) => {
+export const leaveGroup: IRequestHandler<{}, {}, GroupService.IGroupRequestParams> = async (req, res) => {
   try {
-    await GroupService.leaveGroup(req);
+    const { body } = req;
+    const requiredFields = ['groupId', 'userId'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    if (!isValid) {
+      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+    const { groupId, userId } = body;
+    await GroupService.leaveGroup(req, { groupId, userId });
     output.api(req, res, null);
   } catch (err) {
     output.error(req, res, asCustomError(err));

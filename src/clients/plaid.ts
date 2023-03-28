@@ -25,7 +25,7 @@ import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
 import PlaidUser from '../integrations/plaid/user';
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
-import { getCustomFieldIDsAndUpdateLinkedCards } from '../integrations/activecampaign';
+import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
 
 dayjs.extend(utc);
 
@@ -154,7 +154,7 @@ export class PlaidClient extends SdkClient {
       await plaidUserInstance.load();
       await plaidUserInstance.addCards(plaidItem, true);
       // update card data in active campaign
-      await getCustomFieldIDsAndUpdateLinkedCards(userId.toString());
+      await getCustomFieldIDsAndUpdateSetFields(userId.toString(), setLinkedCardData);
       return {
         message: 'Successfully linked plaid account',
         itemId,
@@ -258,7 +258,7 @@ export class PlaidClient extends SdkClient {
               await card.save();
             }
             // update card data in active campaign
-            await getCustomFieldIDsAndUpdateLinkedCards(cards[0].userId.toString());
+            await getCustomFieldIDsAndUpdateSetFields(cards[0].userId.toString(), setLinkedCardData);
           }
         } catch (err) {
           console.log('[-] error unlinking card');

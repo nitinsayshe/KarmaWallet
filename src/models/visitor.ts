@@ -4,10 +4,19 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUser } from './user';
+import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
+
+export interface IVisitorIntegrations {
+  groupCode?: string;
+  urlParams?: IUrlParam[];
+  shareASale?: boolean;
+}
 
 export interface IShareableVisitor {
   email: string;
+  emailStatus: UserEmailStatus;
+  integrations?: IVisitorIntegrations;
+  statusLastModified: Date;
   createdOn: Date;
 }
 
@@ -26,6 +35,22 @@ const visitorSchema = new Schema({
   email: {
     type: String,
     required: true,
+  },
+  emailStatus: {
+    type: String,
+    enum: Object.values(UserEmailStatus),
+    default: UserEmailStatus.Unverified,
+    required: true,
+  },
+  statusLastModified: {
+    type: Date,
+    default: () => getUtcDate(),
+    required: true,
+  },
+  integrations: {
+    groupCode: String,
+    urlParams: { type: Array },
+    shareASale: Boolean,
   },
   createdOn: { type: Date, default: () => getUtcDate() },
 });

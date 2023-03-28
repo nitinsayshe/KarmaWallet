@@ -24,7 +24,7 @@ groupRouter.route('/:groupId/offset-equivalency')
 groupRouter.route('/:groupId/offset-statements')
   .get(authenticate, GroupController.getGroupOffsetStatements);
 
-groupRouter.route('/:groupId/leave')
+groupRouter.route('/leave')
   .put(authenticate, GroupController.leaveGroup);
 
 groupRouter.route('/:groupId/user/:userId')

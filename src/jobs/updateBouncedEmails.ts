@@ -5,6 +5,7 @@ import utc from 'dayjs/plugin/utc';
 import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { UserEmailStatus, UserModel } from '../models/user';
+import { VisitorModel } from '../models/visitor';
 
 dayjs.extend(utc);
 
@@ -35,8 +36,10 @@ export const exec = async () => {
   const suppressionListItems = await getAllSuppressionListItems({});
   for (const item of suppressionListItems) {
     const user = await UserModel.findOne({ 'emails.email': item.EmailAddress });
-    let userHasBeenUpdated = false;
+    const visitor = await VisitorModel.findOne({ email: item.EmailAddress });
+
     if (user) {
+      let userHasBeenUpdated = false;
       user.emails.forEach(email => {
         if (email.email !== item.EmailAddress) return;
         switch (item.Reason) {
@@ -58,6 +61,29 @@ export const exec = async () => {
       if (userHasBeenUpdated) {
         user.lastModified = dayjs().utc().toDate();
         await user.save();
+      }
+    }
+
+    if (visitor) {
+      let visitorHasBeenUpdated = false;
+      switch (item.Reason) {
+        case 'BOUNCE':
+          if (visitor.emailStatus === UserEmailStatus.Bounced) return;
+          visitor.emailStatus = UserEmailStatus.Bounced;
+          visitorHasBeenUpdated = true;
+          break;
+        case 'COMPLAINT':
+          if (visitor.emailStatus === UserEmailStatus.Complained) return;
+          visitor.emailStatus = UserEmailStatus.Complained;
+          visitorHasBeenUpdated = true;
+          break;
+        default:
+          break;
+      }
+
+      if (visitorHasBeenUpdated) {
+        visitor.statusLastModified = dayjs().utc().toDate();
+        await visitor.save();
       }
     }
   }

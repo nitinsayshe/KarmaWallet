@@ -17,7 +17,7 @@ import { IRequest } from '../../types/request';
 import { isValidEmailFormat } from '../../lib/string';
 import { validatePassword } from './utils/validate';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
-import { ALPHANUMERIC_REGEX, ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import { resendEmailVerification } from './verification';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { sendPasswordResetEmail } from '../email';
@@ -34,6 +34,8 @@ import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { deleteContact } from '../../integrations/activecampaign';
 import { UserGroupStatus } from '../../types/groups';
 import { CommissionModel } from '../../models/commissions';
+import { TokenModel } from '../../models/token';
+import { VisitorModel } from '../../models/visitor';
 
 dayjs.extend(utc);
 
@@ -59,11 +61,17 @@ export interface IUrlParam {
 
 export interface IUserData extends ILoginData {
   name: string;
-  zipcode: string;
+  zipcode?: string;
   role?: UserRoles;
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
+}
+
+export interface IRegisterUserData {
+  name: string;
+  token: string;
+  password: string;
 }
 
 export interface IEmailVerificationData {
@@ -92,95 +100,85 @@ export const storeNewLogin = async (userId: string, loginDate: Date) => {
 
 export const register = async (req: IRequest, {
   password,
-  email,
   name,
-  zipcode,
-  shareASaleId,
-  referralParams,
-}: IUserData) => {
-  try {
-    if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
-    if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
-    name = name.replace(/\s/g, ' ').trim();
+  token,
+}: IRegisterUserData) => {
+  // check that all required fields are present
+  if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
+  if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
+  if (!token) throw new CustomError('A token is required.', ErrorTypes.INVALID_ARG);
+  // find token for account creationn and find associated visitor
+  const tokenInfo = await TokenModel.findOne({ value: token });
+  if (!tokenInfo) throw new CustomError('No valid token was found for this email.', ErrorTypes.INVALID_ARG);
+  const visitor = await VisitorModel.findOne({ _id: tokenInfo.visitor });
 
-    email = email?.toLowerCase()?.trim();
-    if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
+  // check password is valid
+  const passwordValidation = validatePassword(password);
+  if (!passwordValidation.valid) throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+  const hash = await argon2.hash(password);
 
-    const passwordValidation = validatePassword(password);
-    if (!passwordValidation.valid) {
-      throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+  // check that email is valid (should have already checked when visitor was created, but just in case)
+  const email = visitor.email?.toLowerCase()?.trim();
+  if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
+
+  // confirm email does not already belong to another user
+  const emailExists: IUserDocument = await UserModel.findOne({ 'emails.email': email });
+  if (!!emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+
+  // start building the user information
+  const { urlParams, shareASale, groupCode } = visitor.integrations;
+  const emails = [{ email, verified: true, primary: true }];
+  name = name.replace(/\s/g, ' ').trim();
+  const integrations: IUserIntegrations = {};
+  const newUserData: any = {
+    name,
+    email,
+    emails,
+    password: hash,
+    role: UserRoles.None,
+  };
+
+  // if user is from shareASale, generate a unique tracking id to add to the user object
+  if (!!shareASale) {
+    let uniqueId = nanoid();
+    let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+    while (existingId) {
+      uniqueId = nanoid();
+      existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
     }
-    const hash = await argon2.hash(password);
-    const emailExists = await UserModel.findOne({ 'emails.email': email });
-    if (emailExists) {
-      throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
-    }
 
-    if (!!zipcode && !ZIPCODE_REGEX.test(zipcode)) throw new CustomError('Invalid zipcode found.', ErrorTypes.INVALID_ARG);
-
-    const emails = [{ email, verified: false, primary: true }];
-    const integrations: IUserIntegrations = {};
-
-    // TODO: delete creating a new legacy user when able.
-    const legacyUser = new LegacyUserModel({
-      _id: nanoid(),
-      name,
-      email,
-      emails,
-      password: hash,
-      zipcode,
-      role: UserRoles.None,
-    });
-
-    await legacyUser.save();
-
-    // map new legacy user to new user
-    const rawUser = {
-      ...legacyUser.toObject(),
-      emails,
-      legacyId: legacyUser._id,
-      integrations,
+    integrations.shareasale = {
+      trackingId: uniqueId,
     };
+  }
 
-    if (!!shareASaleId) {
-      let uniqueId = nanoid();
-      let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+  // save any params that the user came to our site
+  if (!!urlParams && urlParams.length > 0) {
+    const validParams: IUrlParam[] = urlParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+    if (validParams.length > 0) integrations.referrals = { params: validParams };
+  }
 
-      while (existingId) {
-        uniqueId = nanoid();
-        existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
-      }
+  newUserData.integrations = integrations;
+  const newUser = await UserModel.create(newUserData);
+  if (!newUser) throw new CustomError('Error creating user', ErrorTypes.SERVER);
 
-      rawUser.integrations.shareasale = {
-        trackingId: uniqueId,
-      };
-    }
-
-    if (!!referralParams) {
-      const validParams = referralParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
-      if (validParams.length > 0) rawUser.integrations.referrals = { params: referralParams };
-    }
-
-    delete rawUser._id;
-    const newUser = new UserModel({ ...rawUser });
-    await newUser.save();
+  try {
     let authKey = '';
-
-    try {
-      authKey = await Session.createSession(newUser._id.toString());
-      await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
-      await updateNewUserSubscriptions(newUser);
-      const verificationEmailRequest = { ...req, requestor: newUser, body: { email } };
-      await resendEmailVerification(verificationEmailRequest);
-    } catch (afterCreationError) {
-      // undo user creation
-      await UserModel.deleteOne({ _id: newUser?._id });
-      throw new CustomError('error creating user', ErrorTypes.SERVER);
-    }
-
-    return { user: newUser, authKey };
-  } catch (err) {
-    throw asCustomError(err);
+    authKey = await Session.createSession(newUser._id.toString());
+    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+    await updateNewUserSubscriptions(newUser);
+    const responseInfo: any = {
+      user: newUser,
+      authKey,
+    };
+    // return the groupCode to the front end so they can join the user to the group upon successful registration
+    if (!!groupCode) responseInfo.groupCode = groupCode;
+    return responseInfo;
+  } catch (afterCreationError) {
+    // undo user creation
+    await UserModel.deleteOne({ _id: newUser?._id });
+    throw new CustomError('Error creating user', ErrorTypes.SERVER);
   }
 };
 

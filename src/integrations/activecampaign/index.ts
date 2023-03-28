@@ -4,6 +4,7 @@ import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import CustomError from '../../lib/customError';
 import { roundToPercision } from '../../lib/misc';
 import { CardModel } from '../../models/card';
 import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
@@ -120,7 +121,7 @@ const getYearlyKarmaScore = async (user: IUserDocument): Promise<number> => {
   }
 
   if (!yearlyImpactBreakdown || !yearlyImpactBreakdown.length
-      || yearlyImpactBreakdown.length <= 0 || !yearlyImpactBreakdown[0].score) {
+    || yearlyImpactBreakdown.length <= 0 || !yearlyImpactBreakdown[0].score) {
     return 0;
   }
   return roundToPercision(yearlyImpactBreakdown[0].score, 2);
@@ -411,19 +412,19 @@ export const prepareMonthlyUpdatedFields = async (
   }
   customField = customFields.find((field) => field.name === 'carbonEmissionsMonthly');
   if (!!customField && !!impactReport?.carbon?.monthlyEmissions) {
-    const monthlyEmissions = impactReport.carbon.monthlyEmissions.toFixed(2);
+    const monthlyEmissions = impactReport.carbon.monthlyEmissions.toFixed(2) || "0";;
     fieldValues.push({ id: customField.id, value: monthlyEmissions });
   }
 
   customField = customFields.find((field) => field.name === 'carbonOffsetTonnes');
   if (!!customField && !!impactReport?.carbon?.offsets?.totalOffset) {
-    const totalOffset = impactReport.carbon.offsets.totalOffset.toFixed(2);
+    const totalOffset = impactReport.carbon.offsets.totalOffset.toFixed(2) || "0";
     fieldValues.push({ id: customField.id, value: totalOffset });
   }
 
   customField = customFields.find((field) => field.name === 'carbonOffsetDollars');
   if (!!customField && !!impactReport?.carbon?.offsets?.totalDonated) {
-    const totalDonated = impactReport.carbon.offsets.totalDonated.toFixed(2);
+    const totalDonated = impactReport.carbon.offsets.totalDonated.toFixed(2) || "0";;
     fieldValues.push({ id: customField.id, value: totalDonated });
   }
 
@@ -449,7 +450,7 @@ export const prepareMonthlyUpdatedFields = async (
   return fieldValues;
 };
 
-export const setLinkedCardData = async (userId: string, customFields: FieldIds, fieldValues: FieldValues): Promise<FieldValues> => {
+export const setLinkedCardData = async (userId: string, customFields: FieldIds, fieldValues?: FieldValues): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
     return fieldValues;
@@ -726,7 +727,10 @@ export const prepareBackfillSyncFields = async (
   return fieldValues;
 };
 
-export const getCustomFieldIDsAndUpdateLinkedCards = async (userId: string) => {
+/* optionally takes and appends to already inserted fieldValues */
+export type CustomFieldSetter = (userId: string, customFields: FieldIds, fieldValues?: FieldValues) => Promise<FieldValues>
+export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFields: CustomFieldSetter ) => {
+
   try {
     const ac = new ActiveCampaignClient();
     const user = await UserModel.findById(userId);
@@ -734,14 +738,14 @@ export const getCustomFieldIDsAndUpdateLinkedCards = async (userId: string) => {
       return;
     }
     const customFields = await ac.getCustomFieldIDs();
-    const fields = await setLinkedCardData(userId, customFields, []);
+    const fields = await setFields(userId, customFields, []);
 
     const contacts = [{
       email: user.emails.find(e => e.primary).email,
       fields,
     }];
 
-    await ac.importContacts({ contacts });
+    return await ac.importContacts({ contacts });
   } catch (err) {
     console.error('error updating linked card data');
   }

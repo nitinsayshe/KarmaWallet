@@ -29,6 +29,7 @@ export interface IPromo {
   limit: number;
   amount: number;
   campaign?: ICampaign;
+  imageUrl?: string;
   // add slots array for FE to display (will use names like createAccountTop, createAccountBottom, etc)
   // slots: string[];
   // add text slots object with keys for these display slots
@@ -53,6 +54,7 @@ export interface IShareablePromo {
   limit: number;
   amount: number;
   campaign?: IShareableCampaign;
+  imageUrl?: string;
 }
 
 export interface IPromoDocument extends IPromo, Document {
@@ -74,6 +76,7 @@ const promoSchema = new Schema({
   limit: { type: Number, default: 1 },
   amount: { type: Number, default: 0 },
   campaign: { type: Schema.Types.ObjectId, ref: 'campaign' },
+  imageUrl: { type: String },
 });
 
 export const PromoModel = model<IPromoDocument, Model<IPromo>>('promo', promoSchema);

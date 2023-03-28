@@ -36,6 +36,7 @@ import { UserGroupStatus } from '../../types/groups';
 import { CommissionModel } from '../../models/commissions';
 import { TokenModel } from '../../models/token';
 import { VisitorModel } from '../../models/visitor';
+import { PromoModel } from '../../models/promo';
 
 dayjs.extend(utc);
 
@@ -63,6 +64,7 @@ export interface IUserData extends ILoginData {
   name: string;
   zipcode?: string;
   role?: UserRoles;
+  promo?: string;
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
@@ -72,6 +74,7 @@ export interface IRegisterUserData {
   name: string;
   token: string;
   password: string;
+  promo?: string;
 }
 
 export interface IEmailVerificationData {
@@ -102,6 +105,7 @@ export const register = async (req: IRequest, {
   password,
   name,
   token,
+  promo,
 }: IRegisterUserData) => {
   // check that all required fields are present
   if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -130,6 +134,7 @@ export const register = async (req: IRequest, {
   const emails = [{ email, verified: true, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
   const integrations: IUserIntegrations = {};
+
   const newUserData: any = {
     name,
     email,
@@ -157,6 +162,11 @@ export const register = async (req: IRequest, {
   if (!!urlParams && urlParams.length > 0) {
     const validParams: IUrlParam[] = urlParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
     if (validParams.length > 0) integrations.referrals = { params: validParams };
+  }
+
+  if (promo) {
+    const promoItem = await PromoModel.findOne({ _id: promo });
+    integrations.promos = [...(integrations.promos || []), promoItem];
   }
 
   newUserData.integrations = integrations;

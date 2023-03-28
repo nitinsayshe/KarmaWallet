@@ -24,8 +24,8 @@ export interface IPromo {
   type: IPromoTypes;
   disclaimerText: string;
   enabled: boolean;
-  startDate: Date;
-  endDate: Date;
+  startDate?: Date;
+  endDate?: Date;
   limit: number;
   amount: number;
   campaign?: ICampaign;
@@ -44,6 +44,8 @@ export interface IShareablePromo {
   name: string;
   type: IPromoTypes;
   headerText: string;
+  startDate?: Date;
+  endDate?: Date;
   successText: string;
   promoText: string;
   disclaimerText: string;
@@ -67,7 +69,7 @@ const promoSchema = new Schema({
   disclaimerText: { type: String, required: false },
   type: { type: String, required: true, enum: Object.values(IPromoTypes) },
   startDate: { type: Date, default: () => getUtcDate() },
-  expiration: { type: Date },
+  endDate: { type: Date },
   enabled: { type: Boolean, default: true },
   limit: { type: Number, default: 1 },
   amount: { type: Number, default: 0 },

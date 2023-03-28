@@ -6,16 +6,18 @@ import { IRequest } from '../../types/request';
 import { getShareableCampaign } from '../campaign';
 
 export interface IPromoRequestBody {
-  name: string;
-  enabled?: boolean;
-  limit: number;
   amount: number;
-  type: IPromoTypes;
-  headerText: string;
-  successText: string;
-  disclaimerText?: string;
-  promoText: string;
   campaign?: string;
+  disclaimerText?: string;
+  enabled?: boolean;
+  endDate: Date;
+  headerText: string;
+  limit: number;
+  name: string;
+  promoText: string;
+  startDate: Date;
+  successText: string;
+  type: IPromoTypes;
 }
 
 export interface IPromoRequestParams {
@@ -24,28 +26,32 @@ export interface IPromoRequestParams {
 
 export const getShareablePromo = ({
   _id,
-  promoText,
-  disclaimerText,
-  successText,
-  headerText,
-  type,
   amount,
-  limit,
-  enabled,
-  name,
   campaign,
+  disclaimerText,
+  enabled,
+  endDate,
+  headerText,
+  limit,
+  name,
+  promoText,
+  startDate,
+  successText,
+  type,
 }: IPromo) => {
   const shareable: IShareablePromo = {
     _id,
-    headerText,
-    type,
-    promoText,
-    successText,
-    disclaimerText,
     amount,
-    limit,
+    disclaimerText,
     enabled,
+    endDate,
+    headerText,
+    limit,
     name,
+    promoText,
+    startDate,
+    successText,
+    type,
   };
 
   if (campaign) {
@@ -66,7 +72,7 @@ export const getPromos = async (_req: IRequest) => {
 };
 
 export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
-  const { name, enabled, limit, amount, disclaimerText, promoText, campaign, headerText, successText, type } = req.body;
+  const { name, enabled, limit, amount, disclaimerText, promoText, campaign, headerText, successText, type, endDate, startDate } = req.body;
   let campaignId;
 
   if (!name) throw new CustomError('A promo name is required.', ErrorTypes.INVALID_ARG);
@@ -83,19 +89,22 @@ export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
     campaignId = campaignItem;
   }
 
+  console.log('////// this is the startDate', startDate, endDate);
+
   try {
     const promo = new PromoModel({
-      name,
-      startDate: new Date(),
-      enabled: !!enabled,
-      limit,
       amount,
-      type,
-      headerText,
-      successText,
-      disclaimerText,
-      promoText,
       campaign: campaignId,
+      disclaimerText,
+      enabled: !!enabled,
+      endDate,
+      headerText,
+      limit,
+      name,
+      promoText,
+      startDate,
+      successText,
+      type,
     });
 
     promo.save();
@@ -108,7 +117,9 @@ export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
 export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoRequestBody>) => {
   try {
     const { promoId } = req.params;
-    const { name, enabled, limit, amount, disclaimerText, promoText, campaign, type, headerText, successText } = req.body;
+    const { name, enabled, limit, amount, disclaimerText, promoText, campaign, type, headerText, endDate, startDate, successText } = req.body;
+
+    console.log('////// this is the startDate', startDate, endDate);
 
     if (!promoId) throw new CustomError('A promo id is required.', ErrorTypes.INVALID_ARG);
     if (!name && !limit && !amount && !promoText && !disclaimerText && enabled === undefined && !campaign) throw new CustomError('No promo fields were provided.', ErrorTypes.INVALID_ARG);
@@ -124,6 +135,8 @@ export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoR
     if (successText) promo.successText = successText;
     if (type) promo.type = type;
     if (disclaimerText) promo.disclaimerText = disclaimerText;
+    if (endDate) promo.endDate = endDate;
+    if (startDate) promo.startDate = startDate;
     if (enabled !== undefined) promo.enabled = enabled;
     if (campaign) {
       const campaignItem = await CampaignModel.findOne({ name: campaign });

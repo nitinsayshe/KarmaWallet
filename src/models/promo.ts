@@ -14,47 +14,46 @@ export enum IPromoTypes {
   GIFTCARD = 'giftcard',
   OTHER = 'other',
 }
+// event that should trigger the promo
+export enum IPromoEvents {
+  CREATE_ACCOUNT = 'Create Account',
+  LINK_CARD = 'Link Card',
+}
 
 export interface IPromo {
   _id: ObjectId;
-  name: string;
-  headerText: string;
-  promoText: string;
-  successText: string;
-  type: IPromoTypes;
-  disclaimerText: string;
-  enabled: boolean;
-  startDate?: Date;
-  endDate?: Date;
-  limit: number;
   amount: number;
   campaign?: ICampaign;
+  disclaimerText: string;
+  enabled: boolean;
+  endDate?: Date;
+  events: IPromoEvents[];
+  headerText: string;
   imageUrl?: string;
-  // add slots array for FE to display (will use names like createAccountTop, createAccountBottom, etc)
-  // slots: string[];
-  // add text slots object with keys for these display slots
-  /*
-    {
-      createAccountTop: { description: 'Create Account Top', text: 'Create Account Top Text' },
-    }
-  */
+  limit: number;
+  name: string;
+  promoText: string;
+  startDate?: Date;
+  successText: string;
+  type: IPromoTypes;
 }
 
 export interface IShareablePromo {
   _id: ObjectId;
-  name: string;
-  type: IPromoTypes;
-  headerText: string;
-  startDate?: Date;
-  endDate?: Date;
-  successText: string;
-  promoText: string;
-  disclaimerText: string;
-  enabled: boolean;
-  limit: number;
   amount: number;
   campaign?: IShareableCampaign;
+  events: IPromoEvents[];
+  disclaimerText: string;
+  enabled: boolean;
+  endDate?: Date;
+  headerText: string;
   imageUrl?: string;
+  limit: number;
+  name: string;
+  promoText: string;
+  startDate?: Date;
+  successText: string;
+  type: IPromoTypes;
 }
 
 export interface IPromoDocument extends IPromo, Document {
@@ -64,19 +63,20 @@ export interface IPromoDocument extends IPromo, Document {
 export type IPromoModel = IModel<IPromo>;
 
 const promoSchema = new Schema({
-  name: { type: String, required: true },
-  promoText: { type: String, required: true },
-  headerText: { type: String, required: true },
-  successText: { type: String, required: true },
-  disclaimerText: { type: String, required: false },
-  type: { type: String, required: true, enum: Object.values(IPromoTypes) },
-  startDate: { type: Date, default: () => getUtcDate() },
-  endDate: { type: Date },
-  enabled: { type: Boolean, default: true },
-  limit: { type: Number, default: 1 },
   amount: { type: Number, default: 0 },
   campaign: { type: Schema.Types.ObjectId, ref: 'campaign' },
+  disclaimerText: { type: String, required: false },
+  enabled: { type: Boolean, default: true },
+  endDate: { type: Date },
+  events: { type: [String], required: true, enum: Object.values(IPromoEvents) },
+  headerText: { type: String, required: true },
   imageUrl: { type: String },
+  limit: { type: Number, default: 1 },
+  name: { type: String, required: true },
+  promoText: { type: String, required: true },
+  startDate: { type: Date, default: () => getUtcDate() },
+  successText: { type: String, required: true },
+  type: { type: String, required: true, enum: Object.values(IPromoTypes) },
 });
 
 export const PromoModel = model<IPromoDocument, Model<IPromo>>('promo', promoSchema);

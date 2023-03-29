@@ -1,7 +1,7 @@
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { CampaignModel } from '../../models/campaign';
-import { IPromo, IPromoTypes, IShareablePromo, PromoModel } from '../../models/promo';
+import { IPromo, IPromoEvents, IPromoTypes, IShareablePromo, PromoModel } from '../../models/promo';
 import { IRequest } from '../../types/request';
 import { getShareableCampaign } from '../campaign';
 
@@ -11,6 +11,7 @@ export interface IPromoRequestBody {
   disclaimerText?: string;
   enabled?: boolean;
   endDate: Date;
+  events: IPromoEvents[];
   headerText: string;
   imageUrl?: string;
   limit: number;
@@ -32,6 +33,7 @@ export const getShareablePromo = ({
   disclaimerText,
   enabled,
   endDate,
+  events,
   headerText,
   imageUrl,
   limit,
@@ -47,6 +49,7 @@ export const getShareablePromo = ({
     disclaimerText,
     enabled,
     endDate,
+    events,
     headerText,
     imageUrl,
     limit,
@@ -75,9 +78,10 @@ export const getPromos = async (_req: IRequest) => {
 };
 
 export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
-  const { name, enabled, limit, amount, disclaimerText, promoText, imageUrl, campaign, headerText, successText, type, endDate, startDate } = req.body;
+  const { name, enabled, limit, amount, disclaimerText, promoText, imageUrl, campaign, headerText, successText, type, endDate, startDate, events } = req.body;
   let campaignId;
 
+  if (!events) throw new CustomError('A promo event is required.', ErrorTypes.INVALID_ARG);
   if (!name) throw new CustomError('A promo name is required.', ErrorTypes.INVALID_ARG);
   if (!limit) throw new CustomError('A promo limit is required.', ErrorTypes.INVALID_ARG);
   if (!amount) throw new CustomError('A promo amount is required.', ErrorTypes.INVALID_ARG);
@@ -99,6 +103,7 @@ export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
       disclaimerText,
       enabled: !!enabled,
       endDate,
+      events,
       headerText,
       imageUrl,
       limit,
@@ -119,15 +124,16 @@ export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {
 export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoRequestBody>) => {
   try {
     const { promoId } = req.params;
-    const { name, enabled, limit, amount, disclaimerText, promoText, campaign, type, headerText, endDate, startDate, successText, imageUrl } = req.body;
+    const { name, enabled, limit, amount, disclaimerText, promoText, campaign, type, headerText, endDate, startDate, successText, imageUrl, events } = req.body;
 
     if (!promoId) throw new CustomError('A promo id is required.', ErrorTypes.INVALID_ARG);
-    if (!name && !limit && !amount && !promoText && !disclaimerText && enabled === undefined && !campaign) throw new CustomError('No promo fields were provided.', ErrorTypes.INVALID_ARG);
+    if (!name && !limit && !amount && !promoText && !disclaimerText && enabled === undefined && !campaign && !events) throw new CustomError('No promo fields were provided.', ErrorTypes.INVALID_ARG);
 
     const promo = await PromoModel.findById(promoId);
     if (!promo) throw new CustomError(`No promo with id ${promoId} was found.`, ErrorTypes.NOT_FOUND);
     // check for values and update
     if (name) promo.name = name;
+    if (event) promo.events = events;
     if (limit) promo.limit = limit;
     if (amount) promo.amount = amount;
     if (promoText) promo.promoText = promoText;

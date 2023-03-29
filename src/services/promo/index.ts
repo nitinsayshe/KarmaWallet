@@ -133,7 +133,7 @@ export const updatePromo = async (req: IRequest<IPromoRequestParams, {}, IPromoR
     if (!promo) throw new CustomError(`No promo with id ${promoId} was found.`, ErrorTypes.NOT_FOUND);
     // check for values and update
     if (name) promo.name = name;
-    if (event) promo.events = events;
+    if (events) promo.events = events;
     if (limit) promo.limit = limit;
     if (amount) promo.amount = amount;
     if (promoText) promo.promoText = promoText;

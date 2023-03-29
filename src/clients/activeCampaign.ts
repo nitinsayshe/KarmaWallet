@@ -58,6 +58,7 @@ export interface IContactList {
 export interface IGetContactResponse {
   contactAutomations?: Array<IContactAutomation>
   contactLists?: Array<IContactList>
+  fieldValues?: Array<{ field: string; value: string }>
 }
 
 export interface IContactsData {

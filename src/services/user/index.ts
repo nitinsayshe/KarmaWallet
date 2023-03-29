@@ -1,41 +1,37 @@
 import argon2 from 'argon2';
-import isemail from 'isemail';
-import { nanoid } from 'nanoid';
-import { FilterQuery, Types } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import {
-  IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel,
-} from '../../models/user';
-import CustomError, { asCustomError } from '../../lib/customError';
-import * as Session from '../session';
-import {
-  TokenTypes, passwordResetTokenMinutes, ErrorTypes, UserRoles, CardStatus,
-} from '../../lib/constants';
-import * as TokenService from '../token';
-import { IRequest } from '../../types/request';
-import { isValidEmailFormat } from '../../lib/string';
-import { validatePassword } from './utils/validate';
-import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
-import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
-import { resendEmailVerification } from './verification';
-import { verifyRequiredFields } from '../../lib/requestData';
-import { sendPasswordResetEmail } from '../email';
-import { UserLogModel } from '../../models/userLog';
-import { getUtcDate } from '../../lib/date';
-import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsIfUserWasVisitor } from '../subscription';
+import isemail from 'isemail';
+import { FilterQuery, Types } from 'mongoose';
+import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
+import { deleteContact } from '../../integrations/activecampaign';
+import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
+import { ALPHANUMERIC_REGEX, ZIPCODE_REGEX } from '../../lib/constants/regex';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { getUtcDate } from '../../lib/date';
+import { verifyRequiredFields } from '../../lib/requestData';
+import { isValidEmailFormat } from '../../lib/string';
 import { CardModel } from '../../models/card';
+import { CommissionModel } from '../../models/commissions';
+import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
+import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
+import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
+import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
-import { deleteContact } from '../../integrations/activecampaign';
-import { UserGroupStatus } from '../../types/groups';
-import { CommissionModel } from '../../models/commissions';
-import { TokenModel } from '../../models/token';
 import { VisitorModel } from '../../models/visitor';
+import { UserGroupStatus } from '../../types/groups';
+import { IRequest } from '../../types/request';
+import { sendPasswordResetEmail } from '../email';
+import * as Session from '../session';
+import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import * as TokenService from '../token';
+import { validatePassword } from './utils/validate';
+import { resendEmailVerification } from './verification';
 
 dayjs.extend(utc);
 
@@ -91,18 +87,12 @@ export interface IUpdateUserEmailParams {
 type UserKeys = keyof IUserData;
 
 export const storeNewLogin = async (userId: string, loginDate: Date) => {
-  await UserLogModel.findOneAndUpdate(
-    { userId, date: loginDate },
-    { date: loginDate },
-    { upsert: true },
-  ).sort({ date: -1 });
+  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate }, { upsert: true }).sort({
+    date: -1,
+  });
 };
 
-export const register = async (req: IRequest, {
-  password,
-  name,
-  token,
-}: IRegisterUserData) => {
+export const register = async (req: IRequest, { password, name, token }: IRegisterUserData) => {
   // check that all required fields are present
   if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
   if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
@@ -114,7 +104,8 @@ export const register = async (req: IRequest, {
 
   // check password is valid
   const passwordValidation = validatePassword(password);
-  if (!passwordValidation.valid) throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+  if (!passwordValidation.valid)
+    throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   const hash = await argon2.hash(password);
 
   // check that email is valid (should have already checked when visitor was created, but just in case)
@@ -155,7 +146,9 @@ export const register = async (req: IRequest, {
 
   // save any params that the user came to our site
   if (!!urlParams && urlParams.length > 0) {
-    const validParams: IUrlParam[] = urlParams.filter((param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value));
+    const validParams: IUrlParam[] = urlParams.filter(
+      (param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value)
+    );
     if (validParams.length > 0) integrations.referrals = { params: validParams };
   }
 
@@ -215,8 +208,7 @@ export const getUsers = async (_: IRequest, query = {}) => UserModel.find(query)
 
 export const getUser = async (_: IRequest, query = {}) => {
   try {
-    const user = await UserModel
-      .findOne(query);
+    const user = await UserModel.findOne(query);
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -228,8 +220,7 @@ export const getUser = async (_: IRequest, query = {}) => {
 
 export const getUserById = async (_: IRequest, uid: string) => {
   try {
-    const user = await UserModel
-      .findById({ _id: uid });
+    const user = await UserModel.findById({ _id: uid });
 
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
@@ -279,7 +270,11 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
     }
     const email = updates.email?.toLowerCase()?.trim();
     if (!!email && !isemail.validate(email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
-    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: dayjs().utc().toDate() }, { new: true });
+    return await UserModel.findByIdAndUpdate(
+      user._id,
+      { ...updates, lastModified: dayjs().utc().toDate() },
+      { new: true }
+    );
   } catch (err) {
     throw asCustomError(err);
   }
@@ -307,24 +302,33 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
   if (!email) throw new CustomError('A new email address is required.', ErrorTypes.INVALID_ARG);
   if (!isValidEmailFormat(email)) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
 
-  const existingEmail = user.emails.find(userEmail => userEmail.email === email);
+  const existingEmail = user.emails.find((userEmail) => userEmail.email === email);
+  const prevEmail = user.emails.find((e) => e.primary)?.email;
 
   if (!existingEmail) {
     // check if another user has this email
     const isEmailInUse = await UserModel.findOne({ 'emails.email': email });
     if (isEmailInUse) throw new CustomError('Email already in use.', ErrorTypes.INVALID_ARG);
-    user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: false }));
+    user.emails = user.emails.map((userEmail) => ({
+      email: userEmail.email,
+      status: userEmail.status,
+      primary: false,
+    }));
     user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
     // TODO: remove when legacy user is removed
     if (legacyUser) legacyUser.emails = user.emails;
     // updating requestor for access to new email
     resendEmailVerification({ ...req, requestor: user });
-    // If this is an existing email, this update should have already happened
-    await updateSubscriptionsIfUserWasVisitor(email, user._id.toString());
   } else {
-    user.emails = user.emails.map(userEmail => ({ email: userEmail.email, status: userEmail.status, primary: email === userEmail.email }));
+    user.emails = user.emails.map((userEmail) => ({
+      email: userEmail.email,
+      status: userEmail.status,
+      primary: email === userEmail.email,
+    }));
     if (legacyUser) legacyUser.emails = user.emails;
   }
+
+  await updateSubscriptionsOnEmailChange(user._id, user.name, prevEmail, email);
 };
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
@@ -407,11 +411,15 @@ export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>
   return { message };
 };
 
-export const resetPasswordFromToken = async (req: IRequest<{}, {}, (ILoginData & IUpdatePasswordBody)>) => {
+export const resetPasswordFromToken = async (req: IRequest<{}, {}, ILoginData & IUpdatePasswordBody>) => {
   const { newPassword, token } = req.body;
   const requiredFields = ['newPassword', 'token'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
-  if (!isValid) throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
+  if (!isValid)
+    throw new CustomError(
+      `Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`,
+      ErrorTypes.INVALID_ARG
+    );
   const errMsg = 'Token not found. Please request password reset again.';
   const existingToken = await TokenService.getTokenAndConsume({ value: token, type: TokenTypes.Password });
   if (!existingToken) throw new CustomError(errMsg, ErrorTypes.NOT_FOUND);
@@ -434,7 +442,7 @@ export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyToke
   return { message: 'OK' };
 };
 
-export const deleteUser = async (req: IRequest<{}, {userId: string}, {}>) => {
+export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
   try {
     // validate user id
     const { userId } = req.query;
@@ -445,7 +453,7 @@ export const deleteUser = async (req: IRequest<{}, {userId: string}, {}>) => {
     if (!user) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
 
     // get user email
-    const email = user.emails.find(userEmail => userEmail.primary)?.email;
+    const email = user.emails.find((userEmail) => userEmail.primary)?.email;
 
     // throw error if user has commissions
     const commissions = await CommissionModel.countDocuments({ user: user._id });
@@ -454,7 +462,10 @@ export const deleteUser = async (req: IRequest<{}, {userId: string}, {}>) => {
     }
 
     // throw error if user is enrolled in group
-    const userGroups = await UserGroupModel.countDocuments({ user: user._id, status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] } });
+    const userGroups = await UserGroupModel.countDocuments({
+      user: user._id,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
+    });
     if (userGroups > 0) {
       throw new CustomError('Cannot delete users enrolled in group(s).', ErrorTypes.INVALID_ARG);
     }

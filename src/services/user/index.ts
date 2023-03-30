@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact } from '../../integrations/activecampaign';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
-import { ALPHANUMERIC_REGEX, ZIPCODE_REGEX } from '../../lib/constants/regex';
+import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { verifyRequiredFields } from '../../lib/requestData';
@@ -24,6 +24,7 @@ import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { VisitorModel } from '../../models/visitor';
+import { PromoModel } from '../../models/promo';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { sendPasswordResetEmail } from '../email';
@@ -59,6 +60,7 @@ export interface IUserData extends ILoginData {
   name: string;
   zipcode?: string;
   role?: UserRoles;
+  promo?: string;
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
@@ -68,6 +70,7 @@ export interface IRegisterUserData {
   name: string;
   token: string;
   password: string;
+  promo?: string;
 }
 
 export interface IEmailVerificationData {
@@ -92,7 +95,12 @@ export const storeNewLogin = async (userId: string, loginDate: Date) => {
   });
 };
 
-export const register = async (req: IRequest, { password, name, token }: IRegisterUserData) => {
+export const register = async (req: IRequest, {
+  password,
+  name,
+  token,
+  promo,
+}: IRegisterUserData) => {
   // check that all required fields are present
   if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
   if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
@@ -104,8 +112,7 @@ export const register = async (req: IRequest, { password, name, token }: IRegist
 
   // check password is valid
   const passwordValidation = validatePassword(password);
-  if (!passwordValidation.valid)
-    throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+  if (!passwordValidation.valid) { throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG); }
   const hash = await argon2.hash(password);
 
   // check that email is valid (should have already checked when visitor was created, but just in case)
@@ -121,6 +128,7 @@ export const register = async (req: IRequest, { password, name, token }: IRegist
   const emails = [{ email, verified: true, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
   const integrations: IUserIntegrations = {};
+
   const newUserData: any = {
     name,
     email,
@@ -147,9 +155,14 @@ export const register = async (req: IRequest, { password, name, token }: IRegist
   // save any params that the user came to our site
   if (!!urlParams && urlParams.length > 0) {
     const validParams: IUrlParam[] = urlParams.filter(
-      (param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value)
+      (param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value),
     );
     if (validParams.length > 0) integrations.referrals = { params: validParams };
+  }
+
+  if (promo) {
+    const promoItem = await PromoModel.findOne({ _id: promo });
+    integrations.promos = [...(integrations.promos || []), promoItem];
   }
 
   newUserData.integrations = integrations;
@@ -273,7 +286,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
     return await UserModel.findByIdAndUpdate(
       user._id,
       { ...updates, lastModified: dayjs().utc().toDate() },
-      { new: true }
+      { new: true },
     );
   } catch (err) {
     throw asCustomError(err);
@@ -415,11 +428,12 @@ export const resetPasswordFromToken = async (req: IRequest<{}, {}, ILoginData & 
   const { newPassword, token } = req.body;
   const requiredFields = ['newPassword', 'token'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
-  if (!isValid)
+  if (!isValid) {
     throw new CustomError(
       `Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`,
-      ErrorTypes.INVALID_ARG
+      ErrorTypes.INVALID_ARG,
     );
+  }
   const errMsg = 'Token not found. Please request password reset again.';
   const existingToken = await TokenService.getTokenAndConsume({ value: token, type: TokenTypes.Password });
   if (!existingToken) throw new CustomError(errMsg, ErrorTypes.NOT_FOUND);

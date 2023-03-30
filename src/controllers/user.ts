@@ -16,8 +16,8 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const { password, name, token } = body;
-    const { user, authKey, groupCode } = await UserService.register(req, { password, name, token });
+    const { password, name, token, promo } = body;
+    const { user, authKey, groupCode } = await UserService.register(req, { password, name, token, promo });
     output.api(req, res, { user: UserService.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));

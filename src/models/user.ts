@@ -3,11 +3,13 @@ import {
   model,
   Document,
   PaginateModel,
+  ObjectId,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 import { UserRoles } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
+import { IPromo, IPromoDocument } from './promo';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -69,6 +71,7 @@ export interface IUserIntegrations {
   activecampaign?: IActiveCampaignUserIntegration;
   shareasale?: IShareASale;
   referrals?: IReferrals;
+  promos?: IRef<ObjectId, (IPromo | IPromoDocument)>[];
 }
 
 export interface IShareableUser {
@@ -149,6 +152,9 @@ const userSchema = new Schema({
       type: {
         params: { type: Array },
       },
+    },
+    promos: {
+      type: [{ type: Schema.Types.ObjectId, ref: 'promo' }],
     },
   },
 });

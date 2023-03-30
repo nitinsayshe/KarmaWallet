@@ -7,7 +7,7 @@ import {
 } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { MainBullClient } from '../../clients/bull/main';
-import { updateActiveCampaignGroupSubscriptionsAndTags } from '../../integrations/activecampaign';
+import { updateActiveCampaignGroupListsAndTags } from '../../integrations/activecampaign';
 import {
   emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
@@ -346,7 +346,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
     const newGroup = await group.save();
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
     return newGroup;
   } catch (err) {
@@ -1008,7 +1008,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     await user.save();
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupSubscriptionsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
+    await updateActiveCampaignGroupListsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
     // busting cache for group dashboard
@@ -1059,7 +1059,7 @@ export const leaveGroup = async (req: IRequest, {
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
   } catch (err) {
     throw asCustomError(err);
@@ -1411,7 +1411,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     await userGroup.save();
 
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupSubscriptionsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 
     return userGroup;

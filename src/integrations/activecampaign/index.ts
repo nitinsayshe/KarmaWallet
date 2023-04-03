@@ -3,7 +3,6 @@ import { ActiveCampaignClient, IGetContactResponse, IContactList } from '../../c
 import { CardStatus } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
-import CustomError from '../../lib/customError';
 import {
   getAvailableCommissionPayouts,
   getMonthlyCommissionTotal,
@@ -95,7 +94,7 @@ const getShareableUserGroupFromUserGroupDocument = ({
 export const prepareYearlyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -127,7 +126,7 @@ export const prepareYearlyUpdatedFields = async (
 export const prepareQuarterlyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -142,7 +141,7 @@ export const prepareQuarterlyUpdatedFields = async (
 export const prepareMonthlyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -223,7 +222,7 @@ export const prepareMonthlyUpdatedFields = async (
 export const setLinkedCardData: CustomFieldSetter = async (
   userId: string,
   customFields: FieldIds,
-  fieldValues?: FieldValues
+  fieldValues?: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -274,7 +273,7 @@ export const setLinkedCardData: CustomFieldSetter = async (
 export const prepareWeeklyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -310,7 +309,7 @@ export const prepareWeeklyUpdatedFields = async (
 export const prepareDailyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -330,7 +329,7 @@ export const prepareDailyUpdatedFields = async (
 export const prepareInitialSyncFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -357,7 +356,7 @@ export const prepareInitialSyncFields = async (
 const setBackfillCashBackEligiblePurchase = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   if (!customFields) {
     console.log('No custom fields provided');
@@ -370,7 +369,7 @@ const setBackfillCashBackEligiblePurchase = async (
   try {
     const userCommissions = await CommissionModel.find({ user: user._id });
     const customField = customFields.find(
-      (field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase
+      (field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase,
     );
     if (!!userCommissions && userCommissions.length >= 1 && !!customField) {
       fieldValues.push({ id: customField.id, value: 'true' });
@@ -388,7 +387,7 @@ export const updateMadeCashBackEligiblePurchaseStatus = async (user: IUserDocume
 
     const fields = [];
     const customField = customFields.find(
-      (field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase
+      (field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase,
     );
     if (customField) {
       fields.push({ id: customField.id, value: 'true' });
@@ -454,7 +453,7 @@ export const getActiveCampaignTags = async (userId: string): Promise<string[]> =
 
 const getSubscriptionLists = async (
   subscribe: ActiveCampaignListId[],
-  unsubscribe: ActiveCampaignListId[]
+  unsubscribe: ActiveCampaignListId[],
 ): Promise<ISubscriptionLists> => {
   subscribe = !!subscribe ? subscribe : [];
   unsubscribe = !!unsubscribe ? unsubscribe : [];
@@ -474,7 +473,7 @@ export const updateActiveCampaignGroupListsAndTags = async (
     userId: string;
     subscribe: SubscriptionCode[];
     unsubscribe: SubscriptionCode[];
-  }
+  },
 ): Promise<{
   userId: string;
   lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
@@ -489,8 +488,8 @@ export const updateActiveCampaignGroupListsAndTags = async (
     const { subscribe, unsubscribe } = await getSubscriptionLists(
       subscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
       unsubscribeCodes.map(
-        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId
-      )
+        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId,
+      ),
     );
 
     const contacts = [
@@ -525,7 +524,7 @@ export type UpdateActiveCampaignDataRequest = {
 };
 
 export const updateActiveCampaignData = async (
-  req: UpdateActiveCampaignDataRequest
+  req: UpdateActiveCampaignDataRequest,
 ): Promise<{
   userId: string;
   lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
@@ -536,11 +535,11 @@ export const updateActiveCampaignData = async (
     const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = req.subscriptions;
     const { subscribe, unsubscribe } = await getSubscriptionLists(
       subscribeCodes?.map(
-        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId
+        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId,
       ) || [],
       unsubscribeCodes?.map(
-        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId
-      ) || []
+        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId,
+      ) || [],
     );
 
     /* TODO: handle removing tags - this doesn't seem possible through the same active campaign
@@ -575,7 +574,7 @@ export const updateActiveCampaignData = async (
 export const prepareBackfillSyncFields = async (
   user: IUserDocument,
   customFields: FieldIds,
-  fieldValues: FieldValues
+  fieldValues: FieldValues,
 ): Promise<FieldValues> => {
   fieldValues = fieldValues || [];
   fieldValues = await prepareDailyUpdatedFields(user, customFields, fieldValues);
@@ -617,7 +616,7 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
 export const updateActiveCampaignListStatus = async (
   email: string,
   subscribe: ActiveCampaignListId[],
-  unsubscribe: ActiveCampaignListId[]
+  unsubscribe: ActiveCampaignListId[],
 ) => {
   const ac = new ActiveCampaignClient();
 
@@ -669,17 +668,15 @@ export const getActiveCampaignContact = async (email: string): Promise<IGetConta
   }
 };
 
-export const contactListToSubscribedListIDs = (lists: IContactList[]): ActiveCampaignListId[] => {
-  return lists
-    .filter((list) => {
-      if (!Object.values(ActiveCampaignListId).includes(list.list as ActiveCampaignListId)) {
-        console.error('Unknown Active Campaign list: ', list.list);
-        return false;
-      }
-      return list.status === '1'; // return only active subscriptions
-    })
-    .map((list) => list.list as ActiveCampaignListId);
-};
+export const contactListToSubscribedListIDs = (lists: IContactList[]): ActiveCampaignListId[] => lists
+  .filter((list) => {
+    if (!Object.values(ActiveCampaignListId).includes(list.list as ActiveCampaignListId)) {
+      console.error('Unknown Active Campaign list: ', list.list);
+      return false;
+    }
+    return list.status === '1'; // return only active subscriptions
+  })
+  .map((list) => list.list as ActiveCampaignListId);
 
 export const getSubscribedLists = async (email: string): Promise<ActiveCampaignListId[]> => {
   try {

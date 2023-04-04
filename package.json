@@ -11,6 +11,7 @@
     "copy": "ts-node ./bin/postbuild.ts",
     "prebuild": "npm run clean",
     "build": "tsc",
+    "test": "jest --setupFiles dotenv/config",
     "postbuild": "npm run copy",
     "postinstall": "npm run build",
     "start": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/index.js && npm run copy'",
@@ -28,6 +29,7 @@
   },
   "homepage": "https://github.com/karmawallet/karmawallet-backend-ts#readme",
   "devDependencies": {
+    "@jest/globals": "29.5.0",
     "@types/compression": "1.7.2",
     "@types/cors": "2.8.12",
     "@types/crypto-js": "^4.1.1",
@@ -51,7 +53,9 @@
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.25.4",
     "eslint-plugin-unused-imports": "2.0.0",
+    "jest": "29.5.0",
     "nodemon": "2.0.15",
+    "ts-jest": "29.0.5",
     "ts-node": "10.4.0"
   },
   "dependencies": {

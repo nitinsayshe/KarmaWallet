@@ -6,7 +6,6 @@ import {
   ObjectId,
 } from 'mongoose';
 import { IModel } from '../types/model';
-import { getUtcDate } from '../lib/date';
 import { ICampaign, IShareableCampaign } from './campaign';
 
 export enum IPromoTypes {
@@ -74,7 +73,7 @@ const promoSchema = new Schema({
   limit: { type: Number, default: 1 },
   name: { type: String, required: true },
   promoText: { type: String, required: true },
-  startDate: { type: Date, default: () => getUtcDate() },
+  startDate: { type: Date },
   successText: { type: String, required: true },
   type: { type: String, required: true, enum: Object.values(IPromoTypes) },
 });

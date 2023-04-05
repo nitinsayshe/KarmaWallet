@@ -45,7 +45,7 @@ interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
 interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
   groupName?: string;
-  visitor?: Types.ObjectId | IVisitorDocument;
+  visitor?: IVisitorDocument;
 }
 
 interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
@@ -176,8 +176,9 @@ export const sendAccountCreationVerificationEmail = async ({
   const emailTemplateConfig = EmailTemplateConfigs.CreateAccountEmailVerification;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const urlParamsString = visitor.integrations.urlParams.map(param => `${param.key}=${param.value}`).join('&');
   // TODO: verify param FE/UI will be using to verify
-  const verificationLink = `${domain}?verifyaccount=${token}`;
+  const verificationLink = `${domain}?verifyaccount=${token}${!!urlParamsString ? `&${urlParamsString}` : ''}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'Verify your Email Address';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };

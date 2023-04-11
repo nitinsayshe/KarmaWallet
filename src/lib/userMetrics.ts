@@ -1,7 +1,8 @@
 import dayjs from 'dayjs';
-import { FilterQuery, LeanDocument } from 'mongoose';
+import { add } from 'lodash';
+import { FilterQuery, LeanDocument, Types } from 'mongoose';
 import { CommissionModel, KarmaCommissionStatus } from '../models/commissions';
-import { CompanyModel, IShareableCompany } from '../models/company';
+import { CompanyModel, ICompanyDocument, IShareableCompany } from '../models/company';
 import { IShareableMerchant } from '../models/merchant';
 import { MerchantRateModel } from '../models/merchantRate';
 import { SectorModel } from '../models/sector';
@@ -121,6 +122,47 @@ export const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<nu
   }
 };
 
+export const getUserTransactionsPastThirtyDays = async (
+  user: IUserDocument
+): Promise<IShareableTransaction[] | null> => {
+  if (!user || !user._id) return null;
+  try {
+    const thirtyDaysAgo = dayjs().utc().subtract(30, 'day');
+
+    const transactions = await TransactionModel.aggregate()
+      .match({
+        $and: [
+          { user: user._id },
+          { company: { $exists: true } },
+          { company: { $ne: null } },
+          { company: { $ne: [] } },
+          { date: { $gte: thirtyDaysAgo.toDate() } },
+          { date: { $lte: dayjs().toDate() } },
+        ],
+      })
+      .lookup({
+        from: 'companies',
+        localField: 'company',
+        foreignField: '_id',
+        as: 'company',
+      })
+      .unwind({ path: '$company', preserveNullAndEmptyArrays: false })
+      .match({
+        $and: [
+          { 'company.rating': { $exists: true } },
+          { 'company.rating': { $ne: null } },
+          { 'company.rating': { $ne: CompanyRating.Neutral } },
+        ],
+      })
+      .sort({ date: -1 });
+
+    return !!transactions && !!transactions.length ? transactions : null;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
 export const getMonthlyTransactionsWithCashbackCompanies = async (
   user: IUserDocument,
   excludeList: LeanTransactionDocuments
@@ -137,13 +179,6 @@ export const getMonthlyTransactionsWithCashbackCompanies = async (
         as: 'company',
       })
       .unwind({ path: '$company' })
-      .lookup({
-        from: 'merchants',
-        localField: 'company.merchant',
-        foreignField: '_id',
-        as: 'company.merchant',
-      })
-      .unwind({ path: '$company.merchant' })
       .match({
         $and: [
           { user: user._id },
@@ -300,6 +335,70 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
   return (highestRate / 100) * transaction.amount;
 };
 
+export const getTransactionBreakdownByCompanyRating = async (
+  user: IUserDocument
+): Promise<{
+  email: string;
+  numPositivePurchasesLastThirtyDays: number;
+  positivePurchaseDollarsLastThirtyDays: number;
+  numNegativePurchasesLastThirtyDays: number;
+  negativePurchaseDollarsLastThirtyDays: number;
+}> => {
+  try {
+    const email = user.emails?.find((e) => e.primary)?.email;
+    if (!!email && email === 'andy@theimpactkarma.com') {
+      console.log(`preparing spending analysis for ${email}`);
+    }
+
+    const userTransactions = await getUserTransactionsPastThirtyDays(user);
+    if (!userTransactions) {
+      throw new Error(`No transactions found for user with id: ${user?._id}`);
+    }
+
+    const positivePurchases = userTransactions.filter(
+      (t) => (t.company as ICompanyDocument)?.rating === CompanyRating.Positive
+    );
+    const positivePurchaseDollars = positivePurchases.reduce(
+      (metric, t) => {
+        // ignore negetive transaction amounts
+        return t.amount < 0
+          ? { sum: metric.sum, skipped: metric.skipped++ }
+          : { sum: metric.sum + t.amount, skipped: metric.skipped };
+      },
+      { sum: 0, skipped: 0 }
+    );
+    const negativePurchases = userTransactions.filter(
+      (t) => (t.company as ICompanyDocument)?.rating === CompanyRating.Negative
+    );
+    const negativePurchaseDollars = negativePurchases.reduce(
+      (metric, t) => {
+        // ignore negetive transaction amounts
+        if (t.amount < 0) {
+          console.log(`skipping user with email: ${email}`);
+          return { sum: metric.sum, skipped: metric.skipped++ };
+        }
+        return { sum: metric.sum + t.amount, skipped: metric.skipped };
+      },
+      { sum: 0, skipped: 0 }
+    );
+    return {
+      email,
+      numPositivePurchasesLastThirtyDays: positivePurchases?.length - positivePurchaseDollars.skipped || 0,
+      positivePurchaseDollarsLastThirtyDays: roundToPercision(positivePurchaseDollars.sum, 0) || 0,
+      numNegativePurchasesLastThirtyDays: negativePurchases?.length - negativePurchaseDollars.skipped || 0,
+      negativePurchaseDollarsLastThirtyDays: roundToPercision(negativePurchaseDollars.sum, 0) || 0,
+    };
+  } catch (err) {
+    return {
+      email: '',
+      numPositivePurchasesLastThirtyDays: 0,
+      positivePurchaseDollarsLastThirtyDays: 0,
+      numNegativePurchasesLastThirtyDays: 0,
+      negativePurchaseDollarsLastThirtyDays: 0,
+    };
+  }
+};
+
 export const getMonthlyMissedCashBack = async (
   user: IUserDocument
 ): Promise<{
@@ -308,7 +407,6 @@ export const getMonthlyMissedCashBack = async (
   estimatedMonthlyMissedCommissionsAmount: number;
 }> => {
   try {
-    /* const userCommissions = await getMonthlyCommissions(user); */
     /*  TODO:  filter the transactions for only those that are not in the commissions list */
     /* We  don't have the information to do this right now, so we could just assign $0 missed cashback to users that have shopped through KW that month */
     /* So users with $0 missed cashback will either not have a card linked or they will have a card linked but not have shopped through KW that month  */
@@ -318,7 +416,7 @@ export const getMonthlyMissedCashBack = async (
     if (!userTransactions) {
       throw new Error(`No transactions found for user with id: ${user?._id}`);
     }
-    const email = user.emails?.filter((e) => e.primary)[0]?.email;
+    const email = user.emails?.find((e) => e.primary)?.email;
 
     /* simulate commission payout and record the dollar amount */
     const monthlyMissedCashbackAmounts = await Promise.all(userTransactions.map(getEstimatedMissedCommissionAmounts));
@@ -336,4 +434,76 @@ export const getMonthlyMissedCashBack = async (
       estimatedMonthlyMissedCommissionsCount: 0,
     };
   }
+};
+
+export const getUsersWithCommissionsLastMonth = async (): Promise<Types.ObjectId[]> => {
+  const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+  const users = await CommissionModel.aggregate()
+    .match({
+      $and: [
+        { 'integrations.wildfire': { $exists: true } },
+        { 'integrations.wildfire': { $ne: null } },
+        { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { creaetdOn: { $lte: oneMonthAgo.endOf('month').toDate() } },
+      ],
+    })
+    .group({
+      _id: '$user',
+    });
+  return users?.map((u) => u?._id) || [];
+};
+
+// this only cares about users with transactions that we matched to a company
+export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectId[]> => {
+  const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+  const users = await TransactionModel.aggregate()
+    .match({
+      $and: [
+        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
+        { company: { $exists: true } },
+        { company: { $ne: null } },
+      ],
+    })
+    .group({
+      _id: '$user',
+    });
+  return users?.map((u) => u?._id) || [];
+};
+
+// only pulls users with transactions in which we matched the company and it has a positive or negative rating
+export const getUsersWithTransactionPastThirtyDays = async (): Promise<Types.ObjectId[]> => {
+  const thirtyDaysAgo = dayjs().utc().subtract(30, 'day');
+
+  console.log('thirtyDaysAgo: ', thirtyDaysAgo.toString(), ' Today: ', dayjs().toString());
+  const users = await TransactionModel.aggregate()
+    .match({
+      $and: [
+        { date: { $gte: thirtyDaysAgo.toDate() } },
+        { date: { $lte: dayjs().toDate() } },
+        { company: { $exists: true } },
+        { company: { $ne: null } },
+      ],
+    })
+    .lookup({
+      from: 'companies',
+      localField: 'company',
+      foreignField: '_id',
+      as: 'company',
+    })
+    .unwind({
+      path: '$company',
+      preserveNullAndEmptyArrays: false,
+    })
+    .match({
+      $and: [
+        { 'company.rating': { $exists: true } },
+        { 'company.rating': { $ne: null } },
+        { 'company.rating': { $ne: CompanyRating.Neutral } },
+      ],
+    })
+    .group({
+      _id: '$user',
+    });
+  return users?.map((u) => u?._id) || [];
 };

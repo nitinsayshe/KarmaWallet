@@ -15,13 +15,13 @@ import {
   prepareYearlyUpdatedFields,
   removeDuplicateContactAutomaitons,
   UserLists,
-  UserSubscriptions
+  UserSubscriptions,
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
 import {
   ProviderProductIdToSubscriptionCode,
-  SubscriptionCodeToProviderProductId
+  SubscriptionCodeToProviderProductId,
 } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
 import {
@@ -29,12 +29,11 @@ import {
   getTransactionBreakdownByCompanyRating,
   getUsersWithCommissionsLastMonth,
   getUsersWithTransactionPastThirtyDays,
-  getUsersWithTransactionsLastMonth
+  getUsersWithTransactionsLastMonth,
 } from '../lib/userMetrics';
 import { IUser, IUserDocument, UserModel } from '../models/user';
 import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
 import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
-import { remove } from 'lodash';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes;
@@ -77,13 +76,46 @@ const getGroupSubscriptionListsToUpdate = async (user: IUserDocument): Promise<I
   }
 };
 
-const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> =>
-  getGroupSubscriptionListsToUpdate(user);
+const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> => getGroupSubscriptionListsToUpdate(user);
+
+const iterateOverUsersAndExecImportReqWithDelay = async <T>(
+  request: SyncRequest<T>,
+  prepareBulkImportRequest: (
+    req: SyncRequest<T>,
+    userBatch: PaginateResult<IUser>,
+    customFields: { name: string; id: number }[]
+  ) => Promise<IContactsImportData>,
+  msDelayBetweenBatches: number,
+) => {
+  const ac = new ActiveCampaignClient();
+  ac.withHttpClient(request?.httpClient);
+  const customFields = await ac.getCustomFieldIDs();
+
+  let page = 1;
+  let hasNextPage = true;
+  while (hasNextPage) {
+    const userBatch = await UserModel.paginate(request.batchQuery, {
+      page,
+      limit: request.batchLimit,
+    });
+
+    console.log(`Preparing batch ${page} of ${userBatch.totalPages}`);
+    const contacts = await prepareBulkImportRequest(request, userBatch, customFields);
+
+    console.log(`Sending ${contacts.contacts.length} contacts to ActiveCampaign`);
+    await ac.importContacts(contacts);
+
+    sleep(msDelayBetweenBatches);
+
+    hasNextPage = userBatch?.hasNextPage || false;
+    page++;
+  }
+};
 
 const prepareSyncUsersRequest = async (
   req: SyncRequest<SyncAllUsersCustomFields>,
   userBatch: PaginateResult<IUser>,
-  customFields: FieldIds
+  customFields: FieldIds,
 ): Promise<IContactsImportData> => {
   // skip users with no email
   const contacts = await Promise.all(
@@ -104,7 +136,7 @@ const prepareSyncUsersRequest = async (
         const contact: IContactsData = {
           email: user.emails.find((e) => e.primary).email.trim(),
         };
-        let userDocument = user as IUserDocument;
+        const userDocument = user as IUserDocument;
         let fields = await prepareInitialSyncFields(userDocument, customFields, []);
         let tags: string[] = [];
         let lists: ISubscriptionLists = { subscribe: [], unsubscribe: [] };
@@ -146,10 +178,10 @@ const prepareSyncUsersRequest = async (
         await updateUserSubscriptions(
           userDocument._id,
           lists.subscribe.map((id: ActiveCampaignListId) => ProviderProductIdToSubscriptionCode[id]),
-          lists.unsubscribe.map((id: ActiveCampaignListId) => ProviderProductIdToSubscriptionCode[id])
+          lists.unsubscribe.map((id: ActiveCampaignListId) => ProviderProductIdToSubscriptionCode[id]),
         );
         return contact;
-      })
+      }),
   );
   return { contacts };
 };
@@ -185,7 +217,7 @@ export const prepareSubscriptionListsAndTags = async (userLists: UserLists[]): P
         tags: await getUserGroups(list.userId),
       };
       return contact;
-    })
+    }),
   );
   return { contacts };
 };
@@ -209,7 +241,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
           listid: SubscriptionCodeToProviderProductId[unsub] as ActiveCampaignListId,
         })),
       },
-    }))
+    })),
   );
 
   userLists = userLists.filter((lists) => {
@@ -241,21 +273,18 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
 
     // log subscriptions in db
     await Promise.all(
-      currBatch.map(async (user) =>
-        updateUserSubscriptions(
-          user.userId,
-          user.lists.subscribe.map((id) => ProviderProductIdToSubscriptionCode[id.listid]),
-          user.lists.unsubscribe.map((id) => ProviderProductIdToSubscriptionCode[id.listid])
-        )
-      )
+      currBatch.map(async (user) => updateUserSubscriptions(
+        user.userId,
+        user.lists.subscribe.map((id) => ProviderProductIdToSubscriptionCode[id.listid]),
+        user.lists.unsubscribe.map((id) => ProviderProductIdToSubscriptionCode[id.listid]),
+      )),
     );
 
     sleep(msBetweenBatches);
 
-    batchSize =
-      lastItemInCurrentBatch + maxBatchSize >= userLists.length
-        ? userLists.length - lastItemInCurrentBatch
-        : maxBatchSize;
+    batchSize = lastItemInCurrentBatch + maxBatchSize >= userLists.length
+      ? userLists.length - lastItemInCurrentBatch
+      : maxBatchSize;
     firstItemInCurrentBatch = lastItemInCurrentBatch + 1;
     lastItemInCurrentBatch += batchSize;
   }
@@ -264,10 +293,10 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
 const prepareCashbackSimulationImportRequest = async (
   request: SyncRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
-  customFields: { name: string; id: number }[]
+  customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
   let missedCashbackMetrics = await Promise.all(
-    userBatch?.docs?.map(async (user) => getMonthlyMissedCashBack(user as unknown as IUserDocument))
+    userBatch?.docs?.map(async (user) => getMonthlyMissedCashBack(user as unknown as IUserDocument)),
   );
   const emailSchema = z.string().email();
   missedCashbackMetrics = missedCashbackMetrics?.filter((metric) => {
@@ -294,14 +323,14 @@ const prepareCashbackSimulationImportRequest = async (
 
   // set the custom fields and update in active campaign
   const missedDollarsFieldId = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastMonth
+    (field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastMonth,
   );
   const missedCashbackTransactionCountFieldId = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastMonth
+    (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastMonth,
   );
 
   const contacts = missedCashbackMetrics.map((metric) => {
-    let contact: IContactsData = {
+    const contact: IContactsData = {
       email: metric.email,
       fields: [],
     };
@@ -322,41 +351,6 @@ const prepareCashbackSimulationImportRequest = async (
   });
 
   return { contacts };
-};
-
-
-const iterateOverUsersAndExecImportReqWithDelay = async <T>(
-  request: SyncRequest<T>,
-  prepareBulkImportRequest: (
-    req: SyncRequest<T>,
-    userBatch: PaginateResult<IUser>,
-    customFields: { name: string; id: number }[]
-  ) => Promise<IContactsImportData>,
-  msDelayBetweenBatches: number
-) => {
-  const ac = new ActiveCampaignClient();
-  ac.withHttpClient(request?.httpClient);
-  const customFields = await ac.getCustomFieldIDs();
-
-  let page = 1;
-  let hasNextPage = true;
-  while (hasNextPage) {
-    const userBatch = await UserModel.paginate(request.batchQuery, {
-      page,
-      limit: request.batchLimit,
-    });
-
-    console.log(`Preparing batch ${page} of ${userBatch.totalPages}`);
-    const contacts = await prepareBulkImportRequest(request, userBatch, customFields);
-
-    console.log(`Sending ${contacts.contacts.length} contacts to ActiveCampaign`);
-    await ac.importContacts(contacts);
-
-    sleep(msDelayBetweenBatches);
-
-    hasNextPage = userBatch?.hasNextPage || false;
-    page++;
-  }
 };
 
 const syncEstimatedCashbackFields = async (httpClient?: AxiosInstance) => {
@@ -383,9 +377,9 @@ const syncEstimatedCashbackFields = async (httpClient?: AxiosInstance) => {
 };
 
 const prepareSpendingAnalysisImportRequest = async (
-  request: SyncRequest<SpendingAnalysisCustomFields>,
+  _: SyncRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
-  customFields: { name: string; id: number }[]
+  customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
   let spendingAnalysisMetrics: {
     email: string;
@@ -394,7 +388,7 @@ const prepareSpendingAnalysisImportRequest = async (
     numNegativePurchasesLastThirtyDays: number;
     negativePurchaseDollarsLastThirtyDays: number;
   }[] = await Promise.all(
-    userBatch?.docs?.map(async (user) => getTransactionBreakdownByCompanyRating(user as unknown as IUserDocument))
+    userBatch?.docs?.map(async (user) => getTransactionBreakdownByCompanyRating(user as unknown as IUserDocument)),
   );
   const emailSchema = z.string().email();
   spendingAnalysisMetrics = spendingAnalysisMetrics?.filter((metric) => {
@@ -404,20 +398,20 @@ const prepareSpendingAnalysisImportRequest = async (
 
   // set the custom fields and update in active campaign
   const numPositivePurchasesLastThirtyDays = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.numPositivePurchasesLastThirtyDays
+    (field) => field.name === ActiveCampaignCustomFields.numPositivePurchasesLastThirtyDays,
   );
   const positivePurchaseDollarsLastThirtyDays = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.positivePurchaseDollarsLastThirtyDays
+    (field) => field.name === ActiveCampaignCustomFields.positivePurchaseDollarsLastThirtyDays,
   );
   const numNegativePurchasesLastThirtyDays = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.numNegativePurchasesLastThirtyDays
+    (field) => field.name === ActiveCampaignCustomFields.numNegativePurchasesLastThirtyDays,
   );
   const negativePurchaseDollarsLastThirtyDays = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.negativePurchaseDollarsLastThirtyDays
+    (field) => field.name === ActiveCampaignCustomFields.negativePurchaseDollarsLastThirtyDays,
   );
 
   const contacts = spendingAnalysisMetrics.map((metric) => {
-    let contact: IContactsData = {
+    const contact: IContactsData = {
       email: metric.email,
       fields: [],
     };
@@ -479,20 +473,25 @@ export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClien
   let page = 1;
   let hasNextPage = true;
   while (hasNextPage) {
-    const userBatch = await UserModel.paginate({}, {
-      page,
-      limit: batchLimit,
-    });
+    const userBatch = await UserModel.paginate(
+      {},
+      {
+        page,
+        limit: batchLimit,
+      },
+    );
 
     console.log(`Working on batch ${page} of ${userBatch.totalPages}`);
-    await Promise.all(userBatch.docs.map(async (user) => {
-      const email = user?.emails?.find((email) => email.primary)?.email
-      const validationResult = emailSchema.safeParse(email);
-      if (!(validationResult as SafeParseError<string>)?.error) {
-        return null
-      }
-      await removeDuplicateContactAutomaitons(email)
-    }));
+    await Promise.all(
+      userBatch.docs.map(async (user) => {
+        const email = user?.emails?.find((e) => e.primary)?.email;
+        const validationResult = emailSchema.safeParse(email);
+        if (!(validationResult as SafeParseError<string>)?.error) {
+          return null;
+        }
+        await removeDuplicateContactAutomaitons(email);
+      }),
+    );
     console.log(`Processed ${userBatch.docs.length} contacts to ActiveCampaign`);
 
     sleep(msDelayBetweenBatches);

@@ -19,7 +19,7 @@ import {
 
 describe('user impact report generation', () => {
   let testUser: IUserDocument;
-  let testUser_WithThreeMonthsOfTransactions: IUserDocument;
+  let testUserWithThreeMonthsOfTransactions: IUserDocument;
   let twoTestTransactions: ITransactionDocument[];
   let threeMonthsOfTransactions: ITransactionDocument[];
   let testCompany: ICompanyDocument;
@@ -30,13 +30,13 @@ describe('user impact report generation', () => {
 
   afterAll(async () => {
     // clean up db
-    await Promise.all(twoTestTransactions.map(async (t) => await t.remove()));
-    await Promise.all(threeMonthsOfTransactions.map(async (t) => await t.remove()));
+    await Promise.all(twoTestTransactions.map(async (t) => t.remove()));
+    await Promise.all(threeMonthsOfTransactions.map(async (t) => t.remove()));
 
     await testCompany.remove();
 
     await testUser.remove();
-    await testUser_WithThreeMonthsOfTransactions.remove();
+    await testUserWithThreeMonthsOfTransactions.remove();
 
     MongoClient.disconnect();
   });
@@ -44,27 +44,23 @@ describe('user impact report generation', () => {
   beforeAll(async () => {
     await MongoClient.init();
 
-    [testUser, testUser_WithThreeMonthsOfTransactions] = await createSomeUsers(2);
+    [testUser, testUserWithThreeMonthsOfTransactions] = await createSomeUsers({ users: [{}, {}] });
 
     testCompany = await createATestCompany();
     twoTestTransactions = await createSomeTransactions(2, testUser._id, testCompany);
     threeMonthsOfTransactions = await createNumMonthsOfTransactions(
       3,
-      testUser_WithThreeMonthsOfTransactions,
-      testCompany
+      testUserWithThreeMonthsOfTransactions,
+      testCompany,
     );
   });
 
   it('getCarbonDataForMonth silently fails when transactions are an empty array', async () => {
-    expect(() => {
-      return getCarbonDataForMonth([], testUser);
-    }).toBeTruthy();
+    expect(() => getCarbonDataForMonth([], testUser)).toBeTruthy();
   });
 
   it('getCarbonDataForMonth silently fails when user is empty object', async () => {
-    expect(() => {
-      return getCarbonDataForMonth(twoTestTransactions, {} as unknown as IUserDocument);
-    }).toBeTruthy();
+    expect(() => getCarbonDataForMonth(twoTestTransactions, {} as unknown as IUserDocument)).toBeTruthy();
   });
 
   it('groupTransactionsByMonth groups two transactions with the same date into an object with a single key', async () => {
@@ -82,22 +78,22 @@ describe('user impact report generation', () => {
   });
 
   it('groupTransactionsByMonth groups last three months into four keys', async () => {
-    const expectedObjectKey_one = getMonthStartDate(dayjs()).utc().format('YYYY-MM');
-    const expectedObjectKey_two = getMonthStartDate(dayjs()).subtract(1, 'month').utc().format('YYYY-MM');
-    const expectedObjectKey_three = getMonthStartDate(dayjs()).subtract(2, 'month').utc().format('YYYY-MM');
+    const expectedObjectKeyOne = getMonthStartDate(dayjs()).utc().format('YYYY-MM');
+    const expectedObjectKeyTwo = getMonthStartDate(dayjs()).subtract(1, 'month').utc().format('YYYY-MM');
+    const expectedObjectKeyThree = getMonthStartDate(dayjs()).subtract(2, 'month').utc().format('YYYY-MM');
 
     const result = groupTransactionsByMonth(threeMonthsOfTransactions);
 
     expect(result).toBeDefined();
-    expect(result).toHaveProperty(expectedObjectKey_one);
-    expect(result).toHaveProperty(expectedObjectKey_two);
-    expect(result).toHaveProperty(expectedObjectKey_three);
+    expect(result).toHaveProperty(expectedObjectKeyOne);
+    expect(result).toHaveProperty(expectedObjectKeyTwo);
+    expect(result).toHaveProperty(expectedObjectKeyThree);
 
     expect(Object.keys(result)).toHaveLength(3);
 
-    expect(result[expectedObjectKey_one]).toHaveLength(3);
-    expect(result[expectedObjectKey_two]).toHaveLength(3);
-    expect(result[expectedObjectKey_three]).toHaveLength(3);
+    expect(result[expectedObjectKeyOne]).toHaveLength(3);
+    expect(result[expectedObjectKeyTwo]).toHaveLength(3);
+    expect(result[expectedObjectKeyThree]).toHaveLength(3);
   });
 
   it('groupTransactionsByMonth returns empty object when transactions are empty', async () => {
@@ -119,9 +115,9 @@ describe('user impact report generation', () => {
   it('getGroupedTranactionsAndMonthlyBreakdown gets only transactions from last month', async () => {
     const lastMonthStart = getMonthStartDate(dayjs().utc().subtract(1, 'month'));
     const { monthlyImpactBreakdown, monthlyBreakdown } = await getGroupedTransactionsAndMonthlyBreakdown(
-      testUser_WithThreeMonthsOfTransactions,
+      testUserWithThreeMonthsOfTransactions,
       false,
-      lastMonthStart
+      lastMonthStart,
     );
 
     monthlyImpactBreakdown.forEach((m) => {

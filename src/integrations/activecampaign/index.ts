@@ -1,5 +1,5 @@
+import { AxiosInstance } from 'axios';
 import dayjs from 'dayjs';
-import { AxiosInstance, AxiosResponse } from 'axios';
 import { Schema, Types } from 'mongoose';
 import { ActiveCampaignClient, IContactAutomation, IContactList, IGetContactResponse } from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
@@ -477,7 +477,7 @@ export const updateActiveCampaignGroupListsAndTags = async (
     subscribe: SubscriptionCode[];
     unsubscribe: SubscriptionCode[];
   },
-  client?: AxiosInstance
+  client?: AxiosInstance,
 ): Promise<{
   userId: string;
   lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
@@ -530,7 +530,7 @@ export type UpdateActiveCampaignDataRequest = {
 
 export const updateActiveCampaignData = async (
   req: UpdateActiveCampaignDataRequest,
-  client?: AxiosInstance
+  client?: AxiosInstance,
 ): Promise<{
   userId: string;
   lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
@@ -600,7 +600,7 @@ export const prepareBackfillSyncFields = async (
 export const getCustomFieldIDsAndUpdateSetFields = async (
   userId: string,
   setFields: CustomFieldSetter,
-  client?: AxiosInstance
+  client?: AxiosInstance,
 ) => {
   try {
     const ac = new ActiveCampaignClient();
@@ -629,7 +629,7 @@ export const updateActiveCampaignListStatus = async (
   email: string,
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
-  client?: AxiosInstance
+  client?: AxiosInstance,
 ) => {
   const ac = new ActiveCampaignClient();
   ac.withHttpClient(client);
@@ -663,39 +663,36 @@ export const deleteContact = async (email: string, client?: AxiosInstance) => {
   }
 };
 
-export const removeDuplicateAutomations = (automations: IContactAutomation[]): IContactAutomation[] => {
-  return automations?.filter((a) => {
-    // get all autmations with this id
-    const dupeAutomations = automations?.filter((a2) => a2.automation === a.automation);
-    if (dupeAutomations.length == 1) {
-      // this isn't a dupe, so don't include in resulting set
-      return false;
+export const removeDuplicateAutomations = (automations: IContactAutomation[]): IContactAutomation[] => automations?.filter((a) => {
+  // get all autmations with this id
+  const dupeAutomations = automations?.filter((a2) => a2.automation === a.automation);
+  if (dupeAutomations.length === 1) {
+    // this isn't a dupe, so don't include in resulting set
+    return false;
+  }
+  // is this the most recent automation?
+  const oldestDupe = dupeAutomations.reduce((oldest, current) => {
+    if (dayjs(current.adddate).isBefore(dayjs(oldest.adddate))) {
+      return current;
     }
-    // is this the most recent automation?
-    const oldestDupe = dupeAutomations.reduce((oldest, current) => {
-      if (dayjs(current.adddate).isBefore(dayjs(oldest.adddate))) {
-        return current;
-      }
-      return oldest;
-    }, dupeAutomations[0]);
-    if (oldestDupe.id === a.id) {
-      // this is the oldest automation, so keep it
-      return false;
-    }
-    return true;
-  }) || [];
-};
-
+    return oldest;
+  }, dupeAutomations[0]);
+  if (oldestDupe.id === a.id) {
+    // this is the oldest automation, so keep it
+    return false;
+  }
+  return true;
+}) || [];
 
 export const removeDuplicateContactAutomaitons = async (
   email: string,
-  client?: AxiosInstance
+  client?: AxiosInstance,
 ): Promise<void> => {
   try {
     const ac = new ActiveCampaignClient();
     ac.withHttpClient(client);
 
-    console.log('Fetching Contact Data for ', email)
+    console.log('Fetching Contact Data for ', email);
     const contactData = await ac.getContacts({ email });
     if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
       return null;
@@ -709,18 +706,17 @@ export const removeDuplicateContactAutomaitons = async (
 
     const dupeAutomations = removeDuplicateAutomations(contact.contactAutomations);
     if (dupeAutomations.length < 1) {
-      console.log('Found ', 0, " duplicate automation enrollments for ", email)
+      console.log('Found ', 0, ' duplicate automation enrollments for ', email);
       return;
     }
-    console.log('Found ', dupeAutomations.length, " duplicate automation enrollments for ", email)
+    console.log('Found ', dupeAutomations.length, ' duplicate automation enrollments for ', email);
 
     const idsToRemove = dupeAutomations.map((a) => parseInt(a.id, 10));
 
-    await Promise.all(idsToRemove.map(async (id) => {
-      await ac.removeContactAutomation(id);
-    }
-    ))
-    console.log("done removing duplicate automations for ", email)
+    await Promise.all(idsToRemove.map(async (automationId) => {
+      await ac.removeContactAutomation(automationId);
+    }));
+    console.log('done removing duplicate automations for ', email);
   } catch (err) {
     console.error('Error removing duplicate automation enrollments', err);
   }
@@ -728,7 +724,7 @@ export const removeDuplicateContactAutomaitons = async (
 
 export const getActiveCampaignContactByEmail = async (
   email: string,
-  client?: AxiosInstance
+  client?: AxiosInstance,
 ): Promise<IGetContactResponse | null> => {
   try {
     const ac = new ActiveCampaignClient();

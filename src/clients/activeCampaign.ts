@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
-import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
-import { GetAlternateContactRequest } from 'aws-sdk/clients/account';
+import { SdkClient } from './sdkClient';
 
 const { ACTIVECAMPAIGN_API_KEY, ACTIVECAMPAIGN_API_URL } = process.env;
 
@@ -142,14 +141,6 @@ interface ContactAutomation {
   automation: string;
 }
 
-interface GetContactAutomaitonsResponse {
-  contactAutomations: ContactAutomation[];
-  meta: {
-    total: string;
-    showcase_stats: any[];
-  };
-}
-
 export class ActiveCampaignClient extends SdkClient {
   private _client: AxiosInstance;
 
@@ -224,7 +215,7 @@ export class ActiveCampaignClient extends SdkClient {
       console.log(err);
       if (axios.isAxiosError(err)) {
         console.log(
-          `Bulk contact import request failed: ${JSON.stringify((err as AxiosError)?.response?.data?.failureReasons)}`
+          `Bulk contact import request failed: ${JSON.stringify((err as AxiosError)?.response?.data?.failureReasons)}`,
         );
       }
       throw asCustomError(err);
@@ -312,5 +303,4 @@ export class ActiveCampaignClient extends SdkClient {
       throw asCustomError(err);
     }
   }
-
 }

@@ -14,24 +14,45 @@ import { getLoginReport } from './userLogins';
 import { getUserSignUpsReport } from './userSignups';
 import { IReportRequestParams, ReportType } from './utils/types';
 import { getAccountsUnlinkedOrRemovedReport } from './accountsUnlinkedAndRemoved';
+import { getPromosReport } from './promos';
 
 dayjs.extend(utc);
 
-export const getReport = async (req:IRequest<IReportRequestParams, any>) => {
+export const getReport = async (req: IRequest<IReportRequestParams, any>) => {
   switch (req.params.reportId) {
-    case ReportType.AccountsAdded: return getAccountsAddedReport(req);
-    case ReportType.AccountsUnlinkedOrRemoved: return getAccountsUnlinkedOrRemovedReport(req);
-    case ReportType.AccountsAddedHistory: return getAccountsAddedHistoryReport();
-    case ReportType.CarbonOffsets: return getCarbonOffsetsReport(req);
-    case ReportType.AccountTypes: return getAccountTypesReport(req);
-    case ReportType.UserSignup: return getUserSignUpsReport(req);
-    case ReportType.User: return getUserReport(req);
-    case ReportType.UserHistory: return getUserHistoryReport(req);
-    case ReportType.UserLoginsSevenDays: return getLoginReport(req, 7);
-    case ReportType.UserLoginsThirtyDays: return getLoginReport(req, 30);
-    case ReportType.CumulativeUserLoginsSevenDays: return getLoginReport(req, 7, true);
-    case ReportType.CumulativeUserLoginThirtyDays: return getLoginReport(req, 30, true);
-    default: throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
+    case ReportType.AccountsAdded:
+      return getAccountsAddedReport(req);
+    case ReportType.AccountsUnlinkedOrRemoved:
+      return getAccountsUnlinkedOrRemovedReport(req);
+    case ReportType.AccountsAddedHistory:
+      return getAccountsAddedHistoryReport();
+    case ReportType.CarbonOffsets:
+      return getCarbonOffsetsReport(req);
+    case ReportType.AccountTypes:
+      return getAccountTypesReport(req);
+    case ReportType.UserSignup:
+      return getUserSignUpsReport(req);
+    case ReportType.User:
+      return getUserReport(req);
+    case ReportType.UserHistory:
+      return getUserHistoryReport(req);
+    case ReportType.UserLoginsSevenDays:
+      return getLoginReport(req, 7);
+    case ReportType.UserLoginsThirtyDays:
+      return getLoginReport(req, 30);
+    case ReportType.CumulativeUserLoginsSevenDays:
+      return getLoginReport(req, 7, true);
+    case ReportType.CumulativeUserLoginThirtyDays:
+      return getLoginReport(req, 30, true);
+    case ReportType.PromoUsersByCampaign:
+      return getPromosReport(req);
+    case ReportType.PromoUsersBySource:
+      return getPromosReport(req);
+    case ReportType.PromoUsersByAccountStatus:
+      return getPromosReport(req);
+
+    default:
+      throw new CustomError('Invalid report id found.', ErrorTypes.INVALID_ARG);
   }
 };
 
@@ -40,18 +61,16 @@ export const getAllReports = async (_: IRequest) => {
   // so can get all reports last updated status in one request
 
   const userHistoryReportLastUpdatedDate = await ReportModel.findOne({
-    $and: [
-      { userHistory: { $exists: true } },
-      { userHistory: { $ne: null } },
-    ],
-  }).lean().sort({ createdOn: -1 });
+    $and: [{ userHistory: { $exists: true } }, { userHistory: { $ne: null } }],
+  })
+    .lean()
+    .sort({ createdOn: -1 });
 
   const userMetricsReportLastUpdatedDate = await ReportModel.findOne({
-    $and: [
-      { userMetrics: { $exists: true } },
-      { userMetrics: { $ne: null } },
-    ],
-  }).lean().sort({ createdOn: -1 });
+    $and: [{ userMetrics: { $exists: true } }, { userMetrics: { $ne: null } }],
+  })
+    .lean()
+    .sort({ createdOn: -1 });
   // reportId is a unique key for FE and BE to identify this report by.
   // this shuld not change once set
   const reports = [
@@ -115,14 +134,31 @@ export const getAllReports = async (_: IRequest) => {
       description: 'Total login counts over the past seven days.',
       lastUpdated: dayjs().utc().toDate(),
     },
+    {
+      reportId: ReportType.PromoUsersBySource,
+      name: 'Promotions: Source Report',
+      description: 'A breakdown of users in the promo by the utm_source.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.PromoUsersByCampaign,
+      name: 'Promotions: Campaign Report',
+      description: 'A breakdown of users in the promo by the utm_campaign.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
+    {
+      reportId: ReportType.PromoUsersByAccountStatus,
+      name: 'Promotions: Users by Account Status',
+      description: 'A breakdown of users in promotion with linked v no linked accounts.',
+      lastUpdated: dayjs().utc().toDate(),
+    },
   ];
 
   if (!!userMetricsReportLastUpdatedDate?.createdOn) {
     reports.push({
       reportId: ReportType.User,
       name: 'User Metrics',
-      description:
-        'User signups and cards added to the platform over the past thirty days.',
+      description: 'User signups and cards added to the platform over the past thirty days.',
       lastUpdated: dayjs(userMetricsReportLastUpdatedDate.createdOn).utc().toDate(),
     });
   }
@@ -141,10 +177,7 @@ export const getAllReports = async (_: IRequest) => {
 export const getSummary = async (_: IRequest) => {
   try {
     const report = await ReportModel.findOne({
-      $and: [
-        { adminSummary: { $exists: true } },
-        { adminSummary: { $ne: null } },
-      ],
+      $and: [{ adminSummary: { $exists: true } }, { adminSummary: { $ne: null } }],
     }).sort({ createdOn: -1 });
 
     if (!report) {

@@ -1,41 +1,81 @@
 import dayjs from 'dayjs';
 import { ObjectId, Types } from 'mongoose';
+import { CardModel, ICardDocument } from '../models/card';
 import { CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
+import { IPromoDocument, IPromoTypes, PromoModel } from '../models/promo';
 import { ITransactionDocument, TransactionModel } from '../models/transaction';
 import { IUserDocument, UserEmailStatus, UserModel } from '../models/user';
 import { getMonthStartDate } from '../services/impact/utils';
+import { CardStatus } from './constants';
 import { getRandomInt } from './number';
 
-export const createSomeUsers = async (count: number): Promise<IUserDocument[]> => {
-  const users: IUserDocument[] = [];
-  for (let i = 0; i < count; i++) {
-    const user = new UserModel();
-    user.password = 'password';
-    user.name = `Test User_${new Types.ObjectId().toString()}`;
-    user.emails.push({
-      email: `testemail_${new Types.ObjectId().toString()}@theimpactkarma.com`,
-      primary: true,
-      status: UserEmailStatus.Verified,
-    });
-    await user.save();
-    users.push(user);
-  }
-  return users;
+export type CreateTestUsersRequest = {
+  users?: Partial<IUserDocument>[];
 };
 
+export type CreateTestPromosRequest = {
+  promos?: Partial<IPromoDocument>[];
+};
+
+export type CreateTestCardsRequest = {
+  cards?: Partial<ICardDocument>[];
+};
+
+export const createSomeUsers = async (req: CreateTestUsersRequest): Promise<IUserDocument[]> => (await Promise.all(
+  req.users.map(async (user) => {
+    const newUser = new UserModel();
+    newUser.password = user?.password || 'password';
+    newUser.name = user?.name || `Test User_${new Types.ObjectId().toString()}`;
+    newUser.emails = user?.emails || [];
+    if (newUser.emails.length === 0) {
+      newUser.emails.push({
+        email: `testemail_${new Types.ObjectId().toString()}@theimpactkarma.com`,
+        primary: true,
+        status: UserEmailStatus.Verified,
+      });
+    }
+    newUser.integrations = user.integrations;
+    return newUser.save();
+  }),
+)) || [];
+
+export const createSomePromos = async (req: CreateTestPromosRequest): Promise<IPromoDocument[]> => (await Promise.all(
+  req.promos.map(async (promo) => {
+    const newPromo = new PromoModel();
+    newPromo.amount = promo?.amount || 10;
+    newPromo.name = promo?.name || `Test PROMO_${new Types.ObjectId().toString()}`;
+    newPromo.events = promo?.events || [];
+    newPromo.type = promo?.type || IPromoTypes.OTHER;
+    newPromo.promoText = promo?.promoText || `Test PROMO_TEXT_${new Types.ObjectId().toString()}`;
+    newPromo.successText = promo?.successText || `Test PROMO_SUCCESS_${new Types.ObjectId().toString()}`;
+    newPromo.disclaimerText = promo?.disclaimerText || `Test PROMO_DISCLAIMER_${new Types.ObjectId().toString()}`;
+    newPromo.headerText = promo?.headerText || 'Test PROMO_HEADER_TEXT_{new Types.ObjectId().toString()}';
+    return newPromo.save();
+  }),
+)) || [];
+
+export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICardDocument[]> => (await Promise.all(
+  req.cards.map(async (card) => {
+    const newCard = new CardModel();
+    newCard.userId = card?.userId || undefined;
+    newCard.status = card?.status || CardStatus.Linked;
+    newCard.name = card?.name || `Test Card_${new Types.ObjectId().toString()}`;
+    return newCard.save();
+  }),
+)) || [];
 export const createATestCompany = async (): Promise<ICompanyDocument> => {
   const company = new CompanyModel();
   company.companyName = `Test Company_${new Types.ObjectId().toString}`;
   company.combinedScore = getRandomInt(-16, 16);
   company.createdAt = dayjs().subtract(1, 'week').toDate();
   company.hidden = { status: false, reason: CompanyHideReasons.None, lastModified: new Date() };
-  return await company.save();
+  return company.save();
 };
 
 export const createSomeTransactions = async (
   count: number,
   userId: ObjectId,
-  company: ICompanyDocument
+  company: ICompanyDocument,
 ): Promise<ITransactionDocument[]> => {
   const transactions: ITransactionDocument[] = [];
   for (let i = 0; i < count; i++) {
@@ -54,10 +94,10 @@ export const createSomeTransactions = async (
 export const createNumMonthsOfTransactions = async (
   numMonths: number,
   user: IUserDocument,
-  company: ICompanyDocument
+  company: ICompanyDocument,
 ): Promise<ITransactionDocument[]> => {
   // pick some dats accross the three months to use for creating mock transactions
-  let dates: Date[] = [];
+  const dates: Date[] = [];
 
   for (let i = 0; i < numMonths; i++) {
     dates.push(getMonthStartDate(dayjs()).subtract(i, 'month').toDate());
@@ -65,14 +105,14 @@ export const createNumMonthsOfTransactions = async (
     dates.push(getMonthStartDate(dayjs()).subtract(i, 'month').add(2, 'week').toDate());
   }
 
-  return await Promise.all(
+  return Promise.all(
     dates.map(async (date) => {
       const transaction = new TransactionModel();
       transaction.date = date;
       transaction.user = user;
       transaction.amount = getRandomInt(1, 100);
       transaction.company = company;
-      return await transaction.save();
-    })
+      return transaction.save();
+    }),
   );
 };

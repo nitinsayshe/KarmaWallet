@@ -74,7 +74,7 @@ export const getPromos = async (_req: IRequest) => {
       model: CampaignModel,
     });
 
-  return promos.map(p => getShareablePromo(p));
+  return promos.map((p: any) => getShareablePromo(p));
 };
 
 export const createPromo = async (req: IRequest<{}, {}, IPromoRequestBody>) => {

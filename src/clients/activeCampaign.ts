@@ -1,102 +1,145 @@
-import axios, { AxiosError, AxiosInstance } from 'axios';
-import { SdkClient } from './sdkClient';
+import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import { asCustomError } from '../lib/customError';
+import { SdkClient } from './sdkClient';
 
 const { ACTIVECAMPAIGN_API_KEY, ACTIVECAMPAIGN_API_URL } = process.env;
 
+const customFieldsLimit = 100;
+
 export interface ICreateContactData {
-  email: string
-  firstName: string
-  lastName: string
-  fieldValues?: Array<{ field: string; value: string }>
-  phone?: string
+  email: string;
+  firstName: string;
+  lastName: string;
+  fieldValues?: Array<{ field: string; value: string }>;
+  phone?: string;
 }
 
 export interface IUpdateContactData {
-  id: number
-  contact: Partial<ICreateContactData>
+  id: number;
+  contact: Partial<ICreateContactData>;
 }
 
 export interface IGetContactsData {
-  ids?: string // could be repeated for multiple ids (e.g. ids[]=1&ids[]=2&ids[]=3)
-  email?: string
-  email_like?: string // filters for emails containing this value
-  exclude?: number // exclude the id provided here
-  id_greater?: number // only include ids greater than this value
-  id_less?: number // only include ids less than this value
-  listid?: string // only include contacts in this list
-  search?: string // search for contacts with this value in their name, organization email, or phone number
-  seriesid?: number // filters contacts associates with the given automation
-  status?: number // filters contacts by status (1 = subscribed, 2 = unsubscribed, 3 = bounced, 4 = inactive)
-  tagid?: number // filters contacts by tag
+  ids?: string; // could be repeated for multiple ids (e.g. ids[]=1&ids[]=2&ids[]=3)
+  email?: string;
+  email_like?: string; // filters for emails containing this value
+  exclude?: number; // exclude the id provided here
+  id_greater?: number; // only include ids greater than this value
+  id_less?: number; // only include ids less than this value
+  listid?: string; // only include contacts in this list
+  search?: string; // search for contacts with this value in their name, organization email, or phone number
+  seriesid?: number; // filters contacts associates with the given automation
+  status?: number; // filters contacts by status (1 = subscribed, 2 = unsubscribed, 3 = bounced, 4 = inactive)
+  tagid?: number; // filters contacts by tag
 }
 
 export interface ICallbackData {
-  url: string
-  requestType: string
-  detailed_results?: boolean // get success/failure messages for each contact
-  params?: Array<{ key: string; value: string }>
-  headers?: Array<{ key: string; value: string }>
+  url: string;
+  requestType: string;
+  detailed_results?: boolean; // get success/failure messages for each contact
+  params?: Array<{ key: string; value: string }>;
+  headers?: Array<{ key: string; value: string }>;
 }
 
-export interface IContactAutomation{
-  contact?: string, // contact id
-  seriesid?: string,
-  startid?: string,
-  status?: string,
-  bathid?: string, // TODO: restrict to an enum
-  automation?: string, // automation id
+export interface IContactAutomation {
+  contact?: string; // contact id
+  seriesid?: string;
+  startid?: string;
+  status?: string;
+  bathid?: string; // TODO: restrict to an enum
+  automation?: string; // automation id
+  adddate?: string;
+  remdate?: string | null;
+  timespan?: string | null;
+  lastblock?: string;
+  lastlogid?: string;
+  lastdate?: string;
+  in_als?: string;
+  completedElements?: number;
+  totalElements?: number;
+  completed?: number;
+  completeValue?: number;
+  links?: {
+    automation: string;
+    contact: string;
+    contactGoals: string;
+    automationLogs: string;
+  };
+  id?: string;
 }
 
 export interface IContactList {
-  contact?: string, // contact id
-  list?: string, // list ids
-  status?: string, // TODO: restrict to an enum
+  contact?: string; // contact id
+  list?: string; // list ids
+  status?: string; // TODO: restrict to an enum
 }
 
 // Using this mainly to retrieve list status
 export interface IGetContactResponse {
-  contactAutomations?: Array<IContactAutomation>
-  contactLists?: Array<IContactList>
-  fieldValues?: Array<{ field: string; value: string }>
+  contactAutomations?: Array<IContactAutomation>;
+  contactLists?: Array<IContactList>;
+  fieldValues?: Array<{ field: string; value: string }>;
 }
 
 export interface IContactsData {
-  email: string
-  first_name?: string
-  last_name?: string
-  fields?: Array<{ id: number; value: string }>
-  phone?: string
-  tags?: Array<string>
-  subscribe?: Array<{ listid: string}>
-  unsubscribe?: Array<{ listid: string}>
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  fields?: Array<{ id: number; value: string }>;
+  phone?: string;
+  tags?: Array<string>;
+  subscribe?: Array<{ listid: string }>;
+  unsubscribe?: Array<{ listid: string }>;
 }
 
 export interface IContactsImportData {
-  contacts: Array<IContactsData>
-  callback?: ICallbackData // lets you know when the import is complete
+  contacts: Array<IContactsData>;
+  callback?: ICallbackData; // lets you know when the import is complete
 }
 
 export interface IContact {
-  id: string,
-  email: string,
-  cdate?: Date,
-  phone?: string,
-  firstName?: string,
-  lastName?: string,
-  deleted?: string,
+  id: string;
+  email: string;
+  cdate?: Date;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  deleted?: string;
 }
 
 export interface Metadata {
-  total: string,
+  total: string;
 }
 
 export interface IGetContactsResponse {
-  contacts: Array<IContact>,
-  meta: Metadata,
+  contacts: Array<IContact>;
+  meta: Metadata;
 }
 
-const customFieldsLimit = 100;
+interface ContactAutomation {
+  contact: string;
+  seriesid: string;
+  startid: string;
+  status: string;
+  batchid: null;
+  adddate: string;
+  remdate: string;
+  timespan: string;
+  lastblock: string;
+  lastlogid: string;
+  lastdate: string;
+  completedElements: string;
+  totalElements: string;
+  completed: number;
+  completeValue: number;
+  links: {
+    automation: string;
+    contact: string;
+    contactGoals: string;
+  };
+  id: string;
+  automation: string;
+}
 
 export class ActiveCampaignClient extends SdkClient {
   private _client: AxiosInstance;
@@ -118,6 +161,13 @@ export class ActiveCampaignClient extends SdkClient {
       },
       baseURL: ACTIVECAMPAIGN_API_URL,
     });
+  }
+
+  public withHttpClient(client: AxiosInstance) {
+    if (!client) {
+      return;
+    }
+    this._client = client;
   }
 
   /* creates contacts - POST /contacts */
@@ -159,15 +209,14 @@ export class ActiveCampaignClient extends SdkClient {
   /* Note: The API specifies a max of 250 contacts at a time */
   public async importContacts(contactImportData: IContactsImportData) {
     try {
-      const { data } = await this._client.post(
-        '/import/bulk_import',
-        contactImportData,
-      );
+      const { data } = await this._client.post('/import/bulk_import', contactImportData);
       return data;
     } catch (err) {
       console.log(err);
       if (axios.isAxiosError(err)) {
-        console.log(`Bulk contact import request failed: ${JSON.stringify((err as AxiosError)?.response?.data?.failureReasons)}`);
+        console.log(
+          `Bulk contact import request failed: ${JSON.stringify((err as AxiosError)?.response?.data?.failureReasons)}`,
+        );
       }
       throw asCustomError(err);
     }
@@ -239,6 +288,16 @@ export class ActiveCampaignClient extends SdkClient {
         id: parseInt(field.id, 10),
       }));
       return fields;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  public async removeContactAutomation(id: number): Promise<AxiosResponse<undefined, undefined>> {
+    try {
+      const { data } = await this._client.delete(`/contactAutomations/${id}`);
+      return data;
     } catch (err) {
       console.log(err);
       throw asCustomError(err);

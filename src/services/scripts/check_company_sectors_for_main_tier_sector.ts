@@ -18,11 +18,13 @@ export const checkCompanySectorsForMainTierSector = async () => {
   for (const company of companies) {
     count += 1;
     console.log(`\n[#] ${company.companyName} is company ${count} of ${companies.length}`);
+    console.log(JSON.stringify(company.sectors, null, 2));
     for (const companySector of company.sectors) {
       const sector = companySector.sector as ISectorDocument;
+      if (!sector?.tier) console.log(`[#] company ${company?._id} has sector ${sector?._id} with no tier ${JSON.stringify(sector)}`);
       // Don't update for tier 1 sectors
-      if (sector.tier === 1) continue;
-      const tierOneParentSector = await SectorModel.findOne({ _id: { $in: sector.parentSectors }, tier: 1 });
+      if (sector?.tier === 1) continue;
+      const tierOneParentSector = await SectorModel.findOne({ _id: { $in: sector?.parentSectors }, tier: 1 });
       if (!tierOneParentSector) {
         errors.push({ company: company._id, sector: sector._id, error: 'No tier 1 parent sector' });
         continue;

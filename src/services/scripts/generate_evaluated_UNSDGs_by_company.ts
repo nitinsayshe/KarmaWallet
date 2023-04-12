@@ -36,6 +36,11 @@ interface IEvaluatedCompany {
   evalutedUnsdgs: Object;
 }
 
+interface IGetEvaluatedUNSDGsCountForCompanies {
+  companyId?: string;
+  startingIndex?: number;
+}
+
 export const ___getEvaluatedUNSDGsCountForCompanies = async () => {
   let count = 0;
   let errorCount = 0;
@@ -137,14 +142,17 @@ export const ___getEvaluatedUNSDGsCountForCompanies = async () => {
   fs.writeFileSync(path.join(__dirname, '.tmp', 'evaluatedCompanies'), JSON.stringify(evaluatedCompanies, null, 2));
 };
 
-export const getEvaluatedUNSDGsCountForCompanies = async (companyId?: string) => {
+export const getEvaluatedUNSDGsCountForCompanies = async ({
+  companyId = null,
+  startingIndex = null,
+}: IGetEvaluatedUNSDGsCountForCompanies) => {
   let count = 0;
   let errorCount = 0;
   const errorCompanies = [];
-  const companies = companyId ? await CompanyModel.find({ _id: companyId }) : await CompanyModel.find({ });
+  let companies = companyId ? await CompanyModel.find({ _id: companyId }) : await CompanyModel.find({ 'hidden.status': false });
   const now = dayjs().utc().toDate();
   const unsdgObjects = await UnsdgModel.find({}).sort({ goalNum: 1 });
-
+  if (startingIndex) companies = companies.slice(startingIndex);
   for (const company of companies) {
     if (!!company.hidden.status) {
       console.log(`skipping hidden company: ${company.companyName}`);
@@ -214,8 +222,11 @@ export const getEvaluatedUNSDGsCountForCompanies = async (companyId?: string) =>
 
     for (const dataSource of companyDataSources) {
       const unsdgsMapping = await DataSourceMappingModel.findOne({ source: dataSource.source });
+      if (!unsdgsMapping || !unsdgsMapping.unsdgs) {
+        console.log(`[-] error retrieving company data sources and unsdg mappings for company: ${company._id} source: ${dataSource?.source}`);
+      }
 
-      for (let i = 0; i < unsdgsMapping.unsdgs.length; i++) {
+      for (let i = 0; i < unsdgsMapping?.unsdgs.length; i++) {
         const propertyName = `unsdg${i + 1}`;
         if (!!unsdgsMapping.unsdgs[i].exists) {
           // @ts-ignore

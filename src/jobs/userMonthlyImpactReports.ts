@@ -80,7 +80,7 @@ export const groupTransactionsByMonth = (transactions: ITransactionDocument[]) =
 export const getGroupedTransactionsAndMonthlyBreakdown = async (
   user: IUserDocument,
   generateFullHistory: boolean,
-  lastMonthStart: dayjs.Dayjs
+  lastMonthStart: dayjs.Dayjs,
 ): Promise<{
   monthlyImpactBreakdown: IUserImpactMonthData[];
   monthlyBreakdown: { [key: string]: ITransactionDocument[] };
@@ -104,41 +104,38 @@ export const getGroupedTransactionsAndMonthlyBreakdown = async (
     query.$and.push({ date: { $lte: lastMonthEnd.toDate() } });
   }
 
-  try {
-    const ratings = await getUserImpactRatings();
-    const transactions = await TransactionModel.find(query)
-      .populate([
-        {
-          path: 'company',
-          model: CompanyModel,
-          populate: {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
+  const ratings = await getUserImpactRatings();
+  const transactions = await TransactionModel.find(query)
+    .populate([
+      {
+        path: 'company',
+        model: CompanyModel,
+        populate: {
+          path: 'sectors.sector',
+          model: SectorModel,
         },
-      ])
-      .sort({ date: -1 });
-    return {
-      monthlyBreakdown: groupTransactionsByMonth(transactions),
-      monthlyImpactBreakdown: getMonthlyImpactBreakdown(transactions, ratings),
-    };
-  } catch (err) {
-    throw err;
-  }
+      },
+    ])
+    .sort({ date: -1 });
+  return {
+    monthlyBreakdown: groupTransactionsByMonth(transactions),
+    monthlyImpactBreakdown: getMonthlyImpactBreakdown(transactions, ratings),
+  };
 };
 
 const processMonthlyBreakdown = async (
+  user: IUserDocument,
   monthTransactions: ITransactionDocument[],
   monthlyImpactBreakdown: IUserImpactMonthData[],
   count: number,
-  errorCount: number
+  errorCount: number,
 ): Promise<{ count: number; errorCount: number }> => {
   if (!monthTransactions.length) return { count, errorCount };
 
   try {
     // get impact data for this month
     const impactData = monthlyImpactBreakdown.find(
-      (data) => dayjs(data.date).utc().format('YYYY-MM') === dayjs(monthTransactions[0].date).utc().format('YYYY-MM')
+      (data) => dayjs(data.date).utc().format('YYYY-MM') === dayjs(monthTransactions[0].date).utc().format('YYYY-MM'),
     );
 
     // get carbon data for this month
@@ -177,9 +174,8 @@ const processMonthlyBreakdown = async (
   } catch (err) {
     errorCount += 1;
     console.log('[-] error creating monthly impact report for user', user._id, err);
-  } finally {
-    return { count, errorCount };
   }
+  return { count, errorCount };
 };
 
 export const generateMonthlyImpactReportForUser = async (
@@ -187,7 +183,7 @@ export const generateMonthlyImpactReportForUser = async (
   generateFullHistory: boolean,
   lastMonthStart: dayjs.Dayjs,
   count: number,
-  errorCount: number
+  errorCount: number,
 ): Promise<{ count: number; errorCount: number }> => {
   let monthlyBreakdown: { [key: string]: ITransactionDocument[] };
   let monthlyImpactBreakdown: IUserImpactMonthData[];
@@ -196,7 +192,7 @@ export const generateMonthlyImpactReportForUser = async (
     ({ monthlyBreakdown, monthlyImpactBreakdown } = await getGroupedTransactionsAndMonthlyBreakdown(
       user,
       generateFullHistory,
-      lastMonthStart
+      lastMonthStart,
     ));
   } catch (e) {
     console.error(e);
@@ -205,10 +201,11 @@ export const generateMonthlyImpactReportForUser = async (
 
   for (const monthTransactions of Object.values(monthlyBreakdown)) {
     ({ count, errorCount } = await processMonthlyBreakdown(
+      user,
       monthTransactions,
       monthlyImpactBreakdown,
       count,
-      errorCount
+      errorCount,
     ));
   }
   return { count, errorCount };
@@ -234,7 +231,7 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
 
   console.log(
     `\ngenerating user monthly impact reports ${generateFullHistory ? 'for entire history' : `for ${lastMonthStart.format('MMM, YYYY')}`
-    }${!!uid ? ` for user: ${uid}` : ''}...\n`
+    }${!!uid ? ` for user: ${uid}` : ''}...\n`,
   );
   const users = await UserModel.find(userQuery).lean();
 
@@ -247,7 +244,7 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
       generateFullHistory,
       lastMonthStart,
       count,
-      errorCount
+      errorCount,
     ));
   }
 

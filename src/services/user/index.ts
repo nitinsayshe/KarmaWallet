@@ -24,7 +24,7 @@ import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { VisitorModel } from '../../models/visitor';
-import { IPromo, IPromoTypes, PromoModel } from '../../models/promo';
+import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { sendPasswordResetEmail } from '../email';
@@ -91,9 +91,11 @@ export interface IUpdateUserEmailParams {
 type UserKeys = keyof IUserData;
 
 export const handleCreateAccountPromo = async (userId: string, promo: IPromo) => {
-  console.log('//////// this is the promo', userId, promo);
-  if (promo.type === IPromoTypes.CASHBACK) {
-    console.log('/////// there is a cashback promo');
+  if (promo.type === IPromoTypes.CASHBACK && !promo.events.includes(IPromoEvents.LINK_CARD)) {
+    const existingCommissionsForPromo = await CommissionModel.find({ user: userId, promoId: promo._id });
+    const promoEntries = promo.limit;
+    if (existingCommissionsForPromo.length >= promoEntries) return;
+
     try {
       const { APP_USER_ID } = process.env;
       if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
@@ -106,7 +108,6 @@ export const handleCreateAccountPromo = async (userId: string, promo: IPromo) =>
       } as unknown as IRequest<IAddKarmaCommissionToUserRequestParams, {}, {}>);
       await addCashbackToUser(mockRequest);
     } catch (error) {
-      console.log('/////// cashback promo failed');
       throw asCustomError(error);
     }
   }

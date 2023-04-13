@@ -142,8 +142,6 @@ export const getUsersWithCommissionsForPayout = async () => {
 export const addCashbackToUser = async (req: IRequest<IAddKarmaCommissionToUserRequestParams>) => {
   const { userId, promo } = req.params;
 
-  console.log('////// should create a new commission for user', userId, promo);
-
   const newCommission = await new CommissionModel({
     merchant: new Types.ObjectId('63d2b2d148234101740ccdd0'),
     company: new Types.ObjectId('62def0e77b212526d1e055ca'),
@@ -163,6 +161,4 @@ export const addCashbackToUser = async (req: IRequest<IAddKarmaCommissionToUserR
   });
 
   newCommission.save();
-
-  console.log('///////// this is the new commission', newCommission);
 };

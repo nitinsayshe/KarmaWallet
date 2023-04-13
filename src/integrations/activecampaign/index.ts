@@ -1,5 +1,7 @@
+import { AxiosInstance } from 'axios';
+import dayjs from 'dayjs';
 import { Schema, Types } from 'mongoose';
-import { ActiveCampaignClient, IGetContactResponse, IContactList } from '../../clients/activeCampaign';
+import { ActiveCampaignClient, IContactAutomation, IContactList, IGetContactResponse } from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
@@ -380,9 +382,10 @@ const setBackfillCashBackEligiblePurchase = async (
   return fieldValues;
 };
 
-export const updateMadeCashBackEligiblePurchaseStatus = async (user: IUserDocument) => {
+export const updateMadeCashBackEligiblePurchaseStatus = async (user: IUserDocument, client?: AxiosInstance) => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
     const customFields = await ac.getCustomFieldIDs();
 
     const fields = [];
@@ -474,12 +477,14 @@ export const updateActiveCampaignGroupListsAndTags = async (
     subscribe: SubscriptionCode[];
     unsubscribe: SubscriptionCode[];
   },
+  client?: AxiosInstance,
 ): Promise<{
   userId: string;
   lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
 }> => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
     if (!subscriptions) {
       return;
     }
@@ -525,12 +530,14 @@ export type UpdateActiveCampaignDataRequest = {
 
 export const updateActiveCampaignData = async (
   req: UpdateActiveCampaignDataRequest,
+  client?: AxiosInstance,
 ): Promise<{
   userId: string;
   lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
 }> => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
 
     const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = req.subscriptions;
     const { subscribe, unsubscribe } = await getSubscriptionLists(
@@ -590,9 +597,14 @@ export const prepareBackfillSyncFields = async (
 };
 
 /* optionally takes and appends to already inserted fieldValues */
-export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFields: CustomFieldSetter) => {
+export const getCustomFieldIDsAndUpdateSetFields = async (
+  userId: string,
+  setFields: CustomFieldSetter,
+  client?: AxiosInstance,
+) => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
     const user = await UserModel.findById(userId);
     if (!user) {
       return;
@@ -617,8 +629,10 @@ export const updateActiveCampaignListStatus = async (
   email: string,
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
+  client?: AxiosInstance,
 ) => {
   const ac = new ActiveCampaignClient();
+  ac.withHttpClient(client);
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
@@ -634,9 +648,11 @@ export const updateActiveCampaignListStatus = async (
   await ac.importContacts({ contacts });
 };
 
-export const deleteContact = async (email: string) => {
+export const deleteContact = async (email: string, client?: AxiosInstance) => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
     // get active campaign id for user
     const rs = await ac.getContacts({ email });
     if (rs?.contacts?.length > 0) {
@@ -647,9 +663,72 @@ export const deleteContact = async (email: string) => {
   }
 };
 
-export const getActiveCampaignContact = async (email: string): Promise<IGetContactResponse | null> => {
+export const removeDuplicateAutomations = (automations: IContactAutomation[]): IContactAutomation[] => automations?.filter((a) => {
+  // get all autmations with this id
+  const dupeAutomations = automations?.filter((a2) => a2.automation === a.automation);
+  if (dupeAutomations.length === 1) {
+    // this isn't a dupe, so don't include in resulting set
+    return false;
+  }
+  // is this the most recent automation?
+  const oldestDupe = dupeAutomations.reduce((oldest, current) => {
+    if (dayjs(current.adddate).isBefore(dayjs(oldest.adddate))) {
+      return current;
+    }
+    return oldest;
+  }, dupeAutomations[0]);
+  if (oldestDupe.id === a.id) {
+    // this is the oldest automation, so keep it
+    return false;
+  }
+  return true;
+}) || [];
+
+export const removeDuplicateContactAutomaitons = async (
+  email: string,
+  client?: AxiosInstance,
+): Promise<void> => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    console.log('Fetching Contact Data for ', email);
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      return null;
+    }
+
+    const { id } = contactData.contacts[0];
+    const contact = await ac.getContact(parseInt(id));
+    if (!contact || !contact.contactAutomations || contact.contactAutomations.length < 1) {
+      return null;
+    }
+
+    const dupeAutomations = removeDuplicateAutomations(contact.contactAutomations);
+    if (dupeAutomations.length < 1) {
+      console.log('Found ', 0, ' duplicate automation enrollments for ', email);
+      return;
+    }
+    console.log('Found ', dupeAutomations.length, ' duplicate automation enrollments for ', email);
+
+    const idsToRemove = dupeAutomations.map((a) => parseInt(a.id, 10));
+
+    await Promise.all(idsToRemove.map(async (automationId) => {
+      await ac.removeContactAutomation(automationId);
+    }));
+    console.log('done removing duplicate automations for ', email);
+  } catch (err) {
+    console.error('Error removing duplicate automation enrollments', err);
+  }
+};
+
+export const getActiveCampaignContactByEmail = async (
+  email: string,
+  client?: AxiosInstance,
+): Promise<IGetContactResponse | null> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
     const contactData = await ac.getContacts({ email });
     if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
       return null;
@@ -678,9 +757,10 @@ export const contactListToSubscribedListIDs = (lists: IContactList[]): ActiveCam
   })
   .map((list) => list.list as ActiveCampaignListId);
 
-export const getSubscribedLists = async (email: string): Promise<ActiveCampaignListId[]> => {
+export const getSubscribedLists = async (email: string, client?: AxiosInstance): Promise<ActiveCampaignListId[]> => {
   try {
     const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
     const contactData = await ac.getContacts({ email });
     if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
       throw new Error('No contact found');

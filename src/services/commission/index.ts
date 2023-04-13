@@ -8,6 +8,7 @@ import {
 import { IRequest } from '../../types/request';
 import {
   CommissionPayoutModel,
+  ICommissionPayoutDocument,
   KarmaCommissionPayoutStatus,
 } from '../../models/commissionPayout';
 import {
@@ -17,6 +18,9 @@ import {
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
 import { CommissionPayoutDayForUser } from '../../lib/constants';
+import { UserModel } from '../../models/user';
+import { getUtcDate } from '../../lib/date';
+import { CommissionPayoutOverviewModel } from '../../models/commissionPayoutOverview';
 
 export enum CommissionType {
   'wildfire' = 'wildfire',
@@ -115,19 +119,72 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
   };
 };
 
-export const getUsersWithCommissionsForPayout = async () => {
-  const users = await CommissionModel.aggregate([
-    {
-      $match: {
-        status: KarmaCommissionStatus.ReceivedFromVendor,
-      },
-    },
-    {
-      $group: {
-        _id: '$user',
-        count: { $sum: 1 },
-      },
-    },
-  ]);
-  return users;
+export const generateCommissionPayoutForUsers = async (min: number, endDate?: Date, startDate?: Date) => {
+  const users = await UserModel.find({ });
+
+  for (const user of users) {
+    if (!user.integrations.paypal) continue;
+    try {
+      let dateQuery = {};
+      if (!!startDate || !!endDate) dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
+
+      const validUserCommissions = await CommissionModel.aggregate([
+        {
+          $match: {
+            date: dateQuery,
+            amount: { $gte: min },
+            user: user._id,
+            status: {
+              $in: [
+                KarmaCommissionStatus.ReceivedFromVendor,
+                KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+              ],
+            },
+          },
+        },
+      ]);
+
+      if (!validUserCommissions.length) continue;
+
+      const commissionPayout = new CommissionPayoutModel({
+        user: user._id,
+        commissions: validUserCommissions.map(c => getShareableCommission(c)),
+        amount: validUserCommissions.reduce((acc, c) => acc + c.amount, 0),
+        // update this to be a future date?
+        date: getUtcDate(),
+        status: KarmaCommissionPayoutStatus.Pending,
+      });
+      await commissionPayout.save();
+      console.log(`[+] Created CommissionPayout for user ${user._id}`);
+    } catch (err) {
+      console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
+    }
+  }
+};
+
+export const generateCommissionPayoutOverview = async (endDate?: Date, startDate?: Date) => {
+  let commissionPayouts: ICommissionPayoutDocument[] = [];
+
+  if (!!startDate || !!endDate) {
+    const dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
+    commissionPayouts = await CommissionPayoutModel.find({ date: dateQuery });
+  }
+
+  if (!endDate && !startDate) commissionPayouts = await CommissionPayoutModel.find({ });
+
+  if (!commissionPayouts.length) throw new Error('No commission payouts found for this time period.');
+
+  try {
+    const commissionPayoutOverview = new CommissionPayoutOverviewModel({
+      date: getUtcDate(),
+      commissionPayouts,
+      amount: commissionPayouts.reduce((acc, c) => acc + c.amount, 0),
+      status: KarmaCommissionPayoutStatus.Pending,
+    });
+
+    await commissionPayoutOverview.save();
+    console.log('[+] Created CommissionPayoutOverview');
+  } catch (err) {
+    console.log('[+] Error create CommissionPayoutOverview', err);
+  }
 };

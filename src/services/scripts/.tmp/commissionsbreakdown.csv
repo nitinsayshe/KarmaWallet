@@ -1,11 +1,8 @@
 "userId","name","total","karmaCommissions","wildfireCommissions","hasPaypal"
-"621b99235f87e75f53659b49","John",12.51,10,2.51,false
-"621b99225f87e75f53659b38","Anushka Nair",1.99,0,1.99,false
-"621b99235f87e75f53659b5f","Ryen Parno",12.670000000000002,0,12.670000000000002,false
-"621b99235f87e75f53659b44","Jayant Khadilkar",37.17,0,37.17,false
-"621b99235f87e75f53659b9c","Sara Wall",10.78,10,0.78,true
-"621b99245f87e75f53659bf8","Anushka Nair",4.8,0,4.8,false
-"621b99235f87e75f53659b84","Archana Nair ",1.0899999999999999,0,1.0899999999999999,false
+"621b99235f87e75f53659b44","Jayant Khadilkar",32.99,0,32.99,false
+"621b99235f87e75f53659b5f","Ryen Parno",12.81,0,12.81,false
+"621b99235f87e75f53659b49","John",10,10,0,true
+"621b99235f87e75f53659b9c","Sara Wall",10,10,0,true
 "63ce71bac8d3ce62f313bf67","Monica Millner",10,10,0,false
 "63ce8533c8d3ce62f314fe98","Crystal Smith",10,10,0,false
 "63cece009a075782b8eb8397","Daniel Harper",10,10,0,true

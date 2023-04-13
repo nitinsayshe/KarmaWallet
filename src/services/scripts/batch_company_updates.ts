@@ -4,6 +4,7 @@ import csvtojson from 'csvtojson';
 import path from 'path';
 import fs from 'fs';
 import dayjs from 'dayjs';
+import { isValidObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import { mockRequest } from '../../lib/constants/request';
 import CustomError from '../../lib/customError';
@@ -17,16 +18,34 @@ import { getUtcDate } from '../../lib/date';
 import { DataSourceMappingModel } from '../../models/dataSourceMapping';
 import { UnsdgModel } from '../../models/unsdg';
 import { removeTrailingSlash } from './clean_company_urls';
+import { ValueDataSourceMappingModel } from '../../models/valueDataSourceMapping';
+import { ValueModel } from '../../models/value';
+import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 
-// NOVEMBER ADDITION
-// 1) If company is updated and has sectors, overwrite all sectors on company
-// 2) Company Data Source can have status of 1 or -1
-// 3) Unhide company if ACTION is unhide
-// 4) Update false-positive false-negative logic (remove all manual match false)
+const getAppUser = async (): Promise<IUserDocument> => {
+  const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
+  return appUser;
+};
+
+const uploadImageFromUrl = async (externalUrl: string, fileId: string, filename: string) => {
+  const appUser = await getAppUser();
+  if (!appUser) throw new CustomError('App user not found.', ErrorTypes.NOT_FOUND);
+  const mockRequestForLogo = {
+    ...mockRequest,
+    requestor: appUser,
+    body: {
+      externalUrl,
+      fileId,
+      filename: slugify(filename),
+    },
+  };
+  const { url: newLogoUrl } = await downloadImageFromUrlAndStoreInS3(mockRequestForLogo);
+  return newLogoUrl;
+};
 
 // Data Source Mapping Updates
 enum DataSourceMappingUpdateAction {
-  Delete = 'DELETE',
+  Remove = 'REMOVE',
   Update = 'UPDATE',
   Add = 'ADD',
 }
@@ -69,10 +88,18 @@ const handleUpdateOrAddDataSourceMapping = async (update: any) => {
     _15: [_15_1, _15_2, _15_3, _15_4, _15_5, _15_6, _15_7, _15_8, _15_9, _15_a, _15_b, _15_c],
     _16: [_16_1, _16_2, _16_3, _16_4, _16_5, _16_6, _16_7, _16_8, _16_9, _16_a, _16_b],
   };
-  let dataSourceMapping = await DataSourceMappingModel.findOne({ source });
+  let _source = source;
+  let dataSourceMapping;
+  if (isValidObjectId(source)) dataSourceMapping = await DataSourceMappingModel.findOne({ source });
+  else {
+    const __source = await DataSourceModel.findOne({ name: source });
+    if (!__source) throw new Error('Source not found');
+    _source = __source._id;
+    dataSourceMapping = await DataSourceMappingModel.findOne({ source: _source });
+  }
   if (!dataSourceMapping) {
     const _dataSourceMapping = await DataSourceMappingModel.findOne({}).lean();
-    dataSourceMapping = new DataSourceMappingModel({ source, unsdgs: _dataSourceMapping.unsdgs });
+    dataSourceMapping = new DataSourceMappingModel({ source: _source, unsdgs: _dataSourceMapping.unsdgs });
   }
   for (let i = 0; i < 16; i += 1) {
     const unsdgValue = parseFloat(undsgs[i]);
@@ -101,7 +128,8 @@ const handleUpdateOrAddDataSourceMapping = async (update: any) => {
 };
 
 const handleDeleteDataSourceMapping = async (update: any) => {
-  console.log('Updating data source mapping', update);
+  const { _id, dataSource } = update;
+  await DataSourceMappingModel.findOneAndDelete({ _id, source: dataSource });
 };
 
 export const updateDataSourceMapping = async () => {
@@ -114,7 +142,7 @@ export const updateDataSourceMapping = async () => {
     try {
       const { action } = update;
       switch (action) {
-        case DataSourceMappingUpdateAction.Delete:
+        case DataSourceMappingUpdateAction.Remove:
           await handleDeleteDataSourceMapping(update);
           break;
         case DataSourceMappingUpdateAction.Update:
@@ -140,10 +168,24 @@ enum DataSourceUpdateAction {
   Delete = 'DELETE',
   Update = 'UPDATE',
   Add = 'ADD',
+  ExpireAll = 'EXPIRE_ALL',
 }
 
 const handleAddDataSource = async (update: any) => {
   console.log('Adding data source', update);
+  const { name, logoUrl, description, notes, rank, url, hidden } = update;
+  let _logoUrl = logoUrl;
+  if (logoUrl && !logoUrl.includes('karmawallet.io')) _logoUrl = await uploadImageFromUrl(logoUrl, 'data-source', name);
+  const dataSource = new DataSourceModel({
+    name,
+    logoUrl: _logoUrl,
+    description,
+    notes,
+    rank,
+    url,
+    hidden: hidden === 'TRUE',
+  });
+  await dataSource.save();
 };
 
 const handleUpdateDataSource = async (update: any) => {
@@ -179,6 +221,13 @@ const handleDeleteDataSource = async (update: any) => {
   console.log('Adding data source', update);
 };
 
+const handleExpireAllDataSources = async (update: any) => {
+  console.log('Expiring all data sources', update);
+  const { _id } = update;
+  await DataSourceModel.updateOne({ _id }, { hidden: true });
+  await CompanyDataSourceModel.updateMany({ source: _id }, { 'dateRange.end': new Date(), status: 0 });
+};
+
 export const updateDataSources = async () => {
   const errors: any[] = [];
   const updatePath = path.resolve(__dirname, '.tmp', 'batchDataSources.csv');
@@ -197,6 +246,9 @@ export const updateDataSources = async () => {
         case DataSourceUpdateAction.Delete:
           await handleDeleteDataSource(update);
           break;
+        case DataSourceUpdateAction.ExpireAll:
+          await handleExpireAllDataSources(update);
+          break;
         default:
           throw new Error(`Invalid action: ${action}`);
       }
@@ -211,11 +263,117 @@ export const updateDataSources = async () => {
   console.log(`[#] updated ${count} data sources with ${errors.length} errors`);
 };
 
-// Company Data Source Updates
+// Value Data Source Mapping Updates
+enum ValueDataSourceMappingUpdateAction {
+  Remove = 'REMOVE',
+  Add = 'ADD',
+}
 
-// Data Source Mappings
+export const handleDeleteValueDataSourceMapping = async (update: any) => {
+  const { _id } = update;
+  const value = await ValueDataSourceMappingModel.findOneAndDelete({ _id });
+  if (!value) throw new Error(`No value data source mapping found for update: ${JSON.stringify(update)}`);
+  console.log(`[+] deleted value data source mapping ${_id}`);
+};
 
-// Value Updates
+export const handleAddValueDataSourceMapping = async (update: any) => {
+  const { dataSource, value } = update;
+  let _value = await ValueModel.findOne({ name: value });
+  if (!_value && isValidObjectId(value)) _value = await ValueModel.findOne({ _id: value });
+  if (!_value) throw new Error(`No value found for update: ${JSON.stringify(update)}`);
+  let _dataSource = await DataSourceModel.findOne({ name: dataSource });
+  if (!_dataSource && isValidObjectId(dataSource)) _dataSource = await DataSourceModel.findOne({ _id: dataSource });
+  if (!_dataSource) throw new Error(`No data source found for update: ${JSON.stringify(update)}`);
+  const valueDataSourceMapping = await ValueDataSourceMappingModel.findOneAndUpdate({
+    dataSource: _dataSource._id,
+    value: _value._id,
+  }, {
+    dataSource: _dataSource._id,
+    value: _value._id,
+  }, {
+    upsert: true,
+    new: true,
+  });
+  console.log(`[+] added value data source mapping ${valueDataSourceMapping._id}`);
+};
+
+export const updateValueDataSourceMappings = async () => {
+  const errors: any[] = [];
+  const updatePath = path.resolve(__dirname, '.tmp', 'batchValueDataSourceMappings.csv');
+  const updates = await csvtojson().fromFile(updatePath);
+  let count = 0;
+  console.log(`[+] updating ${updates.length} value data source mappings`);
+  for (const update of updates) {
+    try {
+      const { action } = update;
+      switch (action) {
+        case ValueDataSourceMappingUpdateAction.Remove:
+          await handleDeleteValueDataSourceMapping(update);
+          break;
+        case ValueDataSourceMappingUpdateAction.Add:
+          await handleAddValueDataSourceMapping(update);
+          break;
+        default:
+          throw new Error(`Invalid action: ${action}`);
+      }
+      count += 1;
+    } catch (e: any) {
+      console.log(e);
+      errors.push(e);
+    }
+  }
+  if (errors.length > 0) fs.writeFileSync(path.resolve(__dirname, '.tmp', 'batchValueDataSourceMappingErrors.json'), JSON.stringify(errors));
+  console.log(`[#] updated ${count} value data source mappings with ${errors.length} errors`);
+};
+
+// Value Company Mapping Updates
+
+enum ValueCompanyMappingUpdateAction {
+  Remove = 'REMOVE',
+  Add = 'ADD',
+}
+
+export const handleDeleteValueCompanyMapping = async (update: any) => {
+  const { companyId, value } = update;
+  const mapping = await ValueCompanyMappingModel.findOneAndDelete({ company: companyId, value });
+  if (!mapping) throw new Error(`No value company mapping found for update: ${JSON.stringify(update)}`);
+  console.log(`[+] deleted value company mapping ${mapping._id}`);
+};
+
+export const handleAddValueCompanyMapping = async (update: any) => {
+  const { companyId, value } = update;
+  // TODO
+  console.log(`[+] added value company mapping ${companyId} - ${value}`);
+};
+
+export const updateValueCompanyMappings = async () => {
+  const errors: any[] = [];
+  const updatePath = path.resolve(__dirname, '.tmp', 'batchValueCompanyMappings.csv');
+  const updates = await csvtojson().fromFile(updatePath);
+  let count = 0;
+  console.log(`[+] updating ${updates.length} value company mappings`);
+  for (const update of updates) {
+    try {
+      const { action } = update;
+      switch (action) {
+        case ValueCompanyMappingUpdateAction.Remove:
+          await handleDeleteValueCompanyMapping(update);
+          break;
+        case ValueCompanyMappingUpdateAction.Add:
+          await handleAddValueCompanyMapping(update);
+          break;
+        default:
+          throw new Error(`Invalid action: ${action}`);
+      }
+      count += 1;
+    } catch (e: any) {
+      console.log(e);
+      errors.push(e);
+    }
+  }
+  if (errors.length > 0) fs.writeFileSync(path.resolve(__dirname, '.tmp', 'batchValueCompanyMappingErrors.json'), JSON.stringify(errors));
+  console.log(`[#] updated ${count} value company mappings with ${errors.length} errors`);
+};
 
 // Company Data Source Updates
 enum CompanyDataSourceUpdateActions {
@@ -224,17 +382,18 @@ enum CompanyDataSourceUpdateActions {
 }
 
 const handleAddCompanyDataSource = async (update: any) => {
-  const { name, nameDs } = update;
+  const { companyName } = update;
   let { dataSourceId } = update;
   let { companyId } = update;
-  if (!companyId && name) {
-    const company = await CompanyModel.findOne({ companyName: name });
+  if (!companyId && companyName) {
+    const company = await CompanyModel.findOne({ companyName });
+    if (!company && !isValidObjectId(companyId)) throw new Error(`No company name and invalid companyId: ${JSON.stringify(update)}`);
     if (!company) await CompanyModel.findOne({ _id: companyId });
     if (!company) throw new Error(`No company found for update: ${JSON.stringify(update)}`);
     companyId = company._id;
   }
-  if (!dataSourceId) {
-    const _dataSourceId = await DataSourceModel.findOne({ name: nameDs });
+  if (!isValidObjectId(dataSourceId)) {
+    const _dataSourceId = await DataSourceModel.findOne({ name: dataSourceId });
     if (!_dataSourceId) throw new Error(`No data source found for update: ${JSON.stringify(update)}`);
     dataSourceId = _dataSourceId._id;
   }
@@ -259,7 +418,8 @@ const handleAddCompanyDataSource = async (update: any) => {
       upsert: true,
     },
   );
-  await newCompanyDataSource.save();
+  if (!newCompanyDataSource) throw new Error(`No company data source found for update: ${JSON.stringify(update)}`);
+  console.log(`[+] added/updated company data source ${newCompanyDataSource._id}`);
 };
 
 const handleDeleteCompanyDataSource = async (update: any) => {
@@ -314,6 +474,7 @@ enum UpdateAction {
   Delete = 'DELETE',
   Update = 'UPDATE',
   Hide = 'HIDE',
+  Unhide = 'UNHIDE',
   Add = 'ADD',
   RemoveParent = 'REMOVE_PARENT',
   AddParent = 'ADD_PARENT',
@@ -337,6 +498,7 @@ export const handleUpdateCompany = async (companyId: string, update: any): Promi
     logo,
     notes,
     primarySector,
+    parentCompany,
   } = update;
   // handle primary sector update
   if (primarySector) {
@@ -347,9 +509,25 @@ export const handleUpdateCompany = async (companyId: string, update: any): Promi
       company.sectors.push({ sector, primary: false });
     }
   }
+  // handle parent company update
+  if (parentCompany) {
+    let _parentCompany = await CompanyModel.findOne({ companyName: parentCompany });
+    if (!_parentCompany) _parentCompany = await CompanyModel.findOne({ _id: parentCompany });
+    if (!_parentCompany) throw new Error(`Parent company ${parentCompany} not found.`);
+    company.parentCompany = _parentCompany._id;
+  }
   if (notes) company.notes += `; ${notes}`;
   // TODO: add some data validation to these
-  if (logo) company.logo = logo;
+  if (logo) {
+    let _logoUrl = logo;
+    try {
+      if (logo && !logo.includes('karmawallet.io')) _logoUrl = await uploadImageFromUrl(logo, 'company', companyName);
+    } catch (err: any) {
+      console.log(`[-] error uploading logo for company ${companyId} - ${companyName} - ${err.message}`);
+      _logoUrl = logo;
+    }
+    company.logo = _logoUrl;
+  }
   if (url) {
     const cleanUrl = removeTrailingSlash(url);
     company.url = cleanUrl;
@@ -369,6 +547,17 @@ export const handleHideCompany = async (companyId: string, update: any): Promise
   console.log(`[+] hid company ${company?.companyName}`);
 };
 
+export const handleUnhideCompany = async (companyId: string, update: any): Promise<void> => {
+  console.log('[+] unhiding company', companyId);
+  let { hiddenReason } = update;
+  hiddenReason = hiddenReason?.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
+  const isHiddenReasonValid = Object.values(CompanyHideReasons).includes(hiddenReason);
+  if (!isHiddenReasonValid) hiddenReason = CompanyHideReasons.InvalidReason;
+  const company = await CompanyModel.findOneAndUpdate({ _id: companyId }, { 'hidden.status': false, 'hidden.reason': hiddenReason });
+  if (!company) throw new Error(`Company ${companyId} not found.`);
+  console.log(`[+] hid company ${company?.companyName}`);
+};
+
 export const handleAddCompany = async (update: any): Promise<void> => {
   // TODO: need to add company
   const {
@@ -382,17 +571,30 @@ export const handleAddCompany = async (update: any): Promise<void> => {
   } = update;
 
   const cleanUrl = removeTrailingSlash(url);
+  let _logoUrl = logo;
+  if (logo && !logo.includes('karmawallet.io')) {
+    try {
+      _logoUrl = await uploadImageFromUrl(logo, 'company', companyName);
+    } catch (err: any) {
+      _logoUrl = logo;
+    }
+  }
 
   if (!companyName) throw new Error('company name is required.');
   const newCompany = new CompanyModel({
     companyName,
     url: cleanUrl,
-    logo,
+    logo: _logoUrl,
     notes,
     sectors: [{ sector: primarySector, primary: true }],
     createdAt: getUtcDate(),
   });
-  if (parentCompany) newCompany.parentCompany = parentCompany;
+  if (parentCompany) {
+    let _parentCompany = await CompanyModel.findOne({ companyName: parentCompany });
+    if (!_parentCompany) _parentCompany = await CompanyModel.findOne({ _id: parentCompany });
+    if (!_parentCompany) throw new Error(`Parent company ${parentCompany} not found.`);
+    newCompany.parentCompany = _parentCompany._id;
+  }
   let { hiddenReason } = update;
   if (hiddenReason) {
     hiddenReason = hiddenReason?.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
@@ -430,9 +632,9 @@ export const handleRemoveParent = async (companyId: string): Promise<void> => {
 export const handleAddParent = async (companyId: string, update: any): Promise<void> => {
   const { parentCompany } = update;
   const company = await CompanyModel.findOne({ _id: companyId });
-  const parent = await CompanyModel.findOne({ _id: parentCompany });
-
-  if (!parent) throw new Error(`parent Company ${companyId} not found.`);
+  let parent = await CompanyModel.findOne({ companyName: parentCompany });
+  if (!parent) parent = await CompanyModel.findOne({ _id: parentCompany });
+  if (!parent) throw new Error(`Parent company ${parentCompany} not found.`);
 
   company.parentCompany = parent._id;
   await company.save();
@@ -441,14 +643,18 @@ export const handleAddParent = async (companyId: string, update: any): Promise<v
 
 // main function to update companies from the monthly batch updates CSV
 // sector parent inheritance is handled separately in effects
-export const updateCompanies = async (): Promise<void> => {
+export const updateCompanies = async (companyNames?: string[]): Promise<void> => {
   const errors: any[] = [];
   const updatePath = path.resolve(__dirname, '.tmp', 'batchCompanyUpdates.csv');
-  const updates = await csvtojson().fromFile(updatePath);
+  let updates = await csvtojson().fromFile(updatePath);
   let count = 0;
 
   console.log(`[+] updating ${updates.length} companies`);
-
+  if (companyNames) {
+    updates = updates.filter((update) => companyNames.includes(update.companyName));
+    console.log(updates.map(c => c.companyName));
+    console.log(`[+] updating ${updates.length} companies after filtering`);
+  }
   for (const update of updates) {
     console.log(`[+] processing update ${count + 1} of ${updates.length}`);
     const {
@@ -468,6 +674,10 @@ export const updateCompanies = async (): Promise<void> => {
           break;
         case UpdateAction.Hide:
           await handleHideCompany(companyId, update);
+          count += 1;
+          break;
+        case UpdateAction.Unhide:
+          await handleUnhideCompany(companyId, update);
           count += 1;
           break;
         case UpdateAction.Add:
@@ -618,11 +828,6 @@ export const updateMatchedCompanyNames = async (): Promise<void> => {
 export const getNewlyCreatedCompanies = async () => {
   const newlyCreatedCompanies = await CompanyModel.find({ createdAt: { $gte: new Date('2022-7-25') } });
   return newlyCreatedCompanies;
-};
-
-const getAppUser = async (): Promise<IUserDocument> => {
-  const appUser = await UserModel.findOne({ _id: process.env.APP_USER_ID });
-  return appUser;
 };
 
 export const removeBadLogos = async (): Promise<void> => {

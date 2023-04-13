@@ -102,7 +102,7 @@ const userSchema = new Schema({
       status: {
         type: String,
         enum: Object.values(UserEmailStatus),
-        default: UserEmailStatus.Unverified,
+        default: UserEmailStatus.Verified,
       },
       bouncedDate: { type: Date },
       primary: { type: Boolean, default: false },

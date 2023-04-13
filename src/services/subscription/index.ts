@@ -6,7 +6,7 @@ import { IGetContactResponse } from '../../clients/activeCampaign';
 import {
   contactListToSubscribedListIDs,
   FieldValues,
-  getActiveCampaignContact,
+  getActiveCampaignContactByEmail,
   getActiveCampaignTags,
   getSubscribedLists,
   updateActiveCampaignData,
@@ -119,7 +119,7 @@ export const updateSubscriptionsOnEmailChange = async (
   try {
     let prevContact: IGetContactResponse | null = null;
     // get custom field values from the prev email
-    prevContact = await getActiveCampaignContact(prevEmail);
+    prevContact = await getActiveCampaignContactByEmail(prevEmail);
     prevSubs = contactListToSubscribedListIDs(prevContact.contactLists).map(
       (id) => ProviderProductIdToSubscriptionCode[id]
     );

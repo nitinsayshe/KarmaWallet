@@ -1,13 +1,15 @@
 export enum ActiveCampaignSyncTypes {
+  BACKFILL = 'backfill',
+  CASHBACK_SIMULATION = 'cashbackSimulation',
+  REMOVE_DUPLICATE_CONTACT_AUTOMAITONS = 'removeDuplicateContactAutomations',
   DAILY = 'daily',
-  WEEKLY = 'weekly',
+  GROUP = 'group',
+  INITIAL = 'initial',
   MONTHLY = 'monthly',
   QUARTERLY = 'quarterly',
+  SPENDING_ANALYSIS = 'spendingAnalysis',
+  WEEKLY = 'weekly',
   YEARLY = 'yearly',
-  INITIAL = 'initial',
-  BACKFILL = 'backfill',
-  GROUP = 'group',
-  CASHBACK_SIMULATION = 'cashbackSimulation',
 }
 
 export enum ActiveCampaignCustomFields {
@@ -36,6 +38,10 @@ export enum ActiveCampaignCustomFields {
   missedCashbackDollarsLastMonth = 'missedCashbackDollarsLastMonth',
   missedCashbackTransactionNumberLastMonth = 'missedCashbackTransactionNumberLastMonth',
   monthsKarmaScore = 'monthsKarmaScore',
+  negativePurchaseDollarsLastThirtyDays = 'negativePurchaseDollarsLastThirtyDays',
   numLinkedCards = 'numLinkedCards',
+  numNegativePurchasesLastThirtyDays = 'numNegativePurchasesLastThirtyDays',
+  numPositivePurchasesLastThirtyDays = 'numPositivePurchasesLastThirtyDays',
+  positivePurchaseDollarsLastThirtyDays = 'positivePurchaseDollarsLastThirtyDays',
   userId = 'userId',
 }

@@ -24,7 +24,7 @@ import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { VisitorModel } from '../../models/visitor';
-import { PromoModel } from '../../models/promo';
+import { IPromo, IPromoTypes, PromoModel } from '../../models/promo';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { sendPasswordResetEmail } from '../email';
@@ -33,6 +33,7 @@ import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscription
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
 import { resendEmailVerification } from './verification';
+import { IAddKarmaCommissionToUserRequestParams, addCashbackToUser } from '../commission';
 
 dayjs.extend(utc);
 
@@ -89,6 +90,28 @@ export interface IUpdateUserEmailParams {
 
 type UserKeys = keyof IUserData;
 
+export const handleCreateAccountPromo = async (userId: string, promo: IPromo) => {
+  console.log('//////// this is the promo', userId, promo);
+  if (promo.type === IPromoTypes.CASHBACK) {
+    console.log('/////// there is a cashback promo');
+    try {
+      const { APP_USER_ID } = process.env;
+      if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
+      const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+      if (!appUser) throw new CustomError('AppUser not found', ErrorTypes.SERVICE);
+      const mockRequest = ({
+        requestor: appUser,
+        authKey: '',
+        params: { userId, promo },
+      } as unknown as IRequest<IAddKarmaCommissionToUserRequestParams, {}, {}>);
+      await addCashbackToUser(mockRequest);
+    } catch (error) {
+      console.log('/////// cashback promo failed');
+      throw asCustomError(error);
+    }
+  }
+};
+
 export const storeNewLogin = async (userId: string, loginDate: Date) => {
   await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate }, { upsert: true }).sort({
     date: -1,
@@ -101,6 +124,7 @@ export const register = async (req: IRequest, {
   token,
   promo,
 }: IRegisterUserData) => {
+  let promoData;
   // check that all required fields are present
   if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
   if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
@@ -162,6 +186,7 @@ export const register = async (req: IRequest, {
 
   if (promo) {
     const promoItem = await PromoModel.findOne({ _id: promo });
+    promoData = promoItem;
     integrations.promos = [...(integrations.promos || []), promoItem];
   }
 
@@ -180,6 +205,7 @@ export const register = async (req: IRequest, {
     };
     // return the groupCode to the front end so they can join the user to the group upon successful registration
     if (!!groupCode) responseInfo.groupCode = groupCode;
+    if (!!promoData) handleCreateAccountPromo(newUser._id.toString(), promoData);
     return responseInfo;
   } catch (afterCreationError) {
     // undo user creation

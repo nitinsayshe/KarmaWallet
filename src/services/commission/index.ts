@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { Types } from 'mongoose';
 import {
   CommissionModel,
   ICommissionDocument,
@@ -17,11 +18,17 @@ import {
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
 import { CommissionPayoutDayForUser } from '../../lib/constants';
+import { IPromo } from '../../models/promo';
 
 export enum CommissionType {
   'wildfire' = 'wildfire',
   'karma' = 'karma',
   'all' = 'all'
+}
+
+export interface IAddKarmaCommissionToUserRequestParams {
+  userId: string,
+  promo: IPromo;
 }
 
 export interface IGetCommissionsForUserQuery {
@@ -130,4 +137,32 @@ export const getUsersWithCommissionsForPayout = async () => {
     },
   ]);
   return users;
+};
+
+export const addCashbackToUser = async (req: IRequest<IAddKarmaCommissionToUserRequestParams>) => {
+  const { userId, promo } = req.params;
+
+  console.log('////// should create a new commission for user', userId, promo);
+
+  const newCommission = await new CommissionModel({
+    merchant: new Types.ObjectId('63d2b2d148234101740ccdd0'),
+    company: new Types.ObjectId('62def0e77b212526d1e055ca'),
+    user: new Types.ObjectId(userId),
+    amount: promo.amount,
+    allocation: {
+      user: promo.amount,
+      karma: 0,
+    },
+    status: KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+    integrations: {
+      karma: {
+        promo,
+        amount: promo.amount,
+      },
+    },
+  });
+
+  newCommission.save();
+
+  console.log('///////// this is the new commission', newCommission);
 };

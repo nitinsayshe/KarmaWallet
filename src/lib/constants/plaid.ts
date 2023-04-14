@@ -25,3 +25,8 @@ export const ExcludeCategories = [
   'Hospitals, Clinics and Medical Centers',
   'Primary and Secondary Schools',
 ];
+
+export enum PlaidCompanyMatchType {
+  MerchantName = 'merchant_name',
+  Name = 'name',
+}

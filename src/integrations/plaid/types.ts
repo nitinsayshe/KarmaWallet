@@ -1,4 +1,6 @@
 import { AccountBase, Item, Transaction } from 'plaid';
+import { ObjectId } from 'mongoose';
+import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
 
 export interface IPlaidInstitution {
   name: string;
@@ -32,4 +34,15 @@ export interface IPlaidItem {
   access_token: string;
   item_id?: string;
   public_token?: string;
+}
+
+export interface ICompanyMatchingResult {
+  value: string;
+  matchType: PlaidCompanyMatchType;
+  originalValue: string;
+  company: ObjectId;
+}
+
+export interface IMatchedTransaction extends Transaction {
+  company?: ObjectId;
 }

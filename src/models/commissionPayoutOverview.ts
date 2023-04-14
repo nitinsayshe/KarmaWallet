@@ -38,4 +38,4 @@ const commissionPayoutOverview = new Schema({
   // vendorPayments: { type: [Schema.Types.ObjectId], ref: 'vendorPayments' },
 });
 
-export const CommissionPayoutOverviewModel = model<ICommissionPayoutOverviewDocument, PaginateModel<IShareableCommissionPayoutOverview>>('commissionPayoutOverview', commissionPayoutOverview);
+export const CommissionPayoutOverviewModel = model<ICommissionPayoutOverviewDocument, PaginateModel<IShareableCommissionPayoutOverview>>('commission_payout_overview', commissionPayoutOverview);

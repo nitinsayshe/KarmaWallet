@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import {
   CommissionModel,
   ICommissionDocument,
@@ -21,6 +22,9 @@ import { CommissionPayoutDayForUser } from '../../lib/constants';
 import { UserModel } from '../../models/user';
 import { getUtcDate } from '../../lib/date';
 import { CommissionPayoutOverviewModel } from '../../models/commissionPayoutOverview';
+import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
+
+dayjs.extend(utc);
 
 export enum CommissionType {
   'wildfire' = 'wildfire',
@@ -124,16 +128,21 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
 
   for (const user of users) {
     if (!user.integrations.paypal) continue;
+    let dateQuery: any = { $lte: dayjs().utc().toDate() };
+
     try {
-      let dateQuery = {};
-      if (!!startDate || !!endDate) dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
+      if (!!startDate || !!endDate) {
+        dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
+      }
+
+      console.log('////// this is the datequery', dateQuery);
 
       const validUserCommissions = await CommissionModel.aggregate([
         {
           $match: {
-            date: dateQuery,
             amount: { $gte: min },
             user: user._id,
+            createdOn: dateQuery,
             status: {
               $in: [
                 KarmaCommissionStatus.ReceivedFromVendor,
@@ -143,6 +152,8 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
           },
         },
       ]);
+
+      console.log('////// these are the valid user commissions', validUserCommissions);
 
       if (!validUserCommissions.length) continue;
 
@@ -186,5 +197,58 @@ export const generateCommissionPayoutOverview = async (endDate?: Date, startDate
     console.log('[+] Created CommissionPayoutOverview');
   } catch (err) {
     console.log('[+] Error create CommissionPayoutOverview', err);
+  }
+};
+
+export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId: string) => {
+  try {
+    const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
+    if (!commissionPayoutOverview) throw new Error('Commission payout overview not found.');
+    const paypalClient = await new PaypalClient();
+    const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
+    const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
+    const commissionPayoutOverviewAmount = commissionPayoutOverview.amount;
+    const { commissionPayouts } = commissionPayoutOverview;
+
+    if (paypalPrimaryBalanceAmount < commissionPayoutOverviewAmount) {
+      throw new Error('Insufficient funds in paypal account to payout this commission payout overview.');
+    }
+
+    for (const commissionPayout of commissionPayouts) {
+      const payoutData = await CommissionPayoutModel.findById(commissionPayout);
+      if (!payoutData) throw new Error('Commission payout not found.');
+      const user = await UserModel.findById(payoutData.user);
+      if (!user) throw new Error('User not found.');
+      const { paypal } = user.integrations;
+      if (!paypal) throw new Error('User does not have paypal integration.');
+      if (!paypal.payerId) throw new Error('User does not have paypal payerId.');
+      if (payoutData.status === KarmaCommissionPayoutStatus.Paid) throw new Error('Commission payout already paid.');
+
+      const paypalFormattedPayouts: ISendPayoutBatchItem[] = [
+        {
+          recipient_type: 'PAYPAL_ID',
+          amount: {
+            value: payoutData.amount.toString(),
+            currency: 'USD',
+          },
+          receiver: paypal.payerId,
+          note: 'Karma Wallet Cashback Payout - Thank you for using Karma Wallet!',
+          sender_item_id: payoutData._id.toString(),
+        },
+      ];
+
+      const sendPayoutHeader: ISendPayoutBatchHeader = {
+        sender_batch_header: {
+          sender_batch_id: payoutData._id.toString(),
+          email_subject: 'You\'ve received a payout from Karma Wallet!',
+          email_message: 'Your payout for Karma Wallet is on its way. If',
+        },
+      };
+
+      await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
+      console.log('[+] Paypal payout sent', payoutData._id);
+    }
+  } catch (err: any) {
+    throw new Error(err);
   }
 };

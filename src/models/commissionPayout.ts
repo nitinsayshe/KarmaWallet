@@ -41,4 +41,4 @@ const commissionPayout = new Schema({
   commissions: { type: [Schema.Types.ObjectId], ref: 'commission' },
 });
 
-export const CommissionPayoutModel = model<ICommissionPayoutDocument, PaginateModel<ICommissionPayout>>('commissionPayout', commissionPayout);
+export const CommissionPayoutModel = model<ICommissionPayoutDocument, PaginateModel<ICommissionPayout>>('commission_payout', commissionPayout);

@@ -40,6 +40,14 @@ export interface ICommissionsRequestParams {
   type: CommissionType;
 }
 
+export interface ICommissionPayoutOverviewUpdateBody {
+  status: KarmaCommissionPayoutOverviewStatus;
+}
+
+export interface ICommissionPayoutOverviewUpdateRequestParams {
+  commissionPayoutOverviewId: string;
+}
+
 const defaultCommissionPopulation = [
   {
     path: 'company',
@@ -277,3 +285,19 @@ export const getAllCommissionPayoutOverviews = async (req: IRequest) => {
 };
 
 // need to add in service to update the status of the commission payout overview
+export const updateCommissionPayoutOverviewStatus = async (req: IRequest<ICommissionPayoutOverviewUpdateRequestParams, {}, ICommissionPayoutOverviewUpdateBody>) => {
+  try {
+    const { commissionPayoutOverviewId } = req.params;
+    const { status } = req.body;
+    if (!commissionPayoutOverviewId) throw new Error('A commission payout overview id is required.');
+    if (!status) throw new Error('A status is required.');
+    const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
+    if (!commissionPayoutOverview) throw new Error('Commission payout overview not found.');
+    commissionPayoutOverview.status = status;
+
+    await commissionPayoutOverview.save();
+    return commissionPayoutOverview;
+  } catch (err: any) {
+    throw new Error(err.message);
+  }
+};

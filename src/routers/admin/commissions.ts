@@ -14,4 +14,11 @@ router.route('/commissions/:type')
 
 router.route('/payout-total');
 
+router.route('/commission-payouts-overviews/:commissionPayoutOverviewId')
+  .put(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminCommissionsController.updateCommissionPayoutOverviewStatus,
+  );
+
 export default router;

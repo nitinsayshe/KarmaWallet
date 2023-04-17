@@ -20,3 +20,13 @@ export const getAllCommissionPayoutOverviews: IRequestHandler = async (req, res)
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const updateCommissionPayoutOverviewStatus: IRequestHandler<CommissionService.ICommissionPayoutOverviewUpdateRequestParams, {}, CommissionService.ICommissionPayoutOverviewUpdateBody > = async (req, res) => {
+  try {
+    console.log('////// this is the request', req.params);
+    const commissionPayoutOverview = await CommissionService.updateCommissionPayoutOverviewStatus(req);
+    output.api(req, res, commissionPayoutOverview);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

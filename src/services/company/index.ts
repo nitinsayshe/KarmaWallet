@@ -452,7 +452,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       $addFields: {},
     };
 
-
     const sectorsMatch = {
       $match: {
         'sectors.sector': {

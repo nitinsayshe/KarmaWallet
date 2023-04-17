@@ -16,7 +16,6 @@ export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date
     {
       $match: {
         date: dateQuery,
-        amount: { $gte: min },
         status: {
           $in: [
             KarmaCommissionStatus.ReceivedFromVendor,
@@ -33,6 +32,7 @@ export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date
     const existingUserObject = userTransactionTotals.find((u: any) => u.userId.toString() === user._id.toString());
 
     if (!existingUserObject) {
+      console.log('//////// there is not an existing user object');
       userTransactionTotals.push({
         userId: user._id.toString(),
         name: user.name,
@@ -55,6 +55,10 @@ export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date
       existingUserObject.karmaCommissions += payout.integrations.karma ? payout.allocation.user : 0;
       existingUserObject.wildfireCommissions += payout.integrations.wildfire ? payout.allocation.user : 0;
     }
+  }
+
+  for (const user of userTransactionTotals) {
+    if (user.total < min) userTransactionTotals.splice(userTransactionTotals.indexOf(user), 1);
   }
 
   const karmaPayouts = payouts.filter((p: any) => p.integrations.karma);

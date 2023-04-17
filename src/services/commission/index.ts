@@ -18,10 +18,10 @@ import {
   getUserCurrentAccrualsBalance,
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
-import { CommissionPayoutDayForUser } from '../../lib/constants';
+import { CommissionPayoutDayForUser, UserRoles } from '../../lib/constants';
 import { UserModel } from '../../models/user';
 import { getUtcDate } from '../../lib/date';
-import { CommissionPayoutOverviewModel } from '../../models/commissionPayoutOverview';
+import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../models/commissionPayoutOverview';
 import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
 
 dayjs.extend(utc);
@@ -135,12 +135,9 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
         dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
       }
 
-      console.log('////// this is the datequery', dateQuery);
-
       const validUserCommissions = await CommissionModel.aggregate([
         {
           $match: {
-            amount: { $gte: min },
             user: user._id,
             createdOn: dateQuery,
             status: {
@@ -153,14 +150,15 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
         },
       ]);
 
-      console.log('////// these are the valid user commissions', validUserCommissions);
-
       if (!validUserCommissions.length) continue;
+
+      const commissionsTotal = validUserCommissions.reduce((acc, c) => acc + c.allocation.user, 0);
+      if (commissionsTotal < min) continue;
 
       const commissionPayout = new CommissionPayoutModel({
         user: user._id,
         commissions: validUserCommissions.map(c => getShareableCommission(c)),
-        amount: validUserCommissions.reduce((acc, c) => acc + c.amount, 0),
+        amount: commissionsTotal,
         // update this to be a future date?
         date: getUtcDate(),
         status: KarmaCommissionPayoutStatus.Pending,
@@ -173,8 +171,10 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   }
 };
 
-export const generateCommissionPayoutOverview = async (endDate?: Date, startDate?: Date) => {
+export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate?: Date, startDate?: Date) => {
   let commissionPayouts: ICommissionPayoutDocument[] = [];
+  let karmaAmount = 0;
+  let wildfireAmount = 0;
 
   if (!!startDate || !!endDate) {
     const dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
@@ -182,15 +182,27 @@ export const generateCommissionPayoutOverview = async (endDate?: Date, startDate
   }
 
   if (!endDate && !startDate) commissionPayouts = await CommissionPayoutModel.find({ });
-
   if (!commissionPayouts.length) throw new Error('No commission payouts found for this time period.');
+
+  for (const payout of commissionPayouts) {
+    const payoutCommissions = payout.commissions;
+    for (const commission of payoutCommissions) {
+      const commissionData = await CommissionModel.findById(commission);
+      if (!!commissionData.integrations.karma.amount) karmaAmount += commissionData.allocation.user;
+      if (!!commissionData.integrations.wildfire.CommissionID) wildfireAmount += commissionData.allocation.user;
+    }
+  }
 
   try {
     const commissionPayoutOverview = new CommissionPayoutOverviewModel({
-      date: getUtcDate(),
+      payoutDate: getUtcDate(payoutDate),
       commissionPayouts,
       amount: commissionPayouts.reduce((acc, c) => acc + c.amount, 0),
-      status: KarmaCommissionPayoutStatus.Pending,
+      status: KarmaCommissionPayoutOverviewStatus.AwaitingVerification,
+      breakdown: {
+        karma: karmaAmount,
+        wildfire: wildfireAmount,
+      },
     });
 
     await commissionPayoutOverview.save();
@@ -252,3 +264,16 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     throw new Error(err);
   }
 };
+
+export const getAllCommissionPayoutOverviews = async (req: IRequest) => {
+  const { requestor } = req;
+  const user = await UserModel.findById(requestor?._id);
+  if (!user) throw new Error('User not found.');
+  if (user.role !== UserRoles.Admin && user.role !== UserRoles.SuperAdmin) throw new Error('Unauthorized.');
+
+  const commissionPayoutOverviews = await CommissionPayoutOverviewModel.find({ }).sort({ date: -1 });
+
+  return commissionPayoutOverviews;
+};
+
+// need to add in service to update the status of the commission payout overview

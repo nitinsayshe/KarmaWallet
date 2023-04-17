@@ -18,7 +18,7 @@ dayjs.extend(utc);
   try {
     await MongoClient.init();
     // await generateCommissionPayoutForUsers(5);
-    await sendCommissionPayoutsThruPaypal('64384e0e5af2884245a90103');
+    await generateCommissionPayoutOverview(dayjs('2023-05-01T00:00:00.000+00:00').toDate());
   } catch (err) {
     Logger.error(asCustomError(err));
     console.log(err);

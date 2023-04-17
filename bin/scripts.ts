@@ -9,8 +9,6 @@ import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 
-dayjs.extend(utc);
-
 (async () => {
   try {
     await MongoClient.init();

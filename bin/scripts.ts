@@ -12,8 +12,6 @@ import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import * as UserMonthlyImpactReports from '../src/jobs/userMonthlyImpactReports';
 
-dayjs.extend(utc);
-
 (async () => {
   try {
     await MongoClient.init();

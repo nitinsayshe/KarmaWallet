@@ -224,6 +224,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
     if (!commissionPayoutOverview) throw new Error('Commission payout overview not found.');
+    if (commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified) throw new Error('Commission payout overview is not verified.');
     const paypalClient = await new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
@@ -284,7 +285,6 @@ export const getAllCommissionPayoutOverviews = async (req: IRequest) => {
   return commissionPayoutOverviews;
 };
 
-// need to add in service to update the status of the commission payout overview
 export const updateCommissionPayoutOverviewStatus = async (req: IRequest<ICommissionPayoutOverviewUpdateRequestParams, {}, ICommissionPayoutOverviewUpdateBody>) => {
   try {
     const { commissionPayoutOverviewId } = req.params;

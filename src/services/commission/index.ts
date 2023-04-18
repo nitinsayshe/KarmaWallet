@@ -237,13 +237,32 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
 
     for (const commissionPayout of commissionPayouts) {
       const payoutData = await CommissionPayoutModel.findById(commissionPayout);
-      if (!payoutData) throw new Error('Commission payout not found.');
+      if (!payoutData) {
+        console.log('[+] Commission payout not found. Skipping payout.]');
+        continue;
+      }
+
       const user = await UserModel.findById(payoutData.user);
-      if (!user) throw new Error('User not found.');
+      if (!user) {
+        console.log('[+] User not found. Skipping payout.]');
+        continue;
+      }
+
       const { paypal } = user.integrations;
-      if (!paypal) throw new Error('User does not have paypal integration.');
-      if (!paypal.payerId) throw new Error('User does not have paypal payerId.');
-      if (payoutData.status === KarmaCommissionPayoutStatus.Paid) throw new Error('Commission payout already paid.');
+      if (!paypal) {
+        console.log('[+] User does not have paypal integration. Skipping payout.]');
+        continue;
+      }
+
+      if (!paypal.payerId) {
+        console.log('[+] User does not have paypal payerId. Skipping payout.]');
+        continue;
+      }
+
+      if (payoutData.status === KarmaCommissionPayoutStatus.Paid) {
+        console.log('[+] Commission payout already paid. Skipping payout.]');
+        continue;
+      }
 
       const paypalFormattedPayouts: ISendPayoutBatchItem[] = [
         {
@@ -253,20 +272,28 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
             currency: 'USD',
           },
           receiver: paypal.payerId,
+          // need to update this text
           note: 'Karma Wallet Cashback Payout - Thank you for using Karma Wallet!',
           sender_item_id: payoutData._id.toString(),
         },
       ];
-
+      // this is set to send one at a time instead of lumping them all together, should we send it all at once?
       const sendPayoutHeader: ISendPayoutBatchHeader = {
         sender_batch_header: {
           sender_batch_id: payoutData._id.toString(),
           email_subject: 'You\'ve received a payout from Karma Wallet!',
-          email_message: 'Your payout for Karma Wallet is on its way. If',
+          email_message: 'Your payout for Karma Wallet is on its way.',
         },
       };
 
-      await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
+      const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
+      // what shoudl the status be for success?
+      if (paypalResponse.status === 201) {
+        payoutData.update({ status: KarmaCommissionPayoutStatus.Paid });
+      } else {
+        payoutData.update({ status: KarmaCommissionPayoutStatus.Failed });
+      }
+      payoutData.save();
       console.log('[+] Paypal payout sent', payoutData._id);
     }
   } catch (err: any) {

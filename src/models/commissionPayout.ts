@@ -11,6 +11,7 @@ import { IShareableUser } from './user';
 export enum KarmaCommissionPayoutStatus {
   Pending = 'pending',
   Paid = 'paid',
+  Failed = 'failed',
 }
 
 export interface IShareableCommissionPayout {

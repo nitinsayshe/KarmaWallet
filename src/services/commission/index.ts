@@ -273,7 +273,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
           },
           receiver: paypal.payerId,
           // need to update this text
-          note: 'Karma Wallet Cashback Payout - Thank you for using Karma Wallet!',
+          note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
           sender_item_id: payoutData._id.toString(),
         },
       ];
@@ -281,8 +281,8 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
       const sendPayoutHeader: ISendPayoutBatchHeader = {
         sender_batch_header: {
           sender_batch_id: payoutData._id.toString(),
-          email_subject: 'You\'ve received a payout from Karma Wallet!',
-          email_message: 'Your payout for Karma Wallet is on its way.',
+          email_subject: 'You\'ve received a cashback payout from Karma Wallet!',
+          email_message: 'You\'ve earned cashback from Karma Wallet. Great job!.',
         },
       };
 
@@ -296,6 +296,8 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
       payoutData.save();
       console.log('[+] Paypal payout sent', payoutData._id);
     }
+
+    commissionPayoutOverview.update({ status: KarmaCommissionPayoutOverviewStatus.Sent });
   } catch (err: any) {
     throw new Error(err);
   }

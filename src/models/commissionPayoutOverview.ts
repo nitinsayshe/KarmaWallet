@@ -12,6 +12,7 @@ export enum KarmaCommissionPayoutOverviewStatus {
   AwaitingVerification = 'awaiting-verification',
   Verified = 'verified',
   Sent = 'sent',
+  Failed = 'failed',
 }
 
 export interface ICommissionsBreakdown {

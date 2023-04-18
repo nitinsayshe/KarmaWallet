@@ -1,12 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
-import dayjs from 'dayjs';
-import { Types } from 'mongoose';
 import { MongoClient } from '../../../clients/mongo';
 import { createSomeCards, createSomePromos, createSomeUsers } from '../../../lib/testingUtils';
 import { ICardDocument } from '../../../models/card';
-import { ICompanyDocument } from '../../../models/company';
 import { IPromoDocument } from '../../../models/promo';
-import { ITransactionDocument } from '../../../models/transaction';
 import { IUserDocument, IUserIntegrations } from '../../../models/user';
 import { IRequest } from '../../../types/request';
 import { getPromosReport, IAccountStatusAggData, ICampaignAggData, ISourceAggData } from '../promos';
@@ -25,7 +21,7 @@ const sources = [
 const campaigns = ['TestCampaign1', 'TestCampaign2', 'TestCampaign3'];
 
 const getCreateTestUsersRequest = (testPromos: IPromoDocument[]) => {
-  let testIntegrations: IUserIntegrations[] = [];
+  const testIntegrations: IUserIntegrations[] = [];
 
   for (let i = 0; i < numUsersInFirstPromo; i++) {
     testIntegrations.push({
@@ -87,7 +83,7 @@ describe('promo report generation logic tests', () => {
         } catch (err) {
           console.log('error removing cards', err);
         }
-      })
+      }),
     );
 
     /* clean up users */
@@ -98,7 +94,7 @@ describe('promo report generation logic tests', () => {
         } catch (err) {
           console.log('error removing users', err);
         }
-      })
+      }),
     );
 
     /* clean up promos */
@@ -109,7 +105,7 @@ describe('promo report generation logic tests', () => {
         } catch (err) {
           console.log('error removing promos', err);
         }
-      })
+      }),
     );
 
     // clean up db
@@ -126,16 +122,12 @@ describe('promo report generation logic tests', () => {
       // create test users associated with the promos
       const testUsersRequest = getCreateTestUsersRequest(testPromos);
       testUsers = await createSomeUsers({
-        users: testUsersRequest.map((integration) => {
-          return { integrations: integration };
-        }),
+        users: testUsersRequest.map((integration) => ({ integrations: integration })),
       });
 
       // create linked accounts for about half of the users
       const testUsersWithcards = testUsers.filter((_, i) => i % 2 === 0);
-      const cardRequest = testUsersWithcards.map((user) => {
-        return { userId: user._id };
-      });
+      const cardRequest = testUsersWithcards.map((user) => ({ userId: user._id }));
       testCards = await createSomeCards({ cards: cardRequest });
     } catch (err) {
       console.log('error creating test data', err);
@@ -148,7 +140,7 @@ describe('promo report generation logic tests', () => {
       requestor: {},
       authKey: '',
     } as IRequest<IReportRequestParams, IReportRequestQuery>;
-    let data = await getPromosReport(mockRequest);
+    const data = await getPromosReport(mockRequest);
     expect(data).toBeDefined();
     const sourceAggData = data as { data: ISourceAggData[] };
     expect(sourceAggData.data.length).toBe(testPromos.length);
@@ -161,7 +153,7 @@ describe('promo report generation logic tests', () => {
       requestor: {},
       authKey: '',
     } as IRequest<IReportRequestParams, IReportRequestQuery>;
-    let data = await getPromosReport(mockRequest);
+    const data = await getPromosReport(mockRequest);
     expect(data).toBeDefined();
     const campaignAggData = data as { data: ICampaignAggData[] };
     expect(campaignAggData.data.length).toBe(testPromos.length);
@@ -174,7 +166,7 @@ describe('promo report generation logic tests', () => {
       requestor: {},
       authKey: '',
     } as IRequest<IReportRequestParams, IReportRequestQuery>;
-    let data = await getPromosReport(mockRequest);
+    const data = await getPromosReport(mockRequest);
     expect(data).toBeDefined();
     const linkedAccountAggData = data as { data: IAccountStatusAggData[] };
     expect(linkedAccountAggData.data.length).toBe(testPromos.length);

@@ -58,8 +58,9 @@ export class _MainBullClient extends _BullClient {
 
     if (process.env.NODE_ENV === 'production') {
       // active campaign sync
-      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.CASHBACK_SIMULATION}, { jobId: `${JobNames.SyncActiveCampaign}-cashback-simulation`, repeat: { cron: '0 4 1 * *' } });
-      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.SPENDING_ANALYSIS}, { jobId: `${JobNames.SyncActiveCampaign}-spending-analysis`, repeat: { cron: '0 4 28 * *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.UNLINKED_AND_REMOVED_ACCOUNTS }, { jobId: `${JobNames.SyncActiveCampaign}-unlinked-and-removed-accounts`, repeat: { cron: '0 4 9 * *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.CASHBACK_SIMULATION }, { jobId: `${JobNames.SyncActiveCampaign}-cashback-simulation`, repeat: { cron: '0 4 1 * *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.SPENDING_ANALYSIS }, { jobId: `${JobNames.SyncActiveCampaign}-spending-analysis`, repeat: { cron: '0 4 28 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.DAILY }, { jobId: `${JobNames.SyncActiveCampaign}-daily`, repeat: { cron: '0 7 * * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.WEEKLY }, { jobId: `${JobNames.SyncActiveCampaign}-weekly`, repeat: { cron: '0 7 * * 0' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 7 1 * *' } });

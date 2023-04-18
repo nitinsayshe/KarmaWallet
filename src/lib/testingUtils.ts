@@ -59,6 +59,9 @@ export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICar
     const newCard = new CardModel();
     newCard.userId = card?.userId || undefined;
     newCard.status = card?.status || CardStatus.Linked;
+    newCard.unlinkedDate = card?.unlinkedDate || undefined;
+    newCard.removedDate = card?.removedDate || undefined;
+    newCard.lastModified = card?.lastModified || undefined;
     newCard.name = card?.name || `Test Card_${new Types.ObjectId().toString()}`;
     return newCard.save();
   }),

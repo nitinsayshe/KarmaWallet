@@ -48,8 +48,8 @@ const articleSchema = new Schema({
   introParagraph: { type: String, required: true },
   theGood: [{
     type: {
-      paragraphTitle: { type: String },
-      paragraphBody: { type: String },
+      paragraphTitle: { type: String, required: true },
+      paragraphBody: { type: String, required: true },
       imageUrl: { type: String },
       imageSource: { type: String },
       imageAlignment: { type: String, enum: Object.values(ImageAlignment) },
@@ -60,8 +60,8 @@ const articleSchema = new Schema({
   }],
   theBad: [{
     type: {
-      paragraphTitle: { type: String },
-      paragraphBody: { type: String },
+      paragraphTitle: { type: String, required: true },
+      paragraphBody: { type: String, required: true },
       imageUrl: { type: String },
       imageSource: { type: String },
       imageAlignment: { type: String, enum: Object.values(ImageAlignment) },

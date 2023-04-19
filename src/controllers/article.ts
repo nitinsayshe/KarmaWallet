@@ -8,8 +8,9 @@ import { ICompanyDocument } from '../models/company';
 export const getArticleById: IRequestHandler<ArticleService.IGetArticleParams> = async (req, res) => {
   try {
     const article = await ArticleService.getArticleById(req);
-    article.company = CompanyService.getShareableCompany(article.company as ICompanyDocument);
-    api(req, res, article);
+    const _article = article.toObject();
+    _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+    api(req, res, _article);
   } catch (err) {
     error(req, res, asCustomError(err));
   }

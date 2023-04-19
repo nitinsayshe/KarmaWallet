@@ -65,7 +65,6 @@ export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) =
     ],
   }]);
   if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
-
   return article;
 };
 

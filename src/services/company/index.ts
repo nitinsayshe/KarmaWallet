@@ -668,7 +668,6 @@ export const getShareableCompany = ({
       score: cs.score,
     }
     : cs));
-
   const _subcategoryScores = (subcategoryScores || []).map(scs => ((!!scs && !!Object.values(scs).length)
     ? {
       subcategory: !!scs.subcategory && !!Object.values(scs.subcategory).length

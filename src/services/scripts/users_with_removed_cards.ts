@@ -10,9 +10,7 @@ export const getUsersWithRemovedCards = async () => {
 
   for (const card of removedCards) {
     const existingUser = usersWithRemovedCards.find((user: any) => user?.id?.toString() === card?.userId?.toString());
-    console.log('//////// this is the existing user', existingUser);
     if (!existingUser) {
-      console.log('/////// no existing user');
       const userInfo = await UserModel.findById(card.userId);
       if (!userInfo) continue;
       usersWithRemovedCards.push({

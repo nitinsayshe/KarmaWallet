@@ -18,11 +18,12 @@ import {
   getUserCurrentAccrualsBalance,
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
-import { CommissionPayoutDayForUser, UserRoles } from '../../lib/constants';
+import { CommissionPayoutDayForUser, ErrorTypes, UserRoles } from '../../lib/constants';
 import { UserModel } from '../../models/user';
 import { getUtcDate } from '../../lib/date';
 import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../models/commissionPayoutOverview';
 import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
+import CustomError from '../../lib/customError';
 
 dayjs.extend(utc);
 
@@ -179,7 +180,7 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   }
 };
 
-export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate?: Date, startDate?: Date) => {
+export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate: Date, startDate?: Date) => {
   let commissionPayouts: ICommissionPayoutDocument[] = [];
   let karmaAmount = 0;
   let wildfireAmount = 0;
@@ -190,7 +191,7 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
   }
 
   if (!endDate && !startDate) commissionPayouts = await CommissionPayoutModel.find({ });
-  if (!commissionPayouts.length) throw new Error('No commission payouts found for this time period.');
+  if (!commissionPayouts.length) throw new CustomError('No commission payouts found for this time period.', ErrorTypes.GEN);
 
   for (const payout of commissionPayouts) {
     const payoutCommissions = payout.commissions;
@@ -223,8 +224,10 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
 export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId: string) => {
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
-    if (!commissionPayoutOverview) throw new Error('Commission payout overview not found.');
-    if (commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified) throw new Error('Commission payout overview is not verified.');
+    if (!commissionPayoutOverview) throw new CustomError('Commission payout overview not found.', ErrorTypes.INVALID_ARG);
+    if (commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified) {
+      throw new CustomError('Commission payout overview is not verified.', ErrorTypes.GEN);
+    }
     const paypalClient = await new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
@@ -232,35 +235,35 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     const { commissionPayouts } = commissionPayoutOverview;
 
     if (paypalPrimaryBalanceAmount < commissionPayoutOverviewAmount) {
-      throw new Error('Insufficient funds in paypal account to payout this commission payout overview.');
+      throw new CustomError(`[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout overview amount: ${commissionPayoutOverviewAmount}`, ErrorTypes.GEN);
     }
 
     for (const commissionPayout of commissionPayouts) {
       const payoutData = await CommissionPayoutModel.findById(commissionPayout);
       if (!payoutData) {
-        console.log('[+] Commission payout not found. Skipping payout.]');
+        console.log('[+] Commission payout not found. Skipping payout.');
         continue;
       }
 
       const user = await UserModel.findById(payoutData.user);
       if (!user) {
-        console.log('[+] User not found. Skipping payout.]');
+        console.log('[+] User not found. Skipping payout.');
         continue;
       }
 
       const { paypal } = user.integrations;
       if (!paypal) {
-        console.log('[+] User does not have paypal integration. Skipping payout.]');
+        console.log('[+] User does not have paypal integration. Skipping payout.');
         continue;
       }
 
       if (!paypal.payerId) {
-        console.log('[+] User does not have paypal payerId. Skipping payout.]');
+        console.log('[+] User does not have paypal payerId. Skipping payout.');
         continue;
       }
 
       if (payoutData.status === KarmaCommissionPayoutStatus.Paid) {
-        console.log('[+] Commission payout already paid. Skipping payout.]');
+        console.log('[+] Commission payout already paid. Skipping payout.');
         continue;
       }
 
@@ -290,6 +293,11 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
       // what shoudl the status be for success?
       if (paypalResponse.status === 201) {
         payoutData.update({ status: KarmaCommissionPayoutStatus.Paid });
+        const commissions = await CommissionModel.find({ _id: { $in: payoutData.commissions } });
+        for (const commission of commissions) {
+          commission.update({ status: KarmaCommissionStatus.PaidToUser });
+          commission.save();
+        }
       } else {
         payoutData.update({ status: KarmaCommissionPayoutStatus.Failed });
       }
@@ -298,35 +306,42 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     }
 
     commissionPayoutOverview.update({ status: KarmaCommissionPayoutOverviewStatus.Sent });
+    commissionPayoutOverview.save();
   } catch (err: any) {
     throw new Error(err);
   }
 };
 
 export const getAllCommissionPayoutOverviews = async (req: IRequest) => {
-  const { requestor } = req;
-  const user = await UserModel.findById(requestor?._id);
-  if (!user) throw new Error('User not found.');
-  if (user.role !== UserRoles.Admin && user.role !== UserRoles.SuperAdmin) throw new Error('Unauthorized.');
-
-  const commissionPayoutOverviews = await CommissionPayoutOverviewModel.find({ }).sort({ date: -1 });
-
-  return commissionPayoutOverviews;
+  const { _id } = req.requestor;
+  const user = await UserModel.findById(_id);
+  if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+  if (user.role !== UserRoles.Admin && user.role !== UserRoles.SuperAdmin) throw new CustomError('Unauthorized.', ErrorTypes.UNAUTHORIZED);
+  return CommissionPayoutOverviewModel.find({ }).sort({ date: -1 });
 };
 
 export const updateCommissionPayoutOverviewStatus = async (req: IRequest<ICommissionPayoutOverviewUpdateRequestParams, {}, ICommissionPayoutOverviewUpdateBody>) => {
-  try {
-    const { commissionPayoutOverviewId } = req.params;
-    const { status } = req.body;
-    if (!commissionPayoutOverviewId) throw new Error('A commission payout overview id is required.');
-    if (!status) throw new Error('A status is required.');
-    const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
-    if (!commissionPayoutOverview) throw new Error('Commission payout overview not found.');
-    commissionPayoutOverview.status = status;
+  const { commissionPayoutOverviewId } = req.params;
+  const { status } = req.body;
 
-    await commissionPayoutOverview.save();
-    return commissionPayoutOverview;
-  } catch (err: any) {
-    throw new Error(err.message);
+  if (!commissionPayoutOverviewId) throw new CustomError('A commission payout overview id is required.', ErrorTypes.INVALID_ARG);
+  if (!status) throw new CustomError('A status is required.', ErrorTypes.INVALID_ARG);
+  const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
+  if (!commissionPayoutOverview) throw new CustomError('Commission payout overview not found.', ErrorTypes.NOT_FOUND);
+
+  commissionPayoutOverview.status = status;
+  commissionPayoutOverview.save();
+
+  if (status === KarmaCommissionPayoutOverviewStatus.Verified) {
+    // update the status of the individual commissions to received from vendor
+    const payouts = await CommissionPayoutModel.find({ _id: { $in: commissionPayoutOverview.commissionPayouts } });
+    for (const payout of payouts) {
+      const commissions = await CommissionModel.find({ _id: { $in: payout.commissions } });
+      for (const commission of commissions) {
+        commission.status = KarmaCommissionStatus.ReceivedFromVendor;
+        commission.save();
+      }
+    }
   }
+  return commissionPayoutOverview;
 };

@@ -32,7 +32,7 @@ export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date
     const existingUserObject = userTransactionTotals.find((u: any) => u.userId.toString() === user._id.toString());
 
     if (!existingUserObject) {
-      console.log('//////// there is not an existing user object');
+      console.log('[+] there is not an existing user object');
       userTransactionTotals.push({
         userId: user._id.toString(),
         name: user.name,
@@ -50,7 +50,6 @@ export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date
         });
       }
     } else {
-      console.log('/////// exisiting user data', userTransactionTotals[existingUserObject]);
       existingUserObject.total += payout.allocation.user;
       existingUserObject.karmaCommissions += payout.integrations.karma ? payout.allocation.user : 0;
       existingUserObject.wildfireCommissions += payout.integrations.wildfire ? payout.allocation.user : 0;

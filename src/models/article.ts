@@ -5,7 +5,9 @@ import {
   Model,
   ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { getUtcDate } from '../lib/date';
+import { IModel, IRef } from '../types/model';
+import { ICompany, ICompanyDocument, IShareableCompany } from './company';
 
 export enum ImageAlignment {
   Left = 'Left',
@@ -27,12 +29,15 @@ export interface ITheGood extends ITheBad {
 
 export interface IArticle {
   _id: ObjectId;
-  companyId: string;
-  dateWritten: string;
+  company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany>;
+  createdOn: Date;
+  lastModified: Date;
+  publishedOn: Date;
   bannerImageUrl: string;
   introParagraph: string;
   theGood: ITheGood[];
   theBad: ITheBad[];
+  enabled: boolean;
 }
 
 export interface IArticleDocument extends IArticle, Document {
@@ -42,8 +47,11 @@ export interface IArticleDocument extends IArticle, Document {
 export type IArticleModel = IModel<IArticle>;
 
 const articleSchema = new Schema({
-  companyId: { type: String, required: true },
-  dateWritten: { type: String, required: true },
+  enabled: { type: Boolean, required: true, default: false },
+  company: { type: Schema.Types.ObjectId, ref: 'companies', required: true },
+  createdOn: { type: Date, required: true, default: () => getUtcDate() },
+  lastModified: { type: Date, required: true, default: () => getUtcDate() },
+  publishedOn: { type: Date, default: null },
   bannerImageUrl: { type: String, required: true },
   introParagraph: { type: String, required: true },
   theGood: [{

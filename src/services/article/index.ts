@@ -21,14 +21,16 @@ export const getArticleById = async (_req: IRequest, articleId: string) => {
 };
 
 export const createArticle = async (_req: IRequest, _body: IArticleData) => {
+  const { introParagraph, companyId, dateWritten, bannerImageUrl, theBad, theGood } = _body;
+
   try {
     const result = await ArticleModel.create({
-      introParagraph: _body.introParagraph,
-      companyId: _body.companyId,
-      dateWritten: _body.dateWritten,
-      bannerImageUrl: _body.bannerImageUrl,
-      theBad: _body.theBad,
-      theGood: _body.theGood,
+      introParagraph,
+      companyId,
+      dateWritten,
+      bannerImageUrl,
+      theBad,
+      theGood,
     });
     return result;
   } catch (err) {

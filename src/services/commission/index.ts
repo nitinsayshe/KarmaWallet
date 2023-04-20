@@ -140,6 +140,7 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
     let dateQuery: any = { $lte: dayjs().utc().toDate() };
 
     try {
+      // check time of date the dayjs endDate and startDate to ensure includes entire day
       if (!!startDate || !!endDate) {
         dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
       }
@@ -161,18 +162,24 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
 
       if (!validUserCommissions.length) continue;
 
-      const commissionsTotal = validUserCommissions.reduce((acc, c) => acc + c.allocation.user, 0);
+      const [commissionsTotal, commissionIds] = validUserCommissions.reduce((acc, c) => {
+        acc[0] += c.allocation.user;
+        acc[1].push(c._id);
+        return acc;
+      }, [0, []]);
+
       if (commissionsTotal < min) continue;
 
       const commissionPayout = new CommissionPayoutModel({
         user: user._id,
-        commissions: validUserCommissions.map(c => getShareableCommission(c)),
+        commissions: commissionIds,
         amount: commissionsTotal,
         // update this to be a future date?
         date: getUtcDate(),
         status: KarmaCommissionPayoutStatus.Pending,
       });
       await commissionPayout.save();
+      await CommissionModel.updateMany({ _id: { $in: commissionIds } }, { $set: { status: KarmaCommissionStatus.PendingPaymentToUser } });
       console.log(`[+] Created CommissionPayout for user ${user._id}`);
     } catch (err) {
       console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
@@ -180,7 +187,7 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   }
 };
 
-export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate: Date, startDate?: Date) => {
+export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate?: Date, startDate?: Date) => {
   let commissionPayouts: ICommissionPayoutDocument[] = [];
   let karmaAmount = 0;
   let wildfireAmount = 0;
@@ -199,6 +206,7 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
       const commissionData = await CommissionModel.findById(commission);
       if (!!commissionData.integrations.karma.amount) karmaAmount += commissionData.allocation.user;
       if (!!commissionData.integrations.wildfire.CommissionID) wildfireAmount += commissionData.allocation.user;
+      // add kard here
     }
   }
 
@@ -211,6 +219,7 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
       breakdown: {
         karma: karmaAmount,
         wildfire: wildfireAmount,
+        // add kard at some point
       },
     });
 
@@ -280,6 +289,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
           sender_item_id: payoutData._id.toString(),
         },
       ];
+
       // this is set to send one at a time instead of lumping them all together, should we send it all at once?
       const sendPayoutHeader: ISendPayoutBatchHeader = {
         sender_batch_header: {

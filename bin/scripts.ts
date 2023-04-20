@@ -41,7 +41,7 @@ const sendPayoutHeader: any = {
 (async () => {
   try {
     await MongoClient.init();
-    await getCurrentWildfireData();
+    await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
   } catch (err) {
     Logger.error(asCustomError(err));
     console.log(err);

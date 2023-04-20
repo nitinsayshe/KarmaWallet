@@ -68,6 +68,55 @@ export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) =
   return article;
 };
 
+export const getAllArticles = async (_req: IRequest) => {
+  const articles = await ArticleModel.find({ }).populate([{
+    path: 'company',
+    model: CompanyModel,
+    populate: [
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+      {
+        path: 'evaluatedUnsdgs.unsdg',
+        model: UnsdgModel,
+        populate: [{
+          path: 'subCategory',
+          model: UnsdgSubcategoryModel,
+          populate: [{
+            path: 'category',
+            model: UnsdgCategoryModel,
+          }],
+        }],
+      },
+      {
+        path: 'parentCompany',
+        model: CompanyModel,
+        populate: [
+          {
+            path: 'sectors.sector',
+            model: SectorModel,
+          },
+        ],
+      },
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+      {
+        path: 'categoryScores.category',
+        model: UnsdgCategoryModel,
+      },
+      {
+        path: 'subcategoryScores.subcategory',
+        model: UnsdgSubcategoryModel,
+      },
+    ],
+  }]);
+
+  return articles;
+};
+
 export const getRandomArticle = async () => {
   const allArticles = await ArticleModel.find({});
 
@@ -122,5 +171,3 @@ export const getRandomArticle = async () => {
   if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
   return article;
 };
-
-export const getAllArticles = async (_req: IRequest) => ArticleModel.find({});

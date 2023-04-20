@@ -29,3 +29,14 @@ export const getAllArticles: IRequestHandler = async (req, res) => {
     error(req, res, asCustomError(err));
   }
 };
+
+export const getRandomArticle: IRequestHandler<ArticleService.IGetArticleParams> = async (req, res) => {
+  try {
+    const article = await ArticleService.getRandomArticle();
+    const _article = article.toObject();
+    _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+    api(req, res, _article);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

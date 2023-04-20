@@ -1,7 +1,7 @@
 import { isValidObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
-import CustomError, { asCustomError } from '../../lib/customError';
-import { ArticleModel, IArticle } from '../../models/article';
+import CustomError from '../../lib/customError';
+import { ArticleModel } from '../../models/article';
 import { CompanyModel } from '../../models/company';
 import { MerchantModel } from '../../models/merchant';
 import { SectorModel } from '../../models/sector';
@@ -117,19 +117,57 @@ export const getAllArticles = async (_req: IRequest) => {
   return articles;
 };
 
-export const createArticle = async (_req: IRequest, _body: IArticle) => {
-  const { introParagraph, company, bannerImageUrl, theBad, theGood } = _body;
+export const getRandomArticle = async () => {
+  const allArticles = await ArticleModel.find({});
 
-  try {
-    const result = await ArticleModel.create({
-      introParagraph,
-      company,
-      bannerImageUrl,
-      theBad,
-      theGood,
-    });
-    return result;
-  } catch (err) {
-    throw asCustomError(err);
-  }
+  if (!allArticles) throw new CustomError('No articles found', ErrorTypes.NOT_FOUND);
+
+  const randomNumber = Math.floor(Math.random() * allArticles.length);
+
+  const article = await ArticleModel.findOne({ _id: allArticles[randomNumber]._id }).populate([{
+    path: 'company',
+    model: CompanyModel,
+    populate: [
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+      {
+        path: 'evaluatedUnsdgs.unsdg',
+        model: UnsdgModel,
+        populate: [{
+          path: 'subCategory',
+          model: UnsdgSubcategoryModel,
+          populate: [{
+            path: 'category',
+            model: UnsdgCategoryModel,
+          }],
+        }],
+      },
+      {
+        path: 'parentCompany',
+        model: CompanyModel,
+        populate: [
+          {
+            path: 'sectors.sector',
+            model: SectorModel,
+          },
+        ],
+      },
+      {
+        path: 'sectors.sector',
+        model: SectorModel,
+      },
+      {
+        path: 'categoryScores.category',
+        model: UnsdgCategoryModel,
+      },
+      {
+        path: 'subcategoryScores.subcategory',
+        model: UnsdgSubcategoryModel,
+      },
+    ],
+  }]);
+  if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
+  return article;
 };

@@ -12,6 +12,7 @@ import { generatePayoutSummaryForPeriod, getAllWildfireTotalCommissions, getRead
 import { getUsersWithRemovedCards } from '../src/services/scripts/users_with_removed_cards';
 import { generateCommissionPayoutForUsers, generateCommissionPayoutOverview, sendCommissionPayoutsThruPaypal } from '../src/services/commission';
 import { PaypalClient } from '../src/clients/paypal';
+import { getCurrentWildfireData } from '../src/services/scripts/wildfire';
 
 dayjs.extend(utc);
 
@@ -40,9 +41,7 @@ const sendPayoutHeader: any = {
 (async () => {
   try {
     await MongoClient.init();
-    // const paypalClient = new PaypalClient();
-    // const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
-    // console.log('//////// this is the paypal response', paypalResponse);
+    await getCurrentWildfireData();
   } catch (err) {
     Logger.error(asCustomError(err));
     console.log(err);

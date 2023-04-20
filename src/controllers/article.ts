@@ -19,7 +19,12 @@ export const getArticleById: IRequestHandler<ArticleService.IGetArticleParams> =
 export const getAllArticles: IRequestHandler = async (req, res) => {
   try {
     const articles = await ArticleService.getAllArticles(req);
-    api(req, res, articles);
+    const _articles = articles.map((article) => {
+      const _article = article.toObject();
+      _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+      return _article;
+    });
+    api(req, res, _articles);
   } catch (err) {
     error(req, res, asCustomError(err));
   }

@@ -15,3 +15,12 @@ export const getArticleById: IRequestHandler<ArticleService.IGetArticleParams> =
     error(req, res, asCustomError(err));
   }
 };
+
+export const getAllArticles: IRequestHandler = async (req, res) => {
+  try {
+    const articles = await ArticleService.getAllArticles(req);
+    api(req, res, articles);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

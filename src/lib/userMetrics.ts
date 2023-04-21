@@ -164,14 +164,13 @@ export const getUserTransactionsPastThirtyDays = async (
   }
 };
 
-export const getMonthlyTransactionsWithCashbackCompanies = async (
+export const getTransactionsWithCashbackCompaniesInDateRange = async (
   user: IUserDocument,
-  excludeList: LeanTransactionDocuments,
+  startDate: Date,
+  endDate: Date,
 ): Promise<IShareableTransaction[] | null> => {
   if (!user || !user._id) return null;
   try {
-    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
-
     const transactions = await TransactionModel.aggregate()
       .lookup({
         from: 'companies',
@@ -183,15 +182,14 @@ export const getMonthlyTransactionsWithCashbackCompanies = async (
       .match({
         $and: [
           { user: user._id },
-          { _id: { $nin: excludeList.map((t) => t._id) } },
           { company: { $exists: true } },
           { company: { $ne: null } },
           { company: { $ne: [] } },
           { 'company.rating': { $ne: CompanyRating.Negative } },
           { 'company.merchant': { $exists: true } },
           { 'company.merchant': { $ne: null } },
-          { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
-          { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
+          { date: { $gte: startDate } },
+          { date: { $lte: endDate } },
         ],
       })
       .sort({ date: -1 });
@@ -200,6 +198,18 @@ export const getMonthlyTransactionsWithCashbackCompanies = async (
     console.error(err);
     return null;
   }
+};
+
+export const getMonthlyTransactionsWithCashbackCompanies = async (
+  user: IUserDocument,
+): Promise<IShareableTransaction[] | null> => {
+  if (!user || !user._id) return null;
+  const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+  return getTransactionsWithCashbackCompaniesInDateRange(
+    user,
+    oneMonthAgo.startOf('month').toDate(),
+    oneMonthAgo.endOf('month').toDate(),
+  );
 };
 
 export const getAvailableCommissionPayouts = async (user: IUserDocument): Promise<number> => {
@@ -456,10 +466,64 @@ export const getTransactionBreakdownByCompanyRating = async (
     };
   }
 };
+export const getMissedCashBackForDateRange = async (
+  user: IUserDocument,
+  startDate: Date,
+  endDate: Date,
+): Promise<{
+  id: Types.ObjectId;
+  email: string;
+  estimatedMissedCommissionsCount: number;
+  estimatedMissedCommissionsAmount: number;
+  averageMissedCommissionAmount: number;
+  largestMissedCommissionAmount: number;
+}> => {
+  try {
+    const userTransactions = await getTransactionsWithCashbackCompaniesInDateRange(user, startDate, endDate);
+    if (!userTransactions) {
+      throw new Error(`No transactions found for user with id: ${user?._id}`);
+    }
+    const email = user.emails?.find((e) => e.primary)?.email;
+
+    /* simulate commission payout and record the dollar amount */
+    const missedCashbackAmounts = await Promise.all(userTransactions.map(getEstimatedMissedCommissionAmounts));
+
+    // calculate the largest missed comission amount
+    // calculate the average missed comission amount
+    let averageMissedCommissionAmount = 0;
+    let largestMissedCommissionAmount = 0;
+    if (missedCashbackAmounts?.length > 0) {
+      averageMissedCommissionAmount = missedCashbackAmounts.reduce((prev, current) => prev + current, 0) / missedCashbackAmounts.length;
+      largestMissedCommissionAmount = Math.max(...missedCashbackAmounts);
+    }
+
+    // adding up all missed commissions
+    const missedCashbackDollars = missedCashbackAmounts.reduce((prev, current) => prev + current, 0);
+
+    return {
+      id: user._id,
+      email,
+      estimatedMissedCommissionsAmount: missedCashbackDollars,
+      estimatedMissedCommissionsCount: missedCashbackAmounts.length,
+      averageMissedCommissionAmount,
+      largestMissedCommissionAmount,
+    };
+  } catch (err) {
+    return {
+      id: null,
+      email: '',
+      estimatedMissedCommissionsAmount: 0,
+      estimatedMissedCommissionsCount: 0,
+      averageMissedCommissionAmount: 0,
+      largestMissedCommissionAmount: 0,
+    };
+  }
+};
 
 export const getMonthlyMissedCashBack = async (
   user: IUserDocument,
 ): Promise<{
+  id: Types.ObjectId;
   email: string;
   estimatedMonthlyMissedCommissionsCount: number;
   estimatedMonthlyMissedCommissionsAmount: number;
@@ -468,9 +532,7 @@ export const getMonthlyMissedCashBack = async (
     /*  TODO:  filter the transactions for only those that are not in the commissions list */
     /* We  don't have the information to do this right now, so we could just assign $0 missed cashback to users that have shopped through KW that month */
     /* So users with $0 missed cashback will either not have a card linked or they will have a card linked but not have shopped through KW that month  */
-    const excludeList: LeanTransactionDocuments = [];
-
-    const userTransactions = await getMonthlyTransactionsWithCashbackCompanies(user, excludeList);
+    const userTransactions = await getMonthlyTransactionsWithCashbackCompanies(user);
     if (!userTransactions) {
       throw new Error(`No transactions found for user with id: ${user?._id}`);
     }
@@ -481,12 +543,14 @@ export const getMonthlyMissedCashBack = async (
 
     const monthlyMissedCashbackDollars = monthlyMissedCashbackAmounts.reduce((prev, current) => prev + current, 0);
     return {
+      id: user._id,
       email,
       estimatedMonthlyMissedCommissionsAmount: monthlyMissedCashbackDollars,
       estimatedMonthlyMissedCommissionsCount: monthlyMissedCashbackAmounts.length,
     };
   } catch (err) {
     return {
+      id: null,
       email: '',
       estimatedMonthlyMissedCommissionsAmount: 0,
       estimatedMonthlyMissedCommissionsCount: 0,
@@ -494,15 +558,14 @@ export const getMonthlyMissedCashBack = async (
   }
 };
 
-export const getUsersWithCommissionsLastMonth = async (): Promise<Types.ObjectId[]> => {
-  const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+export const getUsersWithCommissionsInDateRange = async (startDate: Date, endDate: Date): Promise<Types.ObjectId[]> => {
   const users = await CommissionModel.aggregate()
     .match({
       $and: [
         { 'integrations.wildfire': { $exists: true } },
         { 'integrations.wildfire': { $ne: null } },
-        { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
-        { creaetdOn: { $lte: oneMonthAgo.endOf('month').toDate() } },
+        { createdOn: { $gte: startDate } },
+        { creaetdOn: { $lte: endDate } },
       ],
     })
     .group({
@@ -511,14 +574,20 @@ export const getUsersWithCommissionsLastMonth = async (): Promise<Types.ObjectId
   return users?.map((u) => u?._id) || [];
 };
 
-// this only cares about users with transactions that we matched to a company
-export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectId[]> => {
+export const getUsersWithCommissionsLastMonth = async (): Promise<Types.ObjectId[]> => {
   const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+  return getUsersWithCommissionsInDateRange(oneMonthAgo.startOf('month').toDate(), oneMonthAgo.endOf('month').toDate());
+};
+
+export const getUsersWithTransactionsInDateRange = async (
+  startDate: Date,
+  endDate: Date,
+): Promise<Types.ObjectId[]> => {
   const users = await TransactionModel.aggregate()
     .match({
       $and: [
-        { date: { $gte: oneMonthAgo.startOf('month').toDate() } },
-        { date: { $lte: oneMonthAgo.endOf('month').toDate() } },
+        { date: { $gte: startDate } },
+        { date: { $lte: endDate } },
         { company: { $exists: true } },
         { company: { $ne: null } },
       ],
@@ -527,6 +596,14 @@ export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectI
       _id: '$user',
     });
   return users?.map((u) => u?._id) || [];
+};
+// this only cares about users with transactions that we matched to a company
+export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectId[]> => {
+  const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+  return getUsersWithTransactionsInDateRange(
+    oneMonthAgo.startOf('month').toDate(),
+    oneMonthAgo.endOf('month').toDate(),
+  );
 };
 
 export const getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays = async (): Promise<Types.ObjectId[]> => {

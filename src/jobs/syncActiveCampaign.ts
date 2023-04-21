@@ -309,16 +309,18 @@ const prepareCashbackSimulationImportRequest = async (
 
   // set any that have a total below the threshold to 0 and round amount
   missedCashbackMetrics = missedCashbackMetrics?.map((metric) => {
-    const { email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount } = metric;
+    const { id, email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount } = metric;
     if (estimatedMonthlyMissedCommissionsAmount <= request.fields.missingCashbackThresholdDollars) {
       return {
+        id,
         email,
         estimatedMonthlyMissedCommissionsAmount: 0,
         estimatedMonthlyMissedCommissionsCount: 0,
       };
     }
     return {
-      email: metric.email,
+      id,
+      email,
       estimatedMonthlyMissedCommissionsAmount: roundToPercision(estimatedMonthlyMissedCommissionsAmount, 0),
       estimatedMonthlyMissedCommissionsCount,
     };
@@ -526,7 +528,11 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
     batchLimit: 100,
   };
 
-  await iterateOverUsersAndExecImportReqWithDelay(req, prepareRemovedOrUnlinkedAccountsSyncRequest, msDelayBetweenBatches);
+  await iterateOverUsersAndExecImportReqWithDelay(
+    req,
+    prepareRemovedOrUnlinkedAccountsSyncRequest,
+    msDelayBetweenBatches,
+  );
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {

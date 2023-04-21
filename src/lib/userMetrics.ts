@@ -182,6 +182,7 @@ export const getTransactionsWithCashbackCompaniesInDateRange = async (
       .match({
         $and: [
           { user: user._id },
+          { amount: { $gt: 0 } },
           { company: { $exists: true } },
           { company: { $ne: null } },
           { company: { $ne: [] } },

@@ -1,4 +1,5 @@
 import dayjs from 'dayjs';
+import { parse } from 'json2csv';
 import fs from 'fs';
 import { PaginateResult, Types } from 'mongoose';
 import path from 'path';
@@ -27,8 +28,9 @@ type CashbackAnalysisWeekReports = {
 
 type CashbackAnalysisReport = {
   weekReports: CashbackAnalysisWeekReports;
+  totalMissedCashback: number;
+  totalMissedCashbackTransactions: number;
   averageMissedCashback: number;
-  averageCashbackMissedPerTransaction: number;
 };
 
 type RangedCashbackSimulationFields = {
@@ -111,17 +113,21 @@ const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<Ca
   return iterateOverUsersAndExecWithDelay(request, runUserCashbackSimulation, msDelayBetweenBatches);
 };
 
-const getFourWeekCashBackReport = async (
+const getPrevWeeksCashBackReport = async (
   prevFourWeeks: { startDate: Date; endDate: Date }[],
 ): Promise<CashbackAnalysisReport> => {
   try {
     const report: CashbackAnalysisReport = {
       weekReports: [],
+      totalMissedCashback: 0,
       averageMissedCashback: 0,
-      averageCashbackMissedPerTransaction: 0,
+      totalMissedCashbackTransactions: 0,
     };
     report.weekReports = await Promise.all(
       prevFourWeeks.map(async (week) => {
+        const startDate = dayjs(week.startDate).format('MM-DD-YYYY');
+        const endDate = dayjs(week.endDate).format('MM-DD-YYYY');
+        console.log(`running cashback simulation for the date range: ${startDate} to ${endDate}`);
         // run cashback simulation on all users for this week
         const cashbackSimulation = await runCashbackSimulation(week.startDate, week.endDate);
         // sum up the total missed cashback for this week
@@ -131,7 +137,9 @@ const getFourWeekCashBackReport = async (
           (acc, curr) => acc + curr.totalMissedCashbackTransactions,
           0,
         );
-        const averageMissedCommissionAmount = totalMissedCashback / totalMissedCashbackTransactions;
+        const averageMissedCommissionAmount = totalMissedCashbackTransactions > 0
+          ? roundToPercision(totalMissedCashback / totalMissedCashbackTransactions, 2)
+          : 0;
 
         const weekReport = {
           totalMissedCashback,
@@ -142,17 +150,13 @@ const getFourWeekCashBackReport = async (
           endDate: week.endDate,
         };
 
+        console.log(`writing report for the date range: ${startDate} to ${endDate}`);
         // write report for this week
         fs.writeFileSync(
-          path.join(
-            __dirname,
-            '.tmp',
-            `UserCashBackReport_${dayjs(week.startDate).format('MM-DD-YYYY')}-${dayjs(week.endDate).format(
-              'MM-DD-YYYY',
-            )}.csv`,
-          ),
-          JSON.stringify(weekReport.userReports),
+          path.join(__dirname, '.tmp', `UserCashBackReport_${startDate}-${endDate}.csv`),
+          parse(weekReport.userReports),
         );
+
         return weekReport;
       }),
     );
@@ -167,7 +171,7 @@ const getFourWeekCashBackReport = async (
             'MM-DD-YYYY',
           )}.csv`,
         ),
-        JSON.stringify({
+        parse({
           startDate: dayjs(week.startDate).format('MM-DD-YYYY'),
           endDate: dayjs(week.endDate).format('MM-DD-YYYY'),
           totalMissedCashback: week.totalMissedCashback,
@@ -177,19 +181,29 @@ const getFourWeekCashBackReport = async (
       );
     });
 
+    report.totalMissedCashbackTransactions = report.weekReports.reduce(
+      (acc, curr) => acc + curr.totalMissedCashbackTransactions,
+      0,
+    );
+    report.totalMissedCashback = report.weekReports.reduce((acc, curr) => acc + curr.totalMissedCashback, 0);
+    report.averageMissedCashback = report.totalMissedCashbackTransactions > 0
+      ? roundToPercision(report.totalMissedCashback / report.totalMissedCashbackTransactions, 2)
+      : 0;
+
     return report;
   } catch (error) {
     console.error(error);
     return {
       weekReports: [],
+      totalMissedCashback: 0,
+      totalMissedCashbackTransactions: 0,
       averageMissedCashback: 0,
-      averageCashbackMissedPerTransaction: 0,
     };
   }
 };
 export const generateCashbackAnalysisReport = async (): Promise<CashbackAnalysisReport> => {
   /* - [ ] analysis going 4 weeks back */
-  const prevFourWeeks = [
+  const prevWeeks = [
     {
       startDate: dayjs().utc().subtract(4, 'week').toDate(),
       endDate: dayjs().utc().subtract(3, 'week').toDate(),
@@ -207,23 +221,22 @@ export const generateCashbackAnalysisReport = async (): Promise<CashbackAnalysis
       endDate: dayjs().utc().toDate(),
     },
   ];
+  console.log('preparing report for previous four weeks:', JSON.stringify(prevWeeks, null, 2));
 
-  const report = await getFourWeekCashBackReport(prevFourWeeks);
-  // calculate the average cashback missed per transaction
-  // calculate the average cashback missed per week
-  //
-  /* - [ ] For each week, how much missed cashback was there overall? */
-  /* - [ ] use this data to set a minimum threshold for notifying the user that they could earn cash back */
+  const report = await getPrevWeeksCashBackReport(prevWeeks);
+
   /* - [ ] Flag purchases over a certain amount */
   /* - [ ] check the past 30 and 60 days for any of these significant cashback missed opportunities (in a single transaction) . */
 
   // prepare summary report
-
   fs.writeFileSync(
     path.join(__dirname, '.tmp', `FourWeekCashBackReportSummary_${dayjs().format('MM-DD-YYYY')}.csv`),
-    JSON.stringify({
+    parse({
+      startDate: prevWeeks[0]?.startDate,
+      endDate: prevWeeks[prevWeeks.length - 1]?.endDate,
+      totalMissedCashback: report.totalMissedCashback,
+      totalMissedCashbackTransactions: report.totalMissedCashbackTransactions,
       averageMissedCashback: report.averageMissedCashback,
-      averageCashbackMissedPerTransaction: report.averageCashbackMissedPerTransaction,
     }),
   );
 

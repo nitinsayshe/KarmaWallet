@@ -1,7 +1,6 @@
 import { SandboxedJob } from 'bullmq';
-import { mockRequest } from '../lib/constants/request';
 
-import { mapTransactionsFromPlaid } from '../integrations/plaid';
+import dayjs from 'dayjs';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { SocketClient } from '../clients/socket';
 import { SocketEvents, SocketEventTypes } from '../lib/constants/sockets';
@@ -10,6 +9,7 @@ import * as EmailService from '../services/email';
 import { getUser } from '../services/user';
 import { IRequest } from '../types/request';
 import { _updateCards } from '../services/card';
+import { globalPlaidTransactionMapping } from '../services/scripts/global_plaid_transaction_mapping';
 
 interface IPlaidTransactionMapperResult {
   userId: string,
@@ -32,7 +32,13 @@ export const exec = async ({ userId, accessToken }: IUserPlaidTransactionMapPara
   let isSuccess = false;
   let result: IResult;
   try {
-    await mapTransactionsFromPlaid(mockRequest, [accessToken], 730);
+    await globalPlaidTransactionMapping({
+      writeOutput: false,
+      startDate: dayjs().subtract(720, 'day').format('YYYY-MM-DD'),
+      endDate: dayjs().format('YYYY-MM-DD'),
+      accessTokens: [accessToken],
+      filterExistingTransactions: false,
+    });
     isSuccess = true;
     result = {
       message: `Successfully mapped transactions for user: ${userId}`,

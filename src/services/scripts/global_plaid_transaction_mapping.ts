@@ -30,11 +30,16 @@ if the last modified is within a certain time frame then we don't have to
 search the names for matches
 */
 
+const logId = '[gptm] - ';
+const log = (message: string) => {
+  console.log(`${logId}${message}`);
+};
 export interface IGlobalPlaidTransactionMappingParams {
   startDate: string;
   endDate: string;
   filterExistingTransactions?: boolean;
   writeOutput?: boolean;
+  accessTokens?: string[];
 }
 
 export const globalPlaidTransactionMapping = async ({
@@ -42,10 +47,12 @@ export const globalPlaidTransactionMapping = async ({
   endDate,
   filterExistingTransactions = true,
   writeOutput = false,
+  accessTokens = [],
 }: IGlobalPlaidTransactionMappingParams) => {
-  const overallTimeString = `--- global plaid transaction mapping for ${dayjs().toISOString()} ---`;
+  const overallTimeString = `${logId}global plaid transaction mapping for ${dayjs().toISOString()}`;
   console.time(overallTimeString);
-  console.log(`global plaid transaction mapping started for ${dayjs().toISOString()}`);
+  console.log('\n');
+  log(`global plaid transaction mapping started for ${dayjs().toISOString()}`);
   // iterate over cards
   // grab transactions for each card
 
@@ -63,7 +70,7 @@ export const globalPlaidTransactionMapping = async ({
   const manualMatches = await V2TransactionManualMatchModel.find({});
 
   // pulling transactions for the access token gets all cards
-  const linkedCardsGroupedByAccessToken = await CardModel.aggregate([
+  const aggSteps: any = [
     {
       $match: {
         'integrations.plaid': {
@@ -83,7 +90,20 @@ export const globalPlaidTransactionMapping = async ({
         },
       },
     },
-  ]);
+  ];
+
+  // for supporting a specific set of access tokens (i.e. user initial link)
+  if (accessTokens.length > 0) {
+    aggSteps.unshift({
+      $match: {
+        'integrations.plaid.accessToken': {
+          $in: accessTokens,
+        },
+      },
+    });
+  }
+
+  const linkedCardsGroupedByAccessToken = await CardModel.aggregate(aggSteps);
 
   const savingPromises: Promise<void>[] = [];
 
@@ -94,7 +114,7 @@ export const globalPlaidTransactionMapping = async ({
     const matchedTransactions: IMatchedTransaction[] = [];
     let remainingTransactions: Transaction[] = [];
 
-    const timeString = `--- matching for user ${card.user.toString()} ---`;
+    const timeString = `${logId}matching for user ${card.user.toString()}`;
     console.time(timeString);
 
     remainingTransactions = await plaidClient.getPlaidTransactions({
@@ -103,18 +123,20 @@ export const globalPlaidTransactionMapping = async ({
       access_token: card._id,
     });
 
-    console.log(`\ninitial transaction count ${remainingTransactions?.length || 0}`);
+    console.log('\n');
+    log(`fetching latest transactions for user ${card.user.toString()}`);
+    log(`initial transaction count ${remainingTransactions?.length || 0}`);
 
     // filter out pending transactions
     remainingTransactions = remainingTransactions.filter((t) => !t.pending);
-    console.log(`initial transaction count after pending ${remainingTransactions.length}`);
+    log(`initial transaction count after pending ${remainingTransactions.length}`);
 
     // filter out existing transactions from plaidId
     if (filterExistingTransactions) {
       const ids = remainingTransactions.map((t) => t.transaction_id);
       const existingTransactions = await TransactionModel.find({ 'integrations.plaid.transaction_id': { $in: ids } }).select('integrations.plaid.transaction_id').lean();
       remainingTransactions = remainingTransactions.filter((t) => !existingTransactions.find((et) => et.integrations.plaid.transaction_id === t.transaction_id));
-      console.log(`transaction count after existing filter ${remainingTransactions.length}`);
+      log(`transaction count after existing filter ${remainingTransactions.length}`);
     }
 
     // filter out false positives
@@ -150,10 +172,10 @@ export const globalPlaidTransactionMapping = async ({
     remainingTransactions = _nonMatchedTransactions;
     matchedTransactions.push(...__matchedTransactions);
 
-    console.log(`matchedTransactions ${matchedTransactions.length}`);
-    console.log(`foundFalsePositives ${foundFalsePositives.length}`);
-    console.log(`foundManualMatches ${foundManualMatches.length}`);
-    console.log(`remainingTransactions ${remainingTransactions.length}`);
+    log(`matchedTransactions ${matchedTransactions.length}`);
+    log(`foundFalsePositives ${foundFalsePositives.length}`);
+    log(`foundManualMatches ${foundManualMatches.length}`);
+    log(`remainingTransactions ${remainingTransactions.length}`);
     console.timeEnd(timeString);
     const allTransactions = [...matchedTransactions, ...foundFalsePositives, ...foundManualMatches, ...remainingTransactions];
     if (writeOutput) output.push(...allTransactions);
@@ -174,5 +196,7 @@ export const globalPlaidTransactionMapping = async ({
     fs.writeFileSync('output.csv', _csv);
   }
   await Promise.all(savingPromises);
+  console.log('\n');
   console.timeEnd(overallTimeString);
+  console.log('\n');
 };

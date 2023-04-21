@@ -11,11 +11,19 @@ import { generateMonthlyImpactReportForUser } from '../src/jobs/userMonthlyImpac
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import * as UserMonthlyImpactReports from '../src/jobs/userMonthlyImpactReports';
+import { globalPlaidTransactionMapping } from '../src/services/scripts/global_plaid_transaction_mapping';
+import { globalTransactionUpdates } from '../src/services/scripts/global_transaction_updates';
 
 (async () => {
   try {
     await MongoClient.init();
-    await UserMonthlyImpactReports.exec({ generateFullHistory: true, uid: '621b99235f87e75f53659b49' });
+    await globalPlaidTransactionMapping({
+      startDate: '2023-01-01',
+      endDate: '2023-04-21',
+      filterExistingTransactions: true,
+      accessTokens: ['access-production-6c424a18-af74-4344-bf17-80793fee67ad'],
+    });
+    // await globalTransactionUpdates({ writeOutput: false });
   } catch (err) {
     console.log(err);
   } finally {

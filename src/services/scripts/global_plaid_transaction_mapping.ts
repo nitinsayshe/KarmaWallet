@@ -126,7 +126,7 @@ export const globalPlaidTransactionMapping = async ({
     console.log('\n');
     log(`fetching latest transactions for user ${card.user.toString()}`);
     log(`initial transaction count ${remainingTransactions?.length || 0}`);
-    if (remainingTransactions.length === 0) {
+    if (!remainingTransactions?.length || remainingTransactions?.length === 0) {
       log(`no transactions found for user ${card.user.toString()}`);
       continue;
     }

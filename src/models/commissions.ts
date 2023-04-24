@@ -24,6 +24,7 @@ export enum KarmaCommissionStatus {
   Pending = 'pending',
   ConfirmedAndAwaitingVendorPayment = 'confirmed-and-awaiting-vendor-payment',
   ReceivedFromVendor = 'received-from-vendor',
+  PendingPaymentToUser = 'pending-payment-to-user',
   PaidToUser = 'paidToUser',
   Canceled = 'canceled',
 }

@@ -67,7 +67,7 @@ export interface IReferrals {
 
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
-  paypal?: IRareUserIntegration;
+  paypal?: IPaypalUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
   shareasale?: IShareASale;
   referrals?: IReferrals;

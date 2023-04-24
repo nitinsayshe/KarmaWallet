@@ -5,20 +5,29 @@ import {
   PaginateModel,
   ObjectId,
 } from 'mongoose';
+import { getUtcDate } from '../lib/date';
 
 export enum KarmaCommissionPayoutOverviewStatus {
   Pending = 'pending',
   AwaitingVerification = 'awaiting-verification',
   Verified = 'verified',
   Sent = 'sent',
+  Failed = 'failed',
+}
+
+export interface ICommissionsBreakdown {
+  karma: number;
+  wildfire: number;
 }
 
 export interface IShareableCommissionPayoutOverview {
   _id: ObjectId;
-  date: Date;
+  createdOn: Date;
+  payoutDate: Date;
   amount: number;
   status: KarmaCommissionPayoutOverviewStatus;
   commissionPayouts: ObjectId[];
+  breakdown: ICommissionsBreakdown;
 }
 
 export interface ICommissionPayoutOverview extends IShareableCommissionPayoutOverview {
@@ -30,12 +39,14 @@ export interface ICommissionPayoutOverviewDocument extends ICommissionPayoutOver
 }
 
 const commissionPayoutOverview = new Schema({
-  date: { type: Date },
+  createdOn: { type: Date, default: () => getUtcDate() },
+  payoutDate: { type: Date },
   amount: { type: Number },
-  amountPaid: { type: Number },
+  // amountPaid: { type: Number },
   status: { type: String, enum: Object.values(KarmaCommissionPayoutOverviewStatus) },
+  breakdown: { type: Object },
   commissionPayouts: { type: [Schema.Types.ObjectId], ref: 'commissionPayouts' },
-  vendorPayments: { type: [Schema.Types.ObjectId], ref: 'vendorPayments' },
+  // vendorPayments: { type: [Schema.Types.ObjectId], ref: 'vendorPayments' },
 });
 
-export const CommissionPayoutOverviewModel = model<ICommissionPayoutOverviewDocument, PaginateModel<IShareableCommissionPayoutOverview>>('commissionPayoutOverview', commissionPayoutOverview);
+export const CommissionPayoutOverviewModel = model<ICommissionPayoutOverviewDocument, PaginateModel<IShareableCommissionPayoutOverview>>('commission_payout_overview', commissionPayoutOverview);

@@ -75,8 +75,6 @@ export const filterDuplicatePlaidTransactions = async (transactions: ITransactio
   )
     .lean();
 
-  console.log(`userTransactions: ${userTransactions.length}`);
-
   const uniqueTransactions = transactions.filter((t) => {
     const exists = userTransactions.find((ut) => {
       // TRANSACTION FINGERPRINTING
@@ -114,6 +112,8 @@ export const saveTransactions = async (
   primarySectorDictionary: any,
   plaidMappingSectorDictionary: any,
 ) => {
+  const logId = '[pstr] - ';
+  const log = (message: string) => console.log(`${logId}${message}`);
   const _user = await UserModel.findOne({ _id: user });
   const cards = await CardModel.find({ status: 'linked', userId: _user._id });
   const cardDictionary = cards.reduce((acc, card) => {
@@ -122,41 +122,51 @@ export const saveTransactions = async (
     return acc;
   }, {});
   if (!_user) return;
-  console.log(`transaction count: ${transactions.length}`);
-  console.log('saving transactions');
+  log(`transaction count: ${transactions.length}`);
+  log('saving transactions');
   const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(t, _user._id.toString(), cardDictionary, primarySectorDictionary, plaidMappingSectorDictionary));
   const transactionsToSave = await filterDuplicatePlaidTransactions(mappedTransactions, _user);
-  console.log(`mapped transaction count: ${mappedTransactions.length}`);
-  console.log(`transactions to save count: ${transactionsToSave.length}`);
-  // await TransactionModel.insertMany(mappedTransactions);
+  log(`mapped transaction count: ${mappedTransactions.length}`);
+  log(`transactions to save count: ${transactionsToSave.length}`);
+  await TransactionModel.insertMany(mappedTransactions);
 };
 
 export interface IPlaidIdTransactionDictionary {
   [key: string]: ITransactionDocument;
 }
 
-export const updateTransactions = async (transactions: ITransaction[], remainingTransactions: IMatchedTransaction[]) => {
-  await TransactionModel.updateMany({ 'integrations.plaid.transaction_id': { $in: remainingTransactions.map(x => x.transaction_id) } }, { $set: { company: null } });
-  console.log('updating transactions');
-  console.log(`transaction count: ${transactions.length}`);
-  console.log(`remaining transaction count: ${remainingTransactions.length}`);
+export const updateTransactions = async (
+  allUserTransactions: ITransaction[],
+  newlyMatchedTransactions: IMatchedTransaction[],
+) => {
+  const logId = '[updt] - ';
+  const log = (message: string) => console.log(`${logId}${message}`);
+
+  log('updating transactions');
+  log(`transaction count: ${allUserTransactions.length}`);
+  log(`remaining transaction count: ${newlyMatchedTransactions.length}`);
+
   const transactionsToSave: any = [];
-  const plaidIdTransactionDictionary: IPlaidIdTransactionDictionary = transactions.reduce((acc, t) => {
-    // @ts-ignore
-    acc[t.integrations.plaid.transaction_id] = t;
+
+  const plaidIdTransactionDictionary: IPlaidIdTransactionDictionary = allUserTransactions.reduce((acc: { [key: string]: ITransactionDocument }, t) => {
+    acc[t.integrations.plaid.transaction_id] = t as ITransactionDocument;
     return acc;
   }, {});
-  console.time('transactions comparison');
-  for (const remainingTransaction of remainingTransactions) {
-    const transaction = plaidIdTransactionDictionary[remainingTransaction.transaction_id];
-    if (!transaction) continue;
-    transaction.integrations.plaid = remainingTransaction;
-    if ((transaction.company?.toString() === remainingTransaction.company?.toString()) || (!transaction.company && !remainingTransaction.company)) continue;
-    console.log(`updating transaction ${transaction._id} company from ${transaction.company} to ${remainingTransaction.company}`);
 
-    transactionsToSave.push(TransactionModel.findOneAndUpdate({ _id: transaction._id }, { company: remainingTransaction.company }, { new: true }));
+  const timeString = `${logId}transactions comparison`;
+  console.time(timeString);
+
+  for (const newlyMatchedTransaction of newlyMatchedTransactions) {
+    const transaction = plaidIdTransactionDictionary[newlyMatchedTransaction.transaction_id];
+    if (!transaction) continue;
+    transaction.integrations.plaid = newlyMatchedTransaction;
+    if ((transaction.company?.toString() === newlyMatchedTransaction.company?.toString()) || (!transaction.company && !newlyMatchedTransaction.company)) continue;
+    log(`updating transaction ${transaction._id} company from ${transaction.company} to ${newlyMatchedTransaction.company}`);
+
+    transactionsToSave.push(TransactionModel.findOneAndUpdate({ _id: transaction._id }, { company: newlyMatchedTransaction.company }, { new: true }));
   }
-  console.log(`transactions to save count: ${transactionsToSave.length}`);
+
+  log(`transactions to save count: ${transactionsToSave.length}`);
   await Promise.all(transactionsToSave);
-  console.timeEnd('transactions comparison');
+  console.timeEnd(timeString);
 };

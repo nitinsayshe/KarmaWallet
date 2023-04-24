@@ -126,7 +126,10 @@ export const getMatchResults = async ({
   saveMatches = false,
   writeToDisk = false,
 }: IMatchTransactionsToCompaniesParams) => {
-  console.time(`--- matchTransactionsToCompanies --- for ${transactions.length} transactions`);
+  const logId = '[mtch] - ';
+  const log = (message: string) => console.log(`${logId}${message}`);
+  const timeString = `${logId}matchTransactionsToCompanies for ${transactions.length} transactions`;
+  console.time(timeString);
   const results: ICompanyMatchingResult[] = [];
 
   for (const transaction of transactions) {
@@ -205,10 +208,10 @@ export const getMatchResults = async ({
     fs.writeFileSync(path.join(__dirname, '.tmp', 'text-match-test.csv'), _csv);
   }
   if (saveMatches) {
-    console.log(`--- saving ${results.length} matches to DB ---`);
+    log(`saving ${results.length} matches to DB`);
     for (const result of results) await V2TransactionMatchedCompanyNameModel.findOneAndUpdate(result, result, { upsert: true });
   }
-  console.timeEnd(`--- matchTransactionsToCompanies --- for ${transactions.length} transactions`);
+  console.timeEnd(timeString);
   return results;
 };
 

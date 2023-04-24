@@ -17,7 +17,9 @@ import { getCurrentWildfireData } from '../src/services/scripts/wildfire';
 (async () => {
   try {
     await MongoClient.init();
-    await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
+    // await generateCommissionPayoutForUsers(0);
+    // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
+    await sendCommissionPayoutsThruPaypal('6446a39c83efc1cc308dae9e');
   } catch (err) {
     Logger.error(asCustomError(err));
     console.log(err);

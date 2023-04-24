@@ -254,6 +254,16 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
       throw new CustomError(`[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout overview amount: ${commissionPayoutOverviewAmount}`, ErrorTypes.GEN);
     }
 
+    const paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
+
+    const sendPayoutHeader: ISendPayoutBatchHeader = {
+      sender_batch_header: {
+        sender_batch_id: commissionPayoutOverviewId,
+        email_subject: 'You\'ve received a cashback payout from Karma Wallet!',
+        email_message: 'You\'ve earned cashback from Karma Wallet. Great job!.',
+      },
+    };
+
     for (const commissionPayout of commissionPayouts) {
       const payoutData = await CommissionPayoutModel.findById(commissionPayout);
       if (!payoutData) {
@@ -283,47 +293,38 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
         continue;
       }
 
-      const paypalFormattedPayouts: ISendPayoutBatchItem[] = [
-        {
-          recipient_type: 'PAYPAL_ID',
-          amount: {
-            value: payoutData.amount.toString(),
-            currency: 'USD',
-          },
-          receiver: paypal.payerId,
-          // need to update this text
-          note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
-          sender_item_id: payoutData._id.toString(),
+      paypalFormattedPayouts.push({
+        recipient_type: 'PAYPAL_ID',
+        amount: {
+          value: payoutData.amount.toString(),
+          currency: 'USD',
         },
-      ];
-
-      // this is set to send one at a time instead of lumping them all together, should we send it all at once?
-      const sendPayoutHeader: ISendPayoutBatchHeader = {
-        sender_batch_header: {
-          sender_batch_id: payoutData._id.toString(),
-          email_subject: 'You\'ve received a cashback payout from Karma Wallet!',
-          email_message: 'You\'ve earned cashback from Karma Wallet. Great job!.',
-        },
-      };
-
-      const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
-      // what shoudl the status be for success?
-      if (paypalResponse.status === 201) {
-        payoutData.update({ status: KarmaCommissionPayoutStatus.Paid });
-        const commissions = await CommissionModel.find({ _id: { $in: payoutData.commissions } });
-        for (const commission of commissions) {
-          commission.update({ status: KarmaCommissionStatus.PaidToUser });
-          commission.save();
-        }
-      } else {
-        payoutData.update({ status: KarmaCommissionPayoutStatus.Failed });
-      }
-      payoutData.save();
-      console.log('[+] Paypal payout sent', payoutData._id);
+        receiver: paypal.payerId,
+        note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
+        sender_item_id: payoutData._id.toString(),
+      });
     }
 
-    commissionPayoutOverview.update({ status: KarmaCommissionPayoutOverviewStatus.Sent });
-    commissionPayoutOverview.save();
+    if (!paypalFormattedPayouts.length) console.log('[+] No valid payouts to send.');
+
+    const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
+    // what shoudl the status be for success?
+
+    // if (paypalResponse.status === 201) {
+    //   payoutData.update({ status: KarmaCommissionPayoutStatus.Paid });
+    //   const commissions = await CommissionModel.find({ _id: { $in: payoutData.commissions } });
+    //   for (const commission of commissions) {
+    //     console.log('////');
+    //     commission.update({ status: KarmaCommissionStatus.PaidToUser });
+    //     commission.save();
+    //   }
+    // } else {
+    //   payoutData.update({ status: KarmaCommissionPayoutStatus.Failed });
+    // }
+    console.log('[+] Paypal payout sent', paypalResponse);
+
+    await commissionPayoutOverview.update({ status: KarmaCommissionPayoutOverviewStatus.Sent });
+    await commissionPayoutOverview.save();
   } catch (err: any) {
     throw new Error(err);
   }

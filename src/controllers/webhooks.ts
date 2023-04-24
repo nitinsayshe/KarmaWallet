@@ -220,27 +220,25 @@ const processPaypalWebhook = async (body: any) => {
 };
 
 export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {
-  const { headers } = <{ headers: IPaypalRequestHeaders }>req;
-  const client = new PaypalClient();
-  console.log('------- BEG Paypal Webhook Headers -------\n');
-  console.log(JSON.stringify(headers, null, 2));
-  console.log('\n------- END Paypal Webhook Headers -------');
-  console.log('------- BEG Paypal Webhook BODY -------\n');
-  console.log(JSON.stringify(req.body, null, 2));
-  console.log('------- END Paypal Webhook BODY -------\n');
-  const verification = await client.verifyWebhookSignature({
-    auth_algo: headers['paypal-auth-algo'],
-    cert_url: headers['paypal-cert-url'],
-    transmission_id: headers['paypal-transmission-id'],
-    transmission_sig: headers['paypal-transmission-sig'],
-    transmission_time: headers['paypal-transmission-time'],
-    webhook_id: process.env.PAYPAL_WEBHOOK_ID,
-    webhook_event: req.body,
-  });
-  if (!verification) {
-    console.log('Paypal webhook verification failed.');
-    return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
+  try {
+    const { headers } = <{ headers: IPaypalRequestHeaders }>req;
+    const client = new PaypalClient();
+    const verification = await client.verifyWebhookSignature({
+      auth_algo: headers['paypal-auth-algo'],
+      cert_url: headers['paypal-cert-url'],
+      transmission_id: headers['paypal-transmission-id'],
+      transmission_sig: headers['paypal-transmission-sig'],
+      transmission_time: headers['paypal-transmission-time'],
+      webhook_id: process.env.PAYPAL_WEBHOOK_ID,
+      webhook_event: req.body,
+    });
+    if (!verification) {
+      console.log('Paypal webhook verification failed.');
+      return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
+    }
+    processPaypalWebhook(req.body);
+    api(req, res, { message: 'Paypal webhook processed successfully.' });
+  } catch (e) {
+    error(req, res, asCustomError(e));
   }
-  processPaypalWebhook(req.body);
-  api(req, res, { message: 'Paypal webhook processed successfully.' });
 };

@@ -193,17 +193,6 @@ export class PaypalClient extends SdkClient {
           Authorization: `Bearer ${access_token}`,
         },
       });
-      console.log('Paypal webhook signature verification response:');
-      console.log(JSON.stringify({
-        auth_algo,
-        cert_url,
-        transmission_id,
-        transmission_sig,
-        transmission_time,
-        webhook_id,
-        webhook_event,
-      }, null, 2));
-      console.log(`Paypal webhook signature verification status: ${JSON.stringify(data, null, 2)}`);
       return data.verification_status === 'SUCCESS';
     } catch (err) {
       console.log(err);

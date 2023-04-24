@@ -1,13 +1,23 @@
 import dayjs from 'dayjs';
-import { parse } from 'json2csv';
 import fs from 'fs';
+import { parse } from 'json2csv';
 import { PaginateResult, Types } from 'mongoose';
 import path from 'path';
 import { SafeParseError, z } from 'zod';
 import { SyncRequest } from '../../jobs/syncActiveCampaign';
 import { roundToPercision, sleep } from '../../lib/misc';
-import { getMissedCashBackForDateRange, getUsersWithTransactionsInDateRange } from '../../lib/userMetrics';
+import {
+  getCashbackCompaniesInDateRange,
+  getMissedCashBackForDateRange,
+  getUsersWithTransactions,
+  getUsersWithTransactionsInDateRange,
+} from '../../lib/userMetrics';
 import { IUser, IUserDocument, UserModel } from '../../models/user';
+
+type SyncResponse<T> = {
+  userId: Types.ObjectId;
+  fields?: T;
+};
 
 type CashbackUserReport = {
   userId: Types.ObjectId;
@@ -37,10 +47,11 @@ type RangedCashbackSimulationFields = {
   startDate: Date;
   endDate: Date;
 };
+
 const runUserCashbackSimulation = async (
   req: SyncRequest<RangedCashbackSimulationFields>,
   userBatch: PaginateResult<IUser>,
-): Promise<CashbackUserReport[]> => {
+): Promise<SyncResponse<CashbackUserReport>[]> => {
   let missedCashbackMetrics = await Promise.all(
     userBatch?.docs?.map(async (user) => getMissedCashBackForDateRange(user as unknown as IUserDocument, req.fields?.startDate, req.fields?.endDate)),
   );
@@ -50,7 +61,7 @@ const runUserCashbackSimulation = async (
     return !!metric.email && !(validationResult as SafeParseError<string>)?.error;
   });
 
-  const userReports: CashbackUserReport[] = missedCashbackMetrics?.map((metric) => {
+  const userReports: SyncResponse<CashbackUserReport>[] = missedCashbackMetrics?.map((metric) => {
     const {
       id,
       estimatedMissedCommissionsAmount,
@@ -60,21 +71,24 @@ const runUserCashbackSimulation = async (
     } = metric;
     return {
       userId: id,
-      totalMissedCashback: roundToPercision(estimatedMissedCommissionsAmount, 0),
-      totalMissedCashbackTransactions: estimatedMissedCommissionsCount,
-      averageCashbackMissedPerTransaction: roundToPercision(averageMissedCommissionAmount, 0),
-      largestMissedCashbackTransactionAmount: roundToPercision(largestMissedCommissionAmount, 0),
+      fields: {
+        userId: id,
+        totalMissedCashback: roundToPercision(estimatedMissedCommissionsAmount, 0),
+        totalMissedCashbackTransactions: estimatedMissedCommissionsCount,
+        averageCashbackMissedPerTransaction: roundToPercision(averageMissedCommissionAmount, 0),
+        largestMissedCashbackTransactionAmount: roundToPercision(largestMissedCommissionAmount, 0),
+      },
     };
   });
-
   return userReports;
 };
-const iterateOverUsersAndExecWithDelay = async <T>(
-  request: SyncRequest<T>,
-  exec: (req: SyncRequest<T>, userBatch: PaginateResult<IUser>) => Promise<CashbackUserReport[]>,
+
+const iterateOverUsersAndExecWithDelay = async <Req, Res>(
+  request: SyncRequest<Req>,
+  exec: (req: SyncRequest<Req>, userBatch: PaginateResult<IUser>) => Promise<SyncResponse<Res>[]>,
   msDelayBetweenBatches: number,
-): Promise<CashbackUserReport[]> => {
-  let report: CashbackUserReport[] = [];
+): Promise<SyncResponse<Res>[]> => {
+  let report: SyncResponse<Res>[] = [];
 
   let page = 1;
   let hasNextPage = true;
@@ -110,7 +124,13 @@ const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<Ca
       endDate,
     },
   };
-  return iterateOverUsersAndExecWithDelay(request, runUserCashbackSimulation, msDelayBetweenBatches);
+  const report: SyncResponse<CashbackUserReport>[] = await iterateOverUsersAndExecWithDelay(
+    request,
+    runUserCashbackSimulation,
+    msDelayBetweenBatches,
+  );
+
+  return report.map((r: SyncResponse<CashbackUserReport>) => ({ ...r.fields, userId: r.userId }));
 };
 
 const getPrevWeeksCashBackReport = async (
@@ -240,5 +260,110 @@ export const generateCashbackAnalysisReport = async (): Promise<CashbackAnalysis
     }),
   );
 
+  return report;
+};
+
+type MissedCashbackMerchantFrequencyRequest = {
+  startDate: Date;
+  endDate: Date;
+  userId: Types.ObjectId;
+};
+
+type MissedCashbackMerchantFrequencyReport = {
+  userId: Types.ObjectId;
+  merchantFrequencies: {
+    company: string;
+    frequency: number;
+    amount: number;
+  }[];
+};
+const getCashbackMerchantFrequencyMetricsForDateRange = async (
+  user: IUserDocument,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<MissedCashbackMerchantFrequencyReport> => {
+  const companies = await getCashbackCompaniesInDateRange(user._id, startDate, endDate);
+  if (!companies?.length) {
+    console.log(`no cashback  merchants found for user ${user._id} in the date range ${startDate} to ${endDate}`);
+    return {
+      userId: user._id.toString(),
+      merchantFrequencies: [],
+    };
+  }
+  console.log(`found ${companies.length} merchants for user ${user._id} in the date range ${startDate} to ${endDate}`);
+  const merchantFrequencies = companies.map((company) => ({
+    company: company.company,
+    frequency: company.count,
+    amount: company.amount,
+  }));
+  return {
+    userId: user._id.toString(),
+    merchantFrequencies,
+  };
+};
+const genereateMissedCashbackMerchantFrequencyReport = async (
+  req: SyncRequest<MissedCashbackMerchantFrequencyRequest>,
+  userBatch: PaginateResult<IUser>,
+): Promise<SyncResponse<MissedCashbackMerchantFrequencyReport>[]> => {
+  // get all transactions for this user in the date range (with cashback merchants)
+  // grouped by merchant
+  // count the number of transactions for each merchant
+  // get this data from an aggregate pipeline
+
+  const cashbackMerchantFrequencyMetrics = (
+    await Promise.all(
+      userBatch?.docs?.map(async (user) => getCashbackMerchantFrequencyMetricsForDateRange(
+        user as unknown as IUserDocument,
+        req.fields?.startDate,
+        req.fields?.endDate,
+      )),
+    )
+  ).filter((metric) => metric?.merchantFrequencies?.length > 0);
+  const userReports: SyncResponse<MissedCashbackMerchantFrequencyReport>[] = cashbackMerchantFrequencyMetrics?.map(
+    (metric) => {
+      const { userId, merchantFrequencies } = metric;
+      return {
+        userId,
+        fields: {
+          userId,
+          merchantFrequencies,
+        },
+      };
+    },
+  );
+  return userReports;
+};
+
+export const generateMissedCashbackMerchantFrequencyReport = async () => {
+  let report: MissedCashbackMerchantFrequencyReport[] = [];
+
+  const usersWithTransactions = await getUsersWithTransactions();
+  console.log(JSON.stringify(usersWithTransactions, null, 2));
+
+  const msDelayBetweenBatches = 2000;
+
+  const request: SyncRequest<MissedCashbackMerchantFrequencyRequest> = {
+    batchQuery: { _id: { $in: usersWithTransactions } },
+    batchLimit: 100,
+    /* fields: { */
+    /*   startDate: dayjs().utc().subtract(4, 'week').toDate(), */
+    /*   endDate: dayjs().utc().toDate(), */
+    /* }, */
+  };
+
+  report = (
+    await iterateOverUsersAndExecWithDelay(
+      request,
+      genereateMissedCashbackMerchantFrequencyReport,
+      msDelayBetweenBatches,
+    )
+  ).map((res) => res?.fields);
+
+  // run top level stats calculations
+
+  fs.writeFileSync(
+    path.join(__dirname, '.tmp', `MerchantFrequencyReport_${dayjs().format('MM-DD-YYYY')}.csv`),
+    parse(report),
+  );
   return report;
 };

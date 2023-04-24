@@ -164,6 +164,51 @@ export const getUserTransactionsPastThirtyDays = async (
   }
 };
 
+export const getCashbackCompaniesInDateRange = async (
+  user: IUserDocument,
+  startDate?: Date,
+  endDate?: Date,
+): Promise<{ company: string; count: number; amount: number }[] | null> => {
+  if (!user || !user._id) return null;
+  try {
+    const matchClause: { $and: any[] } = {
+      $and: [
+        { user: user._id },
+        { amount: { $gt: 0 } },
+        { company: { $exists: true } },
+        { company: { $ne: null } },
+        { company: { $ne: [] } },
+        { 'company.rating': { $ne: CompanyRating.Negative } },
+        { 'company.merchant': { $exists: true } },
+        { 'company.merchant': { $ne: null } },
+      ],
+    };
+    if (!!startDate) matchClause.$and.push({ date: { $gte: startDate } });
+    if (!!endDate) matchClause.$and.push({ date: { $lte: endDate } });
+
+    const companies = await TransactionModel.aggregate()
+      .lookup({
+        from: 'companies',
+        localField: 'company',
+        foreignField: '_id',
+        as: 'company',
+      })
+      .unwind({ path: '$company' })
+      .match(matchClause)
+      .sort({ date: -1 })
+      .group({
+        _id: '$company._id',
+        company: { $first: '$company.companyName' },
+        count: { $sum: 1 },
+        amunt: { $sum: '$amount' },
+      });
+    return !!companies && !!companies.length ? companies : null;
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
+
 export const getTransactionsWithCashbackCompaniesInDateRange = async (
   user: IUserDocument,
   startDate: Date,
@@ -581,21 +626,17 @@ export const getUsersWithCommissionsLastMonth = async (): Promise<Types.ObjectId
 };
 
 export const getUsersWithTransactionsInDateRange = async (
-  startDate: Date,
-  endDate: Date,
+  startDate?: Date,
+  endDate?: Date,
 ): Promise<Types.ObjectId[]> => {
-  const users = await TransactionModel.aggregate()
-    .match({
-      $and: [
-        { date: { $gte: startDate } },
-        { date: { $lte: endDate } },
-        { company: { $exists: true } },
-        { company: { $ne: null } },
-      ],
-    })
-    .group({
-      _id: '$user',
-    });
+  const matchClause: { $and: any[] } = {
+    $and: [{ company: { $exists: true } }, { company: { $ne: null } }],
+  };
+  if (!!startDate) matchClause.$and.push({ date: { $gte: startDate } });
+  if (!!endDate) matchClause.$and.push({ date: { $lte: endDate } });
+  const users = await TransactionModel.aggregate().match(matchClause).group({
+    _id: '$user',
+  });
   return users?.map((u) => u?._id) || [];
 };
 // this only cares about users with transactions that we matched to a company
@@ -606,6 +647,8 @@ export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectI
     oneMonthAgo.endOf('month').toDate(),
   );
 };
+
+export const getUsersWithTransactions = async (): Promise<Types.ObjectId[]> => getUsersWithTransactionsInDateRange();
 
 export const getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays = async (): Promise<Types.ObjectId[]> => {
   const thirtyDaysAgo = dayjs().utc().subtract(30, 'day');

@@ -2,10 +2,10 @@
 
 ## preliminary earned cashback analysis
 
-- [ ] analysis going 4 weeks back
-- [ ] For each week, how much missed cashback was there overall?
-- [ ] use this data to set a minimum threshold for notifying the user that they could earn cash back
-- [ ] Flag purchases over a certain amount
+- [x] analysis going 4 weeks back
+- [x] For each week, how much missed cashback was there overall?
+- [] use this data to set a minimum threshold for notifying the user that they could earn cash back
+- [x] Flag purchases over a certain amount (flagged largest missed amount)
 - [ ] check the past 30 and 60 days for any of these significant cashback missed opportunities (in a single transaction) .
 
 ## preliminary merchant frequency analysis

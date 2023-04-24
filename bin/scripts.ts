@@ -3,8 +3,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable camelcase */
 /* eslint-disable no-unused-vars */
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { generateMonthlyImpactReportForUser } from '../src/jobs/userMonthlyImpactReports';

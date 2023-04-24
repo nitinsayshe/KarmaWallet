@@ -9,6 +9,10 @@ import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { ICompany, ICompanyDocument, IShareableCompany } from './company';
 
+export enum IArticleType {
+  GoodAndBad = 'the-good-and-the-bad',
+}
+
 export interface IArticle {
   _id: ObjectId;
   company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany >;
@@ -22,6 +26,7 @@ export interface IArticle {
   theGood: string;
   theBad: string;
   enabled: boolean;
+  type: IArticleType;
 }
 
 export interface IArticleDocument extends IArticle, Document {
@@ -42,6 +47,7 @@ const articleSchema = new Schema({
   introTitle: { type: String, required: true },
   theGood: { type: String, required: true },
   theBad: { type: String, required: true },
+  type: { type: String, enum: Object.values(IArticleType), required: true },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);

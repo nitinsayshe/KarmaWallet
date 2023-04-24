@@ -209,3 +209,8 @@ export const HubspotPortalId = '22346640';
 
 export const KwApiKeyHeader = 'X-KW-API-KEY';
 export const KwApiIdHeader = 'X-KW-API-ID';
+
+export const ImpactKarmaCompanyData = {
+  merchantId: '63d2b2d148234101740ccdd0',
+  companyId: '62def0e77b212526d1e055ca',
+};

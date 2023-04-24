@@ -14,30 +14,6 @@ import { generateCommissionPayoutForUsers, generateCommissionPayoutOverview, sen
 import { PaypalClient } from '../src/clients/paypal';
 import { getCurrentWildfireData } from '../src/services/scripts/wildfire';
 
-dayjs.extend(utc);
-
-const paypalFormattedPayouts: any = [
-  {
-    recipient_type: 'PAYPAL_ID',
-    amount: {
-      value: '.03',
-      currency: 'USD',
-    },
-    receiver: '6X3V82FPNJKX8',
-    // need to update this text
-    note: 'TEST - Karma Wallet Cashback Payout - Thank you for using Karma Wallet!',
-    sender_item_id: 'test-payout-1',
-  },
-];
-// this is set to send one at a time instead of lumping them all together, should we send it all at once?
-const sendPayoutHeader: any = {
-  sender_batch_header: {
-    sender_batch_id: 'test-payout-1',
-    email_subject: 'You\'ve received a payout from Karma Wallet!',
-    email_message: 'Your payout for Karma Wallet is on its way.',
-  },
-};
-
 (async () => {
   try {
     await MongoClient.init();

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Types } from 'mongoose';
 import {
   CommissionModel,
   ICommissionDocument,
@@ -18,19 +19,25 @@ import {
   getUserCurrentAccrualsBalance,
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
-import { CommissionPayoutDayForUser, ErrorTypes, UserRoles } from '../../lib/constants';
+import { CommissionPayoutDayForUser, ErrorTypes, UserRoles, ImpactKarmaCompanyData } from '../../lib/constants';
 import { UserModel } from '../../models/user';
-import { getUtcDate } from '../../lib/date';
 import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../models/commissionPayoutOverview';
 import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
 import CustomError from '../../lib/customError';
+import { IPromo } from '../../models/promo';
+import { getUtcDate } from '../../lib/date';
 
 dayjs.extend(utc);
 
 export enum CommissionType {
-  'wildfire' = 'wildfire',
   'karma' = 'karma',
-  'all' = 'all'
+  'all' = 'all',
+  'wildfire' = 'wildfire'
+}
+
+export interface IAddKarmaCommissionToUserRequestParams {
+  userId: string,
+  promo: IPromo;
 }
 
 export interface IGetCommissionsForUserQuery {
@@ -354,4 +361,28 @@ export const updateCommissionPayoutOverviewStatus = async (req: IRequest<ICommis
     }
   }
   return commissionPayoutOverview;
+};
+
+export const addCashbackToUser = async (req: IRequest<IAddKarmaCommissionToUserRequestParams>) => {
+  const { userId, promo } = req.params;
+
+  const newCommission = await new CommissionModel({
+    merchant: new Types.ObjectId(ImpactKarmaCompanyData.merchantId),
+    company: new Types.ObjectId(ImpactKarmaCompanyData.companyId),
+    user: new Types.ObjectId(userId),
+    amount: promo.amount,
+    allocation: {
+      user: promo.amount,
+      karma: 0,
+    },
+    status: KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+    integrations: {
+      karma: {
+        promo,
+        amount: promo.amount,
+      },
+    },
+  });
+
+  newCommission.save();
 };

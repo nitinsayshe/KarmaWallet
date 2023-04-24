@@ -222,6 +222,12 @@ const processPaypalWebhook = async (body: any) => {
 export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {
   const { headers } = <{ headers: IPaypalRequestHeaders }>req;
   const client = new PaypalClient();
+  console.log('------- BEG Paypal Webhook Headers -------\n');
+  console.log(JSON.stringify(headers, null, 2));
+  console.log('\n------- END Paypal Webhook Headers -------');
+  console.log('------- BEG Paypal Webhook BODY -------\n');
+  console.log(JSON.stringify(req.body, null, 2));
+  console.log('------- END Paypal Webhook BODY -------\n');
   const verification = await client.verifyWebhookSignature({
     auth_algo: headers['paypal-auth-algo'],
     cert_url: headers['paypal-cert-url'],

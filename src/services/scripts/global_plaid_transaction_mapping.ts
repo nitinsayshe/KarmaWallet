@@ -183,7 +183,7 @@ export const globalPlaidTransactionMapping = async ({
     console.timeEnd(timeString);
     const allTransactions = [...matchedTransactions, ...foundFalsePositives, ...foundManualMatches, ...remainingTransactions];
     if (writeOutput) output.push(...allTransactions);
-    const promise = saveTransactions(allTransactions, card.user.toString(), primarySectorDictionary, plaidMappingSectorDictionary);
+    const promise = saveTransactions(allTransactions, card.user, primarySectorDictionary, plaidMappingSectorDictionary);
 
     // update last transaction sync
     const cards = await CardModel.find({ 'integrations.plaid.accessToken': card._id, userId: card.user });

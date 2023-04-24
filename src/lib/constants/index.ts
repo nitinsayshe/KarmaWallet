@@ -168,7 +168,8 @@ export const CommissionPayoutDayForUser = 15;
 
 export enum CollectionNames {
   Card = 'cards',
-  CommissionPayout = 'commissionPayouts',
+  CommissionPayout = 'commission_payouts',
+  CommissionPayoutOverview = 'commission_payout_overviews',
   Commission = 'commissions',
   Company = 'companies',
   CompanyDataSource = 'company_data_sources',

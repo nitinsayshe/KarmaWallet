@@ -74,6 +74,10 @@ interface IPlaidWebhookBody {
   new_transactions?: number;
 }
 
+interface IPaypalWebhookBody {
+  any: any;
+}
+
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
   if (
     process.env.KW_ENV !== 'staging'
@@ -193,4 +197,13 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
   } catch (e) {
     error(req, res, asCustomError(e));
   }
+};
+
+export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {
+  console.log('\n\n/////////////// PAYPAL WEBHOOK ///////////////////////\n\n');
+  console.log('webhook header \n', JSON.stringify(req?.header, null, 2));
+  console.log('webhook headers \n', JSON.stringify(req?.headers, null, 2));
+  console.log('webhook body \n', JSON.stringify(req?.body, null, 2));
+  api(req, res, { message: 'Paypal webhook processed successfully.' });
+  // proceed to business logic
 };

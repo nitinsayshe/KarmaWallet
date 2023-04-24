@@ -18,6 +18,7 @@ import jwkToPem from 'jwk-to-pem';
 import crypto from 'crypto';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Transaction } from 'plaid';
 import { ErrorTypes, CardStatus } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
@@ -190,7 +191,7 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  getPlaidTransactions = async ({ access_token, start_date, end_date }: TransactionsGetRequest) => {
+  getPlaidTransactions = async ({ access_token, start_date, end_date }: TransactionsGetRequest): Promise<Transaction[]> => {
     if (!access_token) throw new CustomError('An access token is required.', ErrorTypes.INVALID_ARG);
     // the number of transactions to retrieve in
     // each request/

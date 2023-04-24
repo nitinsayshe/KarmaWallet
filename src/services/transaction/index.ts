@@ -1,29 +1,46 @@
-import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { AqpQuery } from 'api-query-params';
-import {
-  IShareableTransaction,
-  ITransaction,
-  ITransactionDocument,
-  TransactionModel,
-} from '../../models/transaction';
-import { ErrorTypes, RareTransactionQuery, UserRoles } from '../../lib/constants';
-import { IRequest } from '../../types/request';
+import { FilterQuery, ObjectId, Types } from 'mongoose';
+import { Transaction } from 'plaid';
+import { SafeParseError, z, ZodError } from 'zod';
 import { RareClient } from '../../clients/rare';
-import { getShareableSector } from '../sectors';
-import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
-import { IRef } from '../../types/model';
-import CustomError, { asCustomError } from '../../lib/customError';
-import { CompanyModel, ICompanyDocument, IShareableCompany } from '../../models/company';
-import { getShareableCompany } from '../company';
-import { getShareableUser } from '../user';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
-import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
-import { getShareableCard } from '../card';
-import { GroupModel } from '../../models/group';
-import { _getTransactions } from './utils';
+import { IMatchedTransaction } from '../../integrations/plaid/types';
+import { getCleanCompanies, getMatchResults, matchTransactionsToCompanies } from '../../integrations/plaid/v2_matching';
+import {
+  ErrorTypes,
+  MaxCompanyNameLength,
+  MaxSafeDoublePercisionFloatingPointNumber,
+  MinCompanyNameLength,
+  RareTransactionQuery,
+  UserRoles,
+} from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
-import { getCompanyRatingsThresholds } from '../misc';
 import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import CustomError, { asCustomError } from '../../lib/customError';
+import { roundToPercision } from '../../lib/misc';
+import { formatZodFieldErrors } from '../../lib/validation';
+import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
+import { CompanyModel, ICompanyDocument, ICompanySector, IShareableCompany } from '../../models/company';
+import { GroupModel } from '../../models/group';
+import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
+import { IShareableTransaction, ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
+import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
+import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
+import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
+import { IRef } from '../../types/model';
+import { IRequest } from '../../types/request';
+import { getShareableCard } from '../card';
+import {
+  convertCompanyModelsToGetCompaniesResponse,
+  getShareableCompany,
+  ICompanyProtocol,
+  _getPaginatedCompanies,
+} from '../company';
+import { getCompanyRatingsThresholds } from '../misc';
+import { calculateCompanyScore } from '../scripts/calculate_company_scores';
+import { getShareableSector } from '../sectors';
+import { getShareableUser } from '../user';
+import { _getTransactions } from './utils';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -60,18 +77,34 @@ export interface ITransactionOptions {
   includeNullCompanies?: boolean;
 }
 
+type EnrichTransactionResponse = {
+  company: ICompanyProtocol;
+  carbonEmissionKilograms: number; // emmissions associated with the transaction
+  karmaScore: number; // 0 to 100
+};
+
+export type EnrichTransactionRequest = {
+  companyName: string;
+  alternateCompanyName?: string;
+  amount: number; // in USD
+};
+
 export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
   try {
     const { ratings, userId, page, limit } = req.query;
 
     if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
-    if (!ratings || !ratings.length) throw new CustomError('A company rating is required to get rated transactions.', ErrorTypes.INVALID_ARG);
+    if (!ratings || !ratings.length) {
+      throw new CustomError('A company rating is required to get rated transactions.', ErrorTypes.INVALID_ARG);
+    }
 
     const _ratings = Array.isArray(ratings) ? ratings : [...(ratings as string).split(',')];
 
-    const invalidRatings = _ratings.filter(rating => !Object.values(CompanyRating).find(r => r === rating));
-    if (invalidRatings.length) throw new CustomError('One or more of the ratings found are invalid.', ErrorTypes.INVALID_ARG);
+    const invalidRatings = _ratings.filter((rating) => !Object.values(CompanyRating).find((r) => r === rating));
+    if (invalidRatings.length) {
+      throw new CustomError('One or more of the ratings found are invalid.', ErrorTypes.INVALID_ARG);
+    }
 
     const userQuery: FilterQuery<ITransaction> = {
       $and: [
@@ -89,24 +122,18 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       const _userId = new Types.ObjectId(userId);
 
       userQuery.$and.push({
-        $or: [
-          { user: _userId },
-          { 'onBehalfOf.user': _userId },
-        ],
+        $or: [{ user: _userId }, { 'onBehalfOf.user': _userId }],
       });
     } else {
       userQuery.$and.push({
-        $or: [
-          { user: req.requestor._id },
-          { 'onBehalfOf.user': req.requestor._id },
-        ],
+        $or: [{ user: req.requestor._id }, { 'onBehalfOf.user': req.requestor._id }],
       });
     }
 
     const companyRatingThresholds = await getCompanyRatingsThresholds();
 
     const companyQuery: FilterQuery<ITransaction> = {
-      $or: _ratings.map(rating => {
+      $or: _ratings.map((rating) => {
         if (rating === CompanyRating.Positive) {
           return { 'company.combinedScore': { $gte: companyRatingThresholds[CompanyRating.Positive].min } };
         }
@@ -157,15 +184,17 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
 
     const transactions = await TransactionModel.aggregatePaginate(transactionAggregate, options);
 
-    const pageIncludesOffsets = transactions.docs.filter(transaction => !!transaction.integrations?.rare).length;
+    const pageIncludesOffsets = transactions.docs.filter((transaction) => !!transaction.integrations?.rare).length;
 
     if (!!pageIncludesOffsets) {
       try {
         const Rare = new RareClient();
         const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
 
-        transactions.docs.forEach(transaction => {
-          const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+        transactions.docs.forEach((transaction) => {
+          const matchedRareTransaction = rareTransactions.transactions.find(
+            (rareTransaction) => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id,
+          );
           transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
         });
       } catch (err) {
@@ -180,7 +209,10 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
   }
 };
 
-export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
+export const getTransactions = async (
+  req: IRequest<{}, ITransactionsRequestQuery>,
+  query: FilterQuery<ITransaction>,
+) => {
   const { userId, includeOffsets, includeNullCompanies, onlyOffsets } = req.query;
 
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
@@ -220,7 +252,9 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   const filter: FilterQuery<ITransaction> = {
     $and: [
       ...Object.entries(query.filter)
-        .filter(([key]) => (key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets'))
+        .filter(
+          ([key]) => key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets',
+        )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
       { amount: { $gt: 0 } },
@@ -233,17 +267,11 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
     }
 
     filter.$and.push({
-      $or: [
-        { user: userId },
-        { 'onBehalfOf.user': userId },
-      ],
+      $or: [{ user: userId }, { 'onBehalfOf.user': userId }],
     });
   } else {
     filter.$and.push({
-      $or: [
-        { user: req.requestor },
-        { 'onBehalfOf.user': req.requestor },
-      ],
+      $or: [{ user: req.requestor }, { 'onBehalfOf.user': req.requestor }],
     });
   }
 
@@ -254,15 +282,17 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   const transactions = await TransactionModel.paginate(filter, paginationOptions);
 
   if (includeOffsets || onlyOffsets) {
-    const pageIncludesOffsets = transactions.docs.filter(transaction => !!transaction.integrations?.rare).length;
+    const pageIncludesOffsets = transactions.docs.filter((transaction) => !!transaction.integrations?.rare).length;
 
     if (!!pageIncludesOffsets) {
       try {
         const Rare = new RareClient();
         const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
 
-        transactions.docs.forEach(transaction => {
-          const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+        transactions.docs.forEach((transaction) => {
+          const matchedRareTransaction = rareTransactions.transactions.find(
+            (rareTransaction) => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id,
+          );
           transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
         });
       } catch (err) {
@@ -289,17 +319,11 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
       }
 
       query.$and.push({
-        $or: [
-          { user: userId },
-          { 'onBehalfOf.user': userId },
-        ],
+        $or: [{ user: userId }, { 'onBehalfOf.user': userId }],
       });
     } else {
       query.$and.push({
-        $or: [
-          { user: req.requestor._id },
-          { 'onBehalfOf.user': req.requestor._id },
-        ],
+        $or: [{ user: req.requestor._id }, { 'onBehalfOf.user': req.requestor._id }],
       });
     }
 
@@ -350,10 +374,7 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
       { sector: { $nin: sectorsToExcludeFromTransactions } },
       { amount: { $gt: 0 } },
       {
-        $or: [
-          { userId: req?.requestor?._id },
-          { 'onBehalfOf.user': req?.requestor?._id },
-        ],
+        $or: [{ userId: req?.requestor?._id }, { 'onBehalfOf.user': req?.requestor?._id }],
       },
       { matchType: null },
       { ...RareTransactionQuery },
@@ -365,7 +386,9 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const rareTransactions = await Rare.getTransactions(req.requestor?.integrations?.rare?.userId);
 
   return transactions.map((transaction) => {
-    const matchedRareTransaction = rareTransactions.transactions.find(rareTransaction => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id);
+    const matchedRareTransaction = rareTransactions.transactions.find(
+      (rareTransaction) => transaction.integrations.rare.transaction_id === rareTransaction.transaction_id,
+    );
     transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
     return transaction;
   });
@@ -414,11 +437,7 @@ export const getShareableTransaction = ({
   };
 
   if (integrations?.rare) {
-    const {
-      projectName,
-      tonnes_amt: offsetsPurchased,
-      certificateUrl,
-    } = integrations.rare;
+    const { projectName, tonnes_amt: offsetsPurchased, certificateUrl } = integrations.rare;
 
     const rareIntegration = {
       projectName,
@@ -444,10 +463,7 @@ export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
       $and: [
         { sector: { $nin: sectorsToExcludeFromTransactions } },
         {
-          $or: [
-            { user: _userId },
-            { 'onBehalfOf.user': _userId },
-          ],
+          $or: [{ user: _userId }, { 'onBehalfOf.user': _userId }],
         },
       ],
     };
@@ -458,6 +474,148 @@ export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
     const count = await getTransactionCount(query);
 
     return count > 0;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+const matchTransactionCompanies = async (
+  transactions: Transaction[],
+): Promise<{ matched: Transaction[]; notMatched: Transaction[] }> => {
+  try {
+    let remainingTransactions = transactions as Transaction[];
+
+    // handle known false positive matches
+    const falsePositives = await V2TransactionFalsePositiveModel.find({});
+    const foundFalsePositives: Transaction[] = [];
+    remainingTransactions = remainingTransactions.filter((t) => {
+      if (falsePositives.find((fp) => fp.originalValue === t[fp.matchType])) {
+        foundFalsePositives.push(t);
+        return false;
+      }
+      return true;
+    });
+    if (foundFalsePositives?.length > 0) {
+      // return error response (transaction did not match / transaction has a false positive)
+      if (!remainingTransactions?.length || remainingTransactions.length === 0) {
+        return { matched: [], notMatched: remainingTransactions };
+      }
+    }
+
+    // check if this is a manual match
+    const manualMatches = await V2TransactionManualMatchModel.find({});
+    const foundManualMatches: IMatchedTransaction[] = [];
+    remainingTransactions = remainingTransactions.filter((t) => {
+      const manualMatch = manualMatches.find((mm) => mm.originalValue === t[mm.matchType]);
+      if (manualMatch) {
+        foundManualMatches.push({ ...t, company: manualMatch.company });
+        return false;
+      }
+      return true;
+    });
+    if (foundManualMatches.length > 0) {
+      if (!remainingTransactions?.length || remainingTransactions.length === 0) {
+        return { matched: foundManualMatches, notMatched: [] };
+      }
+    }
+
+    // check if this match has been cached
+    const alreadyMatchedCompanies = await V2TransactionMatchedCompanyNameModel.find({});
+    const [matchedResults, nonMatchedResults] = matchTransactionsToCompanies(
+      remainingTransactions,
+      alreadyMatchedCompanies,
+    );
+    remainingTransactions = nonMatchedResults;
+
+    if (matchedResults?.length > 0) {
+      if (!remainingTransactions?.length || remainingTransactions.length === 0) {
+        return { matched: matchedResults, notMatched: [] };
+      }
+    }
+
+    // run text matching on any unmatched transactions remaining
+    const cleanedCompanies = await getCleanCompanies();
+    const textMatchingResults = await getMatchResults({
+      transactions: remainingTransactions,
+      cleanedCompanies,
+      saveMatches: true,
+    });
+    const [matched, notMatched] = matchTransactionsToCompanies(remainingTransactions, textMatchingResults);
+
+    return { matched, notMatched };
+  } catch (err) {
+    throw new CustomError('Error matching transactions to companies', ErrorTypes.SERVER);
+  }
+};
+
+export const enrichTransaction = async (
+  req: IRequest<{}, {}, EnrichTransactionRequest>,
+): Promise<EnrichTransactionResponse> => {
+  try {
+    // create zod schema
+    const transactionRequestSchema = z.object({
+      companyName: z.string().min(MinCompanyNameLength).max(MaxCompanyNameLength),
+      alternateCompanyName: z.string().min(MinCompanyNameLength).max(MaxCompanyNameLength).optional(),
+      amount: z.number().positive().lt(MaxSafeDoublePercisionFloatingPointNumber),
+    });
+
+    // validate request body
+    const parsed = transactionRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const formattedError = formatZodFieldErrors(
+        ((parsed as SafeParseError<EnrichTransactionRequest>)?.error as ZodError)?.formErrors?.fieldErrors,
+      );
+      throw new CustomError(`${formattedError || 'Error parsing request body'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const transaction = {
+      name: parsed.data.companyName,
+      amount: parsed.data.amount,
+      merchant_name: parsed.data.alternateCompanyName || parsed.data.companyName,
+    };
+
+    const matchingResults = await matchTransactionCompanies([transaction as Transaction]);
+    const matchedTransaction = matchingResults?.matched[0] as IMatchedTransaction & { company: Types.ObjectId };
+
+    if (!matchedTransaction || !(matchedTransaction as unknown as { company: Types.ObjectId }).company) {
+      throw new CustomError(`No match found for request: ${JSON.stringify(transaction)} `, ErrorTypes.SERVER);
+    }
+
+    // get company and sector from db
+    let company: ICompanyProtocol | null = null;
+    let sector: ICompanySector | null = null;
+    try {
+      const companies = await _getPaginatedCompanies({ filter: { _id: matchedTransaction.company } });
+
+      if (!companies || !companies?.docs?.length) {
+        throw Error('No company found');
+      }
+      sector = companies.docs[0].sectors.find((s) => s.primary);
+      company = (await convertCompanyModelsToGetCompaniesResponse(companies, req.apiRequestor))?.companies[0];
+    } catch (err) {
+      throw new CustomError(
+        `Error getting company from transaction match: ${JSON.stringify(matchedTransaction)} `,
+        ErrorTypes.SERVER,
+      );
+    }
+
+    // get the carbon emmissions
+    let carbonEmissionKilograms = 0;
+    if (!!(sector?.sector as ISectorDocument)?.carbonMultiplier && !!matchedTransaction?.amount) {
+      carbonEmissionKilograms = roundToPercision(
+        (sector?.sector as ISectorDocument).carbonMultiplier * matchedTransaction.amount,
+        2,
+      );
+    }
+
+    // get a karma score
+    const karmaScore = roundToPercision(calculateCompanyScore(company.score), 0);
+
+    return {
+      karmaScore,
+      carbonEmissionKilograms,
+      company,
+    };
   } catch (err) {
     throw asCustomError(err);
   }

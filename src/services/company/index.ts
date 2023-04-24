@@ -111,7 +111,7 @@ interface ISector {
   scores: ISectorScores;
 }
 
-interface ICompanyProtocol {
+export interface ICompanyProtocol {
   companyName: string;
   values: string[];
   rating: CompanyRating;
@@ -120,7 +120,7 @@ interface ICompanyProtocol {
   companyUrl: string;
   subcategoryScores: ISubcategoryScore[];
   categoryScores: ICategoryScore[];
-  wildfireId: number;
+  wildfireId?: number;
   sector: ISector;
 
 }
@@ -668,7 +668,6 @@ export const getShareableCompany = ({
       score: cs.score,
     }
     : cs));
-
   const _subcategoryScores = (subcategoryScores || []).map(scs => ((!!scs && !!Object.values(scs).length)
     ? {
       subcategory: !!scs.subcategory && !!Object.values(scs.subcategory).length
@@ -816,7 +815,7 @@ export const getMerchantRatesForCompany = async (req: IRequest<ICompanyRequestPa
 const isWildfireApp = (app: IApp): boolean => (!!Object.values(WildfireApiIds).filter(v => v === app?.apiId).length);
 
 // Takes mongoose paginated output and converts it to a response object
-const convertCompanyModelsToGetCompaniesResponse = async (
+export const convertCompanyModelsToGetCompaniesResponse = async (
   companies: PaginateResult<PaginateDocument<ICompanyDocument, unknown, unknown>>,
   app: IApp,
 ): Promise<IGetCompaniesResponse> => {

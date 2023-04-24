@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
-import { add } from 'lodash';
 import { FilterQuery, LeanDocument, Types } from 'mongoose';
+import { CardModel } from '../models/card';
 import { CommissionModel, KarmaCommissionStatus } from '../models/commissions';
 import { CompanyModel, ICompanyDocument, IShareableCompany } from '../models/company';
 import { IShareableMerchant } from '../models/merchant';
@@ -12,6 +12,7 @@ import { UserImpactYearData } from '../models/userImpactTotals';
 import { UserLogModel } from '../models/userLog';
 import { UserMontlyImpactReportModel } from '../models/userMonthlyImpactReport';
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../services/impact/utils';
+import { CardStatus } from './constants';
 import { CompanyRating } from './constants/company';
 import { sectorsToExcludeFromTransactions } from './constants/transaction';
 import { roundToPercision } from './misc';
@@ -57,10 +58,10 @@ export const getYearlyKarmaScore = async (user: IUserDocument): Promise<number> 
   }
 
   if (
-    !yearlyImpactBreakdown ||
-    !yearlyImpactBreakdown.length ||
-    yearlyImpactBreakdown.length <= 0 ||
-    !yearlyImpactBreakdown[0].score
+    !yearlyImpactBreakdown
+    || !yearlyImpactBreakdown.length
+    || yearlyImpactBreakdown.length <= 0
+    || !yearlyImpactBreakdown[0].score
   ) {
     return 0;
   }
@@ -123,7 +124,7 @@ export const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<nu
 };
 
 export const getUserTransactionsPastThirtyDays = async (
-  user: IUserDocument
+  user: IUserDocument,
 ): Promise<IShareableTransaction[] | null> => {
   if (!user || !user._id) return null;
   try {
@@ -165,7 +166,7 @@ export const getUserTransactionsPastThirtyDays = async (
 
 export const getMonthlyTransactionsWithCashbackCompanies = async (
   user: IUserDocument,
-  excludeList: LeanTransactionDocuments
+  excludeList: LeanTransactionDocuments,
 ): Promise<IShareableTransaction[] | null> => {
   if (!user || !user._id) return null;
   try {
@@ -335,8 +336,61 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
   return (highestRate / 100) * transaction.amount;
 };
 
+export const countUnlinkedAndRemovedAccounts = async (
+  user: IUserDocument,
+): Promise<{ email: string; unlinkedCardsPastThirtyDays: number; removedCardsPastThirtyDays: number }> => {
+  try {
+    const email = user.emails?.find((e) => e.primary)?.email;
+    if (!email) {
+      throw Error('No email found for user');
+    }
+    console.log(`counting unlinked and removed cards for ${email}`);
+
+    const thirtyDaysAgo = dayjs().utc().subtract(30, 'day');
+    const cards: { unlinked: number; removed: number }[] = await CardModel.aggregate()
+      .match({
+        $and: [
+          { userId: user._id },
+          {
+            $or: [
+              {
+                $and: [
+                  { unlinkedDate: { $exists: true } },
+                  { unlinkedDate: { $ne: null } },
+                  { unlinkedDate: { $gte: thirtyDaysAgo.toDate() } },
+                  { unlinkedDate: { $lt: dayjs().utc().toDate() } },
+                  { status: CardStatus.Unlinked },
+                ],
+              },
+              {
+                $and: [
+                  { removedDate: { $exists: true } },
+                  { removedDate: { $ne: null } },
+                  { removedDate: { $gte: thirtyDaysAgo.toDate() } },
+                  { removedDate: { $lt: dayjs().utc().toDate() } },
+                  { status: CardStatus.Removed },
+                ],
+              },
+            ],
+          },
+        ],
+      })
+      .group({
+        _id: '$userId',
+        unlinked: { $sum: { $cond: [{ $eq: ['$status', CardStatus.Unlinked] }, 1, 0] } },
+        removed: { $sum: { $cond: [{ $eq: ['$status', CardStatus.Removed] }, 1, 0] } },
+      });
+    const unlinkedCardsPastThirtyDays = cards[0]?.unlinked || 0;
+    const removedCardsPastThirtyDays = cards[0]?.removed || 0;
+    return { email, unlinkedCardsPastThirtyDays, removedCardsPastThirtyDays };
+  } catch (err) {
+    console.error(err);
+    return { email: '', unlinkedCardsPastThirtyDays: 0, removedCardsPastThirtyDays: 0 };
+  }
+};
+
 export const getTransactionBreakdownByCompanyRating = async (
-  user: IUserDocument
+  user: IUserDocument,
 ): Promise<{
   email: string;
   numPositivePurchasesLastThirtyDays: number;
@@ -346,9 +400,10 @@ export const getTransactionBreakdownByCompanyRating = async (
 }> => {
   try {
     const email = user.emails?.find((e) => e.primary)?.email;
-    if (!!email && email === 'andy@theimpactkarma.com') {
-      console.log(`preparing spending analysis for ${email}`);
+    if (!email) {
+      throw Error('No email found for user');
     }
+    console.log(`preparing spending analysis for ${email}`);
 
     const userTransactions = await getUserTransactionsPastThirtyDays(user);
     if (!userTransactions) {
@@ -356,19 +411,17 @@ export const getTransactionBreakdownByCompanyRating = async (
     }
 
     const positivePurchases = userTransactions.filter(
-      (t) => (t.company as ICompanyDocument)?.rating === CompanyRating.Positive
+      (t) => (t.company as ICompanyDocument)?.rating === CompanyRating.Positive,
     );
+    // ignore negetive transaction amounts
     const positivePurchaseDollars = positivePurchases.reduce(
-      (metric, t) => {
-        // ignore negetive transaction amounts
-        return t.amount < 0
-          ? { sum: metric.sum, skipped: metric.skipped++ }
-          : { sum: metric.sum + t.amount, skipped: metric.skipped };
-      },
-      { sum: 0, skipped: 0 }
+      (metric, t) => (t.amount < 0
+        ? { sum: metric.sum, skipped: metric.skipped++ }
+        : { sum: metric.sum + t.amount, skipped: metric.skipped }),
+      { sum: 0, skipped: 0 },
     );
     const negativePurchases = userTransactions.filter(
-      (t) => (t.company as ICompanyDocument)?.rating === CompanyRating.Negative
+      (t) => (t.company as ICompanyDocument)?.rating === CompanyRating.Negative,
     );
     const negativePurchaseDollars = negativePurchases.reduce(
       (metric, t) => {
@@ -379,16 +432,21 @@ export const getTransactionBreakdownByCompanyRating = async (
         }
         return { sum: metric.sum + t.amount, skipped: metric.skipped };
       },
-      { sum: 0, skipped: 0 }
+      { sum: 0, skipped: 0 },
     );
     return {
       email,
-      numPositivePurchasesLastThirtyDays: positivePurchases?.length - positivePurchaseDollars.skipped || 0,
+      numPositivePurchasesLastThirtyDays: !!positivePurchases?.length
+        ? positivePurchases.length - positivePurchaseDollars.skipped
+        : 0,
       positivePurchaseDollarsLastThirtyDays: roundToPercision(positivePurchaseDollars.sum, 0) || 0,
-      numNegativePurchasesLastThirtyDays: negativePurchases?.length - negativePurchaseDollars.skipped || 0,
+      numNegativePurchasesLastThirtyDays: !!negativePurchases?.length
+        ? negativePurchases.length - negativePurchaseDollars.skipped
+        : 0,
       negativePurchaseDollarsLastThirtyDays: roundToPercision(negativePurchaseDollars.sum, 0) || 0,
     };
   } catch (err) {
+    console.error(err);
     return {
       email: '',
       numPositivePurchasesLastThirtyDays: 0,
@@ -400,7 +458,7 @@ export const getTransactionBreakdownByCompanyRating = async (
 };
 
 export const getMonthlyMissedCashBack = async (
-  user: IUserDocument
+  user: IUserDocument,
 ): Promise<{
   email: string;
   estimatedMonthlyMissedCommissionsCount: number;
@@ -471,11 +529,41 @@ export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectI
   return users?.map((u) => u?._id) || [];
 };
 
+export const getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays = async (): Promise<Types.ObjectId[]> => {
+  const thirtyDaysAgo = dayjs().utc().subtract(30, 'day');
+
+  const users = await CardModel.aggregate()
+    .match({
+      $or: [
+        {
+          $and: [
+            { unlinkedDate: { $exists: true } },
+            { unlinkedDate: { $ne: null } },
+            { unlinkedDate: { $gte: thirtyDaysAgo.toDate() } },
+            { unlinkedDate: { $lt: dayjs().utc().toDate() } },
+            { status: CardStatus.Unlinked },
+          ],
+        },
+        {
+          $and: [
+            { removedDate: { $exists: true } },
+            { removedDate: { $ne: null } },
+            { removedDate: { $gte: thirtyDaysAgo.toDate() } },
+            { removedDate: { $lt: dayjs().utc().toDate() } },
+            { status: CardStatus.Removed },
+          ],
+        },
+      ],
+    })
+    .group({
+      _id: '$userId',
+    });
+  return users?.map((u) => u?._id) || [];
+};
 // only pulls users with transactions in which we matched the company and it has a positive or negative rating
 export const getUsersWithTransactionPastThirtyDays = async (): Promise<Types.ObjectId[]> => {
   const thirtyDaysAgo = dayjs().utc().subtract(30, 'day');
 
-  console.log('thirtyDaysAgo: ', thirtyDaysAgo.toString(), ' Today: ', dayjs().toString());
   const users = await TransactionModel.aggregate()
     .match({
       $and: [

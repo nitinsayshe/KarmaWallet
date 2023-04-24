@@ -19,6 +19,7 @@ import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
 import { mapWildfireCommissionToKarmaCommission } from '../services/commission/utils';
 import { WildfireCommissionStatus } from '../models/commissions';
+import { PaypalClient } from '../clients/paypal';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
@@ -62,7 +63,7 @@ interface IWildfireWebhookBody {
 }
 
 interface IUserPlaidTransactionsMapBody {
-  userId: String;
+  userId: string;
   accessToken: String
 }
 
@@ -72,6 +73,23 @@ interface IPlaidWebhookBody {
   account_id: string;
   item_id: string;
   new_transactions?: number;
+}
+
+interface IPaypalRequestHeaders {
+  'paypal-transmission-id': string;
+  'paypal-transmission-time': string;
+  'paypal-transmission-sig': string;
+  'paypal-auth-version': string;
+  'paypal-cert-url': string;
+  'paypal-auth-algo': string;
+  'content-type': string;
+  'user-agent': string;
+  'correlation-id': string;
+  'x-b3-spanid': string;
+}
+
+interface IPaypalWebhookBody {
+  any: any;
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -190,6 +208,38 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
     } catch (e) {
       throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
     }
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+const processPaypalWebhook = async (body: any) => {
+  console.log('Paypal webhook processed successfully.');
+  console.log('------- BEG Paypal Transaction -------\n');
+  console.log(JSON.stringify(body, null, 2));
+};
+
+export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {
+  try {
+    const { headers } = <{ headers: IPaypalRequestHeaders }>req;
+    const client = new PaypalClient();
+    const verification = await client.verifyWebhookSignature({
+      auth_algo: headers['paypal-auth-algo'],
+      cert_url: headers['paypal-cert-url'],
+      transmission_id: headers['paypal-transmission-id'],
+      transmission_sig: headers['paypal-transmission-sig'],
+      transmission_time: headers['paypal-transmission-time'],
+      webhook_id: process.env.PAYPAL_WEBHOOK_ID,
+      webhook_event: req.body,
+    });
+    const eventId = (req.body as any).id;
+    if (!verification) {
+      console.log('\n PAYPAL WEBHOOK VERIFICATION FAILED \n');
+      console.log(`Event ID: ${eventId}`);
+      return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
+    }
+    processPaypalWebhook(req.body);
+    api(req, res, { message: 'Paypal webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
   }

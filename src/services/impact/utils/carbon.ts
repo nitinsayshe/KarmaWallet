@@ -182,6 +182,23 @@ export const getTotalEmissions = async (uid: string | Types.ObjectId, query: Fil
   return emissions;
 };
 
+export const getTransactionEmissions = async (uid: string | Types.ObjectId, query: FilterQuery<ITransaction> = {}) => {
+  // TODO: rewrite w/ new reference to plaid mapping
+  const emissions = { kg: 0, mt: 0 };
+  const sumTotal = await buildCarbonMultiplierPipeline(uid)
+    .match(query)
+    .project({ userId: 1, emissions: { $multiply: ['$amount', '$sector.carbonMultiplier'] } })
+    .group({ _id: '$user', amount: { $sum: '$emissions' } });
+
+  if (sumTotal?.length) {
+    const { amount } = sumTotal[0];
+    emissions.kg = amount;
+    emissions.mt = convertKgToMT(amount);
+  }
+
+  return emissions;
+};
+
 export const getMonthlyEmissionsAverage = async (uid: string | Types.ObjectId) => {
   // TODO: rewrite w/ new reference to plaid mapping
   const emissions = { kg: 0, mt: 0 };

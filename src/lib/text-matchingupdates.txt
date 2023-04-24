@@ -1,0 +1,33 @@
+//
+KW: companyName - Best Buy
+
+TR: 
+transaction description (name) - BEST BUY #1213 RALEIGH NC ST. #12390E4FJ
+transaction name (merchant name) - Best Buy
+
+Existing Resources
+* previous matches - name/merchant name to companyName
+* false positives
+* manual matches
+
+Possible Threshold: < .01
+
+1) Process name
+ a) uppercase
+ b) clean - removing any specified regex matches
+ c) trim
+
+2) Check if match already exists, either with manual, stored, or in current batch
+
+3) Check if false positive exists
+
+4) Fuzzy Match Merchant Name and Name
+
+* If merchant name exists, check first result in merchant name for a match. If < Threshold MATCH!
+* If no merchant match, check first in name result for a match. If < Threshold MATCH!
+_____________________________________
+
+
+ACTION ITEM:
+* run all matches and save as CSV to give to Anushka
+* store CSV

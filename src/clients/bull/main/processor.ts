@@ -1,7 +1,6 @@
 import { SandboxedJob } from 'bullmq';
+import dayjs from 'dayjs';
 import { JobNames } from '../../../lib/constants/jobScheduler';
-import { mockRequest } from '../../../lib/constants/request';
-import * as PlaidIntegration from '../../../integrations/plaid';
 import { _MongoClient } from '../../mongo';
 import * as AssociateNegativeToPositiveTransactions from '../../../jobs/associateNegativeToPositiveTransactions';
 import * as CachedDataCleanup from '../../../jobs/cachedDataCleanup';
@@ -28,6 +27,7 @@ import * as GenerateAdminSummaryReport from '../../../jobs/generateAdminSummaryR
 import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
 import * as SyncActiveCampaign from '../../../jobs/syncActiveCampaign';
 import { INextJob } from '../base';
+import { globalPlaidTransactionMapping } from '../../../services/scripts/global_plaid_transaction_mapping';
 
 const MongoClient = new _MongoClient();
 
@@ -101,7 +101,12 @@ export default async (job: SandboxedJob) => {
       result = await GenerateUserTransactionTotals.exec();
       break;
     case JobNames.GlobalPlaidTransactionMapper:
-      await PlaidIntegration.mapTransactionsFromPlaid(mockRequest, [], 20);
+      await globalPlaidTransactionMapping({
+        startDate: dayjs().subtract(30, 'day').format('YYYY-MM-DD'),
+        endDate: dayjs().format('YYYY-MM-DD'),
+        filterExistingTransactions: true,
+      });
+      // await PlaidIntegration.mapTransactionsFromPlaid(mockRequest, [], 20);
 
       result = {
         nextJobs: [

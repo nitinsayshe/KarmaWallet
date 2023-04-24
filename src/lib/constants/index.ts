@@ -9,7 +9,7 @@ export enum ApiKeyStatus {
 }
 
 export interface IErrorType {
-  AUTHENTICATION: ICustomErrorBody
+  AUTHENTICATION: ICustomErrorBody;
   CONFLICT: ICustomErrorBody;
   GEN: ICustomErrorBody;
   FORBIDDEN: ICustomErrorBody;
@@ -146,7 +146,7 @@ export const authTokenDays = 30;
 export const passwordResetTokenMinutes = 15;
 
 export const RareTransactionQuery: {
-  'integrations.rare': { $ne: any }
+  'integrations.rare': { $ne: any };
 } = {
   'integrations.rare': { $ne: null },
 };
@@ -198,7 +198,7 @@ export enum CollectionNames {
   User = 'users',
   ValueCompanyMapping = 'value_company_mappings',
   ValueDataSourceMapping = 'value_data_source_mappings',
-  Value = 'values'
+  Value = 'values',
 }
 
 export const MaxPaginationLimit = 200;
@@ -214,3 +214,13 @@ export const ImpactKarmaCompanyData = {
   merchantId: '63d2b2d148234101740ccdd0',
   companyId: '62def0e77b212526d1e055ca',
 };
+
+/* These nubers were taken from the explanation here: https://stackoverflow.com/questions/45929493/node-js-maximum-safe-floating-point-number */
+export const MaxSafeSinglePercisionFloatingPointNumber = (Number.MAX_SAFE_INTEGER + 1) / 16 - 1;
+export const MaxSafeDoublePercisionFloatingPointNumber = (Number.MAX_SAFE_INTEGER + 1) / 128 - 1;
+
+export const MaxCompanyNameLength = 250;
+export const MinCompanyNameLength = 1;
+
+export const MinCompanayKarmaScore = -16;
+export const MaxCompanayKarmaScore = 16;

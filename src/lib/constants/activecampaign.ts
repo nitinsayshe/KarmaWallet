@@ -8,6 +8,7 @@ export enum ActiveCampaignSyncTypes {
   MONTHLY = 'monthly',
   QUARTERLY = 'quarterly',
   SPENDING_ANALYSIS = 'spendingAnalysis',
+  UNLINKED_AND_REMOVED_ACCOUNTS = 'unlinkedAndRemovedAccounts',
   WEEKLY = 'weekly',
   YEARLY = 'yearly',
 }
@@ -43,5 +44,7 @@ export enum ActiveCampaignCustomFields {
   numNegativePurchasesLastThirtyDays = 'numNegativePurchasesLastThirtyDays',
   numPositivePurchasesLastThirtyDays = 'numPositivePurchasesLastThirtyDays',
   positivePurchaseDollarsLastThirtyDays = 'positivePurchaseDollarsLastThirtyDays',
+  unlinkedAccountsPastThirtyDays = 'unlinkedAccountsPastThirtyDays',
+  removedAccountsPastThirtyDays = 'removedAccountsPastThirtyDays',
   userId = 'userId',
 }

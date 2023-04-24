@@ -25,11 +25,13 @@ import {
 } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
 import {
+  countUnlinkedAndRemovedAccounts,
   getMonthlyMissedCashBack,
   getTransactionBreakdownByCompanyRating,
   getUsersWithCommissionsLastMonth,
   getUsersWithTransactionPastThirtyDays,
   getUsersWithTransactionsLastMonth,
+  getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays,
 } from '../lib/userMetrics';
 import { IUser, IUserDocument, UserModel } from '../models/user';
 import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
@@ -99,6 +101,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
       limit: request.batchLimit,
     });
 
+    console.log('total users matching query: ', userBatch.totalDocs);
     console.log(`Preparing batch ${page} of ${userBatch.totalPages}`);
     const contacts = await prepareBulkImportRequest(request, userBatch, customFields);
 
@@ -461,6 +464,71 @@ const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
   await iterateOverUsersAndExecImportReqWithDelay(req, prepareSpendingAnalysisImportRequest, msDelayBetweenBatches);
 };
 
+const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
+  _: SyncRequest<SpendingAnalysisCustomFields>,
+  userBatch: PaginateResult<IUser>,
+  customFields: { name: string; id: number }[],
+): Promise<IContactsImportData> => {
+  let UnlinkedAndRemovedAccountMetrics: {
+    email: string;
+    unlinkedCardsPastThirtyDays: number;
+    removedCardsPastThirtyDays: number;
+  }[] = await Promise.all(
+    userBatch?.docs?.map(async (user) => countUnlinkedAndRemovedAccounts(user as unknown as IUserDocument)),
+  );
+  const emailSchema = z.string().email();
+  UnlinkedAndRemovedAccountMetrics = UnlinkedAndRemovedAccountMetrics?.filter((metric) => {
+    const validationResult = emailSchema.safeParse(metric.email);
+    return !!metric.email && !(validationResult as SafeParseError<string>)?.error;
+  });
+
+  // set the custom fields and update in active campaign
+  const unlinkedCardsPastThirtyDays = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.unlinkedAccountsPastThirtyDays,
+  );
+  const removedCardsLastThirtyDays = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.removedAccountsPastThirtyDays,
+  );
+
+  const contacts = UnlinkedAndRemovedAccountMetrics.map((metric) => {
+    const contact: IContactsData = {
+      email: metric.email,
+      fields: [],
+    };
+    if (!!unlinkedCardsPastThirtyDays) {
+      contact.fields.push({
+        id: unlinkedCardsPastThirtyDays.id,
+        value: metric.unlinkedCardsPastThirtyDays.toString(),
+      });
+    }
+    if (!!removedCardsLastThirtyDays) {
+      contact.fields.push({
+        id: removedCardsLastThirtyDays.id,
+        value: metric.removedCardsPastThirtyDays.toString(),
+      });
+    }
+
+    return contact;
+  });
+
+  return { contacts };
+};
+
+const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) => {
+  // filter out users with no transactions this month
+  const usersWithTransactionsPastThirtyDays = await getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays();
+
+  const msDelayBetweenBatches = 2000;
+
+  const req: SyncRequest<{}> = {
+    httpClient,
+    batchQuery: { _id: { $in: usersWithTransactionsPastThirtyDays } },
+    batchLimit: 100,
+  };
+
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareRemovedOrUnlinkedAccountsSyncRequest, msDelayBetweenBatches);
+};
+
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
   // filter out users with no transactions this month
   const msDelayBetweenBatches = 1500;
@@ -473,13 +541,10 @@ export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClien
   let page = 1;
   let hasNextPage = true;
   while (hasNextPage) {
-    const userBatch = await UserModel.paginate(
-      {},
-      {
-        page,
-        limit: batchLimit,
-      },
-    );
+    const userBatch = await UserModel.paginate({
+      page,
+      limit: batchLimit,
+    });
 
     console.log(`Working on batch ${page} of ${userBatch.totalPages}`);
     await Promise.all(
@@ -516,6 +581,9 @@ export const exec = async ({ syncType, userSubscriptions, httpClient }: IJobData
         break;
       case ActiveCampaignSyncTypes.SPENDING_ANALYSIS:
         await syncSpendingAnalysisFields(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.UNLINKED_AND_REMOVED_ACCOUNTS:
+        await syncUnlinkedAndRemovedAccountsFields(httpClient);
         break;
       default:
         await syncAllUsers(syncType, httpClient);

@@ -9,6 +9,7 @@ import api from './api';
 import transaction from './transaction';
 import impact from './impact';
 import company from './company';
+import article from './article';
 import sectors from './sectors';
 import webhook from './webhooks';
 import commission from './commission';
@@ -27,6 +28,7 @@ import promo from './promo';
 const routers = (app: Express) => {
   admin(app);
   card(app);
+  article(app);
   company(app);
   comparisonGame(app);
   group(app);

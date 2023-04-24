@@ -38,7 +38,8 @@ export const calculateCompanyScore = (score: number) => ((score + 16) / 32) * 10
 
 export const calculateAllCompanyScores = async () => {
   console.log('calculating scores for all companies...');
-
+  console.log('dropping company unsdgs');
+  await CompanyUnsdgModel.deleteMany({});
   let companies: ICompanyDocument[];
   let categories: IUnsdgCategoryDocument[];
   let subcategories: IUnsdgSubcategoryDocument[];

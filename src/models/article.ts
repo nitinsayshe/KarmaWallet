@@ -13,6 +13,7 @@ export interface IArticle {
   _id: ObjectId;
   company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany >;
   createdOn: Date;
+  description: string;
   lastModified: Date;
   publishedOn: Date;
   bannerImageUrl: string;
@@ -31,6 +32,7 @@ export type IArticleModel = IModel<IArticle>;
 
 const articleSchema = new Schema({
   enabled: { type: Boolean, required: true, default: false },
+  description: { type: String, required: true },
   company: { type: Schema.Types.ObjectId, ref: 'companies', required: true },
   createdOn: { type: Date, required: true, default: () => getUtcDate() },
   lastModified: { type: Date, required: true, default: () => getUtcDate() },

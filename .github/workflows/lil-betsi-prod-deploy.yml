@@ -63,6 +63,7 @@ jobs:
     - run: echo 'WIDLFIRE_DEVICE_UUID=${{secrets.WIDLFIRE_DEVICE_UUID}}' >> .env
     - run: echo 'WILDFIRE_CALLBACK_KEY=${{secrets.WILDFIRE_CALLBACK_KEY}}' >> .env
     - run: echo 'PAYPAL_CLIENT_ID=${{secrets.LIVE_PAYPAL_CLIENT_ID}}' >> .env
+    - run: echo 'PAYPAL_WEBHOOK_ID=${{secrets.PAYPAL_WEBHOOK_ID}}' >> .env
     - run: echo 'PAYPAL_MODE=live' >> .env
     - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env     
     - run: echo 'ACTIVECAMPAIGN_API_URL=${{secrets.ACTIVECAMPAIGN_API_URL}}' >> .env

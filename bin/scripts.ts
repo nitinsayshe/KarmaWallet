@@ -24,7 +24,7 @@ import { globalTransactionUpdates } from '../src/services/scripts/global_transac
     await MongoClient.init();
     // await generateCommissionPayoutForUsers(0);
     // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
-    // await sendCommissionPayoutsThruPaypal('6446a39c83efc1cc308dae9e');
+    await sendCommissionPayoutsThruPaypal('6446dc2a41363a6fadf918be');
     // await globalTransactionUpdates({ writeOutput: false });
   } catch (err) {
     console.log(err);

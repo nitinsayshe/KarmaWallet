@@ -124,7 +124,7 @@ export const saveTransactions = async (
   if (!_user) return;
   log(`transaction count: ${transactions.length}`);
   log('saving transactions');
-  const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(t, _user._id.toString(), cardDictionary, primarySectorDictionary, plaidMappingSectorDictionary));
+  const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(t, _user._id, cardDictionary, primarySectorDictionary, plaidMappingSectorDictionary));
   const transactionsToSave = await filterDuplicatePlaidTransactions(mappedTransactions, _user);
   log(`mapped transaction count: ${mappedTransactions.length}`);
   log(`transactions to save count: ${transactionsToSave.length}`);

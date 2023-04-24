@@ -46,6 +46,22 @@ export interface IPaypalBalance {
   }
 }
 
+export interface IPaypalVerifyWebhookSignature {
+  auth_algo: string;
+  cert_url: string;
+  transmission_id: string;
+  transmission_sig: string;
+  transmission_time: string;
+  webhook_id: string;
+  webhook_event: any;
+}
+
+export interface IPaypalVerifyWebhookSignatureResponse {
+  data: {
+    verification_status: string;
+  }
+}
+
 export class PaypalClient extends SdkClient {
   _client: AxiosInstance;
 
@@ -150,5 +166,37 @@ export class PaypalClient extends SdkClient {
   async getPrimaryBalance() {
     const { balances } = await this.getBalances();
     return balances.find((balance: IPaypalBalance) => balance.primary);
+  }
+
+  async verifyWebhookSignature({
+    auth_algo,
+    cert_url,
+    transmission_id,
+    transmission_sig,
+    transmission_time,
+    webhook_id,
+    webhook_event,
+  }: IPaypalVerifyWebhookSignature) {
+    try {
+      const { access_token } = await this.getClientAccessToken();
+      const { data } : IPaypalVerifyWebhookSignatureResponse = await this._client.post('/notifications/verify-webhook-signature', {
+        auth_algo,
+        cert_url,
+        transmission_id,
+        transmission_sig,
+        transmission_time,
+        webhook_id,
+        webhook_event,
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      return data.verification_status === 'SUCCESS';
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
   }
 }

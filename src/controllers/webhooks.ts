@@ -231,7 +231,7 @@ export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = 
     webhook_id: process.env.PAYPAL_WEBHOOK_ID,
     webhook_event: req.body,
   });
-  if (!verification) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+  if (!verification) throw new CustomError('Paypal webhook verification failed', ErrorTypes.GEN);
   processPaypalWebhook(req.body);
   api(req, res, { message: 'Paypal webhook processed successfully.' });
 };

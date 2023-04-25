@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
 import {
@@ -9,11 +10,13 @@ import {
 import { MerchantModel } from '../../../models/merchant';
 import { CompanyModel } from '../../../models/company';
 import { IUserDocument, UserModel } from '../../../models/user';
-import { CommissionPayoutModel } from '../../../models/commissionPayout';
-import { CommissionPayoutMonths } from '../../../lib/constants';
+import { CommissionPayoutModel, IPayPalPayoutItemStatus, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
+import { CommissionPayoutMonths, ErrorTypes } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { IRef } from '../../../types/model';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
+import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../../models/commissionPayoutOverview';
+import CustomError from '../../../lib/customError';
 
 export type IWildfireCommission = {
   CommissionID: number,
@@ -193,4 +196,107 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
   if (newStatus !== existingCommission?.status) updates.lastStatusUpdate = getUtcDate().toDate();
 
   await CommissionModel.updateOne({ _id: existingCommission?._id }, updates);
+};
+
+export const updateCommissionOverviewStatus = async (commissionOverviewId: string, status: KarmaCommissionPayoutOverviewStatus) => {
+  // throwing error without any
+  const commissionPayoutOverview: any = await CommissionPayoutOverviewModel.find({ _id: commissionOverviewId });
+  if (!commissionPayoutOverview) throw new CustomError(`PayoutOverview with id ${commissionOverviewId} not found`, ErrorTypes.NOT_FOUND);
+  commissionPayoutOverview.status = status;
+};
+
+export const updateCommissionPayoutStatus = async (commissionPayoutId: string, status: KarmaCommissionPayoutStatus, paypalStatus: IPayPalPayoutItemStatus) => {
+  try {
+    const commissionPayout: any = await CommissionPayoutModel.find({ _id: commissionPayoutId });
+    if (!commissionPayout) throw new CustomError(`Payout with id ${commissionPayoutId} not found`, ErrorTypes.NOT_FOUND);
+    for (const commission of commissionPayout.commissions) {
+      const commissionItem = await CommissionModel.findOne({ _id: commission.commissionId });
+      if (status === KarmaCommissionPayoutStatus.Paid) {
+        commissionItem.status = KarmaCommissionStatus.PaidToUser;
+        await commissionItem.save();
+        console.log(`[+] Updated commission status to [${KarmaCommissionStatus.PaidToUser}]`);
+      } else {
+        commissionItem.status = KarmaCommissionStatus.Failed;
+        await commissionItem.save();
+        console.log(`[+] Updated commission status to [${KarmaCommissionStatus.PaidToUser}]`);
+      }
+    }
+
+    commissionPayout.status = status;
+    commissionPayout.integrations.paypal.status = paypalStatus;
+    await commissionPayout.save();
+    console.log(`[+] Updated commission payout status to [${status}`);
+  } catch (err) {
+    console.log('error updating commission payout status', err);
+  }
+};
+
+export const updateStatusOnCommissionItems = async (body: any) => {
+  const { resource, resource_type, event_type } = body;
+
+  // Payouts Overviews
+  if (resource_type === 'payouts') {
+    const { payout_batch_id } = resource;
+    switch (event_type) {
+      case 'PAYMENT.PAYOUTSBATCH.SUCCESS': {
+        updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Success);
+        break;
+      }
+      case 'PAYMENT.PAYOUTSBATCH.DENIED': {
+        updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Denied);
+        break;
+      }
+      case 'PAYMENT.PAYOUTSBATCH.PROCESSING': {
+        updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Processing);
+        break;
+      }
+
+      default:
+        console.log('////// does not match any cases');
+    }
+  }
+
+  // Indisvidual Payouts
+  if (resource_type === 'payouts_item') {
+    const payoutId = resource.payout_item.sender_item_id;
+    if (!payoutId) throw new CustomError('Payout id is required');
+
+    switch (event_type) {
+      case 'PAYMENT.PAYOUTS-ITEM.SUCCEEDED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Paid, PayPalPayoutItemStatus.Success);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.FAILED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Failed);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.BLOCKED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Blocked);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.CANCELED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Canceled);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.DENIED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Denied);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.HELD': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Held);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.UNCLAIMED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Unclaimed);
+        break;
+      }
+      case 'PAYMENT.PAYOUTS-ITEM.REFUNDED': {
+        updateCommissionPayoutStatus(payoutId, KarmaCommissionPayoutStatus.Failed, PayPalPayoutItemStatus.Refunded);
+        break;
+      }
+
+      default:
+        console.log('////// does not match any cases');
+    }
+  }
 };

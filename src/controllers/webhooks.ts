@@ -17,7 +17,7 @@ import { UserModel } from '../models/user';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
-import { mapWildfireCommissionToKarmaCommission } from '../services/commission/utils';
+import { mapWildfireCommissionToKarmaCommission, updateStatusOnCommissionItems } from '../services/commission/utils';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { PaypalClient } from '../clients/paypal';
 
@@ -217,6 +217,7 @@ const processPaypalWebhook = async (body: any) => {
   console.log('Paypal webhook processed successfully.');
   console.log('------- BEG Paypal Transaction -------\n');
   console.log(JSON.stringify(body, null, 2));
+  updateStatusOnCommissionItems(body);
 };
 
 export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {

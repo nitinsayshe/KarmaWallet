@@ -164,16 +164,17 @@ export const getUserTransactionsPastThirtyDays = async (
   }
 };
 
-export const getCashbackCompaniesInDateRange = async (
-  user: IUserDocument,
+/* Be careful with this functoin. It asks the db to do a really heavy operation
+ * and could exceed the memory limitations of the server. This is most likely to
+ * happen if passed no start and end dates. */
+export const getCashbackCompanies = async (
   startDate?: Date,
   endDate?: Date,
+  userId?: Types.ObjectId,
 ): Promise<{ company: string; count: number; amount: number }[] | null> => {
-  if (!user || !user._id) return null;
   try {
     const matchClause: { $and: any[] } = {
       $and: [
-        { user: user._id },
         { amount: { $gt: 0 } },
         { company: { $exists: true } },
         { company: { $ne: null } },
@@ -183,6 +184,7 @@ export const getCashbackCompaniesInDateRange = async (
         { 'company.merchant': { $ne: null } },
       ],
     };
+    if (!!userId) matchClause.$and.push({ user: userId });
     if (!!startDate) matchClause.$and.push({ date: { $gte: startDate } });
     if (!!endDate) matchClause.$and.push({ date: { $lte: endDate } });
 
@@ -200,7 +202,7 @@ export const getCashbackCompaniesInDateRange = async (
         _id: '$company._id',
         company: { $first: '$company.companyName' },
         count: { $sum: 1 },
-        amunt: { $sum: '$amount' },
+        amount: { $sum: '$amount' },
       });
     return !!companies && !!companies.length ? companies : null;
   } catch (err) {

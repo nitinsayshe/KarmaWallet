@@ -7,9 +7,9 @@ import { SafeParseError, z } from 'zod';
 import { SyncRequest } from '../../jobs/syncActiveCampaign';
 import { roundToPercision, sleep } from '../../lib/misc';
 import {
-  getCashbackCompaniesInDateRange,
+  getCashbackCompanies,
   getMissedCashBackForDateRange,
-  getUsersWithTransactions,
+  getUsersWithCommissionsInDateRange,
   getUsersWithTransactionsInDateRange,
 } from '../../lib/userMetrics';
 import { IUser, IUserDocument, UserModel } from '../../models/user';
@@ -113,11 +113,15 @@ const iterateOverUsersAndExecWithDelay = async <Req, Res>(
 };
 
 const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<CashbackUserReport[]> => {
+  // filter out users with commissions this month
+  const usersWithCommissionsInDateRange = await getUsersWithCommissionsInDateRange(startDate, endDate);
   const usersWithTransactionsInDateRange = await getUsersWithTransactionsInDateRange(startDate, endDate);
   const msDelayBetweenBatches = 2000;
 
   const request: SyncRequest<RangedCashbackSimulationFields> = {
-    batchQuery: { _id: { $in: usersWithTransactionsInDateRange } },
+    batchQuery: {
+      $and: [{ _id: { $nin: usersWithCommissionsInDateRange } }, { _id: { $in: usersWithTransactionsInDateRange } }],
+    },
     batchLimit: 100,
     fields: {
       startDate,
@@ -134,7 +138,7 @@ const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<Ca
 };
 
 const getPrevWeeksCashBackReport = async (
-  prevFourWeeks: { startDate: Date; endDate: Date }[],
+  prevWeeks: { startDate: Date; endDate: Date }[],
 ): Promise<CashbackAnalysisReport> => {
   try {
     const report: CashbackAnalysisReport = {
@@ -144,7 +148,7 @@ const getPrevWeeksCashBackReport = async (
       totalMissedCashbackTransactions: 0,
     };
     report.weekReports = await Promise.all(
-      prevFourWeeks.map(async (week) => {
+      prevWeeks.map(async (week) => {
         const startDate = dayjs(week.startDate).format('MM-DD-YYYY');
         const endDate = dayjs(week.endDate).format('MM-DD-YYYY');
         console.log(`running cashback simulation for the date range: ${startDate} to ${endDate}`);
@@ -221,26 +225,27 @@ const getPrevWeeksCashBackReport = async (
     };
   }
 };
-export const generateCashbackAnalysisReport = async (): Promise<CashbackAnalysisReport> => {
+
+const getPrevWeeksStartAndEndDates = (numberOfWeeks: number): { startDate: Date; endDate: Date }[] => {
+  const prevWeeks: { startDate: Date; endDate: Date }[] = [];
+  for (let i = 0; i < numberOfWeeks; i++) {
+    prevWeeks.push({
+      startDate: dayjs()
+        .utc()
+        .subtract(i + 1, 'week')
+        .toDate(),
+      endDate: dayjs().utc().subtract(i, 'week').toDate(),
+    });
+  }
+  return prevWeeks;
+};
+
+export const generateCashbackAnalysisReport = async (weeksBack: number): Promise<CashbackAnalysisReport> => {
+  if (weeksBack < 1) {
+    throw new Error('weeksBack must be greater than 0');
+  }
   /* - [ ] analysis going 4 weeks back */
-  const prevWeeks = [
-    {
-      startDate: dayjs().utc().subtract(4, 'week').toDate(),
-      endDate: dayjs().utc().subtract(3, 'week').toDate(),
-    },
-    {
-      startDate: dayjs().utc().subtract(3, 'week').toDate(),
-      endDate: dayjs().utc().subtract(2, 'week').toDate(),
-    },
-    {
-      startDate: dayjs().utc().subtract(2, 'week').toDate(),
-      endDate: dayjs().utc().subtract(1, 'week').toDate(),
-    },
-    {
-      startDate: dayjs().utc().subtract(1, 'week').toDate(),
-      endDate: dayjs().utc().toDate(),
-    },
-  ];
+  const prevWeeks = getPrevWeeksStartAndEndDates(8);
   console.log('preparing report for previous four weeks:', JSON.stringify(prevWeeks, null, 2));
 
   const report = await getPrevWeeksCashBackReport(prevWeeks);
@@ -250,7 +255,7 @@ export const generateCashbackAnalysisReport = async (): Promise<CashbackAnalysis
 
   // prepare summary report
   fs.writeFileSync(
-    path.join(__dirname, '.tmp', `FourWeekCashBackReportSummary_${dayjs().format('MM-DD-YYYY')}.csv`),
+    path.join(__dirname, '.tmp', `${weeksBack}WeekCashBackReportSummary_${dayjs().format('MM-DD-YYYY')}.csv`),
     parse({
       startDate: prevWeeks[0]?.startDate,
       endDate: prevWeeks[prevWeeks.length - 1]?.endDate,
@@ -266,7 +271,6 @@ export const generateCashbackAnalysisReport = async (): Promise<CashbackAnalysis
 type MissedCashbackMerchantFrequencyRequest = {
   startDate: Date;
   endDate: Date;
-  userId: Types.ObjectId;
 };
 
 type MissedCashbackMerchantFrequencyReport = {
@@ -282,7 +286,7 @@ const getCashbackMerchantFrequencyMetricsForDateRange = async (
   startDate?: Date,
   endDate?: Date,
 ): Promise<MissedCashbackMerchantFrequencyReport> => {
-  const companies = await getCashbackCompaniesInDateRange(user._id, startDate, endDate);
+  const companies = await getCashbackCompanies(startDate, endDate, user._id);
   if (!companies?.length) {
     console.log(`no cashback  merchants found for user ${user._id} in the date range ${startDate} to ${endDate}`);
     return {
@@ -294,7 +298,7 @@ const getCashbackMerchantFrequencyMetricsForDateRange = async (
   const merchantFrequencies = companies.map((company) => ({
     company: company.company,
     frequency: company.count,
-    amount: company.amount,
+    amount: roundToPercision(company.amount, 2),
   }));
   return {
     userId: user._id.toString(),
@@ -334,21 +338,29 @@ const genereateMissedCashbackMerchantFrequencyReport = async (
   return userReports;
 };
 
-export const generateMissedCashbackMerchantFrequencyReport = async () => {
+export const generateMissedCashbackMerchantFrequencyReport = async (weeksBack: number) => {
+  if (weeksBack < 1) {
+    throw new Error('weeksBack must be greater than 0');
+  }
   let report: MissedCashbackMerchantFrequencyReport[] = [];
 
-  const usersWithTransactions = await getUsersWithTransactions();
-  console.log(JSON.stringify(usersWithTransactions, null, 2));
+  const startDate = dayjs().utc().subtract(weeksBack, 'week').toDate();
+  const endDate = dayjs().utc().toDate();
+
+  const usersWithCommissionsInDateRange = await getUsersWithCommissionsInDateRange(startDate, endDate);
+  const usersWithTransactionsInDateRange = await getUsersWithTransactionsInDateRange(startDate, endDate);
 
   const msDelayBetweenBatches = 2000;
 
   const request: SyncRequest<MissedCashbackMerchantFrequencyRequest> = {
-    batchQuery: { _id: { $in: usersWithTransactions } },
+    batchQuery: {
+      $and: [{ _id: { $nin: usersWithCommissionsInDateRange } }, { _id: { $in: usersWithTransactionsInDateRange } }],
+    },
     batchLimit: 100,
-    /* fields: { */
-    /*   startDate: dayjs().utc().subtract(4, 'week').toDate(), */
-    /*   endDate: dayjs().utc().toDate(), */
-    /* }, */
+    fields: {
+      startDate,
+      endDate,
+    },
   };
 
   report = (
@@ -359,11 +371,33 @@ export const generateMissedCashbackMerchantFrequencyReport = async () => {
     )
   ).map((res) => res?.fields);
 
-  // run top level stats calculations
+  const reportFileName = `MissedCashbackMerchantFrequencyReport_${
+    !!request.fields?.startDate ? dayjs(request.fields.startDate).format('MM-DD-YYYY') : ''
+  }_${!!request.fields?.endDate ? `->${dayjs(request.fields.endDate).format('MM-DD-YYYY')}` : ''}${dayjs().format(
+    'MM-DD-YYYY',
+  )}.csv`;
+  fs.writeFileSync(path.join(__dirname, '.tmp', reportFileName), parse(report));
 
-  fs.writeFileSync(
-    path.join(__dirname, '.tmp', `MerchantFrequencyReport_${dayjs().format('MM-DD-YYYY')}.csv`),
-    parse(report),
-  );
+  // run top level stats calculations
+  type MerchantFrequencySummaryReport = {
+    company: string;
+    frequency: number;
+    amount: number;
+  };
+
+  const merchantFrequencySummaryReport: MerchantFrequencySummaryReport[] = (
+    await getCashbackCompanies(request.fields?.startDate, request.fields?.endDate)
+  )?.map((company) => ({
+    company: company.company,
+    amount: roundToPercision(company.amount, 2),
+    frequency: company.count,
+  }));
+  const summaryFileName = `MissedCashbackMerchantFrequencySummary_${
+    !!request.fields?.startDate ? dayjs(request.fields.startDate).format('MM-DD-YYYY') : ''
+  }_${!!request.fields?.endDate ? `->${dayjs(request.fields.endDate).format('MM-DD-YYYY')}` : ''}${dayjs().format(
+    'MM-DD-YYYY',
+  )}.csv`;
+  fs.writeFileSync(path.join(__dirname, '.tmp', summaryFileName), parse(merchantFrequencySummaryReport));
+
   return report;
 };

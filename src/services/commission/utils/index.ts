@@ -10,7 +10,7 @@ import {
 import { MerchantModel } from '../../../models/merchant';
 import { CompanyModel } from '../../../models/company';
 import { IUserDocument, UserModel } from '../../../models/user';
-import { CommissionPayoutModel, IPayPalPayoutItemStatus, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
 import { CommissionPayoutMonths, ErrorTypes } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { IRef } from '../../../types/model';
@@ -205,7 +205,7 @@ export const updateCommissionOverviewStatus = async (commissionOverviewId: strin
   commissionPayoutOverview.status = status;
 };
 
-export const updateCommissionPayoutStatus = async (commissionPayoutId: string, status: KarmaCommissionPayoutStatus, paypalStatus: IPayPalPayoutItemStatus) => {
+export const updateCommissionPayoutStatus = async (commissionPayoutId: string, status: KarmaCommissionPayoutStatus, paypalStatus: PayPalPayoutItemStatus) => {
   try {
     const commissionPayout: any = await CommissionPayoutModel.find({ _id: commissionPayoutId });
     if (!commissionPayout) throw new CustomError(`Payout with id ${commissionPayoutId} not found`, ErrorTypes.NOT_FOUND);

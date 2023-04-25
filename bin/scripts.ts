@@ -18,16 +18,14 @@ import { getCurrentWildfireData } from '../src/services/scripts/wildfire';
 import * as UserMonthlyImpactReports from '../src/jobs/userMonthlyImpactReports';
 import { globalPlaidTransactionMapping } from '../src/services/scripts/global_plaid_transaction_mapping';
 import { globalTransactionUpdates } from '../src/services/scripts/global_transaction_updates';
-import { nudgeVisitorsToFinishAccountCreate } from '../src/services/visitor';
 import { EmailBullClient } from '../src/clients/bull/email';
 
 (async () => {
   try {
     await MongoClient.init();
-    await EmailBullClient.init();
+    // await EmailBullClient.init();
     // await generateCommissionPayoutForUsers(0);
     // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
-    await nudgeVisitorsToFinishAccountCreate();
     // await globalTransactionUpdates({ writeOutput: false });
   } catch (err) {
     console.log(err);

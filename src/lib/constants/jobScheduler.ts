@@ -47,4 +47,5 @@ export enum JobNames {
   GenerateUserReport = 'generate-user-report',
   UpdateWildfireCommissions = 'update-wildfire-commissions',
   SyncActiveCampaign = 'sync-active-campaign',
+  SendAccountCreationReminderEmail = 'send-account-creation-reminder-email',
 }

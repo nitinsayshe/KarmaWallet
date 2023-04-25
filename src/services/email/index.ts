@@ -196,7 +196,6 @@ export const sendAccountCreationReminderEmail = async ({
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
-  console.log('////// there is a nsme', name);
   const emailTemplateConfig = EmailTemplateConfigs.CreateAccountEmailReminder;
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);

@@ -1,6 +1,5 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import dayjs from 'dayjs';
 import { updateActiveCampaignListStatus } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
 import * as TokenService from '../token';
@@ -13,7 +12,7 @@ import { IUserDocument, UserEmailStatus, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
-import { sendAccountCreationReminderEmail, sendAccountCreationVerificationEmail } from '../email';
+import { sendAccountCreationVerificationEmail } from '../email';
 import { IUrlParam, IVerifyTokenBody } from '../user';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
@@ -359,40 +358,4 @@ export const verifyAccountToken = async (req: IRequest<{}, {}, IVerifyTokenBody>
   visitor.emailStatus = UserEmailStatus.Verified;
 
   return { message: 'Token successfully verified.' };
-};
-
-export const nudgeVisitorsToFinishAccountCreate = async () => {
-  let emailsSent = 0;
-  try {
-    // only visitors who requested an account have an emailStatus
-    const visitors = await VisitorModel.find({ user: null, emailStatus: { $ne: null } });
-    // const visitors = await VisitorModel.find({
-    //   _id: '64428ff6c3a96ef3fbc18d5e',
-    // });
-
-    if (!visitors || !visitors.length) throw new CustomError('No visitors to nudge.', ErrorTypes.GEN);
-
-    for (const visitor of visitors) {
-      const createdOnDate = dayjs(visitor.createdOn);
-      const today = dayjs();
-      const difference = today.diff(createdOnDate, 'days');
-      if (difference === 5 || difference === 10) {
-        const days = emailVerificationDays;
-        const { email } = visitor;
-        if (!isemail.validate(email, { minDomainAtoms: 2 })) {
-          console.log(`[+] Invalid email format for visitor ${visitor._id}: ${email}`);
-          continue;
-        }
-
-        const token = await TokenService.createVisitorToken({ visitor, days, type: TokenTypes.Email, resource: { email } });
-        const reminderEmail = await sendAccountCreationReminderEmail({ token: token.value, recipientEmail: email, name: 'createAccountEmailReminder', visitor });
-        if (!!reminderEmail) emailsSent += 1;
-        console.log(`[+] Nudge email sent to visitor ${emailsSent} visitors`);
-      }
-    }
-    console.log(`[+] Nudge emails sent to ${emailsSent} visitors}`);
-  } catch (err) {
-    console.log('Error nudging visitors to finish account creation', err);
-    throw err;
-  }
 };

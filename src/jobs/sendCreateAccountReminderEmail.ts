@@ -21,7 +21,7 @@ export const exec = async () => {
       const createdOnDate = dayjs(visitor.createdOn);
       const today = dayjs();
       const difference = today.diff(createdOnDate, 'days');
-      if (difference === 5 || difference === 10) {
+      if (difference === 5 || difference === 15) {
         const days = emailVerificationDays;
         const { email } = visitor;
         if (!isemail.validate(email, { minDomainAtoms: 2 })) {

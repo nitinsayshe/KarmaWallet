@@ -20,6 +20,7 @@ import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_fal
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
 import { TransactionModel } from '../../models/transaction';
 import { saveTransactions } from '../../integrations/plaid/v2_transaction';
+import { UserModel } from '../../models/user';
 
 dayjs.extend(utc);
 
@@ -114,6 +115,12 @@ export const globalPlaidTransactionMapping = async ({
     const matchedTransactions: IMatchedTransaction[] = [];
     let remainingTransactions: Transaction[] = [];
 
+    const user = await UserModel.findOne({ _id: card.user });
+    if (!user) {
+      log(`user not found for card ${card._id}`);
+      continue;
+    }
+
     const timeString = `${logId}matching for user ${card.user.toString()}`;
     console.time(timeString);
 
@@ -183,10 +190,11 @@ export const globalPlaidTransactionMapping = async ({
     console.timeEnd(timeString);
     const allTransactions = [...matchedTransactions, ...foundFalsePositives, ...foundManualMatches, ...remainingTransactions];
     if (writeOutput) output.push(...allTransactions);
-    const promise = saveTransactions(allTransactions, card.user, primarySectorDictionary, plaidMappingSectorDictionary);
+    const defaultCard = await CardModel.findOne({ 'integrations.plaid.accessToken': card._id });
+    const promise = saveTransactions(allTransactions, card.user, primarySectorDictionary, plaidMappingSectorDictionary, defaultCard);
 
     // update last transaction sync
-    const cards = await CardModel.find({ 'integrations.plaid.accessToken': card._id, userId: card.user });
+    const cards = await CardModel.find({ 'integrations.plaid.accessToken': card._id, userId: card.user, status: CardStatus.Linked });
     for (const c of cards) {
       c.lastTransactionSync = dayjs().utc().toDate();
       await c.save();

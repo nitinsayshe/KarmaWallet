@@ -159,7 +159,9 @@ export abstract class _BullClient extends ConnectionClient {
   };
 
   createJob = (name: string, data: any, opts: JobsOptions = {}, altOpts: IJobDictionary = {}) => {
+    console.log('/////// this is the info', name, data, opts, altOpts);
     this._jobsDictionary[name] = altOpts;
+    console.log('////// this is th queie', this._queue);
     this._queue.add(name, data, { ..._BullClient.defaultJobOpts, ...this._jobOptions, ...opts });
   };
 

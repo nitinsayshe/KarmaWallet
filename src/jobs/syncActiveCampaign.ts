@@ -374,7 +374,7 @@ const syncEstimatedCashbackFields = async (httpClient?: AxiosInstance) => {
     },
     batchLimit: 100,
     fields: {
-      missingCashbackThresholdDollars: 5,
+      missingCashbackThresholdDollars: 2,
     },
   };
 

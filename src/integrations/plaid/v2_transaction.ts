@@ -4,7 +4,7 @@ import { ObjectId } from 'mongoose';
 import { IUser, IUserDocument, UserModel } from '../../models/user';
 import { ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IMatchedTransaction } from './types';
-import { CardModel } from '../../models/card';
+import { CardModel, ICard, ICardDocument } from '../../models/card';
 
 export interface ICardsDictionary {
   [key: string]: ObjectId;
@@ -36,7 +36,14 @@ export const mapPlaidTransactionToKarmaTransaction = (
   cards: ICardsDictionary,
   primarySectorDictionary: any,
   plaidMappingSectorDictionary: any,
+  _card?: ICardDocument | ICard | string | ObjectId,
 ) => {
+  const log = (message: string) => console.log(`[pmap] - ${message}`);
+  let cardToAssign: ObjectId | ICard | string | ICardDocument = cards[plaidTransaction.account_id];
+  if (!cardToAssign) {
+    log(`card not found for plaid transaction ${plaidTransaction.transaction_id}`);
+    cardToAssign = _card;
+  }
   const transaction = new TransactionModel({
     user: userId,
     date: getTransactionDate(plaidTransaction.date),
@@ -45,7 +52,7 @@ export const mapPlaidTransactionToKarmaTransaction = (
     },
     sector: getTransactionSector(plaidTransaction, primarySectorDictionary, plaidMappingSectorDictionary),
     amount: plaidTransaction.amount,
-    card: cards[plaidTransaction.account_id],
+    card: cardToAssign,
   });
   if (plaidTransaction.company) transaction.company = plaidTransaction.company;
   return transaction;
@@ -61,6 +68,7 @@ export const filterDuplicatePlaidTransactions = async (transactions: ITransactio
   const userTransactions = await TransactionModel.find(
     {
       $and: [
+        { 'integrations.plaid': { $ne: null } },
         { user: user._id },
         { $or: [
           {
@@ -111,10 +119,14 @@ export const saveTransactions = async (
   user: IUser | IUserDocument | string,
   primarySectorDictionary: any,
   plaidMappingSectorDictionary: any,
+  _card?: ICardDocument | string | ObjectId | ICard,
 ) => {
   const logId = '[pstr] - ';
   const log = (message: string) => console.log(`${logId}${message}`);
   const _user = await UserModel.findOne({ _id: user });
+  if (!_user?._id) {
+    log(`user not found for id ${user}`);
+  }
   const cards = await CardModel.find({ status: 'linked', userId: _user._id });
   const cardDictionary = cards.reduce((acc, card) => {
     // @ts-ignore
@@ -124,7 +136,7 @@ export const saveTransactions = async (
   if (!_user) return;
   log(`transaction count: ${transactions.length}`);
   log('saving transactions');
-  const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(t, _user._id.toString(), cardDictionary, primarySectorDictionary, plaidMappingSectorDictionary));
+  const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(t, _user._id.toString(), cardDictionary, primarySectorDictionary, plaidMappingSectorDictionary, _card));
   const transactionsToSave = await filterDuplicatePlaidTransactions(mappedTransactions, _user);
   log(`mapped transaction count: ${mappedTransactions.length}`);
   log(`transactions to save count: ${transactionsToSave.length}`);

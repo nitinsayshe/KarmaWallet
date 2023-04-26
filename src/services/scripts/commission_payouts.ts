@@ -5,7 +5,8 @@ import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions
 import { UserModel } from '../../models/user';
 
 export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date, startDate?: Date) => {
-  const dateQuery = !!startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
+  if (!endDate) endDate = new Date();
+  const dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
   let payoutsTotal = 0;
   let karmaTotal = 0;
   let wildfireTotal = 0;
@@ -15,7 +16,7 @@ export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date
   const payouts = await CommissionModel.aggregate([
     {
       $match: {
-        date: dateQuery,
+        createdOn: dateQuery,
         status: {
           $in: [
             KarmaCommissionStatus.ReceivedFromVendor,

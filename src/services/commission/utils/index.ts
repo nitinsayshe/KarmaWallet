@@ -199,18 +199,17 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
 };
 
 export const updateCommissionOverviewStatus = async (commissionOverviewId: string, status: KarmaCommissionPayoutOverviewStatus) => {
-  // throwing error without any
-  const commissionPayoutOverview: any = await CommissionPayoutOverviewModel.find({ _id: commissionOverviewId });
+  const commissionPayoutOverview = await CommissionPayoutOverviewModel.findOneAndUpdate({ _id: commissionOverviewId }, { status });
   if (!commissionPayoutOverview) throw new CustomError(`PayoutOverview with id ${commissionOverviewId} not found`, ErrorTypes.NOT_FOUND);
-  commissionPayoutOverview.status = status;
+  console.log(`[+] Updated commission overview status to [${status}]`);
 };
 
 export const updateCommissionPayoutStatus = async (commissionPayoutId: string, status: KarmaCommissionPayoutStatus, paypalStatus: PayPalPayoutItemStatus) => {
   try {
-    const commissionPayout: any = await CommissionPayoutModel.find({ _id: commissionPayoutId });
+    const commissionPayout = await CommissionPayoutModel.findOne({ _id: commissionPayoutId });
     if (!commissionPayout) throw new CustomError(`Payout with id ${commissionPayoutId} not found`, ErrorTypes.NOT_FOUND);
     for (const commission of commissionPayout.commissions) {
-      const commissionItem = await CommissionModel.findOne({ _id: commission.commissionId });
+      const commissionItem = await CommissionModel.findOne({ _id: commission });
       if (status === KarmaCommissionPayoutStatus.Paid) {
         commissionItem.status = KarmaCommissionStatus.PaidToUser;
         await commissionItem.save();

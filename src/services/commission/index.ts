@@ -140,7 +140,7 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
 };
 
 export const generateCommissionPayoutForUsers = async (min: number, endDate?: Date, startDate?: Date) => {
-  const users = await UserModel.find({ });
+  const users = await UserModel.find({});
 
   for (const user of users) {
     if (!user.integrations.paypal) continue;

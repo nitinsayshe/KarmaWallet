@@ -3,6 +3,7 @@ import { JobNames } from '../../../lib/constants/jobScheduler';
 import { _MongoClient } from '../../mongo';
 import * as SendEmail from '../../../jobs/sendEmail';
 import * as UpdateBouncedEmails from '../../../jobs/updateBouncedEmails';
+import * as SendCreateAccountReminderEmail from '../../../jobs/sendCreateAccountReminderEmail';
 
 const MongoClient = new _MongoClient();
 
@@ -19,6 +20,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateBouncedEmails:
       result = await UpdateBouncedEmails.exec();
+      break;
+    case JobNames.SendAccountCreationReminderEmail:
+      result = await SendCreateAccountReminderEmail.exec();
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

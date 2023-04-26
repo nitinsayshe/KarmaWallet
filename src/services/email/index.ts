@@ -186,6 +186,30 @@ export const sendAccountCreationVerificationEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Nudge email for a visitor who has not completed account creation
+export const sendAccountCreationReminderEmail = async ({
+  name,
+  visitor,
+  domain = process.env.FRONTEND_DOMAIN,
+  token,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.CreateAccountEmailReminder;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const params = visitor.integrations.urlParams.filter(p => p.key !== 'createaccount');
+  const urlParamsString = params.map(param => `${param.key}=${param.value}`).join('&');
+  const verificationLink = `${domain}?verifyaccount=${token}${!!urlParamsString ? `&${urlParamsString}` : ''}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
+  const subject = 'Finish Creating Your Karma Wallet Account';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 // Welcome Flow: No Group
 export const sendWelcomeEmail = async ({
   user,

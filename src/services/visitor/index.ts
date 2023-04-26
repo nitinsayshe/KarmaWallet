@@ -8,7 +8,7 @@ import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserEmailStatus, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
@@ -351,7 +351,11 @@ export const verifyAccountToken = async (req: IRequest<{}, {}, IVerifyTokenBody>
     type: TokenTypes.Email,
     consumed: false,
   });
+
   if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
+
+  const visitor = await VisitorModel.findById(_token.user);
+  visitor.emailStatus = UserEmailStatus.Verified;
 
   return { message: 'Token successfully verified.' };
 };

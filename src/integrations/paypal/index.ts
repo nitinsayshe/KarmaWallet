@@ -38,7 +38,7 @@ export const processPaypalPayouts = async (body: any) => {
   const { resource, resource_type, event_type } = body;
   // Payouts Overviews
   if (resource_type === 'payouts') {
-    const { payout_batch_id } = resource;
+    const { payout_batch_id } = resource.batch_header;
     switch (event_type) {
       case 'PAYMENT.PAYOUTSBATCH.SUCCESS': {
         updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Success);

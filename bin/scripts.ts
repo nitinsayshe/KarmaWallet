@@ -29,7 +29,7 @@ import { RedisClient } from '../src/clients/redis';
     await MongoClient.init();
     await RedisClient.init();
     await EmailBullClient.init();
-    await SendCreateAccountReminderEmails.exec();
+    await SendCreateAccountReminderEmails.oneTimeSend();
     // await generateCommissionPayoutForUsers(0);
     // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
     // const paypal = await new PaypalClient();

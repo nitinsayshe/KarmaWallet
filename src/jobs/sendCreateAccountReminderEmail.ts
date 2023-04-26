@@ -45,7 +45,7 @@ export const exec = async () => {
       const token = await createVisitorToken({ visitor, days, type: TokenTypes.Email, resource: { email } });
       const reminderEmail = await sendAccountCreationReminderEmail({ token: token.value, recipientEmail: email, name: 'createAccountEmailReminder', visitor });
       if (!!reminderEmail) emailsSent += 1;
-      console.log(`[+] Nudge email sent to visitor ${emailsSent} visitors`);
+      console.log(`[+] Nudge email sent to visitor ${visitor._id}`);
     }
     console.log(`[+] Nudge emails sent to ${emailsSent} visitors}`);
   } catch (err) {
@@ -60,10 +60,11 @@ export const oneTimeSend = async () => {
     const query: FilterQuery<IVisitorDocument> = {
       user: null,
       emailStatus: { $ne: null },
-      createdOn: { $lte: dayjs().subtract(15, 'days').endOf('day').toDate() },
+      createdOn: { $lte: dayjs().subtract(16, 'days').startOf('day').toDate() },
     };
 
-    const visitors = await VisitorModel.find(query);
+    const visitors = await VisitorModel.find(query).sort({ createdOn: -1 });
+    console.log(`[+] There will be ${visitors.length} emails sent`, visitors[0]);
 
     if (!visitors || !visitors.length) throw new CustomError('No visitors to nudge.', ErrorTypes.GEN);
 
@@ -80,7 +81,7 @@ export const oneTimeSend = async () => {
       if (!!reminderEmail) emailsSent += 1;
       console.log(`[+] Nudge email sent to visitor ${emailsSent} visitors`);
     }
-    console.log(`[+] Nudge emails sent to ${emailsSent} visitors}`);
+    // console.log(`[+] Nudge emails sent to ${emailsSent} visitors}`);
   } catch (err) {
     console.log('Error nudging visitors to finish account creation', err);
     throw err;

@@ -568,6 +568,28 @@ export const getMissedCashBackForDateRange = async (
   }
 };
 
+export const getWeeklyMissedCashBack = async (
+  user: IUserDocument,
+): Promise<{
+  id: Types.ObjectId;
+  email: string;
+  estimatedWeeklyMissedCommissionsCount: number;
+  estimatedWeeklyMissedCommissionsAmount: number;
+}> => {
+  const oneWeekAgo = dayjs().utc().subtract(1, 'week');
+  const metric = await getMissedCashBackForDateRange(
+    user,
+    oneWeekAgo.startOf('week').toDate(),
+    oneWeekAgo.endOf('week').toDate(),
+  );
+  return {
+    id: metric.id,
+    email: metric.email,
+    estimatedWeeklyMissedCommissionsCount: metric.estimatedMissedCommissionsCount,
+    estimatedWeeklyMissedCommissionsAmount: metric.estimatedMissedCommissionsAmount,
+  };
+};
+
 export const getMonthlyMissedCashBack = async (
   user: IUserDocument,
 ): Promise<{
@@ -576,34 +598,18 @@ export const getMonthlyMissedCashBack = async (
   estimatedMonthlyMissedCommissionsCount: number;
   estimatedMonthlyMissedCommissionsAmount: number;
 }> => {
-  try {
-    /*  TODO:  filter the transactions for only those that are not in the commissions list */
-    /* We  don't have the information to do this right now, so we could just assign $0 missed cashback to users that have shopped through KW that month */
-    /* So users with $0 missed cashback will either not have a card linked or they will have a card linked but not have shopped through KW that month  */
-    const userTransactions = await getMonthlyTransactionsWithCashbackCompanies(user);
-    if (!userTransactions) {
-      throw new Error(`No transactions found for user with id: ${user?._id}`);
-    }
-    const email = user.emails?.find((e) => e.primary)?.email;
-
-    /* simulate commission payout and record the dollar amount */
-    const monthlyMissedCashbackAmounts = await Promise.all(userTransactions.map(getEstimatedMissedCommissionAmounts));
-
-    const monthlyMissedCashbackDollars = monthlyMissedCashbackAmounts.reduce((prev, current) => prev + current, 0);
-    return {
-      id: user._id,
-      email,
-      estimatedMonthlyMissedCommissionsAmount: monthlyMissedCashbackDollars,
-      estimatedMonthlyMissedCommissionsCount: monthlyMissedCashbackAmounts.length,
-    };
-  } catch (err) {
-    return {
-      id: null,
-      email: '',
-      estimatedMonthlyMissedCommissionsAmount: 0,
-      estimatedMonthlyMissedCommissionsCount: 0,
-    };
-  }
+  const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+  const metric = await getMissedCashBackForDateRange(
+    user,
+    oneMonthAgo.startOf('month').toDate(),
+    oneMonthAgo.endOf('month').toDate(),
+  );
+  return {
+    id: metric.id,
+    email: metric.email,
+    estimatedMonthlyMissedCommissionsCount: metric.estimatedMissedCommissionsCount,
+    estimatedMonthlyMissedCommissionsAmount: metric.estimatedMissedCommissionsAmount,
+  };
 };
 
 export const getUsersWithCommissionsInDateRange = async (startDate: Date, endDate: Date): Promise<Types.ObjectId[]> => {
@@ -625,6 +631,11 @@ export const getUsersWithCommissionsInDateRange = async (startDate: Date, endDat
 export const getUsersWithCommissionsLastMonth = async (): Promise<Types.ObjectId[]> => {
   const oneMonthAgo = dayjs().utc().subtract(1, 'month');
   return getUsersWithCommissionsInDateRange(oneMonthAgo.startOf('month').toDate(), oneMonthAgo.endOf('month').toDate());
+};
+
+export const getUsersWithCommissionsLastWeek = async (): Promise<Types.ObjectId[]> => {
+  const oneWeekAgo = dayjs().utc().subtract(1, 'week');
+  return getUsersWithCommissionsInDateRange(oneWeekAgo.startOf('week').toDate(), oneWeekAgo.endOf('week').toDate());
 };
 
 export const getUsersWithTransactionsInDateRange = async (
@@ -650,6 +661,10 @@ export const getUsersWithTransactionsLastMonth = async (): Promise<Types.ObjectI
   );
 };
 
+export const getUsersWithTransactionsLastWeek = async (): Promise<Types.ObjectId[]> => {
+  const oneWeekAgo = dayjs().utc().subtract(1, 'week');
+  return getUsersWithTransactionsInDateRange(oneWeekAgo.startOf('week').toDate(), oneWeekAgo.endOf('week').toDate());
+};
 export const getUsersWithTransactions = async (): Promise<Types.ObjectId[]> => getUsersWithTransactionsInDateRange();
 
 export const getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays = async (): Promise<Types.ObjectId[]> => {

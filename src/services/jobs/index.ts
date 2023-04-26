@@ -29,6 +29,10 @@ export interface ICreateJobParams {
   queue: QueueNames
 }
 
+export interface IObliterateQueueQuery {
+  queue: QueueNames
+}
+
 export const sendGroupVerificationEmail = async (req: IRequest<{}, {}, ISendGroupVerificationEmailParams>) => {
   const { name, domain, token, groupName, recipientEmail, user } = req.body;
   await EmailService.sendGroupVerificationEmail({ name, domain, token, groupName, recipientEmail, user: new Types.ObjectId(user) });
@@ -67,9 +71,19 @@ export const createJob = (req: IRequest<{}, {}, ICreateJobParams>) => {
 // TODO: Update to make sure we have all job statuses needed
 export const logJobs = async (_: IRequest) => MainBullClient.queue.getJobs(['wait', 'delayed']);
 
-export const obliterateQueue = async (_: IRequest) => {
-  await MainBullClient.queue.obliterate();
-  return 'Queue obliterated';
+export const obliterateQueue = async (req: IRequest<{}, IObliterateQueueQuery, {}>) => {
+  const { queue } = req.query;
+  switch (queue) {
+    case QueueNames.Main:
+      await MainBullClient.queue.obliterate();
+      break;
+    case QueueNames.Email:
+      await EmailBullClient.queue.obliterate();
+      break;
+    default:
+      throw new CustomError('Invalid queue name', ErrorTypes.INVALID_ARG);
+  }
+  return { message: `${queue} queue obliterated` };
 };
 
 export const addCronJobs = async (_: IRequest) => {

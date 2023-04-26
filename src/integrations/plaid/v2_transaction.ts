@@ -68,6 +68,7 @@ export const filterDuplicatePlaidTransactions = async (transactions: ITransactio
   const userTransactions = await TransactionModel.find(
     {
       $and: [
+        { 'integrations.plaid': { $ne: null } },
         { user: user._id },
         { $or: [
           {

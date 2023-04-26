@@ -21,11 +21,15 @@ import { globalTransactionUpdates } from '../src/services/scripts/global_transac
 import { EmailBullClient } from '../src/clients/bull/email';
 import { CommissionPayoutOverviewModel } from '../src/models/commissionPayoutOverview';
 import { CommissionPayoutModel } from '../src/models/commissionPayout';
+import * as SendCreateAccountReminderEmails from '../src/jobs/sendCreateAccountReminderEmail';
+import { RedisClient } from '../src/clients/redis';
 
 (async () => {
   try {
     await MongoClient.init();
-    // await EmailBullClient.init();
+    await RedisClient.init();
+    await EmailBullClient.init();
+    await SendCreateAccountReminderEmails.exec();
     // await generateCommissionPayoutForUsers(0);
     // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
     // const paypal = await new PaypalClient();

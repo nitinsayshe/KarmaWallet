@@ -186,6 +186,7 @@ export const sendAccountCreationVerificationEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Nudge email for a visitor who has not completed account creation
 export const sendAccountCreationReminderEmail = async ({
   name,
   visitor,

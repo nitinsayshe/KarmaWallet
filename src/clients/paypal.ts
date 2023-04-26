@@ -168,6 +168,26 @@ export class PaypalClient extends SdkClient {
     return balances.find((balance: IPaypalBalance) => balance.primary);
   }
 
+  async resendWebhookEvent(eventId: string) {
+    try {
+      const { access_token } = await this.getClientAccessToken();
+      const { data } = await this._client.post(`/notifications/webhooks-events/${eventId}/resend`, {
+        webhook_ids: [
+          process.env.PAYPAL_WEBHOOK_ID,
+        ],
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${access_token}`,
+        },
+      });
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
   async verifyWebhookSignature({
     auth_algo,
     cert_url,

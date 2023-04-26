@@ -8,11 +8,12 @@ import {
 import { getUtcDate } from '../lib/date';
 
 export enum KarmaCommissionPayoutOverviewStatus {
-  Pending = 'pending',
   AwaitingVerification = 'awaiting-verification',
-  Verified = 'verified',
+  Denied = 'denied',
+  Processing = 'processing',
   Sent = 'sent',
-  Failed = 'failed',
+  Success = 'success',
+  Verified = 'verified',
 }
 
 export interface ICommissionsBreakdown {

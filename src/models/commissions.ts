@@ -27,6 +27,7 @@ export enum KarmaCommissionStatus {
   PendingPaymentToUser = 'pending-payment-to-user',
   PaidToUser = 'paidToUser',
   Canceled = 'canceled',
+  Failed = 'failed',
 }
 
 export interface IWildfireCommissionIntegration {

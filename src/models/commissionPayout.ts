@@ -60,7 +60,7 @@ const commissionPayout = new Schema({
   date: { type: Date },
   amount: { type: Number },
   status: { type: String, enum: Object.values(KarmaCommissionPayoutStatus) },
-  integrations: { type: Object },
+  integrations: { type: Object, default: { paypal: { status: null } } },
   commissions: { type: [Schema.Types.ObjectId], ref: 'commission' },
 });
 

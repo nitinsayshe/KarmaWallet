@@ -17,9 +17,10 @@ import { UserModel } from '../models/user';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
 import { PlaidClient } from '../clients/plaid';
-import { mapWildfireCommissionToKarmaCommission, updateStatusOnCommissionItems } from '../services/commission/utils';
+import { mapWildfireCommissionToKarmaCommission } from '../services/commission/utils';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { PaypalClient } from '../clients/paypal';
+import { processPaypalWebhook } from '../integrations/paypal';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
@@ -211,13 +212,6 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
   } catch (e) {
     error(req, res, asCustomError(e));
   }
-};
-
-const processPaypalWebhook = async (body: any) => {
-  console.log('Paypal webhook processed successfully.');
-  console.log('------- BEG Paypal Transaction -------\n');
-  console.log(JSON.stringify(body, null, 2));
-  updateStatusOnCommissionItems(body);
 };
 
 export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {

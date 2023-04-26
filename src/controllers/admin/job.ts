@@ -48,7 +48,7 @@ export const logJobs: IRequestHandler = async (req, res) => {
   }
 };
 
-export const obliterateQueue: IRequestHandler = async (req, res) => {
+export const obliterateQueue: IRequestHandler<{}, JobService.IObliterateQueueQuery, {}> = async (req, res) => {
   try {
     const message = await JobService.obliterateQueue(req);
     output.api(req, res, message);

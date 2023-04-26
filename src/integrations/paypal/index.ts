@@ -38,18 +38,18 @@ export const processPaypalPayouts = async (body: any) => {
   const { resource, resource_type, event_type } = body;
   // Payouts Overviews
   if (resource_type === 'payouts') {
-    const { payout_batch_id } = resource.batch_header;
+    const { sender_batch_id } = resource.batch_header.sender_batch_header;
     switch (event_type) {
       case 'PAYMENT.PAYOUTSBATCH.SUCCESS': {
-        updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Success);
+        updateCommissionOverviewStatus(sender_batch_id, KarmaCommissionPayoutOverviewStatus.Success);
         break;
       }
       case 'PAYMENT.PAYOUTSBATCH.DENIED': {
-        updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Denied);
+        updateCommissionOverviewStatus(sender_batch_id, KarmaCommissionPayoutOverviewStatus.Denied);
         break;
       }
       case 'PAYMENT.PAYOUTSBATCH.PROCESSING': {
-        updateCommissionOverviewStatus(payout_batch_id, KarmaCommissionPayoutOverviewStatus.Processing);
+        updateCommissionOverviewStatus(sender_batch_id, KarmaCommissionPayoutOverviewStatus.Processing);
         break;
       }
 

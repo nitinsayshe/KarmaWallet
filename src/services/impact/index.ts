@@ -122,7 +122,7 @@ export const getFeaturedCashback = async () => {
       .find(
         { _id: { $in: [
           '621b993c5f87e75f5365a9a5', // Walmart
-          '621b993c5f87e75f5365a97d', // Verizon
+          '621b99cb5f87e75f5365fc79', // Wolf & Badger
           '621b99545f87e75f5365b715', // Cotopaxi
           '621b99be5f87e75f5365f54d', // Sams Club
           '621b994a5f87e75f5365b139', // Athleta

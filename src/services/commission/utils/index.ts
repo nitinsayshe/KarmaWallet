@@ -1,14 +1,18 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
+import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
+import { CommissionPayoutMonths, UserCommissionPercentage } from '../../../lib/constants';
+import { getUtcDate } from '../../../lib/date';
+import { CommissionPayoutModel } from '../../../models/commissionPayout';
 import {
   CommissionModel,
   IShareableCommission,
   KarmaCommissionStatus,
   WildfireCommissionStatus,
 } from '../../../models/commissions';
-import { MerchantModel } from '../../../models/merchant';
 import { CompanyModel } from '../../../models/company';
+import { MerchantModel } from '../../../models/merchant';
 import { IUserDocument, UserModel } from '../../../models/user';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
 import { CommissionPayoutMonths, ErrorTypes } from '../../../lib/constants';
@@ -146,7 +150,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
 
   // TODO: this is percentage is for now, but should be dynamic
   // allocation is done on every update
-  const userAllocation = Math.floor((Amount * 0.75) * 100) / 100;
+  const userAllocation = Math.floor((Amount * UserCommissionPercentage) * 100) / 100;
   const karmaAllocation = Amount - userAllocation;
 
   const commissionData: Partial<IShareableCommission> = {

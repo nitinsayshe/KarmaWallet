@@ -3,7 +3,7 @@ import { FilterQuery, LeanDocument, Types } from 'mongoose';
 import { CardModel } from '../models/card';
 import { CommissionModel, KarmaCommissionStatus } from '../models/commissions';
 import { CompanyModel, ICompanyDocument, IShareableCompany } from '../models/company';
-import { IShareableMerchant } from '../models/merchant';
+import { IMerchant } from '../models/merchant';
 import { MerchantRateModel } from '../models/merchantRate';
 import { SectorModel } from '../models/sector';
 import { IShareableTransaction, ITransactionDocument, TransactionModel } from '../models/transaction';
@@ -371,12 +371,16 @@ export const getTotalLoginCount = async (user: IUserDocument): Promise<number> =
   }
 };
 
-const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransaction): Promise<number> => {
-  // get the merchant rate for the transaction merchant
-  // TODO: handle matching to specific category rate
-  const merchantId = String(((transaction?.company as IShareableCompany)?.merchant as IShareableMerchant)?._id);
+const getMaxCommissionRate = async (merchant: IMerchant): Promise<number> => {
+  let highestRate = 0;
+  if (merchant?.integrations?.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind === 'PERCENTAGE') {
+    highestRate = merchant?.integrations?.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Amount || 0;
+  }
+  if (highestRate !== 0) {
+    return highestRate;
+  }
   let merchantRates = await MerchantRateModel.find({
-    merchant: merchantId.toString(),
+    merchant: merchant._id.toString(),
   });
 
   if (!merchantRates) {
@@ -387,10 +391,21 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
   // TODO: handle flat rates
 
   // find the hightest rate from the merchant rates
-  const highestRate = merchantRates.reduce((prev, current) => {
+  return merchantRates.reduce((prev, current) => {
     const curr = current?.integrations?.wildfire?.Amount || 0;
     return curr > prev ? curr : prev;
   }, 0);
+};
+
+const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransaction): Promise<number> => {
+  // get the merchant rate for the transaction merchant
+  // TODO: handle matching to specific category rate
+  const merchant = (transaction?.company as IShareableCompany)?.merchant as IMerchant;
+  if (!merchant) {
+    return 0;
+  }
+
+  const highestRate = await getMaxCommissionRate(merchant);
 
   const totalCommission = (highestRate / 100) * transaction.amount;
   return roundToPercision(totalCommission * UserCommissionPercentage, 2);

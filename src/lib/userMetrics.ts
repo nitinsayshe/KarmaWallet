@@ -12,7 +12,7 @@ import { UserImpactYearData } from '../models/userImpactTotals';
 import { UserLogModel } from '../models/userLog';
 import { UserMontlyImpactReportModel } from '../models/userMonthlyImpactReport';
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../services/impact/utils';
-import { CardStatus } from './constants';
+import { CardStatus, UserCommissionPercentage } from './constants';
 import { CompanyRating } from './constants/company';
 import { sectorsToExcludeFromTransactions } from './constants/transaction';
 import { roundToPercision } from './misc';
@@ -378,12 +378,13 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
   let merchantRates = await MerchantRateModel.find({
     merchant: merchantId.toString(),
   });
-  // filter out any that are not a percentage for now
-  // TODO: handle flat rates
+
   if (!merchantRates) {
     return 0;
   }
+  // filter out any that are not a percentage for now
   merchantRates = merchantRates.filter((mr) => mr?.integrations?.wildfire?.Kind === 'PERCENTAGE');
+  // TODO: handle flat rates
 
   // find the hightest rate from the merchant rates
   const highestRate = merchantRates.reduce((prev, current) => {
@@ -391,7 +392,8 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
     return curr > prev ? curr : prev;
   }, 0);
 
-  return (highestRate / 100) * transaction.amount;
+  const totalCommission = (highestRate / 100) * transaction.amount;
+  return roundToPercision(totalCommission * UserCommissionPercentage, 2);
 };
 
 export const countUnlinkedAndRemovedAccounts = async (

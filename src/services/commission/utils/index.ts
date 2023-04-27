@@ -2,9 +2,11 @@
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
-import { CommissionPayoutMonths, UserCommissionPercentage } from '../../../lib/constants';
+import { CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
+import CustomError from '../../../lib/customError';
 import { getUtcDate } from '../../../lib/date';
-import { CommissionPayoutModel } from '../../../models/commissionPayout';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
+import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../../models/commissionPayoutOverview';
 import {
   CommissionModel,
   IShareableCommission,
@@ -14,13 +16,7 @@ import {
 import { CompanyModel } from '../../../models/company';
 import { MerchantModel } from '../../../models/merchant';
 import { IUserDocument, UserModel } from '../../../models/user';
-import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
-import { CommissionPayoutMonths, ErrorTypes } from '../../../lib/constants';
-import { getUtcDate } from '../../../lib/date';
 import { IRef } from '../../../types/model';
-import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
-import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../../models/commissionPayoutOverview';
-import CustomError from '../../../lib/customError';
 
 export type IWildfireCommission = {
   CommissionID: number,

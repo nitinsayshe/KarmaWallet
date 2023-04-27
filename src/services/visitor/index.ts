@@ -351,6 +351,7 @@ export const verifyAccountToken = async (req: IRequest<{}, {}, IVerifyTokenBody>
     type: TokenTypes.Email,
     consumed: false,
   });
+
   if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
 
   return { message: 'Token successfully verified.' };

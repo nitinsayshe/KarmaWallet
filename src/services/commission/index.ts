@@ -140,7 +140,7 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
 };
 
 export const generateCommissionPayoutForUsers = async (min: number, endDate?: Date, startDate?: Date) => {
-  const users = await UserModel.find({ });
+  const users = await UserModel.find({});
 
   for (const user of users) {
     if (!user.integrations.paypal) continue;
@@ -308,22 +308,9 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     if (!paypalFormattedPayouts.length) console.log('[+] No valid payouts to send.');
 
     const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
-    // what shoudl the status be for success?
-
-    // if (paypalResponse.status === 201) {
-    //   payoutData.update({ status: KarmaCommissionPayoutStatus.Paid });
-    //   const commissions = await CommissionModel.find({ _id: { $in: payoutData.commissions } });
-    //   for (const commission of commissions) {
-    //     console.log('////');
-    //     commission.update({ status: KarmaCommissionStatus.PaidToUser });
-    //     commission.save();
-    //   }
-    // } else {
-    //   payoutData.update({ status: KarmaCommissionPayoutStatus.Failed });
-    // }
     console.log('[+] Paypal payout sent', paypalResponse);
 
-    await commissionPayoutOverview.update({ status: KarmaCommissionPayoutOverviewStatus.Sent });
+    commissionPayoutOverview.status = KarmaCommissionPayoutOverviewStatus.Sent;
     await commissionPayoutOverview.save();
   } catch (err: any) {
     throw new Error(err);

@@ -1,6 +1,7 @@
 /* eslint-disable no-restricted-syntax */
+import fs from 'fs';
 import dayjs from 'dayjs';
-import { ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId } from 'mongoose';
 import { IUser, IUserDocument, UserModel } from '../../models/user';
 import { ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IMatchedTransaction } from './types';
@@ -181,4 +182,87 @@ export const updateTransactions = async (
   log(`transactions to save count: ${transactionsToSave.length}`);
   await Promise.all(transactionsToSave);
   console.timeEnd(timeString);
+};
+
+export interface IDuplicatePlaidTransactionDictionary {
+  [key: string]: ITransactionDocument[];
+}
+
+export interface ICleanDuplicateTransactions {
+  userQuery : FilterQuery<IUserDocument>;
+  removeDuplicates?: boolean;
+  writeToDisk?: boolean;
+}
+
+export const identifyAndRemoveDuplicateTransactions = async ({
+  userQuery,
+  removeDuplicates = false,
+  writeToDisk = false,
+}: ICleanDuplicateTransactions) => {
+  const duplicates: IDuplicatePlaidTransactionDictionary = {};
+  const users = await UserModel.find(userQuery);
+  for (const user of users) {
+    const _duplicateMatches: string[] = [];
+    const _duplicates: ITransactionDocument[] = [];
+    const transactions = await TransactionModel.find({ user: user._id, 'integrations.plaid': { $ne: null } });
+
+    let i = 0;
+    for (const transaction of transactions) {
+      i += 1;
+      const transactionsWithSameAmount = await TransactionModel.find({
+        user: user._id,
+        amount: transaction.amount,
+        'integrations.plaid': { $ne: null },
+      });
+
+      console.log(`[i] user ${user._id} transaction ${i} of ${transactions.length}`);
+
+      if (_duplicateMatches.indexOf(transaction._id.toString()) > -1) {
+        console.log(`[i] skipping ${transaction._id} because it's already been matched`);
+        continue;
+      }
+
+      const duplicate = transactionsWithSameAmount.find((t) => {
+        if (_duplicateMatches.find(d => d === t._id.toString())) return false;
+        if (_duplicates.find(d => d._id.toString() === t._id.toString())) return false;
+        if (t._id.toString() === transaction._id.toString()) return false;
+        if (t.integrations.plaid.transaction_id === transaction.integrations.plaid.transaction_id) return true;
+        const fingerprints = [];
+
+        const amountFingerprint = t.amount === transaction.amount;
+        fingerprints.push(amountFingerprint);
+
+        const dateFingerprint = t.date.getTime() === transaction.date.getTime();
+        fingerprints.push(dateFingerprint);
+
+        const cardFingerprint = t.card.toString() === transaction.card.toString();
+        fingerprints.push(cardFingerprint);
+
+        const companyFingerprint = t.company?.toString() === transaction.company?.toString();
+        fingerprints.push(companyFingerprint);
+
+        const nameMatch = t.integrations.plaid.name === transaction.integrations.plaid.name;
+        const merchantMatch = t.integrations.plaid.merchant_name === transaction.integrations.plaid.merchant_name;
+        const nameFingerprint = nameMatch || merchantMatch;
+        fingerprints.push(nameFingerprint);
+
+        return fingerprints.every(x => x);
+      });
+
+      if (duplicate) {
+        console.log(`[i] found duplicate ${transaction._id} for ${duplicate._id}`);
+        _duplicates.push(duplicate);
+        _duplicateMatches.push(transaction._id.toString());
+      }
+    }
+    if (_duplicates.length) duplicates[user._id.toString()] = _duplicates.map(d => d._id.toString());
+    console.log(`[i] user ${user._id} has ${_duplicates.length} duplicates`);
+    if (removeDuplicates && _duplicates.length > 0) {
+      const duplicateIds = _duplicates.map(d => d._id);
+      const d = await TransactionModel.deleteMany({ user, _id: { $in: duplicateIds } });
+      console.log(`[-] deleted ${d.deletedCount} duplicates for user ${user._id}`);
+    }
+  }
+  if (writeToDisk) fs.writeFileSync('./duplicates.json', JSON.stringify(duplicates));
+  return duplicates;
 };

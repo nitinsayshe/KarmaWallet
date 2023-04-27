@@ -22,7 +22,7 @@
     "type": "git",
     "url": "git+https://github.com/karmawallet/karmawallet-backend-ts.git"
   },
-  "author": "@jddalessandro, @swallsy and @iamthe-Wraith",
+  "author": "@jddalessandro, @swallsy, @adelgado0723, @SenciZ",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/karmawallet/karmawallet-backend-ts/issues"

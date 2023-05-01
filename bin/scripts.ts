@@ -20,9 +20,10 @@ import { globalPlaidTransactionMapping } from '../src/services/scripts/global_pl
 import { globalTransactionUpdates } from '../src/services/scripts/global_transaction_updates';
 import { EmailBullClient } from '../src/clients/bull/email';
 import { CommissionPayoutOverviewModel } from '../src/models/commissionPayoutOverview';
-import { CommissionPayoutModel } from '../src/models/commissionPayout';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../src/models/commissionPayout';
 import * as SendCreateAccountReminderEmails from '../src/jobs/sendCreateAccountReminderEmail';
 import { RedisClient } from '../src/clients/redis';
+import { CommissionModel, KarmaCommissionStatus } from '../src/models/commissions';
 
 (async () => {
   try {
@@ -30,14 +31,8 @@ import { RedisClient } from '../src/clients/redis';
     // await RedisClient.init();
     // await EmailBullClient.init();
     // await SendCreateAccountReminderEmails.oneTimeSend();
-    // await generateCommissionPayoutForUsers(0);
-    // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
-    // const paypal = await new PaypalClient();
-    // const response = await paypal.resendWebhookEvent('WH-4VR47920W2506052W-4YU32506GE625901G');
-    // console.log(response);
-    // await generateCommissionPayoutForUsers(0);
-    // await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
-    // await sendCommissionPayoutsThruPaypal('6449571337297549ed65b788');
+    await generateCommissionPayoutForUsers(5);
+    await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
     // await globalTransactionUpdates({ writeOutput: false });
   } catch (err) {
     console.log(err);

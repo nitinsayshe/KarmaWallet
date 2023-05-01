@@ -23,12 +23,15 @@ export enum ILoggedInState {
 
 export interface IShareableBanner {
   _id: ObjectId;
+  color: IBannerColor;
   enabled: boolean;
   endDate?: Date;
+  link?: string;
+  linkText?: string;
   loggedInState: ILoggedInState;
-  text: string;
   name: string;
   startDate?: Date;
+  text: string;
 }
 
 export interface IBanner extends IShareableBanner {
@@ -58,10 +61,13 @@ export interface IBannerDocument extends IBanner, Document {
 }
 
 const bannerSchema = new Schema({
+  color: { type: IBannerColor, required: true },
   enabled: { type: Boolean, required: true },
   endDate: { type: Date },
   loggedInState: { type: ILoggedInState, required: true },
   text: { type: String, required: true },
+  link: { type: String },
+  linkText: { type: String },
   name: { type: String, required: true },
   startDate: { type: Date },
   createdOn: { type: Date, default: () => getUtcDate().toDate() },

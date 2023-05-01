@@ -3,36 +3,39 @@ import { IRequest } from '../../types/request';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
-import { BannerModel, IBanner, ILoggedInState, IShareableBanner } from '../../models/banner';
+import { BannerModel, IBanner, IBannerColor, ILoggedInState, IShareableBanner } from '../../models/banner';
+import { getUtcDate } from '../../lib/date';
 
 export interface IBannerRequestBody {
-  name: string;
-  text: string;
-  color: string;
-  startDate?: Date;
-  endDate?: Date;
+  color: IBannerColor;
   enabled?: boolean;
+  endDate?: Date;
+  link?: string;
+  linkText?: string;
   loggedInState: ILoggedInState;
+  name: string;
+  startDate?: Date;
+  text: string;
 }
 
 export const getShareableBanner = ({
   _id,
-  name,
-  text,
-  startDate,
   color,
-  endDate,
   enabled,
+  endDate,
   loggedInState,
+  name,
+  startDate,
+  text,
 }: IShareableBanner) => ({
   _id,
-  name,
-  text,
-  startDate,
-  endDate,
-  enabled,
   color,
+  enabled,
+  endDate,
   loggedInState,
+  name,
+  startDate,
+  text,
 });
 
 export const getShareablePaginatedBanners = ({
@@ -80,15 +83,18 @@ export const getBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
 };
 
 export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) => {
-  const { name, text, startDate, endDate, loggedInState } = req.body;
+  const { name, text, startDate, endDate, loggedInState, color, link, linkText } = req.body;
   if (!name) throw new CustomError('A banner name is required.', ErrorTypes.INVALID_ARG);
   if (!text) throw new CustomError('Banner html text is required.', ErrorTypes.INVALID_ARG);
+  if (!color) throw new CustomError('A banner color is required.', ErrorTypes.INVALID_ARG);
   if (!loggedInState) throw new CustomError('A banner logged in state is required.', ErrorTypes.INVALID_ARG);
 
   const modelData: IBannerRequestBody = {
     name,
     text,
     color,
+    link,
+    linkText,
     enabled: false,
     loggedInState,
   };
@@ -108,16 +114,20 @@ export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) =>
 export const updateBanner = async (req: IRequest<{ bannerId: string }, {}, IBannerRequestBody>) => {
   const { bannerId } = req.params;
   if (!bannerId) throw new CustomError('A banner id is required.', ErrorTypes.INVALID_ARG);
-  const { name, text, startDate, endDate, loggedInState, enabled } = req.body;
+  const { name, text, startDate, endDate, loggedInState, enabled, color, link, linkText } = req.body;
   if (!name && !text && !loggedInState && !enabled) throw new CustomError('Missing banner fields.', ErrorTypes.INVALID_ARG);
   const bannerToUpdate = await BannerModel.findOne({ _id: bannerId });
   if (!bannerToUpdate) throw new CustomError('Banner not found.', ErrorTypes.NOT_FOUND);
   if (name !== bannerToUpdate.name) bannerToUpdate.name = name;
   if (text !== bannerToUpdate.text) bannerToUpdate.text = text;
+  if (color !== bannerToUpdate.color) bannerToUpdate.color = color;
+  if (link !== bannerToUpdate.link) bannerToUpdate.link = link;
+  if (linkText !== bannerToUpdate.linkText) bannerToUpdate.linkText = linkText;
   if (startDate !== bannerToUpdate?.startDate || !bannerToUpdate?.startDate) bannerToUpdate.startDate = startDate;
   if (endDate !== bannerToUpdate?.endDate || !bannerToUpdate?.endDate) bannerToUpdate.endDate = endDate;
   if (loggedInState !== bannerToUpdate.loggedInState) bannerToUpdate.loggedInState = loggedInState;
   if (enabled !== bannerToUpdate.enabled) bannerToUpdate.enabled = enabled;
+  bannerToUpdate.lastModified = getUtcDate().toDate();
   bannerToUpdate.save();
   return getShareableBanner(bannerToUpdate);
 };

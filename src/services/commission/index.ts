@@ -186,7 +186,7 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
         commissions: commissionIds,
         amount: commissionsTotal,
         // update this to be a future date?
-        date: getUtcDate(),
+        date: getUtcDate().toDate(),
         status: KarmaCommissionPayoutStatus.Pending,
       });
       await commissionPayout.save();
@@ -223,7 +223,7 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
 
   try {
     const commissionPayoutOverview = new CommissionPayoutOverviewModel({
-      payoutDate: getUtcDate(payoutDate),
+      payoutDate: getUtcDate(payoutDate).toDate(),
       commissionPayouts,
       amount: commissionPayouts.reduce((acc, c) => acc + c.amount, 0),
       status: KarmaCommissionPayoutOverviewStatus.AwaitingVerification,

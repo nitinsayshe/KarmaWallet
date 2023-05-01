@@ -1,3 +1,4 @@
+import { UserCommissionPercentage } from '../../lib/constants';
 import { IMerchantDocument, IShareableMerchant, IWildfireMerchantIntegration } from '../../models/merchant';
 import { getMaxWildfireMerchantRateDescription } from './utils';
 
@@ -30,7 +31,7 @@ export const getShareableMerchant = ({
     const amount = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Amount;
     const kind = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind;
     // the cut that we are passing on to end user is 75%
-    const maxAmountNumber = !!amount ? Math.round((amount * 0.75) * 100) / 100 : 0;
+    const maxAmountNumber = !!amount ? Math.round((amount * UserCommissionPercentage) * 100) / 100 : 0;
     const descriptions = getMaxWildfireMerchantRateDescription(kind, maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxDescription = descriptions.maxDescription;

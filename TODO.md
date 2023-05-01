@@ -1,1 +1,0 @@
-- [] add removedCardsPastThirtyDays and unlinkedCardsPastThirtyDays updated monthly on the 9th of each month?

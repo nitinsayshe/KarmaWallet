@@ -224,3 +224,5 @@ export const MinCompanyNameLength = 1;
 
 export const MinCompanayKarmaScore = -16;
 export const MaxCompanayKarmaScore = 16;
+
+export const UserCommissionPercentage = 0.75;

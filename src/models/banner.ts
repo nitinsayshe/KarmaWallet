@@ -16,9 +16,9 @@ export enum IBannerColor {
 }
 
 export enum ILoggedInState {
-  LoggedIn = 'LoggedIn',
-  LoggedOut = 'LoggedOut',
-  Both = 'Both',
+  LoggedIn = 'loggedIn',
+  LoggedOut = 'loggedOut',
+  Both = 'both',
 }
 
 export interface IShareableBanner {
@@ -61,10 +61,10 @@ export interface IBannerDocument extends IBanner, Document {
 }
 
 const bannerSchema = new Schema({
-  color: { type: IBannerColor, required: true },
-  enabled: { type: Boolean, required: true },
+  color: { type: String, enum: Object.values(IBannerColor) },
+  enabled: { type: Boolean, default: false },
   endDate: { type: Date },
-  loggedInState: { type: ILoggedInState, required: true },
+  loggedInState: { type: String, enum: Object.values(ILoggedInState), required: true },
   text: { type: String, required: true },
   link: { type: String },
   linkText: { type: String },

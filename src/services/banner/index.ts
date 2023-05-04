@@ -27,6 +27,8 @@ export const getShareableBanner = ({
   name,
   startDate,
   text,
+  link,
+  linkText,
 }: IShareableBanner) => ({
   _id,
   color,
@@ -36,6 +38,8 @@ export const getShareableBanner = ({
   name,
   startDate,
   text,
+  link,
+  linkText,
 });
 
 export const getShareablePaginatedBanners = ({
@@ -103,8 +107,8 @@ export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) =>
   if (endDate) modelData.endDate = endDate;
 
   try {
-    const banner = new BannerModel(modelData);
-    banner.save();
+    const banner = await new BannerModel(modelData);
+    await banner.save();
     return getShareableBanner(banner);
   } catch (err) {
     throw asCustomError(err);
@@ -128,6 +132,6 @@ export const updateBanner = async (req: IRequest<{ bannerId: string }, {}, IBann
   if (loggedInState !== bannerToUpdate.loggedInState) bannerToUpdate.loggedInState = loggedInState;
   if (enabled !== bannerToUpdate.enabled) bannerToUpdate.enabled = enabled;
   bannerToUpdate.lastModified = getUtcDate().toDate();
-  bannerToUpdate.save();
+  await bannerToUpdate.save();
   return getShareableBanner(bannerToUpdate);
 };

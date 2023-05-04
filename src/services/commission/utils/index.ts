@@ -1,22 +1,22 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
+import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
+import { CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
+import CustomError from '../../../lib/customError';
+import { getUtcDate } from '../../../lib/date';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
+import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../../models/commissionPayoutOverview';
 import {
   CommissionModel,
   IShareableCommission,
   KarmaCommissionStatus,
   WildfireCommissionStatus,
 } from '../../../models/commissions';
-import { MerchantModel } from '../../../models/merchant';
 import { CompanyModel } from '../../../models/company';
+import { MerchantModel } from '../../../models/merchant';
 import { IUserDocument, UserModel } from '../../../models/user';
-import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
-import { CommissionPayoutMonths, ErrorTypes } from '../../../lib/constants';
-import { getUtcDate } from '../../../lib/date';
 import { IRef } from '../../../types/model';
-import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
-import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../../models/commissionPayoutOverview';
-import CustomError from '../../../lib/customError';
 
 export type IWildfireCommission = {
   CommissionID: number,
@@ -146,7 +146,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
 
   // TODO: this is percentage is for now, but should be dynamic
   // allocation is done on every update
-  const userAllocation = Math.floor((Amount * 0.75) * 100) / 100;
+  const userAllocation = Math.floor((Amount * UserCommissionPercentage) * 100) / 100;
   const karmaAllocation = Amount - userAllocation;
 
   const commissionData: Partial<IShareableCommission> = {

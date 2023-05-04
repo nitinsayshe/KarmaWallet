@@ -4,26 +4,9 @@
 /* eslint-disable camelcase */
 /* eslint-disable no-unused-vars */
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
-import { generateMonthlyImpactReportForUser } from '../src/jobs/userMonthlyImpactReports';
-import { asCustomError } from '../src/lib/customError';
-import { Logger } from '../src/services/logger';
-import { generatePayoutSummaryForPeriod, getAllWildfireTotalCommissions, getReadyWildfireCommissioins } from '../src/services/scripts/commission_payouts';
-import { getUsersWithRemovedCards } from '../src/services/scripts/users_with_removed_cards';
-import { generateCommissionPayoutForUsers, generateCommissionPayoutOverview, sendCommissionPayoutsThruPaypal } from '../src/services/commission';
-import { PaypalClient } from '../src/clients/paypal';
-import { getCurrentWildfireData } from '../src/services/scripts/wildfire';
-import * as UserMonthlyImpactReports from '../src/jobs/userMonthlyImpactReports';
-import { globalPlaidTransactionMapping } from '../src/services/scripts/global_plaid_transaction_mapping';
-import { globalTransactionUpdates } from '../src/services/scripts/global_transaction_updates';
-import { EmailBullClient } from '../src/clients/bull/email';
-import { CommissionPayoutOverviewModel } from '../src/models/commissionPayoutOverview';
-import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../src/models/commissionPayout';
-import * as SendCreateAccountReminderEmails from '../src/jobs/sendCreateAccountReminderEmail';
-import { RedisClient } from '../src/clients/redis';
-import { CommissionModel, KarmaCommissionStatus } from '../src/models/commissions';
+import { generateCommissionPayoutForUsers, generateCommissionPayoutOverview } from '../src/services/commission';
 
 (async () => {
   try {

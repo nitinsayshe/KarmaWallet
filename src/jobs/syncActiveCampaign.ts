@@ -29,9 +29,12 @@ import {
   getMonthlyMissedCashBack,
   getTransactionBreakdownByCompanyRating,
   getUsersWithCommissionsLastMonth,
+  getUsersWithCommissionsLastWeek,
   getUsersWithTransactionPastThirtyDays,
   getUsersWithTransactionsLastMonth,
+  getUsersWithTransactionsLastWeek,
   getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays,
+  getWeeklyMissedCashBack,
 } from '../lib/userMetrics';
 import { IUser, IUserDocument, UserModel } from '../models/user';
 import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
@@ -293,7 +296,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
   }
 };
 
-const prepareCashbackSimulationImportRequest = async (
+const prepareMonthlyCashbackSimulationImportRequest = async (
   request: SyncRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
@@ -309,16 +312,18 @@ const prepareCashbackSimulationImportRequest = async (
 
   // set any that have a total below the threshold to 0 and round amount
   missedCashbackMetrics = missedCashbackMetrics?.map((metric) => {
-    const { email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount } = metric;
+    const { id, email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount } = metric;
     if (estimatedMonthlyMissedCommissionsAmount <= request.fields.missingCashbackThresholdDollars) {
       return {
+        id,
         email,
         estimatedMonthlyMissedCommissionsAmount: 0,
         estimatedMonthlyMissedCommissionsCount: 0,
       };
     }
     return {
-      email: metric.email,
+      id,
+      email,
       estimatedMonthlyMissedCommissionsAmount: roundToPercision(estimatedMonthlyMissedCommissionsAmount, 0),
       estimatedMonthlyMissedCommissionsCount,
     };
@@ -356,7 +361,97 @@ const prepareCashbackSimulationImportRequest = async (
   return { contacts };
 };
 
-const syncEstimatedCashbackFields = async (httpClient?: AxiosInstance) => {
+const prepareWeeklyCashbackSimulationImportRequest = async (
+  request: SyncRequest<CashbackSimulationCustomFields>,
+  userBatch: PaginateResult<IUser>,
+  customFields: { name: string; id: number }[],
+): Promise<IContactsImportData> => {
+  let missedCashbackMetrics = await Promise.all(
+    userBatch?.docs?.map(async (user) => getWeeklyMissedCashBack(user as unknown as IUserDocument)),
+  );
+  const emailSchema = z.string().email();
+  missedCashbackMetrics = missedCashbackMetrics?.filter((metric) => {
+    const validationResult = emailSchema.safeParse(metric.email);
+    return !!metric.email && !(validationResult as SafeParseError<string>)?.error;
+  });
+
+  // set any that have a total below the threshold to 0 and round amount
+  missedCashbackMetrics = missedCashbackMetrics?.map((metric) => {
+    const { id, email, estimatedWeeklyMissedCommissionsAmount, estimatedWeeklyMissedCommissionsCount } = metric;
+    if (estimatedWeeklyMissedCommissionsAmount <= request.fields.missingCashbackThresholdDollars) {
+      return {
+        id,
+        email,
+        estimatedWeeklyMissedCommissionsAmount: 0,
+        estimatedWeeklyMissedCommissionsCount: 0,
+      };
+    }
+    return {
+      id,
+      email,
+      estimatedWeeklyMissedCommissionsAmount: roundToPercision(estimatedWeeklyMissedCommissionsAmount, 0),
+      estimatedWeeklyMissedCommissionsCount,
+    };
+  });
+
+  // set the custom fields and update in active campaign
+  const missedDollarsFieldId = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastWeek,
+  );
+  const missedCashbackTransactionCountFieldId = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastWeek,
+  );
+
+  const contacts = missedCashbackMetrics.map((metric) => {
+    const contact: IContactsData = {
+      email: metric.email,
+      fields: [],
+    };
+    if (!!missedDollarsFieldId) {
+      contact.fields.push({
+        id: missedDollarsFieldId.id,
+        value: metric.estimatedWeeklyMissedCommissionsAmount.toString(),
+      });
+    }
+    if (!!missedCashbackTransactionCountFieldId) {
+      contact.fields.push({
+        id: missedCashbackTransactionCountFieldId.id,
+        value: metric.estimatedWeeklyMissedCommissionsCount.toString(),
+      });
+    }
+    return contact;
+  });
+
+  return { contacts };
+};
+const syncEstimatedCashbackFieldsWeekly = async (httpClient?: AxiosInstance) => {
+  // filter out users with commissions this month
+  const usersWithCommissionsLastWeek = await getUsersWithCommissionsLastWeek();
+
+  // filter out users with no transactions this month
+  const usersWithTransactionsLastWeek = await getUsersWithTransactionsLastWeek();
+
+  const msDelayBetweenBatches = 2000;
+
+  const req: SyncRequest<CashbackSimulationCustomFields> = {
+    httpClient,
+    batchQuery: {
+      $and: [{ _id: { $nin: usersWithCommissionsLastWeek } }, { _id: { $in: usersWithTransactionsLastWeek } }],
+    },
+    batchLimit: 100,
+    fields: {
+      missingCashbackThresholdDollars: 2,
+    },
+  };
+
+  await iterateOverUsersAndExecImportReqWithDelay(
+    req,
+    prepareWeeklyCashbackSimulationImportRequest,
+    msDelayBetweenBatches,
+  );
+};
+
+const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) => {
   // filter out users with commissions this month
   const usersWithCommissionsLastMonth = await getUsersWithCommissionsLastMonth();
 
@@ -372,11 +467,15 @@ const syncEstimatedCashbackFields = async (httpClient?: AxiosInstance) => {
     },
     batchLimit: 100,
     fields: {
-      missingCashbackThresholdDollars: 5,
+      missingCashbackThresholdDollars: 2,
     },
   };
 
-  await iterateOverUsersAndExecImportReqWithDelay(req, prepareCashbackSimulationImportRequest, msDelayBetweenBatches);
+  await iterateOverUsersAndExecImportReqWithDelay(
+    req,
+    prepareMonthlyCashbackSimulationImportRequest,
+    msDelayBetweenBatches,
+  );
 };
 
 const prepareSpendingAnalysisImportRequest = async (
@@ -526,7 +625,11 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
     batchLimit: 100,
   };
 
-  await iterateOverUsersAndExecImportReqWithDelay(req, prepareRemovedOrUnlinkedAccountsSyncRequest, msDelayBetweenBatches);
+  await iterateOverUsersAndExecImportReqWithDelay(
+    req,
+    prepareRemovedOrUnlinkedAccountsSyncRequest,
+    msDelayBetweenBatches,
+  );
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
@@ -574,7 +677,10 @@ export const exec = async ({ syncType, userSubscriptions, httpClient }: IJobData
         await syncUserSubsrciptionsAndTags(userSubscriptions, httpClient);
         break;
       case ActiveCampaignSyncTypes.CASHBACK_SIMULATION:
-        await syncEstimatedCashbackFields(httpClient);
+        await syncEstimatedCashbackFieldsMonthly(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.CASHBACK_SIMULATION_WEEKLY:
+        await syncEstimatedCashbackFieldsWeekly(httpClient);
         break;
       case ActiveCampaignSyncTypes.REMOVE_DUPLICATE_CONTACT_AUTOMAITONS:
         await removeDuplicateAutomationEnrollmentsFromAllUsers(httpClient);

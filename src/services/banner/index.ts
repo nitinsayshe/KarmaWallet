@@ -4,7 +4,7 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import { BannerModel, IBanner, IBannerColor, ILoggedInState, IShareableBanner } from '../../models/banner';
-import { getUtcDate } from '../../lib/date';
+import { getUtcDate, inDateRange } from '../../lib/date';
 
 export interface IBannerRequestBody {
   color: IBannerColor;
@@ -72,6 +72,7 @@ export const getShareablePaginatedBanners = ({
 
 export const getBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
   const { projection, skip, limit } = query;
+
   const invalidQuery = !ALPHANUMERIC_REGEX.test(projection) || !ALPHANUMERIC_REGEX.test(skip) || !ALPHANUMERIC_REGEX.test(limit);
   if (invalidQuery) throw new CustomError('Invalid query parameters.', ErrorTypes.INVALID_ARG);
 
@@ -81,8 +82,37 @@ export const getBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
     limit: limit || 10,
   };
 
-  const filter: FilterQuery<IBanner> = { ...query.filter };
-  const paginatedBanners = await BannerModel.paginate(filter, options);
+  const filterInfo: FilterQuery<IBanner> = { ...query.filter };
+  const paginatedBanners = await BannerModel.paginate(filterInfo, options);
+  return getShareablePaginatedBanners(paginatedBanners);
+};
+
+export const getActiveBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
+  const { projection, skip, limit } = query;
+
+  const invalidQuery = !ALPHANUMERIC_REGEX.test(projection) || !ALPHANUMERIC_REGEX.test(skip) || !ALPHANUMERIC_REGEX.test(limit);
+  if (invalidQuery) throw new CustomError('Invalid query parameters.', ErrorTypes.INVALID_ARG);
+
+  const options = {
+    projection: projection || '',
+    page: skip || 1,
+    limit: limit || 10,
+  };
+
+  const filterInfo: FilterQuery<IBanner> = { ...query.filter };
+  const paginatedBanners = await BannerModel.paginate(filterInfo, options);
+  paginatedBanners.docs = paginatedBanners.docs.filter((b) => {
+    const startDate = b?.startDate;
+    const endDate = b?.endDate;
+    if (startDate && endDate) {
+      return inDateRange(endDate, startDate);
+    }
+
+    return b;
+  });
+
+  paginatedBanners.totalDocs = paginatedBanners.docs.length;
+
   return getShareablePaginatedBanners(paginatedBanners);
 };
 

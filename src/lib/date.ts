@@ -7,8 +7,10 @@ import {
 } from 'date-fns';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import isBetween from 'dayjs/plugin/isBetween';
 
 dayjs.extend(utc);
+dayjs.extend(isBetween);
 
 export interface IGetDateFromData {
   months?: string | number;
@@ -77,4 +79,9 @@ export const areMoreThanOneDayApart = (date1: Date, date2: Date): boolean => {
   // convert ms to hours                      min  sec   ms
   const hoursBetweenDates = msBetweenDates / (60 * 60 * 1000);
   return hoursBetweenDates >= 24;
+};
+
+export const inDateRange = (endDate: Date, startDate: Date) => {
+  const currentDate = dayjs().utc();
+  return currentDate.isBetween(dayjs(startDate), dayjs(endDate));
 };

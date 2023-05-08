@@ -4,10 +4,10 @@ import * as BannerService from '../services/banner';
 import * as output from '../services/output';
 import { asCustomError } from '../lib/customError';
 
-export const getBanners: IRequestHandler = async (req, res) => {
+export const getActiveBanners: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
-    const banners = await BannerService.getBanners(req, query);
+    const banners = await BannerService.getActiveBanners(req, query);
 
     output.api(req, res, banners);
   } catch (err) {

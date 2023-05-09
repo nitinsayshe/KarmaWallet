@@ -84,7 +84,7 @@ export const getBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
 
   const filterInfo: FilterQuery<IBanner> = { ...query.filter };
   const paginatedBanners = await BannerModel.paginate(filterInfo, options);
-  return getShareablePaginatedBanners(paginatedBanners);
+  return paginatedBanners;
 };
 
 export const getActiveBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
@@ -110,7 +110,7 @@ export const getActiveBanners = async (__: IRequest, query: FilterQuery<IBanner>
   });
 
   paginatedBanners.totalDocs = paginatedBanners.docs.length;
-  return getShareablePaginatedBanners(paginatedBanners);
+  return paginatedBanners;
 };
 
 export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) => {
@@ -136,7 +136,7 @@ export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) =>
   try {
     const banner = await new BannerModel(modelData);
     await banner.save();
-    return getShareableBanner(banner);
+    return banner;
   } catch (err) {
     throw asCustomError(err);
   }
@@ -159,6 +159,6 @@ export const updateBanner = async (req: IRequest<{ bannerId: string }, {}, IBann
   if (loggedInState !== bannerToUpdate.loggedInState) bannerToUpdate.loggedInState = loggedInState;
   if (enabled !== bannerToUpdate.enabled) bannerToUpdate.enabled = enabled;
   bannerToUpdate.lastModified = getUtcDate().toDate();
-  await bannerToUpdate.save();
-  return getShareableBanner(bannerToUpdate);
+  const banner = await bannerToUpdate.save();
+  return banner;
 };

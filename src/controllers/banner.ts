@@ -8,7 +8,7 @@ export const getActiveBanners: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const banners = await BannerService.getActiveBanners(req, query);
-    output.api(req, res, banners);
+    output.api(req, res, BannerService.getShareablePaginatedBanners(banners));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

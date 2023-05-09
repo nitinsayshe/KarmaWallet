@@ -105,15 +105,11 @@ export const getActiveBanners = async (__: IRequest, query: FilterQuery<IBanner>
   paginatedBanners.docs = paginatedBanners.docs.filter((b) => {
     const startDate = b?.startDate;
     const endDate = b?.endDate;
-    if (startDate && endDate) {
-      return inDateRange(endDate, startDate);
-    }
-
+    if (startDate && endDate) return inDateRange(endDate, startDate);
     return b;
   });
 
   paginatedBanners.totalDocs = paginatedBanners.docs.length;
-
   return getShareablePaginatedBanners(paginatedBanners);
 };
 

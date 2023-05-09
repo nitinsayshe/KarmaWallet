@@ -29,7 +29,7 @@ export interface ICreateJobParams {
   queue: QueueNames
 }
 
-export interface IObliterateQueueQuery {
+export interface IQueueQuery {
   queue: QueueNames
 }
 
@@ -68,10 +68,9 @@ export const createJob = (req: IRequest<{}, {}, ICreateJobParams>) => {
   return 'Job added to queue';
 };
 
-// TODO: Update to make sure we have all job statuses needed
-export const logJobs = async (_: IRequest) => MainBullClient.queue.getJobs(['wait', 'delayed']);
+export const logJobs = async (_: IRequest) => MainBullClient.queue.getJobs(['active', 'waiting', 'wait', 'repeat', 'delayed']);
 
-export const obliterateQueue = async (req: IRequest<{}, IObliterateQueueQuery, {}>) => {
+export const obliterateQueue = async (req: IRequest<{}, IQueueQuery, {}>) => {
   const { queue } = req.query;
   switch (queue) {
     case QueueNames.Main:
@@ -86,7 +85,17 @@ export const obliterateQueue = async (req: IRequest<{}, IObliterateQueueQuery, {
   return { message: `${queue} queue obliterated` };
 };
 
-export const addCronJobs = async (_: IRequest) => {
-  await MainBullClient.initCronJobs();
+export const addCronJobs = async (req: IRequest<{}, IQueueQuery, {}>) => {
+  const { queue } = req.query;
+  switch (queue) {
+    case QueueNames.Main:
+      await MainBullClient.initCronJobs();
+      break;
+    case QueueNames.Email:
+      await EmailBullClient.initCronJobs();
+      break;
+    default:
+      throw new CustomError('Invalid queue name', ErrorTypes.INVALID_ARG);
+  }
   return 'Cron jobs added';
 };

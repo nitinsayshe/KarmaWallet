@@ -48,7 +48,7 @@ export const logJobs: IRequestHandler = async (req, res) => {
   }
 };
 
-export const obliterateQueue: IRequestHandler<{}, JobService.IObliterateQueueQuery, {}> = async (req, res) => {
+export const obliterateQueue: IRequestHandler<{}, JobService.IQueueQuery, {}> = async (req, res) => {
   try {
     const message = await JobService.obliterateQueue(req);
     output.api(req, res, message);
@@ -57,7 +57,7 @@ export const obliterateQueue: IRequestHandler<{}, JobService.IObliterateQueueQue
   }
 };
 
-export const addCronJobs: IRequestHandler = async (req, res) => {
+export const addCronJobs: IRequestHandler<{}, JobService.IQueueQuery, {}> = async (req, res) => {
   try {
     const message = await JobService.addCronJobs(req);
     output.api(req, res, message);

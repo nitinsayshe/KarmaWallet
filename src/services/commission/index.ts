@@ -148,6 +148,8 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
       continue;
     }
 
+    if (!user.integrations?.paypal) continue;
+
     let dateQuery: any = { $lte: dayjs().utc().toDate() };
 
     try {

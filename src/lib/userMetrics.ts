@@ -414,8 +414,8 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
 export const countUnlinkedAndRemovedAccounts = async (
   user: IUserDocument,
 ): Promise<{ email: string; unlinkedCardsPastThirtyDays: number; removedCardsPastThirtyDays: number }> => {
+  const email = user.emails?.find((e) => e.primary)?.email || '';
   try {
-    const email = user.emails?.find((e) => e.primary)?.email;
     if (!email) {
       throw Error('No email found for user');
     }
@@ -460,7 +460,7 @@ export const countUnlinkedAndRemovedAccounts = async (
     return { email, unlinkedCardsPastThirtyDays, removedCardsPastThirtyDays };
   } catch (err) {
     console.error(err);
-    return { email: '', unlinkedCardsPastThirtyDays: 0, removedCardsPastThirtyDays: 0 };
+    return { email, unlinkedCardsPastThirtyDays: 0, removedCardsPastThirtyDays: 0 };
   }
 };
 
@@ -473,8 +473,8 @@ export const getTransactionBreakdownByCompanyRating = async (
   numNegativePurchasesLastThirtyDays: number;
   negativePurchaseDollarsLastThirtyDays: number;
 }> => {
+  const email = user?.emails?.find((e) => e.primary)?.email || '';
   try {
-    const email = user.emails?.find((e) => e.primary)?.email;
     if (!email) {
       throw Error('No email found for user');
     }
@@ -523,7 +523,7 @@ export const getTransactionBreakdownByCompanyRating = async (
   } catch (err) {
     console.error(err);
     return {
-      email: '',
+      email,
       numPositivePurchasesLastThirtyDays: 0,
       positivePurchaseDollarsLastThirtyDays: 0,
       numNegativePurchasesLastThirtyDays: 0,
@@ -543,18 +543,17 @@ export const getMissedCashBackForDateRange = async (
   averageMissedCommissionAmount: number;
   largestMissedCommissionAmount: number;
 }> => {
+  const email = user?.emails?.find((e) => e.primary)?.email || '';
   try {
     const userTransactions = await getTransactionsWithCashbackCompaniesInDateRange(user, startDate, endDate);
     if (!userTransactions) {
       throw new Error(`No transactions found for user with id: ${user?._id}`);
     }
-    const email = user.emails?.find((e) => e.primary)?.email;
 
     /* simulate commission payout and record the dollar amount */
     const missedCashbackAmounts = await Promise.all(userTransactions.map(getEstimatedMissedCommissionAmounts));
 
     // calculate the largest missed comission amount
-    // calculate the average missed comission amount
     let averageMissedCommissionAmount = 0;
     let largestMissedCommissionAmount = 0;
     if (missedCashbackAmounts?.length > 0) {
@@ -575,8 +574,8 @@ export const getMissedCashBackForDateRange = async (
     };
   } catch (err) {
     return {
-      id: null,
-      email: '',
+      id: user?._id,
+      email,
       estimatedMissedCommissionsAmount: 0,
       estimatedMissedCommissionsCount: 0,
       averageMissedCommissionAmount: 0,

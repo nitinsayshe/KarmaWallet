@@ -12,4 +12,4 @@ dump.rdb
 */.tmp
 *.rdb
 *.backups
-bin/
+bin

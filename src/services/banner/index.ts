@@ -89,6 +89,7 @@ export const getBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
 
 export const getActiveBanners = async (__: IRequest, query: FilterQuery<IBanner>) => {
   const { projection, skip, limit } = query;
+  query.filter.enabled = true;
 
   const invalidQuery = !ALPHANUMERIC_REGEX.test(projection) || !ALPHANUMERIC_REGEX.test(skip) || !ALPHANUMERIC_REGEX.test(limit);
   if (invalidQuery) throw new CustomError('Invalid query parameters.', ErrorTypes.INVALID_ARG);

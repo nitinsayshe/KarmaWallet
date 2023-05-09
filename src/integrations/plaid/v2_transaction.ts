@@ -96,8 +96,8 @@ export const filterDuplicatePlaidTransactions = async (transactions: ITransactio
       const dateFingerprint = ut.date.getTime() === t.date.getTime();
       fingerprints.push(dateFingerprint);
 
-      const cardFingerprint = ut.card.toString() === t.card.toString();
-      fingerprints.push(cardFingerprint);
+      // const cardFingerprint = ut.card.toString() === t.card.toString();
+      // fingerprints.push(cardFingerprint);
 
       const companyFingerprint = ut.company?.toString() === t.company?.toString();
       fingerprints.push(companyFingerprint);
@@ -235,8 +235,8 @@ export const identifyAndRemoveDuplicateTransactions = async ({
         const dateFingerprint = t.date.getTime() === transaction.date.getTime();
         fingerprints.push(dateFingerprint);
 
-        const cardFingerprint = t.card.toString() === transaction.card.toString();
-        fingerprints.push(cardFingerprint);
+        // const cardFingerprint = t.card.toString() === transaction.card.toString();
+        // fingerprints.push(cardFingerprint);
 
         const companyFingerprint = t.company?.toString() === transaction.company?.toString();
         fingerprints.push(companyFingerprint);

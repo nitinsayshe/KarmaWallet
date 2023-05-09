@@ -7,6 +7,7 @@ import dayjs from 'dayjs';
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { generateCommissionPayoutForUsers, generateCommissionPayoutOverview } from '../src/services/commission';
+import { fixStatusesOnFailedAndPaidCommissions } from '../src/services/scripts/commission_payouts';
 
 (async () => {
   try {
@@ -14,8 +15,7 @@ import { generateCommissionPayoutForUsers, generateCommissionPayoutOverview } fr
     // await RedisClient.init();
     // await EmailBullClient.init();
     // await SendCreateAccountReminderEmails.oneTimeSend();
-    await generateCommissionPayoutForUsers(5);
-    await generateCommissionPayoutOverview(dayjs('2023-05-01T07:00:00.000+00:00').toDate());
+    await fixStatusesOnFailedAndPaidCommissions();
     // await globalTransactionUpdates({ writeOutput: false });
   } catch (err) {
     console.log(err);

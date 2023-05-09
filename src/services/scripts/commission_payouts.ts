@@ -142,5 +142,30 @@ export const getReadyWildfireCommissioins = async () => {
 
 export const fixStatusesOnFailedAndPaidCommissions = async () => {
   const payouts = await CommissionPayoutModel.find({ status: { $in: [KarmaCommissionPayoutStatus.Failed, KarmaCommissionPayoutStatus.Paid] } });
+  let paidCount = 0;
+  let failedCount = 0;
+
   console.log('//////// these are all the payouts', payouts);
+  for (const payout of payouts) {
+    for (const commission of payout.commissions) {
+      const commissionModel = await CommissionModel.findById(commission);
+      if (!commissionModel) continue;
+      console.log('//////// this is the commission', commissionModel);
+      if (payout.status === KarmaCommissionPayoutStatus.Failed) {
+        console.log('///// should be marked failed');
+        failedCount++;
+        commissionModel.status = KarmaCommissionStatus.Failed;
+      } else if (payout.status === KarmaCommissionPayoutStatus.Paid) {
+        console.log('///// should be marked paid');
+        paidCount++;
+        commissionModel.status = KarmaCommissionStatus.PaidToUser;
+      }
+      await commissionModel.save();
+    }
+  }
+
+  console.log('/////// Final Count', {
+    paidCount,
+    failedCount,
+  });
 };

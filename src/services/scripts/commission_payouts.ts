@@ -3,6 +3,7 @@ import fs from 'fs';
 import { parse } from 'json2csv';
 import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
 import { UserModel } from '../../models/user';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
 
 export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date, startDate?: Date) => {
   if (!endDate) endDate = new Date();
@@ -137,4 +138,9 @@ export const getReadyWildfireCommissioins = async () => {
 
   const _csv = parse(mappedPayouts);
   fs.writeFileSync(path.join(__dirname, '.tmp', 'allReadyWildfireCommissions.csv'), _csv);
+};
+
+export const fixStatusesOnFailedAndPaidCommissions = async () => {
+  const payouts = await CommissionPayoutModel.find({ status: { $in: [KarmaCommissionPayoutStatus.Failed, KarmaCommissionPayoutStatus.Paid] } });
+  console.log('//////// these are all the payouts', payouts);
 };

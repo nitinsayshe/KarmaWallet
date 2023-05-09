@@ -170,6 +170,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     if (!company) throw new Error('Company not found');
     const user = await UserModel.findOne({ _id: TrackingCode });
     if (!user) throw new Error('User not found');
+
     const newCommission = new CommissionModel({
       user: user?._id,
       company: company?._id,
@@ -186,6 +187,8 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     await newCommission.save();
     return;
   }
+  // if already paid to user DO NOT update the Karma Commission Status, this will revert the status back to received-from-vendor
+  if (existingCommission.status === KarmaCommissionStatus.PaidToUser) return;
   const newStatus = getKarmaCommissionStatusFromWildfireStatus(Status, existingCommission.status);
 
   const updates: Partial<IShareableCommission> = {

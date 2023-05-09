@@ -188,7 +188,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     return;
   }
   // if already paid to user DO NOT update the Karma Commission Status, this will revert the status back to received-from-vendor
-  if (existingCommission.status === KarmaCommissionStatus.PaidToUser) return;
+  if (existingCommission.status === KarmaCommissionStatus.PaidToUser || existingCommission.status === KarmaCommissionStatus.Failed) return;
   const newStatus = getKarmaCommissionStatusFromWildfireStatus(Status, existingCommission.status);
 
   const updates: Partial<IShareableCommission> = {

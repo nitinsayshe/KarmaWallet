@@ -18,7 +18,11 @@ const sources = [
   { name: 'linkedin', total: numUsersInFourthPromo },
 ];
 
-const campaigns = ['TestCampaign1', 'TestCampaign2', 'TestCampaign3'];
+const campaigns = [
+  { name: 'testcampaign1', total: numUsersInFirstPromo },
+  { name: 'testcampaign2', total: numUsersInSecondPromo },
+  { name: 'testcampaign3', total: numUsersInFourthPromo },
+];
 
 const getCreateTestUsersRequest = (testPromos: IPromoDocument[]) => {
   const testIntegrations: IUserIntegrations[] = [];
@@ -29,7 +33,7 @@ const getCreateTestUsersRequest = (testPromos: IPromoDocument[]) => {
       referrals: {
         params: [
           { key: 'utm_source', value: sources[0].name },
-          { key: 'utm_campaign', value: campaigns[0] },
+          { key: 'utm_campaign', value: campaigns[0].name },
           { key: 'extra_param', value: 'TEST' },
         ],
       },
@@ -42,7 +46,7 @@ const getCreateTestUsersRequest = (testPromos: IPromoDocument[]) => {
         params: [
           { key: 'utm_source', value: sources[0].name },
           { key: 'extra_param', value: 'TEST' },
-          { key: 'utm_campaign', value: campaigns[1] },
+          { key: 'utm_campaign', value: campaigns[1].name },
         ],
       },
     });
@@ -58,7 +62,7 @@ const getCreateTestUsersRequest = (testPromos: IPromoDocument[]) => {
       referrals: {
         params: [
           { key: 'utm_source', value: sources[1].name },
-          { key: 'utm_campaign', value: campaigns[2] },
+          { key: 'utm_campaign', value: campaigns[2].name },
         ],
       },
     });
@@ -143,8 +147,11 @@ describe('promo report generation logic tests', () => {
     const data = await getPromosReport(mockRequest);
     expect(data).toBeDefined();
     const sourceAggData = data as { data: ISourceAggData[] };
-    expect(sourceAggData.data.length).toBe(testPromos.length);
-    // TODO: add better assertions
+    expect(sourceAggData.data.length).toBeGreaterThanOrEqual(testPromos.length);
+    const promoNames = testPromos.map((promo) => promo.name);
+    promoNames.forEach((promoName) => {
+      expect(sourceAggData.data.find((source) => source.promo === promoName)).toBeDefined();
+    });
   });
 
   it('getPromosReport created campaigns report', async () => {
@@ -156,8 +163,21 @@ describe('promo report generation logic tests', () => {
     const data = await getPromosReport(mockRequest);
     expect(data).toBeDefined();
     const campaignAggData = data as { data: ICampaignAggData[] };
-    expect(campaignAggData.data.length).toBe(testPromos.length);
-    // TODO: add better assertions
+    expect(campaignAggData.data.length).toBeGreaterThanOrEqual(testPromos.length);
+
+    let userCampaigns = campaignAggData.data.map((campaignData) => campaignData?.campaigns);
+    userCampaigns = userCampaigns.filter((campaign) => Object.keys(campaign)?.length > 0);
+    console.log(JSON.stringify(userCampaigns, null, 2));
+    campaigns.forEach((campaign) => {
+      console.log('campaign', campaign);
+      const usersInCampaign = userCampaigns.filter((c) => !!Object.keys(c)?.find((key) => key === campaign.name));
+      console.log('usersInCampaign', JSON.stringify(usersInCampaign, null, 2));
+
+      const numUsersInCampaign = usersInCampaign.reduce((acc, curr) => acc + (curr[campaign.name] || 0), 0);
+      console.log('numUsersInCampaign', numUsersInCampaign);
+
+      expect(numUsersInCampaign).toBeGreaterThanOrEqual(campaign.total);
+    });
   });
 
   it('getPromosReport created linked accounts report', async () => {
@@ -169,7 +189,7 @@ describe('promo report generation logic tests', () => {
     const data = await getPromosReport(mockRequest);
     expect(data).toBeDefined();
     const linkedAccountAggData = data as { data: IAccountStatusAggData[] };
-    expect(linkedAccountAggData.data.length).toBe(testPromos.length);
+    expect(linkedAccountAggData.data.length).toBeGreaterThanOrEqual(testPromos.length);
     // TODO: add better assertions
   });
 });

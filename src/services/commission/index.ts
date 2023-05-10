@@ -143,6 +143,11 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   const users = await UserModel.find({});
 
   for (const user of users) {
+    if (!user.integrations?.paypal?.payerId) {
+      console.log(`[+] Skipping user ${user._id} - no paypal integration`);
+      continue;
+    }
+
     if (!user.integrations?.paypal) continue;
 
     let dateQuery: any = { $lte: dayjs().utc().toDate() };
@@ -183,11 +188,11 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
         commissions: commissionIds,
         amount: commissionsTotal,
         // update this to be a future date?
-        date: getUtcDate(),
+        date: getUtcDate().toDate(),
         status: KarmaCommissionPayoutStatus.Pending,
       });
       await commissionPayout.save();
-      await CommissionModel.updateMany({ _id: { $in: commissionIds } }, { $set: { status: KarmaCommissionStatus.PendingPaymentToUser } });
+      await CommissionModel.updateMany({ _id: { $in: commissionIds } }, { $set: { status: KarmaCommissionStatus.PendingPaymentToUser, lastStatusUpdate: getUtcDate() } });
       console.log(`[+] Created CommissionPayout for user ${user._id}`);
     } catch (err) {
       console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
@@ -220,7 +225,7 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
 
   try {
     const commissionPayoutOverview = new CommissionPayoutOverviewModel({
-      payoutDate: getUtcDate(payoutDate),
+      payoutDate: getUtcDate(payoutDate).toDate(),
       commissionPayouts,
       amount: commissionPayouts.reduce((acc, c) => acc + c.amount, 0),
       status: KarmaCommissionPayoutOverviewStatus.AwaitingVerification,

@@ -24,6 +24,7 @@ import dataSource from './dataSource';
 import values from './values';
 import visitor from './visitor';
 import promo from './promo';
+import banner from './banner';
 
 const routers = (app: Express) => {
   admin(app);
@@ -51,6 +52,7 @@ const routers = (app: Express) => {
   commission(app);
   webhook(app);
   promo(app);
+  banner(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

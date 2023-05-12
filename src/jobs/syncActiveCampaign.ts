@@ -30,10 +30,6 @@ import {
   getTransactionBreakdownByCompanyRating,
   getUsersWithCommissionsLastMonth,
   getUsersWithCommissionsLastWeek,
-  getUsersWithTransactionPastThirtyDays,
-  getUsersWithTransactionsLastMonth,
-  getUsersWithTransactionsLastWeek,
-  getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays,
   getWeeklyMissedCashBack,
 } from '../lib/userMetrics';
 import { IUser, IUserDocument, UserModel } from '../models/user';
@@ -428,15 +424,12 @@ const syncEstimatedCashbackFieldsWeekly = async (httpClient?: AxiosInstance) => 
   // filter out users with commissions this month
   const usersWithCommissionsLastWeek = await getUsersWithCommissionsLastWeek();
 
-  // filter out users with no transactions this month
-  const usersWithTransactionsLastWeek = await getUsersWithTransactionsLastWeek();
-
   const msDelayBetweenBatches = 2000;
 
   const req: SyncRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: {
-      $and: [{ _id: { $nin: usersWithCommissionsLastWeek } }, { _id: { $in: usersWithTransactionsLastWeek } }],
+      _id: { $nin: usersWithCommissionsLastWeek },
     },
     batchLimit: 100,
     fields: {
@@ -455,16 +448,11 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
   // filter out users with commissions this month
   const usersWithCommissionsLastMonth = await getUsersWithCommissionsLastMonth();
 
-  // filter out users with no transactions this month
-  const usersWithTransactionsLastMonth = await getUsersWithTransactionsLastMonth();
-
   const msDelayBetweenBatches = 2000;
 
   const req: SyncRequest<CashbackSimulationCustomFields> = {
     httpClient,
-    batchQuery: {
-      $and: [{ _id: { $nin: usersWithCommissionsLastMonth } }, { _id: { $in: usersWithTransactionsLastMonth } }],
-    },
+    batchQuery: { _id: { $nin: usersWithCommissionsLastMonth } },
     batchLimit: 100,
     fields: {
       missingCashbackThresholdDollars: 2,
@@ -549,14 +537,11 @@ const prepareSpendingAnalysisImportRequest = async (
 };
 
 const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
-  // filter out users with no transactions this month
-  const usersWithTransactionsPastThirtyDays = await getUsersWithTransactionPastThirtyDays();
-
   const msDelayBetweenBatches = 2000;
 
   const req: SyncRequest<{}> = {
     httpClient,
-    batchQuery: { _id: { $in: usersWithTransactionsPastThirtyDays } },
+    batchQuery: {},
     batchLimit: 100,
   };
 
@@ -614,14 +599,11 @@ const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
 };
 
 const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) => {
-  // filter out users with no transactions this month
-  const usersWithTransactionsPastThirtyDays = await getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays();
-
   const msDelayBetweenBatches = 2000;
 
   const req: SyncRequest<{}> = {
     httpClient,
-    batchQuery: { _id: { $in: usersWithTransactionsPastThirtyDays } },
+    batchQuery: {},
     batchLimit: 100,
   };
 
@@ -633,7 +615,6 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
-  // filter out users with no transactions this month
   const msDelayBetweenBatches = 1500;
   const batchLimit = 10;
   const emailSchema = z.string().email();

@@ -96,6 +96,7 @@ export const filterDuplicatePlaidTransactions = async (transactions: ITransactio
       const dateFingerprint = ut.date.getTime() === t.date.getTime();
       fingerprints.push(dateFingerprint);
 
+      // removed to account for the same card being used for multiple accountIds
       // const cardFingerprint = ut.card.toString() === t.card.toString();
       // fingerprints.push(cardFingerprint);
 
@@ -215,10 +216,10 @@ export const identifyAndRemoveDuplicateTransactions = async ({
         'integrations.plaid': { $ne: null },
       });
 
-      console.log(`[i] user ${user._id} transaction ${i} of ${transactions.length}`);
+      // console.log(`[i] user ${user._id} transaction ${i} of ${transactions.length}`);
 
       if (_duplicateMatches.indexOf(transaction._id.toString()) > -1) {
-        console.log(`[i] skipping ${transaction._id} because it's already been matched`);
+        // console.log(`[i] skipping ${transaction._id} because it's already been matched`);
         continue;
       }
 
@@ -250,7 +251,7 @@ export const identifyAndRemoveDuplicateTransactions = async ({
       });
 
       if (duplicate) {
-        console.log(`[i] found duplicate ${transaction._id} for ${duplicate._id}`);
+        // console.log(`[i] found duplicate ${transaction._id} for ${duplicate._id}`);
         _duplicates.push(duplicate);
         _duplicateMatches.push(transaction._id.toString());
       }

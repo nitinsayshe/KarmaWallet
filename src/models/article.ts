@@ -11,6 +11,7 @@ import { ICompany, ICompanyDocument, IShareableCompany } from './company';
 
 export enum IArticleType {
   GoodAndBad = 'the-good-and-the-bad',
+  OurImpact = 'our-impact',
 }
 
 export interface IArticle {
@@ -27,6 +28,7 @@ export interface IArticle {
   theBad: string;
   enabled: boolean;
   type: IArticleType;
+  featured: boolean;
 }
 
 export interface IArticleDocument extends IArticle, Document {
@@ -48,6 +50,7 @@ const articleSchema = new Schema({
   theGood: { type: String, required: true },
   theBad: { type: String, required: true },
   type: { type: String, enum: Object.values(IArticleType), required: true },
+  featured: { type: Boolean, default: false },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);

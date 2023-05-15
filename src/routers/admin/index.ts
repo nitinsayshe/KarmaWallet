@@ -13,6 +13,7 @@ import usersRouter from './users';
 import commissionsRouter from './commissions';
 import promoRouter from './promo';
 import campaignRouter from './campaign';
+import transaction from './transaction';
 import bannerRouter from './banner';
 
 const adminRouter = Router();
@@ -31,6 +32,7 @@ adminRouter.use('/socket', socketRouter);
 adminRouter.use('/commissions', commissionsRouter);
 adminRouter.use('/promo', promoRouter);
 adminRouter.use('/campaign', campaignRouter);
+adminRouter.use('/transaction', transaction);
 adminRouter.use('/banner', bannerRouter);
 
 export default (app: Express) => app.use('/admin', adminRouter);

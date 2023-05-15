@@ -2,9 +2,10 @@ import {
   Schema,
   model,
   Document,
-  Model,
   ObjectId,
+  PaginateModel,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 import { PlaidCompanyMatchType } from '../lib/constants/plaid';
 import { getUtcDate } from '../lib/date';
@@ -31,4 +32,6 @@ const V2TransactionFalsePositiveSchema = new Schema({
   lastModified: { type: Date, default: () => getUtcDate() },
 });
 
-export const V2TransactionFalsePositiveModel = model<IV2TransactionFalsePositiveDocument, Model<IV2TransactionFalsePositive>>('v2_transaction_false_positive', V2TransactionFalsePositiveSchema);
+V2TransactionFalsePositiveSchema.plugin(mongoosePaginate);
+
+export const V2TransactionFalsePositiveModel = model<IV2TransactionFalsePositiveDocument, PaginateModel<IV2TransactionFalsePositive>>('v2_transaction_false_positive', V2TransactionFalsePositiveSchema);

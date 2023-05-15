@@ -89,6 +89,56 @@ export type EnrichTransactionRequest = {
   amount: number; // in USD
 };
 
+export interface IGetFalsePositivesQuery {
+  page: number;
+  limit: number;
+  matchType: string;
+  originalValue: string;
+  company: string;
+  search: string;
+}
+
+export interface ICreateFalsePositiveRequest {
+  matchType: string;
+  originalValue: string;
+}
+
+export interface IUpdateFalsePositiveRequest {
+  matchType?: string;
+  originalValue?: string;
+}
+export interface IFalsePositiveIdParam {
+  id: string;
+}
+
+export interface IGetManualMatchesQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export interface ICreateManualMatchRequest {
+  matchType: string;
+  company: string;
+  originalValue: string;
+}
+
+export interface IManualMatchIdParam {
+  id: string;
+}
+
+export interface IUpdateManualMatchRequest {
+  matchType?: string;
+  company?: string;
+  originalValue?: string;
+}
+
+export interface IGetMatchedCompaniesQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
 export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
   try {
     const { ratings, userId, page, limit } = req.query;
@@ -616,6 +666,171 @@ export const enrichTransaction = async (
       carbonEmissionKilograms,
       company,
     };
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getFalsePositives = async (req: IRequest<{}, IGetFalsePositivesQuery, {}>) => {
+  try {
+    const { page = 1, limit = 50, matchType, originalValue, company, search } = req.query;
+
+    const query: any = {};
+
+    if (matchType) query.matchType = matchType;
+    if (originalValue) query.originalValue = originalValue;
+    if (company) query.company = company;
+    if (search) query.$text = { $search: search };
+
+    const falsePositives = await V2TransactionFalsePositiveModel.paginate(query, {
+      page,
+      limit,
+      lean: true,
+      sort: { createdOn: -1 },
+    });
+    return falsePositives;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const createFalsePositive = async (req: IRequest<{}, {}, ICreateFalsePositiveRequest>) => {
+  try {
+    const { matchType, originalValue } = req.body;
+    if (!matchType || !originalValue) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
+    const falsePositive = new V2TransactionFalsePositiveModel({
+      matchType,
+      originalValue,
+    });
+    await falsePositive.save();
+    return falsePositive;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const deleteFalsePositive = async (req: IRequest<IFalsePositiveIdParam, {}, {}>) => {
+  try {
+    const { id } = req.params;
+    const falsePositive = await V2TransactionFalsePositiveModel.findByIdAndDelete(id);
+    return falsePositive;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const updateFalsePositive = async (req: IRequest<IFalsePositiveIdParam, {}, IUpdateFalsePositiveRequest>) => {
+  try {
+    const { id } = req.params;
+    const { matchType, originalValue } = req.body;
+    const update: IUpdateFalsePositiveRequest = {};
+    if (matchType) update.matchType = matchType;
+    if (originalValue) update.originalValue = originalValue;
+    const falsePositive = await V2TransactionFalsePositiveModel.findOneAndUpdate(
+      { _id: id },
+      update,
+      { new: true },
+    );
+    return falsePositive;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getManualMatches = async (req: IRequest<{}, IGetManualMatchesQuery, {}>) => {
+  try {
+    const { page = 1, limit = 50, search } = req.query;
+
+    const query: any = {};
+
+    if (search) query.$text = { $search: search };
+
+    const manualMatches = await V2TransactionManualMatchModel.paginate(query, {
+      page,
+      limit,
+      lean: true,
+      populate: [
+        {
+          path: 'company',
+          model: 'company',
+          select: 'companyName',
+        },
+      ],
+      sort: { createdOn: -1 },
+    });
+    return manualMatches;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const createManualMatch = async (req: IRequest<{}, {}, ICreateManualMatchRequest>) => {
+  try {
+    const { matchType, company, originalValue } = req.body;
+    if (!matchType || !company || !originalValue) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
+    const manualMatch = new V2TransactionManualMatchModel({
+      matchType,
+      company,
+      originalValue,
+    });
+    await manualMatch.save();
+    return manualMatch;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const deleteManualMatch = async (req: IRequest<IManualMatchIdParam, {}, {}>) => {
+  try {
+    const { id } = req.params;
+    const manualMatch = await V2TransactionManualMatchModel.findByIdAndDelete(id);
+    return manualMatch;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const updateManualMatch = async (req: IRequest<IManualMatchIdParam, {}, IUpdateManualMatchRequest>) => {
+  try {
+    const { id } = req.params;
+    const { matchType, company, originalValue } = req.body;
+    const update: IUpdateManualMatchRequest = {};
+    if (matchType) update.matchType = matchType;
+    if (company) update.company = company;
+    if (originalValue) update.originalValue = originalValue;
+    const manualMatch = await V2TransactionManualMatchModel.findOneAndUpdate(
+      { _id: id },
+      update,
+      { new: true },
+    );
+    return manualMatch;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const getMatchedCompanies = async (req: IRequest<{}, IGetMatchedCompaniesQuery, {}>) => {
+  try {
+    const { page = 1, limit = 50, search } = req.query;
+
+    const query: any = { company: { $ne: null } };
+
+    if (search) query.$text = { $search: search };
+
+    const matchedCompanies = await V2TransactionMatchedCompanyNameModel.paginate(query, {
+      page,
+      limit,
+      populate: [
+        {
+          path: 'company',
+          model: 'company',
+          select: 'companyName',
+        },
+      ],
+      lean: true,
+      sort: { createdOn: -1 },
+    });
+    return matchedCompanies;
   } catch (err) {
     throw asCustomError(err);
   }

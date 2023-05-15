@@ -378,5 +378,5 @@ export const addCashbackToUser = async (req: IRequest<IAddKarmaCommissionToUserR
     },
   });
 
-  newCommission.save();
+  await newCommission.save();
 };

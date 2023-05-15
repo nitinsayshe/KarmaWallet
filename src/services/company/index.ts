@@ -137,6 +137,10 @@ export interface IGetCompaniesResponse {
   pagination: IPagination;
 }
 
+export interface ISearchCompaniesQuery {
+  search: string;
+}
+
 export const _getPaginatedCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
   const options = {
     projection: query?.projection || '',
@@ -362,7 +366,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
 
   if (search) {
     delete filter.companyName;
-    searchQuery = { companyName: { $regex: search } };
+    searchQuery = { $text: { $search: search } };
   }
 
   const cleanedFilter = convertFilterToObjectId(filter);

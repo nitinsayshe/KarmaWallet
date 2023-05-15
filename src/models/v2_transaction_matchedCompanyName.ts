@@ -2,9 +2,10 @@ import {
   Schema,
   model,
   Document,
-  Model,
   ObjectId,
+  PaginateModel,
 } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel } from '../types/model';
 import { PlaidCompanyMatchType } from '../lib/constants/plaid';
 import { getUtcDate } from '../lib/date';
@@ -33,4 +34,6 @@ const v2TransactionMatchedCompanyNameSchema = new Schema({
   lastModified: { type: Date, default: () => getUtcDate() },
 });
 
-export const V2TransactionMatchedCompanyNameModel = model<ITransactionMatchedCompanyNameDocument, Model<IV2TransactionMatchedCompanyName>>('v2_transaction_matched_company_name', v2TransactionMatchedCompanyNameSchema);
+v2TransactionMatchedCompanyNameSchema.plugin(mongoosePaginate);
+
+export const V2TransactionMatchedCompanyNameModel = model<ITransactionMatchedCompanyNameDocument, PaginateModel<IV2TransactionMatchedCompanyName>>('v2_transaction_matched_company_name', v2TransactionMatchedCompanyNameSchema);

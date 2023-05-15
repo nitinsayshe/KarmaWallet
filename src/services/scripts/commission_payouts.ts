@@ -3,7 +3,13 @@ import fs from 'fs';
 import { parse } from 'json2csv';
 import { CommissionModel, KarmaCommissionStatus } from '../../models/commissions';
 import { UserModel } from '../../models/user';
+import { CommissionPayoutOverviewModel } from '../../models/commissionPayoutOverview';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
+import { ErrorTypes } from '../../lib/constants';
+import CustomError from '../../lib/customError';
+import { IRequest } from '../../types/request';
+import { IAddKarmaCommissionToUserRequestParams, addCashbackToUser } from '../commission';
+import { PromoModel } from '../../models/promo';
 
 export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date, startDate?: Date) => {
   if (!endDate) endDate = new Date();
@@ -138,6 +144,56 @@ export const getReadyWildfireCommissioins = async () => {
 
   const _csv = parse(mappedPayouts);
   fs.writeFileSync(path.join(__dirname, '.tmp', 'allReadyWildfireCommissions.csv'), _csv);
+};
+
+export const getListOfEmailsThatReceivedCommissionPayout = async (commisionPayoutOverviewId: string) => {
+  const commissionPayoutOverview = await CommissionPayoutOverviewModel.findOne({ _id: commisionPayoutOverviewId });
+  const { commissionPayouts } = commissionPayoutOverview;
+  const paidEmails = [];
+  const failedEmails = [];
+
+  for (const payout of commissionPayouts) {
+    const payoutData = await CommissionPayoutModel.findOne({ _id: payout });
+    const user = await UserModel.findById(payoutData.user);
+    const userPrimaryEmail = user.emails.filter(e => !!e.primary)[0].email;
+    if (payoutData.status === KarmaCommissionPayoutStatus.Paid) {
+      paidEmails.push({
+        email: userPrimaryEmail,
+      });
+    }
+
+    if (payoutData.status === KarmaCommissionPayoutStatus.Failed) {
+      failedEmails.push({
+        email: userPrimaryEmail,
+      });
+    }
+  }
+
+  const _failedCsv = parse(failedEmails);
+  const _paidCsv = parse(paidEmails);
+
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'failed.csv'), _failedCsv);
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'paid.csv'), _paidCsv);
+};
+
+export const addKarmaCommissionToUser = async (user: string, promo: string) => {
+  const promoItem = await PromoModel.findOne({ _id: promo });
+  const userItem = await UserModel.findOne({ _id: user });
+  if (!user) throw new CustomError('User not found', ErrorTypes.SERVICE);
+
+  userItem.integrations.promos = [...(userItem.integrations.promos || []), promoItem];
+  await userItem.save();
+
+  const { APP_USER_ID } = process.env;
+  if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
+  const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+  if (!appUser) throw new CustomError('AppUser not found', ErrorTypes.SERVICE);
+  const mockRequest = ({
+    requestor: appUser,
+    authKey: '',
+    params: { userId: user, promo: promoItem },
+  } as unknown as IRequest<IAddKarmaCommissionToUserRequestParams, {}, {}>);
+  await addCashbackToUser(mockRequest);
 };
 
 export const fixStatusesOnFailedAndPaidCommissions = async () => {

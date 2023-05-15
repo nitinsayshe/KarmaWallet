@@ -4,6 +4,7 @@ google.keyfile.json
 .DS_Store
 dist
 data
+bin/scripts.ts
 dbExport
 .scratch*
 .build*

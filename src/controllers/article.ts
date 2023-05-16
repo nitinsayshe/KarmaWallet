@@ -9,7 +9,9 @@ export const getArticleById: IRequestHandler<ArticleService.IGetArticleParams> =
   try {
     const article = await ArticleService.getArticleById(req);
     const _article = article.toObject();
-    _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+    if (!!article.company) {
+      _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+    }
     api(req, res, _article);
   } catch (err) {
     error(req, res, asCustomError(err));
@@ -21,7 +23,9 @@ export const getAllArticles: IRequestHandler = async (req, res) => {
     const articles = await ArticleService.getAllArticles(req);
     const _articles = articles.map((article) => {
       const _article = article.toObject();
-      _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+      if (!!article.company) {
+        _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+      }
       return _article;
     });
     api(req, res, _articles);

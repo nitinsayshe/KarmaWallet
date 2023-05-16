@@ -16,11 +16,16 @@ export interface IGetArticleParams {
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) => {
   const { articleId } = req.params;
+  let article;
 
   if (!articleId) throw new CustomError('Article id required', ErrorTypes.INVALID_ARG);
   if (!isValidObjectId(articleId)) throw new CustomError('Invalid article id provided', ErrorTypes.INVALID_ARG);
 
-  const article = await ArticleModel.findOne({ _id: articleId }).populate([{
+  const tempArticle = await ArticleModel.findOne({ _id: articleId });
+
+  if (!tempArticle.company) article = tempArticle;
+
+  article = await ArticleModel.findOne({ _id: articleId }).populate([{
     path: 'company',
     model: CompanyModel,
     populate: [

@@ -44,7 +44,7 @@ export type IArticleModel = IModel<IArticle>;
 const articleSchema = new Schema({
   enabled: { type: Boolean, required: true, default: false },
   description: { type: String, required: true },
-  company: { type: Schema.Types.ObjectId, ref: 'companies', required: true },
+  company: { type: Schema.Types.ObjectId, ref: 'companies' },
   createdOn: { type: Date, required: true, default: () => getUtcDate() },
   lastModified: { type: Date, required: true, default: () => getUtcDate() },
   publishedOn: { type: Date, default: null },
@@ -58,6 +58,7 @@ const articleSchema = new Schema({
   body: { type: String, required: false },
   altrenateTitle: { type: String, required: false },
   altrenateLogo: { type: String, required: false },
+  noCompanySlug: { type: String, required: false },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);

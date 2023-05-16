@@ -16,60 +16,60 @@ export interface IGetArticleParams {
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) => {
   const { articleId } = req.params;
-  let article;
 
   if (!articleId) throw new CustomError('Article id required', ErrorTypes.INVALID_ARG);
   if (!isValidObjectId(articleId)) throw new CustomError('Invalid article id provided', ErrorTypes.INVALID_ARG);
 
-  const tempArticle = await ArticleModel.findOne({ _id: articleId });
+  const article = await ArticleModel.findOne({ _id: articleId });
 
-  if (!tempArticle.company) article = tempArticle;
-
-  article = await ArticleModel.findOne({ _id: articleId }).populate([{
-    path: 'company',
-    model: CompanyModel,
-    populate: [
-      {
-        path: 'merchant',
-        model: MerchantModel,
-      },
-      {
-        path: 'evaluatedUnsdgs.unsdg',
-        model: UnsdgModel,
-        populate: [{
-          path: 'subCategory',
-          model: UnsdgSubcategoryModel,
-          populate: [{
-            path: 'category',
-            model: UnsdgCategoryModel,
-          }],
-        }],
-      },
-      {
-        path: 'parentCompany',
-        model: CompanyModel,
-        populate: [
-          {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
-        ],
-      },
-      {
-        path: 'sectors.sector',
-        model: SectorModel,
-      },
-      {
-        path: 'categoryScores.category',
-        model: UnsdgCategoryModel,
-      },
-      {
-        path: 'subcategoryScores.subcategory',
-        model: UnsdgSubcategoryModel,
-      },
-    ],
-  }]);
   if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
+
+  if (!!article.company) {
+    await article.populate([{
+      path: 'company',
+      model: CompanyModel,
+      populate: [
+        {
+          path: 'merchant',
+          model: MerchantModel,
+        },
+        {
+          path: 'evaluatedUnsdgs.unsdg',
+          model: UnsdgModel,
+          populate: [{
+            path: 'subCategory',
+            model: UnsdgSubcategoryModel,
+            populate: [{
+              path: 'category',
+              model: UnsdgCategoryModel,
+            }],
+          }],
+        },
+        {
+          path: 'parentCompany',
+          model: CompanyModel,
+          populate: [
+            {
+              path: 'sectors.sector',
+              model: SectorModel,
+            },
+          ],
+        },
+        {
+          path: 'sectors.sector',
+          model: SectorModel,
+        },
+        {
+          path: 'categoryScores.category',
+          model: UnsdgCategoryModel,
+        },
+        {
+          path: 'subcategoryScores.subcategory',
+          model: UnsdgSubcategoryModel,
+        },
+      ],
+    }]);
+  }
   return article;
 };
 
@@ -122,57 +122,19 @@ export const getAllArticles = async (_req: IRequest) => {
   return articles;
 };
 
-export const getRandomArticle = async () => {
-  const allArticles = await ArticleModel.find({});
+export const getRandomArticle = async (_req: IRequest) => {
+  const randomArticle = await ArticleModel.aggregate([{ $sample: { size: 1 } }]);
 
-  if (!allArticles) throw new CustomError('No articles found', ErrorTypes.NOT_FOUND);
+  if (randomArticle.length === 0) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
 
-  const randomNumber = Math.floor(Math.random() * allArticles.length);
+  const mockRequest = ({
+    ..._req,
+    params: {
+      articleId: randomArticle[0]._id,
+    },
+  } as IRequest);
 
-  const article = await ArticleModel.findOne({ _id: allArticles[randomNumber]._id }).populate([{
-    path: 'company',
-    model: CompanyModel,
-    populate: [
-      {
-        path: 'merchant',
-        model: MerchantModel,
-      },
-      {
-        path: 'evaluatedUnsdgs.unsdg',
-        model: UnsdgModel,
-        populate: [{
-          path: 'subCategory',
-          model: UnsdgSubcategoryModel,
-          populate: [{
-            path: 'category',
-            model: UnsdgCategoryModel,
-          }],
-        }],
-      },
-      {
-        path: 'parentCompany',
-        model: CompanyModel,
-        populate: [
-          {
-            path: 'sectors.sector',
-            model: SectorModel,
-          },
-        ],
-      },
-      {
-        path: 'sectors.sector',
-        model: SectorModel,
-      },
-      {
-        path: 'categoryScores.category',
-        model: UnsdgCategoryModel,
-      },
-      {
-        path: 'subcategoryScores.subcategory',
-        model: UnsdgSubcategoryModel,
-      },
-    ],
-  }]);
-  if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
+  const article = await getArticleById(mockRequest as IRequest<IGetArticleParams, {}, {}>);
+
   return article;
 };

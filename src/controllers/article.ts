@@ -36,7 +36,7 @@ export const getAllArticles: IRequestHandler = async (req, res) => {
 
 export const getRandomArticle: IRequestHandler<ArticleService.IGetArticleParams> = async (req, res) => {
   try {
-    const article = await ArticleService.getRandomArticle();
+    const article = await ArticleService.getRandomArticle(req);
     const _article = article.toObject();
     _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
     api(req, res, _article);

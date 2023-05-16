@@ -31,8 +31,8 @@ export interface IArticle {
   type: IArticleType;
   featured: boolean;
   body: string;
-  altrenateTitle: string;
-  altrenateLogo: string;
+  alternateTitle: string;
+  alternateLogo: string;
 }
 
 export interface IArticleDocument extends IArticle, Document {
@@ -56,8 +56,8 @@ const articleSchema = new Schema({
   type: { type: String, enum: Object.values(IArticleType), required: true },
   featured: { type: Boolean, default: false },
   body: { type: String, required: false },
-  altrenateTitle: { type: String, required: false },
-  altrenateLogo: { type: String, required: false },
+  alternateTitle: { type: String, required: false },
+  alternateLogo: { type: String, required: false },
   noCompanySlug: { type: String, required: false },
 });
 

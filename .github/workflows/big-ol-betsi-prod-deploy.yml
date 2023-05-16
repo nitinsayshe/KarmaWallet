@@ -69,5 +69,7 @@ jobs:
     - run: echo 'ACTIVECAMPAIGN_API_KEY=${{secrets.ACTIVECAMPAIGN_API_KEY}}' >> .env
     - run: echo 'HUBSPOT_URL=${{secrets.HUBSPOT_URL}}' >> .env
     - run: echo 'HUBSPOT_APP_TOKEN=${{secrets.HUBSPOT_APP_TOKEN}}' >> .env
+    - run: echo 'OPENAI_ORG=${{secrets.OPENAI_ORG}}' >> .env
+    - run: echo 'OPENAI_SECRET=${{secrets.OPENAI_SECRET}}' >> .env
     - run: npm i
     - run: pm2 restart all

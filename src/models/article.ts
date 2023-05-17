@@ -11,7 +11,8 @@ import { ICompany, ICompanyDocument, IShareableCompany } from './company';
 
 export enum IArticleType {
   GoodAndBad = 'the-good-and-the-bad',
-  OurImpact = 'our-impact',
+  CompanySpotlight = 'company-spotlight',
+  IndustryReport = 'industry-report',
 }
 
 export interface IArticle {
@@ -29,6 +30,9 @@ export interface IArticle {
   enabled: boolean;
   type: IArticleType;
   featured: boolean;
+  body: string;
+  alternateTitle: string;
+  alternateLogo: string;
 }
 
 export interface IArticleDocument extends IArticle, Document {
@@ -40,7 +44,7 @@ export type IArticleModel = IModel<IArticle>;
 const articleSchema = new Schema({
   enabled: { type: Boolean, required: true, default: false },
   description: { type: String, required: true },
-  company: { type: Schema.Types.ObjectId, ref: 'companies', required: true },
+  company: { type: Schema.Types.ObjectId, ref: 'companies' },
   createdOn: { type: Date, required: true, default: () => getUtcDate() },
   lastModified: { type: Date, required: true, default: () => getUtcDate() },
   publishedOn: { type: Date, default: null },
@@ -51,6 +55,10 @@ const articleSchema = new Schema({
   theBad: { type: String, required: true },
   type: { type: String, enum: Object.values(IArticleType), required: true },
   featured: { type: Boolean, default: false },
+  body: { type: String, required: false },
+  alternateTitle: { type: String, required: false },
+  alternateLogo: { type: String, required: false },
+  noCompanySlug: { type: String, required: false },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);

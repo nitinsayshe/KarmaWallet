@@ -26,6 +26,7 @@ export const getTransactionSector = (transaction: IMatchedTransaction, primarySe
     if (sector) return sector;
   }
   // if there is no company, use the plaid category mapping to the sector
+  if (!transaction?.category?.length) return;
   const plaidCategoriesId = transaction?.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
   const plaidCategory = plaidMappingSectorDictionary[plaidCategoriesId];
   if (plaidCategory) return plaidCategory.sector;

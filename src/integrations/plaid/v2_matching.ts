@@ -209,7 +209,13 @@ export const getMatchResults = async ({
   }
   if (saveMatches) {
     log(`saving ${results.length} matches to DB`);
-    for (const result of results) await V2TransactionMatchedCompanyNameModel.findOneAndUpdate(result, result, { upsert: true });
+    for (const result of results) {
+      if (!result.company) {
+        console.log('no company found for result', result);
+        continue;
+      }
+      await V2TransactionMatchedCompanyNameModel.findOneAndUpdate(result, result, { upsert: true });
+    }
   }
   console.timeEnd(timeString);
   return results;

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { ObjectId } from 'mongoose';
 import { getCompanyRatingFromScore } from '../../lib/company';
 import { CompanyModel, ICategoryScore, ICompanyDocument, ISubcategoryScore } from '../../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceModel } from '../../models/companyDataSource';
@@ -36,16 +37,19 @@ export const calculateUnsdgScore = (unsdgPoints: number[]) => {
 
 export const calculateCompanyScore = (score: number) => ((score + 16) / 32) * 100;
 
-export const calculateAllCompanyScores = async () => {
-  console.log('calculating scores for all companies...');
-  console.log('dropping company unsdgs');
-  await CompanyUnsdgModel.deleteMany({});
+export interface ICalculateCompanyScoresParams {
+  companyId?: string | ObjectId;
+}
+
+export const calculateAllCompanyScores = async ({ companyId }: ICalculateCompanyScoresParams) => {
+  console.log(`[+] calculating company scores  ${companyId ? `for ${companyId}` : 'for all companies'}`);
   let companies: ICompanyDocument[];
   let categories: IUnsdgCategoryDocument[];
   let subcategories: IUnsdgSubcategoryDocument[];
 
   try {
-    companies = await CompanyModel.find({}).sort({ createdAt: 1 });
+    const query = companyId ? { _id: companyId } : {};
+    companies = await CompanyModel.find(query).sort({ createdAt: 1 });
     categories = await UnsdgCategoryModel.find({});
     subcategories = await UnsdgSubcategoryModel.find({})
       .populate([{
@@ -62,6 +66,8 @@ export const calculateAllCompanyScores = async () => {
   let count = 0;
   let errorCount = 0;
   let companyIndex = 1;
+
+  console.log(`[+] ${companies.length} companies found`);
 
   for (const company of companies) {
     const childCompanyDataSources: ICompanyDataSourceModel[] = [];
@@ -121,7 +127,7 @@ export const calculateAllCompanyScores = async () => {
       continue;
     }
 
-    if (!companyDataSources || !unsdgMappings) continue;
+    if (!companyDataSources?.length || !unsdgMappings?.length) continue;
 
     const promises: Promise<any>[] = [];
 
@@ -170,6 +176,8 @@ export const calculateAllCompanyScores = async () => {
         } else {
           unsdgScore = companyDataSource.status === -1 ? -1 : value;
         }
+
+        if (value !== null && companyDataSource.status === -1) unsdgScore = -1;
 
         let existingAllValue = companyUnsdgs[title].allValues.find(v => v.dataSource.toString() === unsdgMapping.source.toString());
 

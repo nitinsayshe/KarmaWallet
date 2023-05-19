@@ -8,7 +8,6 @@ import matchExistingTransactions from './match-existing-transactions';
 import * as GenerateUserTransactionTotals from '../../jobs/generateUserTransactionTotals';
 import * as GenerateUserImpactTotals from '../../jobs/generateUserImpactTotals';
 import * as UserMonthlyImpactReports from '../../jobs/userMonthlyImpactReports';
-import { CompanyUnsdgModel } from '../../models/companyUnsdg';
 import { ValueCompanyAssignmentType, ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 import { getEvaluatedUNSDGsCountForCompanies } from './generate_evaluated_UNSDGs_by_company';
 
@@ -17,10 +16,9 @@ const runTransactions = false;
 
 export const monthlyBatchUpdateEffects = async () => {
   if (runScores) {
-    await CompanyUnsdgModel.deleteMany({});
     await ValueCompanyMappingModel.deleteMany({ assignmentType: ValueCompanyAssignmentType.DataSourceInherited });
     await checkCompanySectorsForMainTierSector();
-    await calculateAllCompanyScores();
+    await calculateAllCompanyScores({});
     await calculateAvgScores({ writeToDisk: false });
     // adding values throws errors bc of duplicate keys: name
     await mapValuesToCompanies();

@@ -631,7 +631,9 @@ export const handleRemoveParent = async (companyId: string): Promise<void> => {
 
 export const handleAddParent = async (companyId: string, update: any): Promise<void> => {
   const { parentCompany } = update;
-  const company = await CompanyModel.findOne({ _id: companyId });
+  let company = await CompanyModel.findOne({ _id: companyId });
+  if (!company) company = await CompanyModel.findOne({ companyName: update.companyName });
+  if (!company) throw new Error(`Company ${companyId} not found.`);
   let parent = await CompanyModel.findOne({ companyName: parentCompany });
   if (!parent) parent = await CompanyModel.findOne({ _id: parentCompany });
   if (!parent) throw new Error(`Parent company ${parentCompany} not found.`);

@@ -18,7 +18,6 @@ export const checkCompanySectorsForMainTierSector = async () => {
   for (const company of companies) {
     count += 1;
     console.log(`\n[#] ${company.companyName} is company ${count} of ${companies.length}`);
-    console.log(JSON.stringify(company.sectors, null, 2));
     for (const companySector of company.sectors) {
       const sector = companySector.sector as ISectorDocument;
       if (!sector?.tier) console.log(`[#] company ${company?._id} has sector ${sector?._id} with no tier ${JSON.stringify(sector)}`);

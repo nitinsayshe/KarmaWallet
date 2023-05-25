@@ -143,12 +143,17 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   const users = await UserModel.find({});
 
   for (const user of users) {
+    if (!user.integrations?.paypal) continue;
+
     if (!user.integrations?.paypal?.payerId) {
       console.log(`[+] Skipping user ${user._id} - no paypal integration`);
       continue;
     }
 
-    if (!user.integrations?.paypal) continue;
+    if (!user.integrations.paypal.verified_account) {
+      console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
+      continue;
+    }
 
     let dateQuery: any = { $lte: dayjs().utc().toDate() };
 

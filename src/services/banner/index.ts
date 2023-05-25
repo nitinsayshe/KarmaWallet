@@ -114,7 +114,7 @@ export const getActiveBanners = async (__: IRequest, query: FilterQuery<IBanner>
 };
 
 export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) => {
-  const { name, text, startDate, endDate, loggedInState, color, link, linkText } = req.body;
+  const { name, text, startDate, endDate, loggedInState, color, link, linkText, enabled } = req.body;
   if (!name) throw new CustomError('A banner name is required.', ErrorTypes.INVALID_ARG);
   if (!text) throw new CustomError('Banner html text is required.', ErrorTypes.INVALID_ARG);
   if (!color) throw new CustomError('A banner color is required.', ErrorTypes.INVALID_ARG);
@@ -126,7 +126,7 @@ export const createBanner = async (req: IRequest<{}, {}, IBannerRequestBody>) =>
     color,
     link,
     linkText,
-    enabled: false,
+    enabled,
     loggedInState,
   };
 

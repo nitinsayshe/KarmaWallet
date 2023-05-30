@@ -13,6 +13,7 @@ export enum IArticleType {
   GoodAndBad = 'the-good-and-the-bad',
   CompanySpotlight = 'company-spotlight',
   IndustryReport = 'industry-report',
+  General = 'general',
 }
 
 export interface IArticle {

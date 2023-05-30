@@ -1,32 +1,23 @@
 /* eslint-disable camelcase */
-import {
-  Configuration,
-  PlaidApi,
-  PlaidEnvironments,
-  LinkTokenCreateRequest,
-  CountryCode,
-  Products,
-  TransactionsGetRequest,
-  ItemPublicTokenExchangeRequest,
-  SandboxItemFireWebhookRequestWebhookCodeEnum,
-  SandboxPublicTokenCreateRequest,
-  WebhookVerificationKeyGetRequest,
-} from 'plaid';
-import pino from 'pino';
-import jsonwebtoken from 'jsonwebtoken';
-import jwkToPem from 'jwk-to-pem';
 import crypto from 'crypto';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { Transaction } from 'plaid';
-import { ErrorTypes, CardStatus } from '../lib/constants';
+import jsonwebtoken from 'jsonwebtoken';
+import jwkToPem from 'jwk-to-pem';
+import pino from 'pino';
+import {
+  Configuration, CountryCode, ItemPublicTokenExchangeRequest, LinkTokenCreateRequest, PlaidApi,
+  PlaidEnvironments, Products, SandboxItemFireWebhookRequestWebhookCodeEnum,
+  SandboxPublicTokenCreateRequest, Transaction, TransactionsGetRequest, WebhookVerificationKeyGetRequest,
+} from 'plaid';
+import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
+import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
+import PlaidUser from '../integrations/plaid/user';
+import { CardStatus, ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
-import PlaidUser from '../integrations/plaid/user';
-import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
-import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
 
 dayjs.extend(utc);
 
@@ -154,8 +145,6 @@ export class PlaidClient extends SdkClient {
       const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
       await plaidUserInstance.addCards(plaidItem, true);
-      // update card data in active campaign
-      await getCustomFieldIDsAndUpdateSetFields(userId.toString(), setLinkedCardData);
       return {
         message: 'Successfully linked plaid account',
         itemId,

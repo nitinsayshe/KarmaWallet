@@ -62,7 +62,15 @@ export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICar
     newCard.unlinkedDate = card?.unlinkedDate || undefined;
     newCard.removedDate = card?.removedDate || undefined;
     newCard.lastModified = card?.lastModified || undefined;
+    newCard.institution = card?.institution || 'Test Institution';
     newCard.name = card?.name || `Test Card_${new Types.ObjectId().toString()}`;
+    newCard.integrations = card?.integrations || undefined;
+    newCard.type = card?.type || undefined;
+    newCard.binToken = card?.binToken || undefined;
+    newCard.networkToken = card?.networkToken || undefined;
+    newCard.lastFourDigitsToken = card?.lastFourDigitsToken || undefined;
+    console.log('creating new card', JSON.stringify(newCard));
+    console.log('from requested card', JSON.stringify(card, null, 2));
     return newCard.save();
   }),
 )) || [];

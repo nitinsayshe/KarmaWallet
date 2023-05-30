@@ -87,7 +87,6 @@ describe('active campaign sync jobs logic', () => {
       ],
     };
     testCards = await createSomeCards(createCardsReq);
-    console.log('created test cards', JSON.stringify(testCards, null, 2));
   });
 
   it('usersWithUnlinkedOrRemovedAccountsPastThirtyDays retrieves all users that have unlinked or removed a card', async () => {

@@ -16,6 +16,11 @@ export enum IArticleType {
   General = 'general',
 }
 
+export enum ArticleHeaderTypes {
+  LogoAndTitle = 'logo-and-title',
+  CompanyAndRating = 'company-and-rating',
+}
+
 export interface IArticle {
   _id: ObjectId;
   company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany >;
@@ -39,6 +44,7 @@ export interface IArticle {
   headerLogo: string;
   // overrides the list view background image
   listViewImage: string;
+  headerType: ArticleHeaderTypes,
 }
 
 // list view background order
@@ -68,6 +74,12 @@ const articleSchema = new Schema({
   headerBackground: { type: String, required: false },
   headerLogo: { type: String, required: false },
   listViewImage: { type: String, required: true },
+  headerType: {
+    type: String,
+    enum: Object.values(ArticleHeaderTypes),
+    required: true,
+    default: ArticleHeaderTypes.LogoAndTitle,
+  },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);

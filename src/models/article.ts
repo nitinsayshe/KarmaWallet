@@ -20,21 +20,31 @@ export interface IArticle {
   _id: ObjectId;
   company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany >;
   createdOn: Date;
-  description: string;
   lastModified: Date;
   publishedOn: Date;
-  bannerImageUrl: string;
-  introParagraph: string;
-  introTitle: string;
-  theGood: string;
-  theBad: string;
   enabled: boolean;
   type: IArticleType;
   featured: boolean;
   body: string;
-  alternateTitle: string;
-  alternateLogo: string;
+  // used on homepage
+  description: string;
+  // used in article body AND in article list view AND homepage as fallback
+  introParagraph: string;
+  // used in article body, in article list view, URL
+  title: string;
+  headerTitle: string;
+  // if no company and no header logo, this is the list view background
+  headerBackground: string;
+  // if no company, this is the list view background
+  headerLogo: string;
+  // overrides the list view background image
+  listViewImage: string;
 }
+
+// list view background order
+// listViewImage > company > headerLogo > headerBackground
+
+// industry-report/{{ articleType }}/{{ companyName || '' + title }}/{{article._id}}
 
 export interface IArticleDocument extends IArticle, Document {
   _id: ObjectId;
@@ -43,23 +53,21 @@ export interface IArticleDocument extends IArticle, Document {
 export type IArticleModel = IModel<IArticle>;
 
 const articleSchema = new Schema({
-  enabled: { type: Boolean, required: true, default: false },
-  description: { type: String, required: true },
   company: { type: Schema.Types.ObjectId, ref: 'companies' },
   createdOn: { type: Date, required: true, default: () => getUtcDate() },
   lastModified: { type: Date, required: true, default: () => getUtcDate() },
   publishedOn: { type: Date, default: null },
-  bannerImageUrl: { type: String, required: true },
-  introParagraph: { type: String, required: true },
-  introTitle: { type: String, required: true },
-  theGood: { type: String, required: true },
-  theBad: { type: String, required: true },
+  enabled: { type: Boolean, required: true, default: false },
   type: { type: String, enum: Object.values(IArticleType), required: true },
   featured: { type: Boolean, default: false },
   body: { type: String, required: false },
-  alternateTitle: { type: String, required: false },
-  alternateLogo: { type: String, required: false },
-  noCompanySlug: { type: String, required: false },
+  description: { type: String, required: true },
+  introParagraph: { type: String, required: true },
+  title: { type: String, required: true },
+  headerTitle: { type: String, required: false },
+  headerBackground: { type: String, required: false },
+  headerLogo: { type: String, required: false },
+  listViewImage: { type: String, required: true },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);

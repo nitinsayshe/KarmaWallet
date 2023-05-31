@@ -117,7 +117,7 @@ export const getAllArticles = async (_req: IRequest) => {
         model: UnsdgSubcategoryModel,
       },
     ],
-  }]);
+  }]).sort({ publishedOn: -1 });
 
   return articles;
 };

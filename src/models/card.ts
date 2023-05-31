@@ -1,10 +1,4 @@
-import {
-  Schema,
-  model,
-  Document,
-  Model,
-  ObjectId,
-} from 'mongoose';
+import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { CardStatus } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
@@ -28,9 +22,14 @@ export interface IRareCardIntegration {
   expr_year: number;
 }
 
+export interface IKardIntegration {
+  dateAdded: Date;
+}
+
 export interface ICardIntegrations {
-  plaid: IPlaidCardIntegration;
-  rare: IRareCardIntegration;
+  plaid?: IPlaidCardIntegration;
+  rare?: IRareCardIntegration;
+  kard?: IKardIntegration;
 }
 
 export interface IShareableCard {
@@ -52,6 +51,9 @@ export interface IShareableCard {
 export interface ICard extends IShareableCard {
   userId: IRef<ObjectId, IUserDocument>;
   integrations: ICardIntegrations;
+  lastFourDigitsToken?: string;
+  binToken?: string;
+  networkToken?: string;
 }
 
 export interface ICardDocument extends ICard, Document {}
@@ -95,11 +97,19 @@ const cardSchema = new Schema({
         expr_year: { type: Number },
       },
     },
+    kard: {
+      type: {
+        dateAdded: { type: Date },
+      },
+    },
   },
   initialTransactionsProcessing: { type: Boolean },
   createdOn: { type: Date },
   lastModified: { type: Date },
   lastTransactionSync: { type: Date },
+  lastFourDigitsToken: { type: String },
+  binToken: { type: String },
+  networkToken: { type: String },
   unlinkedDate: { type: Date },
   removedDate: { type: Date },
 });

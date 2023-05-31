@@ -58,7 +58,7 @@ export const exec = async () => {
 
     for (const item of res) {
       _mockRequest.requestor = appUser;
-      _mockRequest.query = { userId: item.user };
+      _mockRequest.query = { userId: item.user._id };
       const offsetsAndEmissions = await getCarbonOffsetsAndEmissions(_mockRequest);
 
       totalDollars += offsetsAndEmissions.offsets.totalDonated;

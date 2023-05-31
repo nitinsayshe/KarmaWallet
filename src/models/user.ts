@@ -1,10 +1,4 @@
-import {
-  Schema,
-  model,
-  Document,
-  PaginateModel,
-  ObjectId,
-} from 'mongoose';
+import { Schema, model, Document, PaginateModel, ObjectId } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { UserRoles } from '../lib/constants';
@@ -44,21 +38,27 @@ export interface IActiveCampaignUserIntegration {
   latestSync: Date;
 }
 
+export interface IKardIntegration {
+  userId: string;
+  dateAccountCreated: Date;
+  dateAccountUpdated?: Date;
+}
+
 export interface IUrlParam {
   key: string;
   value: string;
 }
 
 export interface IPaypalUserIntegration {
-  user_id: string,
-  sub: string,
-  name: string,
-  middle_name: string,
-  email: string,
-  verified: Boolean,
-  payerId: string,
-  verified_account: Boolean,
-  email_verified: Boolean,
+  user_id: string;
+  sub: string;
+  name: string;
+  middle_name: string;
+  email: string;
+  verified: Boolean;
+  payerId: string;
+  verified_account: Boolean;
+  email_verified: Boolean;
 }
 
 export interface IReferrals {
@@ -69,9 +69,10 @@ export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
+  kard?: IKardIntegration;
   shareasale?: IShareASale;
   referrals?: IReferrals;
-  promos?: IRef<ObjectId, (IPromo | IPromoDocument)>[];
+  promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
 }
 
 export interface IShareableUser {
@@ -96,18 +97,20 @@ export interface IUserDocument extends IUser, Document {}
 export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
-  emails: [{
-    type: {
-      email: { type: String },
-      status: {
-        type: String,
-        enum: Object.values(UserEmailStatus),
-        default: UserEmailStatus.Verified,
+  emails: [
+    {
+      type: {
+        email: { type: String },
+        status: {
+          type: String,
+          enum: Object.values(UserEmailStatus),
+          default: UserEmailStatus.Verified,
+        },
+        bouncedDate: { type: Date },
+        primary: { type: Boolean, default: false },
       },
-      bouncedDate: { type: Date },
-      primary: { type: Boolean, default: false },
     },
-  }],
+  ],
   name: { type: String, required: true },
   password: { type: String, required: true },
   dateJoined: { type: Date, default: () => getUtcDate() },
@@ -141,6 +144,13 @@ const userSchema = new Schema({
     activecampaign: {
       type: {
         latestSyncDate: { type: Date },
+      },
+    },
+    kard: {
+      type: {
+        userId: { type: String },
+        dateAccountCreated: { type: Date },
+        dateAccountUpdated: { type: Date },
       },
     },
     shareasale: {

@@ -15,6 +15,7 @@ import { isValidEmailFormat } from '../../lib/string';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
+import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
 import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
@@ -24,16 +25,16 @@ import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
 import { VisitorModel } from '../../models/visitor';
-import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
+import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
 import { resendEmailVerification } from './verification';
-import { IAddKarmaCommissionToUserRequestParams, addCashbackToUser } from '../commission';
+import { deleteKardUser } from '../../integrations/kard';
 
 dayjs.extend(utc);
 
@@ -101,11 +102,11 @@ export const handleCreateAccountPromo = async (userId: string, promo: IPromo) =>
       if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
       const appUser = await UserModel.findOne({ _id: APP_USER_ID });
       if (!appUser) throw new CustomError('AppUser not found', ErrorTypes.SERVICE);
-      const mockRequest = ({
+      const mockRequest = {
         requestor: appUser,
         authKey: '',
         params: { userId, promo },
-      } as unknown as IRequest<IAddKarmaCommissionToUserRequestParams, {}, {}>);
+      } as unknown as IRequest<IAddKarmaCommissionToUserRequestParams, {}, {}>;
       await addCashbackToUser(mockRequest);
     } catch (error) {
       throw asCustomError(error);
@@ -119,12 +120,7 @@ export const storeNewLogin = async (userId: string, loginDate: Date) => {
   });
 };
 
-export const register = async (req: IRequest, {
-  password,
-  name,
-  token,
-  promo,
-}: IRegisterUserData) => {
+export const register = async (req: IRequest, { password, name, token, promo }: IRegisterUserData) => {
   let promoData;
   // check that all required fields are present
   if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
@@ -137,7 +133,9 @@ export const register = async (req: IRequest, {
 
   // check password is valid
   const passwordValidation = validatePassword(password);
-  if (!passwordValidation.valid) { throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG); }
+  if (!passwordValidation.valid) {
+    throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
+  }
   const hash = await argon2.hash(password);
 
   // check that email is valid (should have already checked when visitor was created, but just in case)
@@ -514,6 +512,10 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     // delete user from active campaign
     if (email) await deleteContact(email);
     await cancelUserSubscriptions(user._id.toString());
+
+    if (!!user?.integrations?.kard?.userId) {
+      await deleteKardUser(user);
+    }
 
     await deleteUserData(user._id);
 

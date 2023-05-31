@@ -1,7 +1,7 @@
 import { isValidObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
-import { ArticleModel } from '../../models/article';
+import { ArticleHeaderTypes, ArticleModel } from '../../models/article';
 import { CompanyModel } from '../../models/company';
 import { MerchantModel } from '../../models/merchant';
 import { SectorModel } from '../../models/sector';
@@ -138,3 +138,13 @@ export const getRandomArticle = async (_req: IRequest) => {
 
   return article;
 };
+
+// TODO: sanitize input for html
+
+export const createArticle = async (req: IRequest) => {};
+
+export const updateArticle = async (req: IRequest) => {};
+
+export const deleteArticle = async (req: IRequest) => {};
+
+export const getArticleHeaderTypes = async (_req: IRequest) => Object.values(ArticleHeaderTypes);

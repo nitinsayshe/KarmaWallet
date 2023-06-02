@@ -1,7 +1,7 @@
 import { isValidObjectId } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
-import { ArticleHeaderTypes, ArticleModel } from '../../models/article';
+import { ArticleHeaderTypes, ArticleModel, IArticle } from '../../models/article';
 import { CompanyModel } from '../../models/company';
 import { MerchantModel } from '../../models/merchant';
 import { SectorModel } from '../../models/sector';
@@ -9,9 +9,15 @@ import { UnsdgModel } from '../../models/unsdg';
 import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
+import { toUTC } from '../../lib/date';
 
 export interface IGetArticleParams {
   articleId: string;
+}
+
+export interface IArticleRequestBody {
+  title: string;
+  publishedOn? : Date;
 }
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) => {
@@ -143,7 +149,18 @@ export const getRandomArticle = async (_req: IRequest) => {
 
 export const createArticle = async (req: IRequest) => {}; //eslint-disable-line
 
-export const updateArticle = async (req: IRequest) => {}; //eslint-disable-line
+export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IArticleRequestBody>) => {
+  const { title, publishedOn } = req.body;
+  if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
+  const updates: Partial<IArticle> = {
+    lastModified: toUTC(new Date()),
+  };
+
+  if (title) updates.title = title;
+  if (publishedOn) updates.publishedOn = toUTC(publishedOn);
+
+  return ArticleModel.findByIdAndUpdate(req.params.articleId, updates, { new: true });
+};
 
 export const deleteArticle = async (req: IRequest) => {}; //eslint-disable-line
 

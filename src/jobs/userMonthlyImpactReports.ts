@@ -185,7 +185,6 @@ export const generateMonthlyImpactReportForUser = async (
   count: number,
   errorCount: number,
 ): Promise<{ count: number; errorCount: number }> => {
-  console.log('////// should generate full history', generateFullHistory);
   let monthlyBreakdown: { [key: string]: ITransactionDocument[] };
   let monthlyImpactBreakdown: IUserImpactMonthData[];
 
@@ -223,7 +222,6 @@ export const exec = async (jobData: IJobData = {}) => {
   const userQuery: FilterQuery<IUserDocument> = !!uid ? { _id: uid } : {};
 
   if (!!generateFullHistory) {
-    console.log('////// generating full history!');
     // clearing any existing history
     // ...needed for when user links/relinks a card. have
     // to delete existing histories (if any exist), and

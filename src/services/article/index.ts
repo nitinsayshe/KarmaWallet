@@ -15,9 +15,17 @@ export interface IGetArticleParams {
   articleId: string;
 }
 
-export interface IArticleRequestBody {
-  title: string;
+export interface IUpdateArticleRequestBody {
+  title?: string;
   publishedOn? : Date;
+  introParagraph?: string;
+  enabled?: boolean;
+  description?: string;
+  featured?: boolean;
+  headerBackground?: string;
+  listViewImage?: string;
+  headerTitle?: string;
+  body?: string;
 }
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) => {
@@ -149,15 +157,29 @@ export const getRandomArticle = async (_req: IRequest) => {
 
 export const createArticle = async (req: IRequest) => {}; //eslint-disable-line
 
-export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IArticleRequestBody>) => {
-  const { title, publishedOn } = req.body;
+export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdateArticleRequestBody>) => {
+  const { title, publishedOn, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled } = req.body;
   if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
   const updates: Partial<IArticle> = {
     lastModified: toUTC(new Date()),
   };
 
   if (title) updates.title = title;
-  if (publishedOn) updates.publishedOn = toUTC(publishedOn);
+  if (introParagraph) updates.introParagraph = introParagraph;
+  if (featured) updates.featured = featured;
+  if (headerBackground) updates.headerBackground = headerBackground;
+
+  if (body) {
+    // Run body through sanitizer on back end as well
+    const sanitizedBody = body;
+    updates.body = sanitizedBody;
+  }
+
+  if (headerTitle) updates.headerTitle = headerTitle;
+  if (listViewImage) updates.listViewImage = listViewImage;
+  if (description) updates.description = description;
+  if (enabled) updates.enabled = enabled;
+  if (publishedOn) updates.publishedOn = publishedOn;
 
   return ArticleModel.findByIdAndUpdate(req.params.articleId, updates, { new: true });
 };

@@ -45,10 +45,11 @@ export const getRandomArticle: IRequestHandler<ArticleService.IGetArticleParams>
   }
 };
 
-export const updateArticle: IRequestHandler<ArticleService.IGetArticleParams, {}, ArticleService.IArticleRequestBody> = async (req, res) => {
+export const updateArticle: IRequestHandler<ArticleService.IGetArticleParams, {}, ArticleService.IUpdateArticleRequestBody> = async (req, res) => {
   try {
     const article = await ArticleService.updateArticle(req);
-    api(req, res, article);
+    const _article = article.toObject();
+    api(req, res, _article);
   } catch (err) {
     error(req, res, asCustomError(err));
   }

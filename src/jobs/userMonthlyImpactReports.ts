@@ -216,7 +216,8 @@ interface IJobData {
   uid?: string;
 }
 
-export const exec = async ({ generateFullHistory, uid }: IJobData) => {
+export const exec = async (jobData: IJobData = {}) => {
+  const { generateFullHistory, uid } = jobData;
   const userQuery: FilterQuery<IUserDocument> = !!uid ? { _id: uid } : {};
 
   if (!!generateFullHistory) {

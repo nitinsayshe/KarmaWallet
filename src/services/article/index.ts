@@ -26,6 +26,8 @@ export interface IUpdateArticleRequestBody {
   listViewImage?: string;
   headerTitle?: string;
   body?: string;
+  headerType?: ArticleHeaderTypes;
+  headerLogo?: string;
 }
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) => {

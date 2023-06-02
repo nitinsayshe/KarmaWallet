@@ -12,8 +12,7 @@ import { ICompany, ICompanyDocument, IShareableCompany } from './company';
 export enum IArticleType {
   GoodAndBad = 'the-good-and-the-bad',
   CompanySpotlight = 'company-spotlight',
-  IndustryReport = 'industry-report',
-  General = 'general',
+  Feature = 'feature',
 }
 
 export enum ArticleHeaderTypes {

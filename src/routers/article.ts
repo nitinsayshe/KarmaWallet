@@ -7,4 +7,4 @@ router.get('/all', ArticleController.getAllArticles);
 router.get('/:articleId', ArticleController.getArticleById);
 router.get('/', ArticleController.getRandomArticle);
 
-export default (app: Express) => app.use('/industry-report', router);
+export default (app: Express) => app.use('/article', router);

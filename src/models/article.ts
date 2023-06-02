@@ -82,4 +82,4 @@ const articleSchema = new Schema({
   },
 });
 
-export const ArticleModel = model<IArticleDocument, Model<IArticle>>('article', articleSchema);
+export const ArticleModel = model<IArticleDocument, Model<IArticle>>('articlesv2', articleSchema);

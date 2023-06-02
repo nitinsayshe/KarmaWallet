@@ -141,10 +141,10 @@ export const getRandomArticle = async (_req: IRequest) => {
 
 // TODO: sanitize input for html
 
-export const createArticle = async (req: IRequest) => {};
+export const createArticle = async (req: IRequest) => {}; //eslint-disable-line
 
-export const updateArticle = async (req: IRequest) => {};
+export const updateArticle = async (req: IRequest) => {}; //eslint-disable-line
 
-export const deleteArticle = async (req: IRequest) => {};
+export const deleteArticle = async (req: IRequest) => {}; //eslint-disable-line
 
 export const getArticleHeaderTypes = async (_req: IRequest) => Object.values(ArticleHeaderTypes);

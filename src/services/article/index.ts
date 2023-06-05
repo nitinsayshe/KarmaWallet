@@ -1,7 +1,8 @@
 import { isValidObjectId } from 'mongoose';
+import sanitizeHtml from 'sanitize-html';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
-import { ArticleHeaderTypes, ArticleModel, IArticle } from '../../models/article';
+import { ArticleHeaderTypes, ArticleModel } from '../../models/article';
 import { CompanyModel } from '../../models/company';
 import { MerchantModel } from '../../models/merchant';
 import { SectorModel } from '../../models/sector';
@@ -9,7 +10,7 @@ import { UnsdgModel } from '../../models/unsdg';
 import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
-import { toUTC } from '../../lib/date';
+import { getUtcDate } from '../../lib/date';
 
 export interface IGetArticleParams {
   articleId: string;
@@ -28,15 +29,17 @@ export interface IUpdateArticleRequestBody {
   body?: string;
   headerType?: ArticleHeaderTypes;
   headerLogo?: string;
+  deleted?: boolean;
 }
 
-export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) => {
+export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>, isAdmin = false) => {
   const { articleId } = req.params;
 
   if (!articleId) throw new CustomError('Article id required', ErrorTypes.INVALID_ARG);
   if (!isValidObjectId(articleId)) throw new CustomError('Invalid article id provided', ErrorTypes.INVALID_ARG);
 
-  const article = await ArticleModel.findOne({ _id: articleId });
+  const query = isAdmin ? { _id: articleId, deleted: false } : { _id: articleId, enabled: true, deleted: false };
+  const article = await ArticleModel.findOne(query);
 
   if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
 
@@ -89,8 +92,9 @@ export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>) =
   return article;
 };
 
-export const getAllArticles = async (_req: IRequest) => {
-  const articles = await ArticleModel.find({ }).populate([{
+export const getAllArticles = async (_req: IRequest, isAdmin = false) => {
+  const query = isAdmin ? { deleted: false } : { enabled: true, deleted: false };
+  const articles = await ArticleModel.find(query).populate([{
     path: 'company',
     model: CompanyModel,
     populate: [
@@ -139,7 +143,10 @@ export const getAllArticles = async (_req: IRequest) => {
 };
 
 export const getRandomArticle = async (_req: IRequest) => {
-  const randomArticle = await ArticleModel.aggregate([{ $sample: { size: 1 } }]);
+  const randomArticle = await ArticleModel.aggregate([
+    { $match: { enabled: true, deleted: false } },
+    { $sample: { size: 1 } },
+  ]);
 
   if (randomArticle.length === 0) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
 
@@ -155,37 +162,54 @@ export const getRandomArticle = async (_req: IRequest) => {
   return article;
 };
 
-// TODO: sanitize input for html
-
-export const createArticle = async (req: IRequest) => {}; //eslint-disable-line
-
-export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdateArticleRequestBody>) => {
+export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestBody>) => {
   const { title, publishedOn, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled } = req.body;
   if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
-  const updates: Partial<IArticle> = {
-    lastModified: toUTC(new Date()),
-  };
+  const article = new ArticleModel({
+    title,
+    publishedOn,
+    introParagraph,
+    featured,
+    headerBackground,
+    body: sanitizeHtml(body),
+    headerTitle,
+    listViewImage,
+    description,
+    enabled,
+    lastModified: getUtcDate().toDate(),
+  });
 
-  if (title) updates.title = title;
-  if (introParagraph) updates.introParagraph = introParagraph;
-  if (featured) updates.featured = featured;
-  if (headerBackground) updates.headerBackground = headerBackground;
+  await article.save();
+  return article;
+};
+
+export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdateArticleRequestBody>) => {
+  const { title, publishedOn, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, deleted } = req.body;
+
+  const article = await ArticleModel.findOne({ _id: req.params.articleId });
+
+  if (!article) throw new CustomError('Article not found', ErrorTypes.NOT_FOUND);
+
+  if (title) article.title = title;
+  if (introParagraph) article.introParagraph = introParagraph;
+  if (featured) article.featured = featured;
+  if (headerBackground) article.headerBackground = headerBackground;
 
   if (body) {
     // Run body through sanitizer on back end as well
-    const sanitizedBody = body;
-    updates.body = sanitizedBody;
+    const sanitizedBody = sanitizeHtml(body);
+    article.body = sanitizedBody;
   }
 
-  if (headerTitle) updates.headerTitle = headerTitle;
-  if (listViewImage) updates.listViewImage = listViewImage;
-  if (description) updates.description = description;
-  if (enabled) updates.enabled = enabled;
-  if (publishedOn) updates.publishedOn = publishedOn;
+  if (headerTitle) article.headerTitle = headerTitle;
+  if (listViewImage) article.listViewImage = listViewImage;
+  if (description) article.description = description;
+  if (enabled !== undefined) article.enabled = enabled;
+  if (deleted !== undefined) article.deleted = deleted;
+  if (publishedOn) article.publishedOn = publishedOn;
 
-  return ArticleModel.findByIdAndUpdate(req.params.articleId, updates, { new: true });
+  await article.save();
+  return article;
 };
-
-export const deleteArticle = async (req: IRequest) => {}; //eslint-disable-line
 
 export const getArticleHeaderTypes = async (_req: IRequest) => Object.values(ArticleHeaderTypes);

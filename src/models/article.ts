@@ -44,6 +44,7 @@ export interface IArticle {
   // overrides the list view background image
   listViewImage: string;
   headerType: ArticleHeaderTypes,
+  deleted: boolean;
 }
 
 // list view background order
@@ -79,6 +80,7 @@ const articleSchema = new Schema({
     required: true,
     default: ArticleHeaderTypes.LogoAndTitle,
   },
+  deleted: { type: Boolean, required: true, default: false },
 });
 
 export const ArticleModel = model<IArticleDocument, Model<IArticle>>('articlesv2', articleSchema);

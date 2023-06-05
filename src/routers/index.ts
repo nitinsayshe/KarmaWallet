@@ -10,6 +10,7 @@ import transaction from './transaction';
 import impact from './impact';
 import company from './company';
 import article from './article';
+import articles from './admin/articleTemplates';
 import sectors from './sectors';
 import webhook from './webhooks';
 import commission from './commission';
@@ -30,6 +31,7 @@ const routers = (app: Express) => {
   admin(app);
   card(app);
   article(app);
+  articles(app);
   company(app);
   comparisonGame(app);
   group(app);

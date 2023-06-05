@@ -53,3 +53,12 @@ export const createArticle: IRequestHandler<{}, {}, ArticleService.IUpdateArticl
     error(req, res, asCustomError(err));
   }
 };
+
+export const getArticleHeaderTypes: IRequestHandler = async (req, res) => {
+  try {
+    const articleHeaderTypes = await ArticleService.getArticleHeaderTypes(req);
+    api(req, res, articleHeaderTypes);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

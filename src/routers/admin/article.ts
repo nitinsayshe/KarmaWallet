@@ -12,6 +12,14 @@ router.get(
   protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
   ArticleController.getAllArticles,
 );
+
+router.get(
+  '/header-types',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  ArticleController.getArticleHeaderTypes,
+);
+
 router.get(
   '/:articleId',
   authenticate,
@@ -25,6 +33,7 @@ router.put(
   protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
   ArticleController.updateArticle,
 );
+
 router.post(
   '/',
   authenticate,

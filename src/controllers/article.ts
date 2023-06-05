@@ -48,8 +48,7 @@ export const getRandomArticle: IRequestHandler<ArticleService.IGetArticleParams>
 export const updateArticle: IRequestHandler<ArticleService.IGetArticleParams, {}, ArticleService.IUpdateArticleRequestBody> = async (req, res) => {
   try {
     const article = await ArticleService.updateArticle(req);
-    const _article = article.toObject();
-    api(req, res, _article);
+    api(req, res, article);
   } catch (err) {
     error(req, res, asCustomError(err));
   }
@@ -58,8 +57,7 @@ export const updateArticle: IRequestHandler<ArticleService.IGetArticleParams, {}
 export const createArticle: IRequestHandler<{}, {}, ArticleService.IUpdateArticleRequestBody> = async (req, res) => {
   try {
     const article = await ArticleService.createArticle(req);
-    const _article = article.toObject();
-    api(req, res, _article);
+    api(req, res, article);
   } catch (err) {
     error(req, res, asCustomError(err));
   }

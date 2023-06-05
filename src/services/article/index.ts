@@ -168,6 +168,12 @@ export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestB
   const { title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType } = req.body;
 
   if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
+
+  // const requiredFields = [title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType];
+  // requiredFields.forEach((field) => {
+  //   if (req.body[field as keyof IUpdateArticleRequestBody] === undefined) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
+  // });
+
   const article = new ArticleModel({
     title,
     publishedOn: enabled ? getUtcDate().toDate() : null,

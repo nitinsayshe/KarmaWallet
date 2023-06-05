@@ -62,3 +62,12 @@ export const getArticleHeaderTypes: IRequestHandler = async (req, res) => {
     error(req, res, asCustomError(err));
   }
 };
+
+export const getAllArticleTemplates: IRequestHandler = async (req, res) => {
+  try {
+    const articleTemplates = await ArticleService.getAllArticleTemplates(req);
+    api(req, res, articleTemplates);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

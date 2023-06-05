@@ -14,6 +14,13 @@ router.get(
 );
 
 router.get(
+  '/templates',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  ArticleController.getAllArticleTemplates,
+);
+
+router.get(
   '/header-types',
   authenticate,
   protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),

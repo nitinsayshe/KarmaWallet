@@ -11,6 +11,7 @@ import { UnsdgCategoryModel } from '../../models/unsdgCategory';
 import { UnsdgSubcategoryModel } from '../../models/unsdgSubcategory';
 import { IRequest } from '../../types/request';
 import { getUtcDate } from '../../lib/date';
+import { ArticleTemplateModel } from '../../models/articleTemplate';
 
 export interface IGetArticleParams {
   articleId: string;
@@ -225,3 +226,5 @@ export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdate
 };
 
 export const getArticleHeaderTypes = async (_req: IRequest) => Object.values(ArticleHeaderTypes);
+
+export const getAllArticleTemplates = async (_req: IRequest) => ArticleTemplateModel.find({});

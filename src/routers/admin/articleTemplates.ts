@@ -5,4 +5,4 @@ const router = Router();
 
 router.get('/all', ArticleTemplatesController.getAllArticleTemplates);
 
-export default (app: Express) => app.use('/articles', router);
+export default (app: Express) => app.use('/article-templates', router);

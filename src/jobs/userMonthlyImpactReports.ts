@@ -216,7 +216,9 @@ interface IJobData {
   uid?: string;
 }
 
-export const exec = async ({ generateFullHistory, uid }: IJobData) => {
+export const exec = async (jobData: IJobData = {}) => {
+  const generateFullHistory = !!jobData.generateFullHistory;
+  const { uid } = jobData;
   const userQuery: FilterQuery<IUserDocument> = !!uid ? { _id: uid } : {};
 
   if (!!generateFullHistory) {
@@ -239,6 +241,7 @@ export const exec = async ({ generateFullHistory, uid }: IJobData) => {
   let errorCount = 0;
 
   for (const user of users) {
+    console.log(`[+] generating monthly impact reports for user: ${user._id}`);
     ({ count, errorCount } = await generateMonthlyImpactReportForUser(
       user as IUserDocument,
       generateFullHistory,

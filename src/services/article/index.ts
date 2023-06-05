@@ -2,7 +2,7 @@ import { isValidObjectId } from 'mongoose';
 import sanitizeHtml from 'sanitize-html';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
-import { ArticleHeaderTypes, ArticleModel } from '../../models/article';
+import { ArticleHeaderTypes, ArticleModel, ArticleTypes } from '../../models/article';
 import { CompanyModel } from '../../models/company';
 import { MerchantModel } from '../../models/merchant';
 import { SectorModel } from '../../models/sector';
@@ -30,6 +30,7 @@ export interface IUpdateArticleRequestBody {
   headerType?: ArticleHeaderTypes;
   headerLogo?: string;
   deleted?: boolean;
+  type?: ArticleTypes;
 }
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>, isAdmin = false) => {
@@ -163,11 +164,12 @@ export const getRandomArticle = async (_req: IRequest) => {
 };
 
 export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestBody>) => {
-  const { title, publishedOn, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled } = req.body;
+  const { title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType } = req.body;
+
   if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
   const article = new ArticleModel({
     title,
-    publishedOn,
+    publishedOn: enabled ? getUtcDate().toDate() : null,
     introParagraph,
     featured,
     headerBackground,
@@ -177,6 +179,10 @@ export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestB
     description,
     enabled,
     lastModified: getUtcDate().toDate(),
+    type,
+    headerLogo,
+    headerType,
+    createdOn: getUtcDate().toDate(),
   });
 
   await article.save();
@@ -184,7 +190,7 @@ export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestB
 };
 
 export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdateArticleRequestBody>) => {
-  const { title, publishedOn, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, deleted } = req.body;
+  const { title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, deleted, type, headerLogo, headerType } = req.body;
 
   const article = await ArticleModel.findOne({ _id: req.params.articleId });
 
@@ -204,9 +210,15 @@ export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdate
   if (headerTitle) article.headerTitle = headerTitle;
   if (listViewImage) article.listViewImage = listViewImage;
   if (description) article.description = description;
-  if (enabled !== undefined) article.enabled = enabled;
+  if (enabled !== undefined) {
+    article.enabled = enabled;
+    if (enabled && !article.publishedOn) article.publishedOn = getUtcDate().toDate();
+  }
   if (deleted !== undefined) article.deleted = deleted;
-  if (publishedOn) article.publishedOn = publishedOn;
+  if (headerType && !!Object.values(ArticleHeaderTypes).find(t => headerType === t)) article.headerType = headerType;
+  if (type && !!Object.values(ArticleTypes).find(t => type === t)) article.type = type;
+  if (headerLogo) article.headerLogo = headerLogo;
+  article.lastModified = getUtcDate().toDate();
 
   await article.save();
   return article;

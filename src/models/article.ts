@@ -9,10 +9,11 @@ import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { ICompany, ICompanyDocument, IShareableCompany } from './company';
 
-export enum IArticleType {
+export enum ArticleTypes {
   GoodAndBad = 'the-good-and-the-bad',
   CompanySpotlight = 'company-spotlight',
-  Feature = 'feature',
+  IndustryReport = 'industry-report',
+  General = 'general',
 }
 
 export enum ArticleHeaderTypes {
@@ -27,7 +28,7 @@ export interface IArticle {
   lastModified: Date;
   publishedOn: Date;
   enabled: boolean;
-  type: IArticleType;
+  type: ArticleTypes;
   featured: boolean;
   body: string;
   // used on homepage
@@ -64,7 +65,7 @@ const articleSchema = new Schema({
   lastModified: { type: Date, required: true, default: () => getUtcDate() },
   publishedOn: { type: Date, default: null },
   enabled: { type: Boolean, required: true, default: false },
-  type: { type: String, enum: Object.values(IArticleType), required: true },
+  type: { type: String, enum: Object.values(ArticleTypes), required: true },
   featured: { type: Boolean, default: false },
   body: { type: String, required: false },
   description: { type: String, required: true },
@@ -73,7 +74,7 @@ const articleSchema = new Schema({
   headerTitle: { type: String, required: false },
   headerBackground: { type: String, required: false },
   headerLogo: { type: String, required: false },
-  listViewImage: { type: String, required: true },
+  listViewImage: { type: String, required: false },
   headerType: {
     type: String,
     enum: Object.values(ArticleHeaderTypes),

@@ -38,7 +38,7 @@ export const getRandomArticle: IRequestHandler<ArticleService.IGetArticleParams>
   try {
     const article = await ArticleService.getRandomArticle(req);
     const _article = article.toObject();
-    _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+    if (_article.company) _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
     api(req, res, _article);
   } catch (err) {
     error(req, res, asCustomError(err));

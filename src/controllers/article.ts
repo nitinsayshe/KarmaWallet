@@ -38,8 +38,26 @@ export const getRandomArticle: IRequestHandler<ArticleService.IGetArticleParams>
   try {
     const article = await ArticleService.getRandomArticle(req);
     const _article = article.toObject();
-    _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
+    if (_article.company) _article.company = CompanyService.getShareableCompany(_article.company as ICompanyDocument);
     api(req, res, _article);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const updateArticle: IRequestHandler<ArticleService.IGetArticleParams, {}, ArticleService.IUpdateArticleRequestBody> = async (req, res) => {
+  try {
+    const article = await ArticleService.updateArticle(req);
+    api(req, res, article);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const createArticle: IRequestHandler<{}, {}, ArticleService.IUpdateArticleRequestBody> = async (req, res) => {
+  try {
+    const article = await ArticleService.createArticle(req);
+    api(req, res, article);
   } catch (err) {
     error(req, res, asCustomError(err));
   }

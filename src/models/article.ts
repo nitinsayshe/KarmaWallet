@@ -19,11 +19,12 @@ export enum ArticleTypes {
 export enum ArticleHeaderTypes {
   LogoAndTitle = 'logo-and-title',
   CompanyAndRating = 'company-and-rating',
+  TitleOnly = 'title-only',
 }
 
 export interface IArticle {
   _id: ObjectId;
-  company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany >;
+  company: IRef<ObjectId, ICompany | ICompanyDocument | IShareableCompany>;
   createdOn: Date;
   lastModified: Date;
   publishedOn: Date;

@@ -85,4 +85,4 @@ const articleSchema = new Schema({
   deleted: { type: Boolean, required: true, default: false },
 });
 
-export const ArticleModel = model<IArticleDocument, Model<IArticle>>('articlesv2', articleSchema);
+export const ArticleModel = model<IArticleDocument, Model<IArticle>>('articles', articleSchema);

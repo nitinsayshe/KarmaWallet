@@ -1,22 +1,19 @@
-# This workflow will do a clean install of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+# This workflow will do a clean install of node dependencies, cache/restore them, and build the source code
 
 name: Sandbox Deployment
 
 on:
+  push:
+    branches: [ sandbox ]
   workflow_dispatch:
     inputs:
       branch:
         description: 'The branch to use'     
-        required: true
-        default: 'staging'
-      env:
-        description: 'The environment to deploy to'
-        required: true
+        default: 'sandbox'
 
 jobs:
   build:
-    runs-on: [self-hosted, 'betsi-${{ github.event.inputs.env }}']
+    runs-on: [self-hosted, betsi-sandbox]
 
     strategy:
       matrix:
@@ -25,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        ref: '${{ github.event.inputs.branch }}'
+        ref: 'sandbox'
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v2
       with:
@@ -33,9 +30,9 @@ jobs:
         cache: 'npm'
     - run: echo 'PUBLIC_TOKEN=${{secrets.STAGING_PUBLIC_TOKEN}}' >> .env
     - run: echo 'NODE_ENV=staging' >> .env
-    - run: echo 'FRONTEND_DOMAIN=https://sandbox.karmawallet.io' >> .env
-    - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
     - run: echo 'PORT=8012' >> .env
+    - run: echo 'FRONTEND_DOMAIN=https://frontend.staging.karmawallet.io' >> .env
+    - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
     - run: echo 'DB_USER=${{secrets.STAGING_DB_USER}}' >> .env
     - run: echo 'DB_NAME=${{secrets.STAGING_DB_NAME}}' >> .env
     - run: echo 'DB_URL=${{secrets.STAGING_DB_URL}}:27017' >> .env
@@ -59,7 +56,7 @@ jobs:
     - run: echo 'RARE_ENV=prod' >> .env
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
-    - run: echo 'KW_ENV=sandbox' >> .env
+    - run: echo 'KW_ENV=staging' >> .env
     - run: echo 'BETSI_ENV=bigolbetsi' >> .env
     - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
     - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
@@ -74,11 +71,14 @@ jobs:
     - run: echo 'WILDFIRE_CALLBACK_KEY=${{secrets.WILDFIRE_CALLBACK_KEY}}' >> .env
     - run: echo 'PAYPAL_CLIENT_ID=${{secrets.LIVE_PAYPAL_CLIENT_ID}}' >> .env
     - run: echo 'PAYPAL_MODE=live' >> .env
-    - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env  
+    - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env
+    - run: echo 'PAYPAL_WEBHOOK_ID=${{secrets.LIVE_PAYPAL_WEBHOOK_ID}}' >> .env  
     - run: echo 'ACTIVECAMPAIGN_API_URL=${{secrets.ACTIVECAMPAIGN_API_URL}}' >> .env
     - run: echo 'ACTIVECAMPAIGN_API_KEY=${{secrets.ACTIVECAMPAIGN_API_KEY}}' >> .env
     - run: echo 'HUBSPOT_URL=${{secrets.HUBSPOT_URL}}' >> .env
     - run: echo 'HUBSPOT_APP_TOKEN=${{secrets.HUBSPOT_APP_TOKEN}}' >> .env
+    - run: echo 'OPENAI_ORG=${{secrets.OPENAI_ORG}}' >> .env
+    - run: echo 'OPENAI_SECRET=${{secrets.OPENAI_SECRET}}' >> .env
     - run: echo 'ENCRYPTION_SECRET_KEY=${{secrets.STAGING_ENCRYPTION_SECRET_KEY}}' >> .env
     - run: echo 'ENCRYPTION_SECRET_INITIALIZATION_VECTOR=${{secrets.STAGING_ENCRYPTION_INITIALIZATION_VECTOR}}' >> .env
     - run: echo 'ENCRYPTION_METHOD=${{secrets.STAGING_ENCRYPTION_METHOD}}' >> .env

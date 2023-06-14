@@ -240,22 +240,13 @@ export const getAllUsersWithoutVerifiedPaypal = async () => {
   fs.writeFileSync(path.join(__dirname, '.tmp', 'no_verified_paypal.csv'), _csv);
 };
 
-export const sendOneOffPayout = async (commissionPayoutId: string) => {
+export const sendOneOffPayout = async (commissionPayoutIds: string[]) => {
   try {
-    const payoutData = await CommissionPayoutModel.findById(commissionPayoutId);
-    const correspondingCommissionPayoutOverivew = await CommissionPayoutOverviewModel.findOne({ commissionPayouts: commissionPayoutId });
-    if (!payoutData) throw new CustomError('Commission payout not found.', ErrorTypes.INVALID_ARG);
-    if (payoutData.status === KarmaCommissionPayoutStatus.Paid) {
-      throw new CustomError('Commission payout already paid.', ErrorTypes.GEN);
-    }
+    let commissionPayoutAmount = 0;
+    const correspondingCommissionPayoutOverivew = await CommissionPayoutOverviewModel.findOne({ commissionPayouts: commissionPayoutIds[0] });
     const paypalClient = await new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
-    const commissionPayoutAmount = payoutData.amount;
-
-    if (paypalPrimaryBalanceAmount < commissionPayoutAmount) {
-      throw new CustomError(`[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout amount: ${commissionPayoutAmount}`, ErrorTypes.GEN);
-    }
 
     let paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
 
@@ -267,40 +258,50 @@ export const sendOneOffPayout = async (commissionPayoutId: string) => {
       },
     };
 
-    if (!payoutData) {
-      console.log('[+] Commission payout not found. Skipping payout.');
-      throw new CustomError('Commission payout not found.', ErrorTypes.INVALID_ARG);
+    for (const payout of commissionPayoutIds) {
+      const payoutData = await CommissionPayoutModel.findById(payout);
+
+      if (!payoutData) {
+        console.log('[+] Commission payout not found. Skipping payout.');
+        throw new CustomError('Commission payout not found.', ErrorTypes.INVALID_ARG);
+      }
+
+      commissionPayoutAmount += payoutData.amount;
+
+      const user = await UserModel.findById(payoutData.user);
+
+      if (!user) {
+        console.log('[+] User not found. Skipping payout.');
+        throw new CustomError('User not found.', ErrorTypes.INVALID_ARG);
+      }
+
+      const { paypal } = user.integrations;
+
+      if (!paypal) {
+        console.log('[+] User does not have paypal integration. Skipping payout.');
+        throw new CustomError('User does not have paypal integration.', ErrorTypes.INVALID_ARG);
+      }
+
+      if (!paypal.payerId) {
+        console.log('[+] User does not have paypal payerId. Skipping payout.');
+        throw new CustomError('User does not have paypal payerId.', ErrorTypes.INVALID_ARG);
+      }
+
+      paypalFormattedPayouts = [{
+        recipient_type: 'PAYPAL_ID',
+        amount: {
+          value: payoutData.amount.toString(),
+          currency: 'USD',
+        },
+        receiver: paypal.payerId,
+        note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
+        sender_item_id: payoutData._id.toString(),
+      }];
     }
 
-    const user = await UserModel.findById(payoutData.user);
-
-    if (!user) {
-      console.log('[+] User not found. Skipping payout.');
-      throw new CustomError('User not found.', ErrorTypes.INVALID_ARG);
+    if (paypalPrimaryBalanceAmount < commissionPayoutAmount) {
+      throw new CustomError(`[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout amount: ${commissionPayoutAmount}`, ErrorTypes.GEN);
     }
-
-    const { paypal } = user.integrations;
-
-    if (!paypal) {
-      console.log('[+] User does not have paypal integration. Skipping payout.');
-      throw new CustomError('User does not have paypal integration.', ErrorTypes.INVALID_ARG);
-    }
-
-    if (!paypal.payerId) {
-      console.log('[+] User does not have paypal payerId. Skipping payout.');
-      throw new CustomError('User does not have paypal payerId.', ErrorTypes.INVALID_ARG);
-    }
-
-    paypalFormattedPayouts = [{
-      recipient_type: 'PAYPAL_ID',
-      amount: {
-        value: payoutData.amount.toString(),
-        currency: 'USD',
-      },
-      receiver: paypal.payerId,
-      note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
-      sender_item_id: payoutData._id.toString(),
-    }];
 
     if (!paypalFormattedPayouts.length) console.log('[+] No valid payouts to send.');
 

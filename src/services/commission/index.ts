@@ -149,11 +149,11 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
       console.log(`[+] Skipping user ${user._id} - no paypal integration`);
       continue;
     }
-
-    if (!user.integrations.paypal.verified_account) {
-      console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
-      continue;
-    }
+    // revisit this when we have a better way to verify paypal accounts
+    // if (!user.integrations.paypal.verified_account) {
+    //   console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
+    //   continue;
+    // }
 
     let dateQuery: any = { $lte: dayjs().utc().toDate() };
 
@@ -297,11 +297,6 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
 
       if (!paypal) {
         console.log('[+] User does not have paypal integration. Skipping payout.');
-        continue;
-      }
-
-      if (!!paypal && !paypal.verified_account) {
-        console.log('[+] User does not have verified paypal account. Skipping payout.');
         continue;
       }
 

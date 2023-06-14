@@ -225,3 +225,15 @@ export const fixStatusesOnFailedAndPaidCommissions = async () => {
     failedCount,
   });
 };
+
+export const getAllUsersWithoutVerifiedPaypal = async () => {
+  const usersWithout = [];
+  const usersWithoutVerifiedPaypal = await UserModel.find({ 'integrations.paypal.verified_account': false });
+  for (const user of usersWithoutVerifiedPaypal) {
+    usersWithout.push({
+      email: user.emails.filter(e => !!e.primary)[0].email,
+    });
+  }
+  const _csv = parse(usersWithout);
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'no_verified_paypal.csv'), _csv);
+};

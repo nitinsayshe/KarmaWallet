@@ -240,10 +240,9 @@ export const getAllUsersWithoutVerifiedPaypal = async () => {
   fs.writeFileSync(path.join(__dirname, '.tmp', 'no_verified_paypal.csv'), _csv);
 };
 
-export const sendOneOffPayout = async (commissionPayoutIds: string[]) => {
+export const sendOneOffPayout = async (commissionPayoutIds: string[], commissionOverviewId: string) => {
   try {
     let commissionPayoutAmount = 0;
-    const correspondingCommissionPayoutOverivew = await CommissionPayoutOverviewModel.findOne({ commissionPayouts: commissionPayoutIds[0] });
     const paypalClient = await new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
@@ -252,7 +251,7 @@ export const sendOneOffPayout = async (commissionPayoutIds: string[]) => {
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
-        sender_batch_id: `${correspondingCommissionPayoutOverivew._id}-${getUtcDate().unix()}`,
+        sender_batch_id: `${commissionOverviewId}-${getUtcDate().unix()}`,
         email_subject: 'You\'ve received a cashback payout from Karma Wallet!',
         email_message: 'You\'ve earned cashback from Karma Wallet. Great job!.',
       },

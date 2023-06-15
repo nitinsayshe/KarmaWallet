@@ -1,21 +1,17 @@
 import {
-  Schema,
-  model,
-  Document,
-  ObjectId,
+  Document, model, ObjectId, Schema,
 } from 'mongoose';
-import mongoosePaginate from 'mongoose-paginate-v2';
 import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
-import { IModel, IRef } from '../types/model';
-import { ISector, ISectorDocument } from './sector';
-import { slugify } from '../lib/slugify';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { CompanyRating } from '../lib/constants/company';
+import { slugify } from '../lib/slugify';
+import { IAggregatePaginateModel } from '../sockets/types/aggregations';
+import { IModel, IRef } from '../types/model';
+import { IShareableMerchant } from './merchant';
+import { ISector, ISectorDocument } from './sector';
+import { IUnsdg, IUnsdgDocument } from './unsdg';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
-import { IJobReportDocument } from './jobReport';
-import { IShareableMerchant } from './merchant';
-import { IUnsdg, IUnsdgDocument } from './unsdg';
-import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 
 export enum CompanyCreationStatus {
   Completed = 'completed',
@@ -52,11 +48,6 @@ export interface ICategoryScore {
 export interface ISubcategoryScore {
   subcategory: IRef<ObjectId, (IUnsdgSubcategory | IUnsdgSubcategoryDocument)>;
   score: number;
-}
-
-export interface ICompanyCreation {
-  status: CompanyCreationStatus;
-  jobReportId: IRef<ObjectId, IJobReportDocument>;
 }
 
 export interface ICompanySector {
@@ -114,7 +105,6 @@ export interface ICompany extends IShareableCompany {
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, ICompanyDocument>;
   notes: string;
-  creation: ICompanyCreation;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -187,16 +177,6 @@ const companySchema = new Schema(
         lastModified: { type: Date },
       },
       required: true,
-    },
-    creation: {
-      status: {
-        type: String,
-        enum: Object.values(CompanyCreationStatus),
-      },
-      jobReportId: {
-        type: Schema.Types.ObjectId,
-        ref: 'job_report',
-      },
     },
     createdAt: {
       type: Date,

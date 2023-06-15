@@ -1,11 +1,16 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import dayjs from 'dayjs';
-import { MongoClient } from '../../clients/mongo';
-import { ICardDocument } from '../../models/card';
-import { IUserDocument } from '../../models/user';
-import { CardStatus } from '../constants';
-import { createSomeCards, createSomeUsers, CreateTestCardsRequest } from '../testingUtils';
-import { getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays } from '../userMetrics';
+import { getUsersWithUnlinkedOrRemovedAccountsPastThirtyDays } from '../metrics';
+import { MongoClient } from '../../../../clients/mongo';
+import { CardStatus } from '../../../../lib/constants';
+import { ICardDocument } from '../../../../models/card';
+import { IUserDocument } from '../../../../models/user';
+import {
+  createSomeUsers,
+  CreateTestCardsRequest,
+  createSomeCards,
+  cleanUpDocuments,
+} from '../../../../lib/testingUtils';
 
 describe('active campaign sync jobs logic', () => {
   let testUser: IUserDocument;
@@ -22,14 +27,15 @@ describe('active campaign sync jobs logic', () => {
 
   afterAll(async () => {
     // clean up db
-    await Promise.all(testCards.map(async (card) => card.remove()));
-
-    await testUser.remove();
-    await testUserWithRemovedCard.remove();
-    await testUserWithRemovedCards.remove();
-    await testUserWithUnlinkedCard.remove();
-    await testUserWithUnlinkedCards.remove();
-    await testUserWithUnlinkedCardTwoMonthsAgo.remove();
+    await cleanUpDocuments([
+      ...testCards,
+      testUser,
+      testUserWithRemovedCard,
+      testUserWithRemovedCards,
+      testUserWithUnlinkedCard,
+      testUserWithUnlinkedCards,
+      testUserWithUnlinkedCardTwoMonthsAgo,
+    ]);
 
     MongoClient.disconnect();
   });
@@ -45,7 +51,6 @@ describe('active campaign sync jobs logic', () => {
       testUserWithUnlinkedCardTwoMonthsAgo,
       testUser,
     ] = await createSomeUsers({ users: [{}, {}, {}, {}, {}, {}] });
-    console.log('created test users', testUser);
 
     const createCardsReq: CreateTestCardsRequest = {
       cards: [

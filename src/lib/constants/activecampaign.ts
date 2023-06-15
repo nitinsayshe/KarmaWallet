@@ -1,4 +1,5 @@
 export enum ActiveCampaignSyncTypes {
+  ARTICLE_RECOMMENDATION = 'articleRecommendations',
   BACKFILL = 'backfill',
   CASHBACK_SIMULATION = 'cashbackSimulation',
   CASHBACK_SIMULATION_WEEKLY = 'cashbackSimulationWeekly',
@@ -38,8 +39,8 @@ export enum ActiveCampaignCustomFields {
   loginCountTotal = 'loginCountTotal',
   madeCashbackEligiblePurchase = 'madeCashbackEligiblePurchase',
   missedCashbackDollarsLastMonth = 'missedCashbackDollarsLastMonth',
-  missedCashbackTransactionNumberLastMonth = 'missedCashbackTransactionNumberLastMonth',
   missedCashbackDollarsLastWeek = 'missedCashbackDollarsLastWeek',
+  missedCashbackTransactionNumberLastMonth = 'missedCashbackTransactionNumberLastMonth',
   missedCashbackTransactionNumberLastWeek = 'missedCashbackTransactionNumberLastWeek',
   monthsKarmaScore = 'monthsKarmaScore',
   negativePurchaseDollarsLastThirtyDays = 'negativePurchaseDollarsLastThirtyDays',
@@ -47,7 +48,8 @@ export enum ActiveCampaignCustomFields {
   numNegativePurchasesLastThirtyDays = 'numNegativePurchasesLastThirtyDays',
   numPositivePurchasesLastThirtyDays = 'numPositivePurchasesLastThirtyDays',
   positivePurchaseDollarsLastThirtyDays = 'positivePurchaseDollarsLastThirtyDays',
-  unlinkedAccountsPastThirtyDays = 'unlinkedAccountsPastThirtyDays',
+  recommendedArticles = 'recommendedArticles',
   removedAccountsPastThirtyDays = 'removedAccountsPastThirtyDays',
+  unlinkedAccountsPastThirtyDays = 'unlinkedAccountsPastThirtyDays',
   userId = 'userId',
 }

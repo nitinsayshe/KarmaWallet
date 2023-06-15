@@ -356,19 +356,6 @@ export const addCompanyDataSource = async (company: ICompanyDocument, dataSource
     }
   }
 
-  if (company.creation?.status === CompanyCreationStatus.PendingDataSources) {
-    company.creation.status = CompanyCreationStatus.PendingScoreCalculations;
-
-    try {
-      await CompanyModel.updateOne({ company }, { creation: company.creation });
-      return [true, ''];
-    } catch (err: any) {
-      const message = `Failed to update creation status for company: ${company.companyName} (${company._id}): ${err.message}`;
-      console.log(`[-] ${message}`);
-      return [false, message];
-    }
-  }
-
   return [true, null];
 };
 

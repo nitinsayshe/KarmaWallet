@@ -32,6 +32,7 @@ export interface IUpdateArticleRequestBody {
   headerLogo?: string;
   deleted?: boolean;
   type?: ArticleTypes;
+  company?: string;
 }
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>, isAdmin = false) => {
@@ -165,7 +166,7 @@ export const getRandomArticle = async (_req: IRequest) => {
 };
 
 export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestBody>) => {
-  const { title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType } = req.body;
+  const { title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType, company } = req.body;
 
   if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
 
@@ -190,6 +191,7 @@ export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestB
     headerLogo,
     headerType,
     createdOn: getUtcDate().toDate(),
+    company,
   });
 
   await article.save();

@@ -7,9 +7,14 @@ export interface IValidateHtmlBody {
   html: string;
 }
 
+export interface IValidateHtmlError {
+  error: string;
+  location: string;
+}
+
 export interface IValidateHtmlResult {
   isValid: boolean;
-  errors: string[];
+  errors: IValidateHtmlError[];
 }
 
 export const validateHtml = async (req: IRequest<{}, {}, IValidateHtmlBody>) => {
@@ -26,13 +31,12 @@ export const validateHtml = async (req: IRequest<{}, {}, IValidateHtmlBody>) => 
     // messages that are coming back that should be ignored need to be added verbatim here
   };
   const validateResult = await validator(options);
-
-  result.isValid = typeof validateResult === 'string' && validateResult === 'The document validates according to the specified schema(s).';
-
-  console.log('\n\n\n\n', { validateResult }, '\n\n\n\n');
-
+  result.isValid = validateResult.messages.length === 0 && html.includes('<') === true;
   result.errors = [];
 
-  console.log('\n\n -- ', result, ' -- \n\n');
+  validateResult.messages.forEach((message) => {
+    result.errors.push({ error: message.message, location: message.extract });
+  });
+
   return result;
 };

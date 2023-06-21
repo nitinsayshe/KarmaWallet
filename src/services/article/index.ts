@@ -19,7 +19,6 @@ export interface IGetArticleParams {
 
 export interface IUpdateArticleRequestBody {
   title?: string;
-  company?: string;
   publishedOn? : Date;
   introParagraph?: string;
   enabled?: boolean;
@@ -180,7 +179,6 @@ export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestB
     title,
     publishedOn: enabled ? getUtcDate().toDate() : null,
     introParagraph,
-    company,
     featured,
     headerBackground,
     body: sanitizeHtml(body),

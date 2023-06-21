@@ -33,6 +33,7 @@ export interface IUpdateArticleRequestBody {
   headerLogo?: string;
   deleted?: boolean;
   type?: ArticleTypes;
+  company?: string;
 }
 
 export const getArticleById = async (req: IRequest<IGetArticleParams, {}, {}>, isAdmin = false) => {
@@ -192,6 +193,7 @@ export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestB
     headerLogo,
     headerType,
     createdOn: getUtcDate().toDate(),
+    company,
   });
 
   await article.save();

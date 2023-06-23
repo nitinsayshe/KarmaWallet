@@ -168,12 +168,14 @@ export const getRandomArticle = async (_req: IRequest) => {
 export const createArticle = async (req: IRequest<{}, {}, IUpdateArticleRequestBody>) => {
   const { title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType, company } = req.body;
 
-  if (!title) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
+  const isValidCompany = await CompanyModel.findOne({ _id: company });
 
-  // const requiredFields = [title, introParagraph, featured, headerBackground, body, headerTitle, listViewImage, description, enabled, type, headerLogo, headerType];
-  // requiredFields.forEach((field) => {
-  //   if (req.body[field as keyof IUpdateArticleRequestBody] === undefined) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
-  // });
+  if (!isValidCompany) throw new CustomError('Invalid company id provided', ErrorTypes.INVALID_ARG);
+
+  const requiredFields = [title, introParagraph, headerBackground, body, headerTitle, listViewImage, description, type, headerLogo, headerType];
+  requiredFields.forEach((field) => {
+    if (req.body[field as keyof IUpdateArticleRequestBody] === undefined) throw new CustomError('No updatable data found for article.', ErrorTypes.INVALID_ARG);
+  });
 
   const article = new ArticleModel({
     title,

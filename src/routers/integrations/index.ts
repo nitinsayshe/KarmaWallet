@@ -2,6 +2,7 @@ import { Express, Router } from 'express';
 import plaidRouter from './plaid';
 import rareRouter from './rare';
 import paypalRouter from './paypal';
+import marqetaRouter from './marqeta/index';
 
 /**
  * this file is used for direct communication with the integration APIs
@@ -16,5 +17,6 @@ const integrationsRouter = Router();
 integrationsRouter.use('/plaid', plaidRouter);
 integrationsRouter.use('/rare', rareRouter);
 integrationsRouter.use('/paypal', paypalRouter);
+integrationsRouter.use('/marqeta', marqetaRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

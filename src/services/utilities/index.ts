@@ -35,7 +35,7 @@ export const validateHtml = async (req: IRequest<{}, {}, IValidateHtmlBody>) => 
   result.errors = [];
 
   validateResult.messages.forEach((message) => {
-    result.errors.push({ error: message.message, location: message.extract });
+    result.errors.push({ error: message.message, location: (message as any).extract });
   });
 
   return result;

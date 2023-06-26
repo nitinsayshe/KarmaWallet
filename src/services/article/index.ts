@@ -214,7 +214,7 @@ export const updateArticle = async (req: IRequest<IGetArticleParams, {}, IUpdate
 
   if (body) {
     // Run body through sanitizer on back end as well
-    const sanitizedBody = sanitizeHtml(body);
+    const sanitizedBody = sanitizeHtml(body, { allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']) });
     article.body = sanitizedBody;
   }
 

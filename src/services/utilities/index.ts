@@ -28,15 +28,16 @@ export const validateHtml = async (req: IRequest<{}, {}, IValidateHtmlBody>) => 
   const options: validator.OptionsForHtmlFileAsValidationTargetAndObjectAsResult = {
     data: html,
     isFragment: true,
-    // messages that are coming back that should be ignored need to be added verbatim here
   };
   const validateResult = await validator(options);
-  result.isValid = validateResult.messages.length === 0 && html.includes('<') === true;
   result.errors = [];
 
   validateResult.messages.forEach((message) => {
+    if (message.message === 'Trailing slash on void elements has no effect and interacts badly with unquoted attribute values.') return;
     result.errors.push({ error: message.message, location: (message as any).extract });
   });
+
+  result.isValid = html.includes('<') === true && result.errors.length === 0;
 
   return result;
 };

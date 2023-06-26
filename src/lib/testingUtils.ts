@@ -37,6 +37,7 @@ export interface IRemoveableDocument {
 
 export const cleanUpDocument = async (document: IRemoveableDocument) => {
   try {
+    if (!document?.remove) throw new Error('Document does not have a remove method');
     await document.remove();
   } catch (err) {
     console.error(err);

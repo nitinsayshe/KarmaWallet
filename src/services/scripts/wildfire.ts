@@ -1,15 +1,48 @@
 import fs from 'fs';
-import path from 'path';
 import Fuse from 'fuse.js';
+import { Types } from 'mongoose';
+import path from 'path';
 import { WildfireClient } from '../../clients/wildfire';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
-import { IMerchantDocument, MerchantModel } from '../../models/merchant';
+import { IMerchantDocument, IWildfireMerchantIntegration, MerchantModel } from '../../models/merchant';
 import { MerchantRateModel } from '../../models/merchantRate';
 
 const getWildfireDictionary = (arr: any) => arr.reduce((acc: any, merchant: any) => {
   acc[merchant.ID] = merchant;
   return acc;
 }, {});
+
+const addWildfireIntegrationToMerchant = async (
+  merchantId: Types.ObjectId,
+  merchant: any,
+  domain: any,
+): Promise<IMerchantDocument | null> => {
+  try {
+    const existingMerchant = await MerchantModel.findById(merchantId);
+    if (!existingMerchant) {
+      const missingMerchantError = `[err] merchant not found: ${merchantId}`;
+      console.log(missingMerchantError);
+      return null;
+    }
+
+    // update merchant to have kard integration
+    if (!existingMerchant?.integrations) existingMerchant.integrations = {};
+    existingMerchant.integrations.wildfire = {
+      merchantId: merchant.ID,
+      Name: merchant.Name,
+      Kind: merchant?.Kind,
+      PaysNewCustomersOnly: merchant?.PaysNewCustomersOnly,
+      ShareAndEarnDisabled: merchant?.ShareAndEarnDisabled,
+      domains: [domain],
+      Categories: merchant?.Categories,
+    } as IWildfireMerchantIntegration;
+
+    return existingMerchant.save();
+  } catch (err) {
+    console.error(err);
+    return null;
+  }
+};
 
 // Creates a new merchant in the database
 export const createMerchant = async (merchant: any, domain: any) => {
@@ -33,6 +66,8 @@ export const createMerchant = async (merchant: any, domain: any) => {
 // Adds merchant rates to the merchant in the database
 export const createMerchantRates = async (merchant: any, merchantRates: any) => {
   const kwMerchant = await MerchantModel.findOne({ 'integrations.wildfire.merchantId': merchant.ID });
+  const rates = [];
+
   if (!kwMerchant) throw new Error(`Merchant ${merchant.ID} not found in DB`);
   for (const rate of merchantRates) {
     const merchantRateInstance = new MerchantRateModel({
@@ -48,8 +83,9 @@ export const createMerchantRates = async (merchant: any, merchantRates: any) => 
         },
       },
     });
-    await merchantRateInstance.save();
+    rates.push((await merchantRateInstance.save()));
   }
+  return rates;
 };
 
 // Add merchants to our database based on a csv of matches
@@ -71,7 +107,9 @@ export const associateWildfireMatches = async () => {
   console.log(`[info] ${rates.length} rates found`);
   console.log(`[info] ${merchants.length} merchants found`);
   console.log(`[info] ${domains.length} domains found`);
-  console.log('[info] starting process of creating merchants, merchant-rates, and associating matches with companies \n');
+  console.log(
+    '[info] starting process of creating merchants, merchant-rates, and associating matches with companies \n',
+  );
 
   for (const match of matches) {
     const { _id: companyId, domainId } = match;
@@ -83,8 +121,12 @@ export const associateWildfireMatches = async () => {
     }
 
     if (!companyId || !domainId || !merchantId) {
-      console.log(`[err] match is missing info: company - ${companyId}; domain - ${domainId}; merchant - ${merchantId}`);
-      errors.push(`[err] match is missing info: company - ${companyId}; domain - ${domainId}; merchant - ${merchantId}`);
+      console.log(
+        `[err] match is missing info: company - ${companyId}; domain - ${domainId}; merchant - ${merchantId}`,
+      );
+      errors.push(
+        `[err] match is missing info: company - ${companyId}; domain - ${domainId}; merchant - ${merchantId}`,
+      );
       continue;
     }
 
@@ -103,14 +145,28 @@ export const associateWildfireMatches = async () => {
     try {
       const domainMerchantMatch = merchant.ID === domain.Merchant.ID;
       if (!domainMerchantMatch) throw new Error(`domain merchant mismatch: ${domain.Merchant.ID} != ${merchant.ID}`);
-      console.log(`[info] ${company.companyName} - ${merchant.ID} - ${domain.ID} - ${merchantRates.length} - ${domainMerchantMatch}`);
+      console.log(
+        `[info] ${company.companyName} - ${merchant.ID} - ${domain.ID} - ${merchantRates.length} - ${domainMerchantMatch}`,
+      );
+      // TODO: check if the merchant exists. If so, add the wildfire integration instead of creating the merchant
+      if (!!company.merchant) {
+        const updatedMerchant = await addWildfireIntegrationToMerchant(
+          company.merchant as unknown as Types.ObjectId,
+          merchant,
+          domain,
+        );
+        if (!updatedMerchant) throw new Error(`Error updating Merchant: ${merchant._id}`);
+        // update merchant rates
+        const updatedRates = await createMerchantRates(updatedMerchant, merchantRates);
+        if (!updatedRates) throw new Error(`Error updating Merchant Rates: ${merchant._id}`);
+      }
       await createMerchant(merchant, domain);
       await createMerchantRates(merchant, merchantRates);
       const kwMerchant = await MerchantModel.findOne({ 'integrations.wildfire.merchantId': merchant.ID });
       if (!kwMerchant) throw new Error(`Merchant ${merchant.ID} not found in DB`);
       company.merchant = kwMerchant._id;
       await company.save();
-    } catch (err:any) {
+    } catch (err: any) {
       errors.push({ companyId, domainId, merchantId, error: err.message });
       console.log(`[err] ${company.companyName} - ${merchant?.ID} - ${domain?.ID} - ${merchantRates?.length}`);
     }
@@ -121,6 +177,7 @@ export const associateWildfireMatches = async () => {
 };
 
 // Removes any duplicate merchants from the database
+// keeps merchants if they have other integrations
 export const removeDuplicateWildfireMerchants = async () => {
   const merchants = await MerchantModel.find({});
 
@@ -130,9 +187,19 @@ export const removeDuplicateWildfireMerchants = async () => {
       'integrations.wildfire.merchantId': merchantId,
     });
 
-    if (duplicateMerchants.length > 1) {
-      const duplicateMerchant = duplicateMerchants[1];
-      await MerchantModel.deleteOne({ _id: duplicateMerchant._id });
+    const firstDup = duplicateMerchants?.[0];
+    const trimmedList = (
+      await Promise.all(
+        duplicateMerchants?.slice(1)?.map(async (duplicateMerchant) => {
+          if (!duplicateMerchant?.integrations?.wildfire && !duplicateMerchant.integrations?.karma) {
+            return duplicateMerchant.remove();
+          }
+          return null;
+        }),
+      )
+    ).filter((m) => !!m);
+    if (trimmedList?.length > 0) {
+      await firstDup?.remove();
     }
   }
 };
@@ -190,7 +257,10 @@ export const updateWildfireMerchants = async () => {
     }
   }
   console.log(`[+] updated ${count} merchants`);
-  const merchantsWithoutActiveDomains = await MerchantModel.updateMany({ lastModified: { $ne: lastModifiedDate } }, { 'integrations.wildfire.domains.0.Merchant.MaxRate': null });
+  const merchantsWithoutActiveDomains = await MerchantModel.updateMany(
+    { lastModified: { $ne: lastModifiedDate } },
+    { 'integrations.wildfire.domains.0.Merchant.MaxRate': null },
+  );
   console.log(`[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant max rates removed`);
 };
 
@@ -198,7 +268,7 @@ export const updateWildfireMerchantRates = async () => {
   const wildfireClient = new WildfireClient();
   const merchants: IMerchantDocument[] = await MerchantModel.find({});
   const res = await wildfireClient.getMerchantRates();
-  const newRates: {[key: string]: any[]} = res.data;
+  const newRates: { [key: string]: { ID: number; Name: string; Kind: string; Amount: string; Currency?: string }[] } = res.data;
   // caching date for cleanup purposes
   const lastModifiedDate = new Date().toISOString();
   let count = 0;
@@ -210,22 +280,20 @@ export const updateWildfireMerchantRates = async () => {
     if (newRatesForMerchant) {
       try {
         for (const rate of newRatesForMerchant) {
-          const merchantRate = await MerchantRateModel.create(
-            {
-              merchant: merchant._id,
-              integrations: {
-                wildfire: {
-                  merchantId,
-                  ID: rate.ID,
-                  Name: rate.Name,
-                  Kind: rate.Kind,
-                  Amount: parseFloat(rate.Amount),
-                  Currency: rate.Currency,
-                },
+          const merchantRate = await MerchantRateModel.create({
+            merchant: merchant._id,
+            integrations: {
+              wildfire: {
+                merchantId,
+                ID: rate.ID,
+                Name: rate.Name,
+                Kind: rate.Kind,
+                Amount: parseFloat(rate.Amount),
+                Currency: rate.Currency,
               },
-              lastModified: lastModifiedDate,
             },
-          );
+            lastModified: lastModifiedDate,
+          });
 
           if (merchantRate) count += 1;
         }
@@ -273,8 +341,11 @@ export const matchWildfireCompanies = async () => {
   let index = 0;
   for (const company of companies) {
     if (!!company.merchant) {
-      console.log(`[+] Skipping company, already has a merchant - ${company.companyName}`);
-      continue;
+      const merchant = await MerchantModel.findById(company.merchant);
+      if (!!merchant?.integrations?.wildfire) {
+        console.log(`[+] Skipping company, already has a wildfire merchant - ${company.companyName}`);
+        continue;
+      }
     }
 
     if (!!company.hidden.status) {

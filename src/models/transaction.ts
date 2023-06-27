@@ -1,19 +1,15 @@
-import {
-  Schema,
-  ObjectId,
-  model,
-  Document,
-} from 'mongoose';
-import mongoosePaginate from 'mongoose-paginate-v2';
+import { Document, model, ObjectId, Schema } from 'mongoose';
 import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
+import mongoosePaginate from 'mongoose-paginate-v2';
+import { EarnedRewardTransaction, TransactionStatus } from '../clients/kard';
+import { getUtcDate } from '../lib/date';
+import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 import { IModel, IRef } from '../types/model';
 import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
 import { IShareableUser, IUserDocument } from './user';
-import { IAggregatePaginateModel } from '../sockets/types/aggregations';
-import { getUtcDate } from '../lib/date';
 
 export enum MatchTypes {
   Offset = 'offset',
@@ -74,6 +70,12 @@ export interface IPlaidTransactionIntegration {
   unofficial_currency_code?: string;
 }
 
+export interface IKardTransactionIntegration {
+  id?: string;
+  status?: TransactionStatus;
+  rewardData?: Partial<EarnedRewardTransaction>
+}
+
 export interface IRareTransactionIntegration {
   transaction_id?: string;
   currency?: string;
@@ -85,14 +87,15 @@ export interface IRareTransactionIntegration {
   refunded?: boolean;
   refunded_ts?: string;
   projectName?: string;
-  fee_amt?: number,
-  subtotal_amt?: number,
-  tonnes_amt?: number,
+  fee_amt?: number;
+  subtotal_amt?: number;
+  tonnes_amt?: number;
 }
 
 export interface ITransactionIntegrations {
   plaid?: IPlaidTransactionIntegration;
   rare?: IRareTransactionIntegration;
+  kard?: IKardTransactionIntegration;
 }
 
 export interface ITransactionAssociation {
@@ -102,8 +105,8 @@ export interface ITransactionAssociation {
 }
 
 export interface IUserOrGroup {
-  user?: IRef<ObjectId, (IShareableUser | IUserDocument)>;
-  group?: IRef<ObjectId, (IShareableGroup | IGroupDocument)>;
+  user?: IRef<ObjectId, IShareableUser | IUserDocument>;
+  group?: IRef<ObjectId, IShareableGroup | IGroupDocument>;
 }
 
 export interface ITransactionMatch {
@@ -142,7 +145,7 @@ export interface ITransaction extends IShareableTransaction {
 }
 
 export interface ITransactionAggregate extends ITransaction {
-  total: number
+  total: number;
 }
 
 export interface ITransactionDocument extends ITransaction, Document {}
@@ -202,16 +205,18 @@ export const transactionSchemaDefinition = {
   // are related in some way. Like a negative transaction
   // linked to the positive transaction because it was
   // reversed for some reason (like a refund).
-  transactionAssociations: [{
-    transaction: {
-      type: Schema.Types.ObjectId,
-      ref: 'transaction',
+  transactionAssociations: [
+    {
+      transaction: {
+        type: Schema.Types.ObjectId,
+        ref: 'transaction',
+      },
+      reason: {
+        type: String,
+        enum: Object.values(TransactionAssociationReasons),
+      },
     },
-    reason: {
-      type: String,
-      enum: Object.values(TransactionAssociationReasons),
-    },
-  }],
+  ],
   integrations: {
     plaid: {
       type: {
@@ -252,6 +257,33 @@ export const transactionSchemaDefinition = {
         fee_amt: { type: Number },
         subtotal_amt: { type: Number },
         tonnes_amt: { type: Number },
+      },
+      kard: {
+        type: {
+          id: { type: String },
+          status: { type: String, enum: Object.values(TransactionStatus) },
+          rewardData: {
+            type: {
+              issuerTransactionId: { type: String },
+              transactionId: { type: String },
+              transactionAmountInCents: { type: Number },
+              status: { type: String, enum: Object.values(TransactionStatus) },
+              itemsOrdered: {
+                type: [
+                  {
+                    offerId: { type: String },
+                    total: { type: Number },
+                    quantity: { type: Number },
+                    amount: { type: Number },
+                    description: { type: String },
+                    category: { type: String },
+                    commissionToIssuer: { type: Number },
+                  },
+                ],
+              },
+            },
+          },
+        },
       },
     },
   },
@@ -322,4 +354,7 @@ const transactionSchema = new Schema(transactionSchemaDefinition);
 transactionSchema.plugin(mongoosePaginate);
 transactionSchema.plugin(mongooseAggregatePaginate);
 
-export const TransactionModel = model<ITransactionDocument, IAggregatePaginateModel<ITransactionDocument>>('transaction', transactionSchema);
+export const TransactionModel = model<ITransactionDocument, IAggregatePaginateModel<ITransactionDocument>>(
+  'transaction',
+  transactionSchema,
+);

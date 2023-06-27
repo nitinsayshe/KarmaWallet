@@ -1,0 +1,54 @@
+version: '3.7'
+
+networks:
+  default:
+    external:
+      name: impact-karma
+
+volumes:
+  npm-modules:
+  redis-data:
+  dbdata:
+
+services:
+  redis:
+    image: redis:6-alpine
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    volumes:
+      - redis-data:/data/redis
+    ports:
+      - 6379:6379
+    restart: unless-stopped
+
+  mongo:
+    image: mongo
+    restart: unless-stopped
+    ports:
+      - 27017:27017
+    volumes:
+      - dbdata:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DB_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${DB_PASS}
+
+  karmawallet-backend-ts-test:
+    restart: always
+    container_name: karmawallet-backend-ts-test
+    build:
+      context: ./
+      dockerfile: ./test.Dockerfile
+    env_file:
+      - .env
+    environment:
+      DB_URL: mongo:27017
+      DB_USER: root
+      DB_PASS: example
+      REDIS_URL: localhost
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - .:/kw-backend
+      - npm-modules:/kw-backend/node_modules

@@ -299,8 +299,6 @@ export const resendFailedPayoutsonCommissionOverview = async (commissionOverview
         note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
         sender_item_id: payoutData._id.toString(),
       });
-
-      if (paypalFormattedPayouts.length === 2) break;
     }
 
     if (paypalPrimaryBalanceAmount < commissionPayoutAmount) {

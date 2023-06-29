@@ -10,7 +10,6 @@ import {
 import { IRequest } from '../../types/request';
 import {
   CommissionPayoutModel,
-  ICommissionPayoutDocument,
   KarmaCommissionPayoutStatus,
 } from '../../models/commissionPayout';
 import {
@@ -139,7 +138,7 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
   };
 };
 
-export const generateCommissionPayoutForUsers = async (min: number, endDate?: Date, startDate?: Date) => {
+export const generateCommissionPayoutForUsers = async (min: number) => {
   const users = await UserModel.find({});
 
   for (const user of users) {
@@ -149,29 +148,21 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
       console.log(`[+] Skipping user ${user._id} - no paypal integration`);
       continue;
     }
-    // revisit this when we have a better way to verify paypal accounts
-    // if (!user.integrations.paypal.verified_account) {
-    //   console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
-    //   continue;
-    // }
-
-    let dateQuery: any = { $lte: dayjs().utc().toDate() };
 
     try {
-      // check time of date the dayjs endDate and startDate to ensure includes entire day
-      if (!!startDate || !!endDate) {
-        dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
-      }
-
       const validUserCommissions = await CommissionModel.aggregate([
         {
           $match: {
             user: user._id,
-            createdOn: dateQuery,
             status: {
               $in: [
                 KarmaCommissionStatus.ReceivedFromVendor,
                 KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+              ],
+              $nin: [
+                KarmaCommissionStatus.PendingPaymentToUser,
+                KarmaCommissionStatus.PaidToUser,
+                KarmaCommissionStatus.Failed,
               ],
             },
           },
@@ -205,17 +196,13 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   }
 };
 
-export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate?: Date, startDate?: Date) => {
-  let commissionPayouts: ICommissionPayoutDocument[] = [];
+export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
+  const commissionPayouts = await CommissionPayoutModel.find({
+    status: KarmaCommissionPayoutStatus.Pending,
+  });
   let karmaAmount = 0;
   let wildfireAmount = 0;
 
-  if (!!startDate || !!endDate) {
-    const dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
-    commissionPayouts = await CommissionPayoutModel.find({ date: dateQuery });
-  }
-
-  if (!endDate && !startDate) commissionPayouts = await CommissionPayoutModel.find({ });
   if (!commissionPayouts.length) throw new CustomError('No commission payouts found for this time period.', ErrorTypes.GEN);
 
   for (const payout of commissionPayouts) {

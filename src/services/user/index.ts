@@ -2,6 +2,7 @@ import argon2 from 'argon2';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
+import jwt from 'jsonwebtoken';
 import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
@@ -45,6 +46,7 @@ export interface IVerifyTokenBody {
 export interface ILoginData {
   email: string;
   password?: string;
+  biometricSignature? :string;
   token?: string;
 }
 
@@ -213,20 +215,37 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
   }
 };
 
-export const login = async (_: IRequest, { email, password }: ILoginData) => {
+export const login = async (req: IRequest, { email, password, biometricSignature }: ILoginData) => {
   email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
+
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
-  const passwordMatch = await argon2.verify(user.password, password);
-  if (!passwordMatch) {
-    throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
+  if (password) {
+    const passwordMatch = await argon2.verify(user.password, password);
+    if (!passwordMatch) {
+      throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
+    }
+  }
+  if (biometricSignature) {
+    const { identifierKey } = req;
+    const { biometrics } = user.integrations;
+    try {
+      console.log('identifierKey', identifierKey);
+      const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
+      const verifySignature = jwt.verify(biometricSignature, biometricKey, { algorithms: ['RS256'] });
+      // Signature verification successful
+      console.log('Signature verification successful');
+      console.log('Decoded payload:', verifySignature);
+    } catch (error) {
+      // Signature verification failed
+      console.error('Signature verification failed:', error);
+      throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
+    }
   }
   const authKey = await Session.createSession(user._id.toString());
-
   await storeNewLogin(user._id.toString(), getUtcDate().toDate());
-
   return { user, authKey };
 };
 
@@ -282,6 +301,7 @@ export const getShareableUser = ({
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
+  if (integrations?.biometrics) _integrations.biometrics = integrations.biometrics;
   return {
     _id,
     email,
@@ -525,3 +545,14 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
   }
   return { message: 'OK' };
 };
+
+// export const registerBiometricKey = async (req: IRequest<{}, {}, IUserBiometric>) => {
+//   const { requestor } = req;
+//   const { biometricKey, isBiometricEnabled } = req.body;
+//   // check that all required fields are present
+//   if (!biometricKey) throw new CustomError('A biometricKey is required.', ErrorTypes.INVALID_ARG);
+//   requestor.biometricKey = biometricKey;
+//   requestor.isBiometricEnabled = isBiometricEnabled;
+//   await requestor.save();
+//   return requestor;
+// };

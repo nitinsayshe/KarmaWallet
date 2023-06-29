@@ -1,11 +1,12 @@
 import { Express, Router } from 'express';
 import * as UserController from '../controllers/user';
 import authenticate from '../middleware/authenticate';
+import biometricAuthenticate from '../middleware/biometricAuthenticate';
 
 const router = Router();
 
 router.post('/register', UserController.register);
-router.post('/login', UserController.login);
+router.post('/login', biometricAuthenticate, UserController.login);
 
 router.post('/password/token/create', UserController.createPasswordResetToken);
 router.post('/password/token/verify', UserController.verifyPasswordResetToken);
@@ -19,5 +20,7 @@ router.get('/session', authenticate, UserController.getProfile);
 router.put('/password', authenticate, UserController.updatePassword);
 router.post('/email/token/create', authenticate, UserController.resendEmailVerification);
 router.post('/email/token/verify', authenticate, UserController.verifyEmail);
+
+// router.post('/register-biometric', authenticate, UserController.registerBiometricKey);
 
 export default (app: Express) => app.use('/user', router);

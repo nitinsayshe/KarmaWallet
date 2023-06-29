@@ -2,6 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/glob
 import dayjs from 'dayjs';
 import { MongoClient } from '../../clients/mongo';
 import {
+  cleanUpDocuments,
   createATestCompany,
   createNumMonthsOfTransactions,
   createSomeTransactions,
@@ -30,13 +31,13 @@ describe('user impact report generation', () => {
 
   afterAll(async () => {
     // clean up db
-    await Promise.all(twoTestTransactions.map(async (t) => t.remove()));
-    await Promise.all(threeMonthsOfTransactions.map(async (t) => t.remove()));
-
-    await testCompany.remove();
-
-    await testUser.remove();
-    await testUserWithThreeMonthsOfTransactions.remove();
+    await cleanUpDocuments([
+      ...twoTestTransactions,
+      ...threeMonthsOfTransactions,
+      testCompany,
+      testUser,
+      testUserWithThreeMonthsOfTransactions,
+    ]);
 
     MongoClient.disconnect();
   });

@@ -1,7 +1,8 @@
 import { AxiosInstance } from 'axios';
 import { SandboxedJob } from 'bullmq';
+import dayjs from 'dayjs';
 import isemail from 'isemail';
-import { FilterQuery, PaginateResult } from 'mongoose';
+import { PaginateResult } from 'mongoose';
 import z, { SafeParseError } from 'zod';
 import { ActiveCampaignClient, IContactsData, IContactsImportData } from '../clients/activeCampaign';
 import {
@@ -24,6 +25,16 @@ import {
   SubscriptionCodeToProviderProductId,
 } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
+import { IArticleDocument } from '../models/article';
+import { IUser, IUserDocument, UserModel } from '../models/user';
+import {
+  getArticleRecommendationsBasedOnTransactionHistory,
+  getCompaniesWithArticles,
+  getArticlesForCompany,
+  URLs,
+} from '../services/article/utils/recommendations';
+import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
+import { IterationRequest } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
   getMonthlyMissedCashBack,
@@ -31,9 +42,7 @@ import {
   getUsersWithCommissionsLastMonth,
   getUsersWithCommissionsLastWeek,
   getWeeklyMissedCashBack,
-} from '../lib/userMetrics';
-import { IUser, IUserDocument, UserModel } from '../models/user';
-import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
+} from '../services/user/utils/metrics';
 import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
 
 interface IJobData {
@@ -46,11 +55,11 @@ interface ISubscriptionLists {
   subscribe: ActiveCampaignListId[];
   unsubscribe: ActiveCampaignListId[];
 }
-export type SyncRequest<T> = {
-  httpClient?: AxiosInstance;
-  batchQuery: FilterQuery<IUser>;
-  batchLimit: number;
-  fields?: T;
+
+export type ArticleRecommedationsCustomFields = {
+  startDate: Date;
+  endDate: Date;
+  articlesByCompany: (IArticleDocument & { url: string })[][];
 };
 
 export type SpendingAnalysisCustomFields = {};
@@ -80,9 +89,9 @@ const getGroupSubscriptionListsToUpdate = async (user: IUserDocument): Promise<I
 const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> => getGroupSubscriptionListsToUpdate(user);
 
 const iterateOverUsersAndExecImportReqWithDelay = async <T>(
-  request: SyncRequest<T>,
+  request: IterationRequest<T>,
   prepareBulkImportRequest: (
-    req: SyncRequest<T>,
+    req: IterationRequest<T>,
     userBatch: PaginateResult<IUser>,
     customFields: { name: string; id: number }[]
   ) => Promise<IContactsImportData>,
@@ -104,8 +113,10 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
     console.log(`Preparing batch ${page} of ${userBatch.totalPages}`);
     const contacts = await prepareBulkImportRequest(request, userBatch, customFields);
 
-    console.log(`Sending ${contacts.contacts.length} contacts to ActiveCampaign`);
-    await ac.importContacts(contacts);
+    if (contacts?.contacts?.length > 0) {
+      console.log(`Sending ${contacts.contacts.length} contacts to ActiveCampaign`);
+      await ac.importContacts(contacts);
+    }
 
     sleep(msDelayBetweenBatches);
 
@@ -115,7 +126,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
 };
 
 const prepareSyncUsersRequest = async (
-  req: SyncRequest<SyncAllUsersCustomFields>,
+  req: IterationRequest<SyncAllUsersCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: FieldIds,
 ): Promise<IContactsImportData> => {
@@ -199,7 +210,7 @@ export const onFailed = (_: SandboxedJob, err: Error) => {
 
 const syncAllUsers = async (syncType: ActiveCampaignSyncTypes, httpClient: AxiosInstance) => {
   const msDelayBetweenBatches = 1500;
-  const req: SyncRequest<SyncAllUsersCustomFields> = {
+  const req: IterationRequest<SyncAllUsersCustomFields> = {
     httpClient,
     batchQuery: {},
     batchLimit: 150,
@@ -293,7 +304,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
 };
 
 const prepareMonthlyCashbackSimulationImportRequest = async (
-  request: SyncRequest<CashbackSimulationCustomFields>,
+  request: IterationRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -358,7 +369,7 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
 };
 
 const prepareWeeklyCashbackSimulationImportRequest = async (
-  request: SyncRequest<CashbackSimulationCustomFields>,
+  request: IterationRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -426,7 +437,7 @@ const syncEstimatedCashbackFieldsWeekly = async (httpClient?: AxiosInstance) => 
 
   const msDelayBetweenBatches = 2000;
 
-  const req: SyncRequest<CashbackSimulationCustomFields> = {
+  const req: IterationRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: {
       _id: { $nin: usersWithCommissionsLastWeek },
@@ -450,7 +461,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
 
   const msDelayBetweenBatches = 2000;
 
-  const req: SyncRequest<CashbackSimulationCustomFields> = {
+  const req: IterationRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: { _id: { $nin: usersWithCommissionsLastMonth } },
     batchLimit: 100,
@@ -467,7 +478,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
 };
 
 const prepareSpendingAnalysisImportRequest = async (
-  _: SyncRequest<SpendingAnalysisCustomFields>,
+  _: IterationRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -539,7 +550,7 @@ const prepareSpendingAnalysisImportRequest = async (
 const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: SyncRequest<{}> = {
+  const req: IterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -549,7 +560,7 @@ const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
 };
 
 const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
-  _: SyncRequest<SpendingAnalysisCustomFields>,
+  _: IterationRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -598,10 +609,61 @@ const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
   return { contacts };
 };
 
+const prepareArticleRecommendationSyncRequest = async (
+  req: IterationRequest<ArticleRecommedationsCustomFields>,
+  userBatch: PaginateResult<IUser>,
+  customFields: { name: string; id: number }[],
+): Promise<IContactsImportData> => {
+  let articleRecommendationData: { email: string; urls: URLs }[] = (
+    await Promise.all(
+      userBatch?.docs?.map(async (user) => {
+        const email = user?.emails?.find((e) => e.primary)?.email;
+        const urls = await getArticleRecommendationsBasedOnTransactionHistory(
+          user as unknown as IUserDocument,
+          req.fields.startDate,
+          req.fields.endDate,
+          req.fields.articlesByCompany,
+        );
+        return { urls, email };
+      }),
+    )
+  ).filter((data) => data?.urls?.length > 0);
+
+  const emailSchema = z.string().email();
+  articleRecommendationData = articleRecommendationData?.filter((data) => {
+    const validationResult = emailSchema.safeParse(data.email);
+    return !!data.email && !(validationResult as SafeParseError<string>)?.error;
+  });
+
+  // set the custom fields and update in active campaign
+  const recommendedArticles = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.recommendedArticles,
+  );
+
+  if (!recommendedArticles) {
+    return { contacts: [] };
+  }
+
+  const contacts = articleRecommendationData.map((d) => {
+    const contact: IContactsData = {
+      email: d.email,
+      fields: [],
+    };
+    contact.fields.push({
+      id: recommendedArticles.id,
+      value: d.urls.join('||'),
+    });
+
+    return contact;
+  });
+
+  return { contacts };
+};
+
 const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: SyncRequest<{}> = {
+  const req: IterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -612,6 +674,31 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
     prepareRemovedOrUnlinkedAccountsSyncRequest,
     msDelayBetweenBatches,
   );
+};
+
+const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
+  const msDelayBetweenBatches = 2000;
+
+  // take companies with articles as a param
+  const companiesWithArticles = await getCompaniesWithArticles();
+
+  // each element in the array holds the articles for a given company
+  const articlesByCompany: (IArticleDocument & { url: string })[][] = await Promise.all(
+    companiesWithArticles.map(async (company) => getArticlesForCompany(company)),
+  );
+
+  const req: IterationRequest<ArticleRecommedationsCustomFields> = {
+    httpClient,
+    batchQuery: {},
+    batchLimit: 100,
+    fields: {
+      startDate: dayjs().subtract(1, 'week').toDate(),
+      endDate: dayjs().toDate(),
+      articlesByCompany,
+    },
+  };
+
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareArticleRecommendationSyncRequest, msDelayBetweenBatches);
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
@@ -671,6 +758,9 @@ export const exec = async ({ syncType, userSubscriptions, httpClient }: IJobData
         break;
       case ActiveCampaignSyncTypes.UNLINKED_AND_REMOVED_ACCOUNTS:
         await syncUnlinkedAndRemovedAccountsFields(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION:
+        await syncArticleRecommendationFields(httpClient);
         break;
       default:
         await syncAllUsers(syncType, httpClient);

@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import { ObjectId, Types } from 'mongoose';
+import { ArticleModel, IArticleDocument, ArticleTypes } from '../models/article';
 import { CardModel, ICardDocument } from '../models/card';
 import { CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
 import { IPromoDocument, IPromoTypes, PromoModel } from '../models/promo';
@@ -7,6 +8,7 @@ import { ITransactionDocument, TransactionModel } from '../models/transaction';
 import { IUserDocument, UserEmailStatus, UserModel } from '../models/user';
 import { getMonthStartDate } from '../services/impact/utils';
 import { CardStatus } from './constants';
+import { CompanyRating } from './constants/company';
 import { getRandomInt } from './number';
 
 export type CreateTestUsersRequest = {
@@ -21,12 +23,41 @@ export type CreateTestCardsRequest = {
   cards?: Partial<ICardDocument>[];
 };
 
+export type CreateTestArticlesRequest = {
+  articles?: Partial<IArticleDocument>[];
+};
+
+export type CreateTestCompaniesRequest = {
+  companies?: Partial<ICompanyDocument>[];
+};
+
+export interface IRemoveableDocument {
+  remove: () => Promise<this>;
+}
+
+export const cleanUpDocument = async (document: IRemoveableDocument) => {
+  try {
+    await document.remove();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+export const cleanUpDocuments = async (document: IRemoveableDocument[]) => {
+  await Promise.all(
+    document.map(async (d) => {
+      await cleanUpDocument(d);
+    }),
+  );
+};
+
 export const createSomeUsers = async (req: CreateTestUsersRequest): Promise<IUserDocument[]> => (await Promise.all(
   req.users.map(async (user) => {
     const newUser = new UserModel();
     newUser.password = user?.password || 'password';
     newUser.name = user?.name || `Test User_${new Types.ObjectId().toString()}`;
     newUser.emails = user?.emails || [];
+    newUser.articles = user?.articles || undefined;
     if (newUser.emails.length === 0) {
       newUser.emails.push({
         email: `testemail_${new Types.ObjectId().toString()}@theimpactkarma.com`,
@@ -49,7 +80,7 @@ export const createSomePromos = async (req: CreateTestPromosRequest): Promise<IP
     newPromo.promoText = promo?.promoText || `Test PROMO_TEXT_${new Types.ObjectId().toString()}`;
     newPromo.successText = promo?.successText || `Test PROMO_SUCCESS_${new Types.ObjectId().toString()}`;
     newPromo.disclaimerText = promo?.disclaimerText || `Test PROMO_DISCLAIMER_${new Types.ObjectId().toString()}`;
-    newPromo.headerText = promo?.headerText || 'Test PROMO_HEADER_TEXT_{new Types.ObjectId().toString()}';
+    newPromo.headerText = promo?.headerText || `Test PROMO_HEADER_TEXT_${new Types.ObjectId().toString()}`;
     return newPromo.save();
   }),
 )) || [];
@@ -74,6 +105,46 @@ export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICar
     return newCard.save();
   }),
 )) || [];
+
+export const createSomeArticles = async (req: CreateTestArticlesRequest): Promise<IArticleDocument[]> => (await Promise.all(
+  req.articles.map(async (article) => {
+    const newArticle = new ArticleModel();
+    newArticle.company = article?.company || undefined;
+    newArticle.createdOn = article?.createdOn || dayjs().utc().toDate();
+    newArticle.lastModified = article?.lastModified || dayjs().utc().toDate();
+    newArticle.enabled = article?.enabled || true;
+    newArticle.type = article?.type || ArticleTypes.IndustryReport;
+    newArticle.title = article?.title || undefined;
+    newArticle.featured = article?.featured || undefined;
+    newArticle.description = article?.description || `Test Article${new Types.ObjectId().toString()}`;
+    newArticle.introParagraph = article?.introParagraph || 'paragraph';
+    newArticle.title = article?.title || 'title';
+    newArticle.body = article?.body || 'body';
+    return newArticle.save();
+  }),
+)) || [];
+
+export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Promise<ICompanyDocument[]> => (await Promise.all(
+  req.companies.map(async (company) => {
+    const newCompany = new CompanyModel();
+    newCompany.companyName = company?.companyName || 'Test Company{new Types.ObjectId().toString()}';
+    newCompany.combinedScore = company?.combinedScore || undefined;
+    newCompany.grade = company?.grade || undefined;
+    newCompany.merchant = company?.merchant || undefined;
+    newCompany.parentCompany = company?.parentCompany || undefined;
+    newCompany.createdAt = company?.createdAt || dayjs().utc().toDate();
+    newCompany.evaluatedUnsdgs = company?.evaluatedUnsdgs || [];
+    newCompany.hidden = company?.hidden || {
+      status: false,
+      reason: CompanyHideReasons.None,
+      lastModified: new Date(),
+    };
+    newCompany.rating = company?.rating || CompanyRating.Neutral;
+    newCompany.sectors = company?.sectors || [];
+    return newCompany.save();
+  }),
+)) || [];
+
 export const createATestCompany = async (): Promise<ICompanyDocument> => {
   const company = new CompanyModel();
   company.companyName = `Test Company_${new Types.ObjectId().toString}`;
@@ -87,11 +158,12 @@ export const createSomeTransactions = async (
   count: number,
   userId: ObjectId,
   company: ICompanyDocument,
+  date?: Date,
 ): Promise<ITransactionDocument[]> => {
   const transactions: ITransactionDocument[] = [];
   for (let i = 0; i < count; i++) {
     const transaction = new TransactionModel();
-    transaction.date = dayjs().subtract(1, 'week').toDate();
+    transaction.date = date || dayjs().subtract(1, 'week').toDate();
     transaction.user = userId;
     transaction.company = company;
     transaction.amount = getRandomInt(1, 100);

@@ -1,24 +1,15 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import { randomUUID } from 'crypto';
-import dayjs from 'dayjs';
-import { uniqueId } from 'lodash';
 import { getActiveCampaignContactByEmail, removeDuplicateAutomations, removeDuplicateContactAutomaitons } from '..';
-import { IContactAutomation } from '../../../clients/activeCampaign';
-import { MongoClient } from '../../../clients/mongo';
-import { date } from 'zod';
-import exp from 'constants';
 
 describe('active campaign logic tests', () => {
-
   afterEach(() => {
     /* clean up between tests */
   });
 
-  afterAll(async () => {
-  });
+  afterAll(async () => {});
 
-  beforeAll(async () => {
-  });
+  beforeAll(async () => {});
 
   // skipping to avoid hitting the active campaign api unintentionally
   it.skip('getActiveCampaignContactByEmail returns contact data', async () => {
@@ -36,6 +27,7 @@ describe('active campaign logic tests', () => {
   it.skip('removeDuplicateContactAutomationsById removes a contacts dupe automations, keeping only the oldest', async () => {
     try {
       const res = await removeDuplicateContactAutomaitons('jayant@theimpactkarma.com');
+      expect(res).toBeDefined();
     } catch (err) {
       expect(err).toBeUndefined();
     }

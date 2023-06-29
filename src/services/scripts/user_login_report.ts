@@ -17,6 +17,7 @@ type UserLoginReport = {
   email: string;
   name: string;
   total_logins: number;
+  last_login_date: string;
   account_created_date: string;
   total_linked_accounts: number;
   linked_depository_accounts: number;
@@ -27,6 +28,16 @@ type UserLoginReport = {
   earned_cashback: boolean;
   cashback_amount: number;
   cashback_companies: string[];
+};
+
+const getLastUserLogin = async (user: IUserDocument): Promise<Date | null> => {
+  const email = user?.emails?.find((e) => e.primary)?.email || '';
+  try {
+    return (await UserLogModel.findOne({ userId: user._id }).sort({ date: -1 }))?.date;
+  } catch (e) {
+    console.log('Error getting latest login date for user with email: ', email, ': ', e);
+    return null;
+  }
 };
 
 const getUserLoginCount = async (user: IUserDocument): Promise<number> => {
@@ -103,6 +114,7 @@ export const getUserLoginReport = async (): Promise<UserLoginReport[]> => {
           // # Query user_logins collection
           // count total logins
           const totalLogins = (await getUserLoginCount(user)) || 0;
+          const lastLoginDate = (await getLastUserLogin(user)) || null;
 
           // # Query cards collection
           // get all linked accounts (sorted by ascending date)
@@ -149,6 +161,7 @@ export const getUserLoginReport = async (): Promise<UserLoginReport[]> => {
             email,
             name,
             total_logins: totalLogins,
+            last_login_date: lastLoginDate ? dayjs(lastLoginDate)?.utc()?.format('MM-DD-YYYY') : '',
             account_created_date: !!dateJoined ? dayjs(dateJoined)?.utc()?.format('MM-DD-YYYY') : '',
             total_linked_accounts: cards?.length ? cards.length : 0,
             linked_depository_accounts: numDepositoryAccounts,
@@ -169,6 +182,7 @@ export const getUserLoginReport = async (): Promise<UserLoginReport[]> => {
             email: email || '',
             name: name || '',
             total_logins: 0,
+            last_login_date: '',
             account_created_date: '',
             total_linked_accounts: 0,
             linked_depository_accounts: 0,
@@ -192,13 +206,6 @@ export const getUserLoginReport = async (): Promise<UserLoginReport[]> => {
   }
   // write to csv
   const csv = parse(report);
-  fs.writeFileSync(
-    path.join(
-      __dirname,
-      '.tmp',
-      `user_login_report_${dayjs()?.utc()?.format('MM-DD-YYYY')}.csv`,
-    ),
-    csv,
-  );
+  fs.writeFileSync(path.join(__dirname, '.tmp', `user_login_report_${dayjs()?.utc()?.format('MM-DD-YYYY')}.csv`), csv);
   return report;
 };

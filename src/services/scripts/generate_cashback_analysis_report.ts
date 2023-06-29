@@ -4,20 +4,15 @@ import { parse } from 'json2csv';
 import { PaginateResult, Types } from 'mongoose';
 import path from 'path';
 import { SafeParseError, z } from 'zod';
-import { SyncRequest } from '../../jobs/syncActiveCampaign';
-import { roundToPercision, sleep } from '../../lib/misc';
+import { roundToPercision } from '../../lib/misc';
+import { IUser, IUserDocument } from '../../models/user';
+import { iterateOverUsersAndExecWithDelay, IterationRequest, IterationResponse } from '../user/utils';
 import {
   getCashbackCompanies,
   getMissedCashBackForDateRange,
   getUsersWithCommissionsInDateRange,
   getUsersWithTransactionsInDateRange,
-} from '../../lib/userMetrics';
-import { IUser, IUserDocument, UserModel } from '../../models/user';
-
-type SyncResponse<T> = {
-  userId: Types.ObjectId;
-  fields?: T;
-};
+} from '../user/utils/metrics';
 
 type CashbackUserReport = {
   userId: Types.ObjectId;
@@ -49,9 +44,9 @@ type RangedCashbackSimulationFields = {
 };
 
 const runUserCashbackSimulation = async (
-  req: SyncRequest<RangedCashbackSimulationFields>,
+  req: IterationRequest<RangedCashbackSimulationFields>,
   userBatch: PaginateResult<IUser>,
-): Promise<SyncResponse<CashbackUserReport>[]> => {
+): Promise<IterationResponse<CashbackUserReport>[]> => {
   let missedCashbackMetrics = await Promise.all(
     userBatch?.docs?.map(async (user) => getMissedCashBackForDateRange(user as unknown as IUserDocument, req.fields?.startDate, req.fields?.endDate)),
   );
@@ -61,7 +56,7 @@ const runUserCashbackSimulation = async (
     return !!metric.email && !(validationResult as SafeParseError<string>)?.error;
   });
 
-  const userReports: SyncResponse<CashbackUserReport>[] = missedCashbackMetrics?.map((metric) => {
+  const userReports: IterationResponse<CashbackUserReport>[] = missedCashbackMetrics?.map((metric) => {
     const {
       id,
       estimatedMissedCommissionsAmount,
@@ -83,42 +78,13 @@ const runUserCashbackSimulation = async (
   return userReports;
 };
 
-const iterateOverUsersAndExecWithDelay = async <Req, Res>(
-  request: SyncRequest<Req>,
-  exec: (req: SyncRequest<Req>, userBatch: PaginateResult<IUser>) => Promise<SyncResponse<Res>[]>,
-  msDelayBetweenBatches: number,
-): Promise<SyncResponse<Res>[]> => {
-  let report: SyncResponse<Res>[] = [];
-
-  let page = 1;
-  let hasNextPage = true;
-  while (hasNextPage) {
-    const userBatch = await UserModel.paginate(request.batchQuery, {
-      page,
-      limit: request.batchLimit,
-    });
-
-    console.log('total users matching query: ', userBatch.totalDocs);
-    const userReports = await exec(request, userBatch);
-
-    console.log(`Prepared ${userReports.length} user reports`);
-    report = report.concat(userReports);
-
-    sleep(msDelayBetweenBatches);
-
-    hasNextPage = userBatch?.hasNextPage || false;
-    page++;
-  }
-  return report;
-};
-
 const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<CashbackUserReport[]> => {
   // filter out users with commissions this month
   const usersWithCommissionsInDateRange = await getUsersWithCommissionsInDateRange(startDate, endDate);
   const usersWithTransactionsInDateRange = await getUsersWithTransactionsInDateRange(startDate, endDate);
   const msDelayBetweenBatches = 2000;
 
-  const request: SyncRequest<RangedCashbackSimulationFields> = {
+  const request: IterationRequest<RangedCashbackSimulationFields> = {
     batchQuery: {
       $and: [{ _id: { $nin: usersWithCommissionsInDateRange } }, { _id: { $in: usersWithTransactionsInDateRange } }],
     },
@@ -128,13 +94,13 @@ const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<Ca
       endDate,
     },
   };
-  const report: SyncResponse<CashbackUserReport>[] = await iterateOverUsersAndExecWithDelay(
+  const report: IterationResponse<CashbackUserReport>[] = await iterateOverUsersAndExecWithDelay(
     request,
     runUserCashbackSimulation,
     msDelayBetweenBatches,
   );
 
-  return report.map((r: SyncResponse<CashbackUserReport>) => ({ ...r.fields, userId: r.userId }));
+  return report.map((r: IterationResponse<CashbackUserReport>) => ({ ...r.fields, userId: r.userId }));
 };
 
 const getPrevWeeksCashBackReport = async (
@@ -305,10 +271,11 @@ const getCashbackMerchantFrequencyMetricsForDateRange = async (
     merchantFrequencies,
   };
 };
+
 const genereateMissedCashbackMerchantFrequencyReport = async (
-  req: SyncRequest<MissedCashbackMerchantFrequencyRequest>,
+  req: IterationRequest<MissedCashbackMerchantFrequencyRequest>,
   userBatch: PaginateResult<IUser>,
-): Promise<SyncResponse<MissedCashbackMerchantFrequencyReport>[]> => {
+): Promise<IterationResponse<MissedCashbackMerchantFrequencyReport>[]> => {
   // get all transactions for this user in the date range (with cashback merchants)
   // grouped by merchant
   // count the number of transactions for each merchant
@@ -323,7 +290,7 @@ const genereateMissedCashbackMerchantFrequencyReport = async (
       )),
     )
   ).filter((metric) => metric?.merchantFrequencies?.length > 0);
-  const userReports: SyncResponse<MissedCashbackMerchantFrequencyReport>[] = cashbackMerchantFrequencyMetrics?.map(
+  const userReports: IterationResponse<MissedCashbackMerchantFrequencyReport>[] = cashbackMerchantFrequencyMetrics?.map(
     (metric) => {
       const { userId, merchantFrequencies } = metric;
       return {
@@ -352,7 +319,7 @@ export const generateMissedCashbackMerchantFrequencyReport = async (weeksBack: n
 
   const msDelayBetweenBatches = 2000;
 
-  const request: SyncRequest<MissedCashbackMerchantFrequencyRequest> = {
+  const request: IterationRequest<MissedCashbackMerchantFrequencyRequest> = {
     batchQuery: {
       $and: [{ _id: { $nin: usersWithCommissionsInDateRange } }, { _id: { $in: usersWithTransactionsInDateRange } }],
     },

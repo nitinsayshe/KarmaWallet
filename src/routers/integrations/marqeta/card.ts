@@ -12,4 +12,5 @@ router.route('/list/:userToken')
 
 router.route('/transition')
   .get(CardController.cardTransition);
+
 export default router;

@@ -2,7 +2,7 @@ import { Express, Router } from 'express';
 import plaidRouter from './plaid';
 import rareRouter from './rare';
 import paypalRouter from './paypal';
-import marqetaRouter from './marqeta/index';
+import marqetaRouter from './marqeta';
 
 /**
  * this file is used for direct communication with the integration APIs

@@ -232,12 +232,10 @@ export const login = async (req: IRequest, { email, password, biometricSignature
     const { identifierKey } = req;
     const { biometrics } = user.integrations;
     try {
-      console.log('identifierKey', identifierKey);
       const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
-      const verifySignature = jwt.verify(biometricSignature, biometricKey, { algorithms: ['RS256'] });
+      jwt.verify(biometricSignature, biometricKey, { algorithms: ['RS256'] });
       // Signature verification successful
       console.log('Signature verification successful');
-      console.log('Decoded payload:', verifySignature);
     } catch (error) {
       // Signature verification failed
       console.error('Signature verification failed:', error);
@@ -545,14 +543,3 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
   }
   return { message: 'OK' };
 };
-
-// export const registerBiometricKey = async (req: IRequest<{}, {}, IUserBiometric>) => {
-//   const { requestor } = req;
-//   const { biometricKey, isBiometricEnabled } = req.body;
-//   // check that all required fields are present
-//   if (!biometricKey) throw new CustomError('A biometricKey is required.', ErrorTypes.INVALID_ARG);
-//   requestor.biometricKey = biometricKey;
-//   requestor.isBiometricEnabled = isBiometricEnabled;
-//   await requestor.save();
-//   return requestor;
-// };

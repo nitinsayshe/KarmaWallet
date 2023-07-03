@@ -119,8 +119,6 @@ const userSchema = new Schema({
     },
   ],
   name: { type: String, required: true },
-  // biometricKey: { type: String },
-  // isBiometricEnabled: { type: Boolean, default: false },
   password: { type: String, required: true },
   dateJoined: { type: Date, default: () => getUtcDate() },
   zipcode: { type: String },

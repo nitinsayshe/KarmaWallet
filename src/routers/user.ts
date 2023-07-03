@@ -21,6 +21,4 @@ router.put('/password', authenticate, UserController.updatePassword);
 router.post('/email/token/create', authenticate, UserController.resendEmailVerification);
 router.post('/email/token/verify', authenticate, UserController.verifyEmail);
 
-// router.post('/register-biometric', authenticate, UserController.registerBiometricKey);
-
 export default (app: Express) => app.use('/user', router);

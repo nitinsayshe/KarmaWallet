@@ -19,7 +19,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
   try {
     const uid = await Session.verifySession(authKey);
     const session = await LegacySessionModel.findOne({ authKey }).lean();
-
+    console.log('uid', uid, ':::session', session);
     if (!uid && !session) return next();
 
     if (session?.uid) {

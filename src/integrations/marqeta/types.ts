@@ -14,6 +14,10 @@ interface Metadata {
   authentication_answer3: string;
 }
 
+export interface IMarqetaUserToken {
+  user_token:string;
+}
+
 export interface IMarqetaCreateUser {
   first_name: string;
   last_name: string;
@@ -33,24 +37,21 @@ export interface IMarqetaCreateUser {
   metadata: Metadata;
 }
 
-export interface IMarqetaCreateCard {
-  user_token: string;
+export interface IMarqetaCreateCard extends IMarqetaUserToken {
   card_product_token: string;
 }
 
-export interface IMarqetaCreateGPAorder{
-  user_token:string;
+export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   amount: number;
   currency_code:string;
   funding_source_token:string;
 }
 
-export interface IMarqetaProcessKyc{
-  user_token:string;
+export interface IMarqetaProcessKyc extends IMarqetaUserToken {
 }
 
-export interface IMarqetaCardTransition{
-  user_token:string;
+export interface IMarqetaCardTransition {
+  card_token: string;
   channel:string;
   state:string;
 }

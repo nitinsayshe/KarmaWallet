@@ -24,8 +24,8 @@ export const listCards = async (userToken:string) => {
 };
 
 export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransition>) => {
-  const { user_token, channel, state } = req.body;
+  const { card_token, channel, state } = req.body;
   const responseMessage = '';
-  const userResponse = await card.cardTransition({ user_token, channel, state });
+  const userResponse = await card.cardTransition({ card_token, channel, state });
   return { message: responseMessage, user: userResponse };
 };

@@ -13,7 +13,6 @@ export const createUser = async (req: IRequest<{}, {}, IMarqetaCreateUser>) => {
   const params = req.body;
   const responseMessage = '';
   const userResponse = await user.createUser(params);
-  console.log('Created user:', userResponse);
   return { message: responseMessage, user: userResponse };
 };
 

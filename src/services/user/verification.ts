@@ -1,5 +1,6 @@
 import isemail from 'isemail';
 import dayjs from 'dayjs';
+import crypto from 'crypto';
 import {
   IUserDocument, UserModel,
   UserEmailStatus,
@@ -52,4 +53,15 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
   // TODO: update to verified when support for owner approval is added.
   await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
   return { email };
+};
+
+export const verifyBiometric = async (email:string, biometricSignature:string, biometricKey:string) => {
+  const verifier = crypto.createVerify('RSA-SHA256');
+  verifier.update('poonam@wizzosmartsolutions.com');
+  const isVerified = verifier.verify(
+    `-----BEGIN PUBLIC KEY-----\n${biometricKey}\n-----END PUBLIC KEY-----`,
+    biometricSignature,
+    'base64',
+  );
+  return isVerified;
 };

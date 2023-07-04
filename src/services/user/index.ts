@@ -2,7 +2,6 @@ import argon2 from 'argon2';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
-import jwt from 'jsonwebtoken';
 import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
@@ -34,7 +33,7 @@ import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
-import { resendEmailVerification } from './verification';
+import { resendEmailVerification, verifyBiometric } from './verification';
 import { deleteKardUser } from '../../integrations/kard';
 
 dayjs.extend(utc);
@@ -231,14 +230,12 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   if (biometricSignature) {
     const { identifierKey } = req;
     const { biometrics } = user.integrations;
-    try {
-      const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
-      jwt.verify(biometricSignature, biometricKey, { algorithms: ['RS256'] });
-      // Signature verification successful
-      console.log('Signature verification successful');
-    } catch (error) {
-      // Signature verification failed
-      console.error('Signature verification failed:', error);
+
+    // get the publicKey to verify the signature
+    const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
+    const isVerified = await verifyBiometric(email, biometricSignature, biometricKey);
+
+    if (!isVerified) {
       throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
     }
   }

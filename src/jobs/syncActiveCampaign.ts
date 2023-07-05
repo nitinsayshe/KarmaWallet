@@ -11,6 +11,7 @@ import {
   prepareBackfillSyncFields,
   prepareDailyUpdatedFields,
   prepareInitialSyncFields,
+  prepareLinkedAccountFields,
   prepareMonthlyUpdatedFields,
   prepareWeeklyUpdatedFields,
   prepareYearlyUpdatedFields,
@@ -115,6 +116,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
 
     if (contacts?.contacts?.length > 0) {
       console.log(`Sending ${contacts.contacts.length} contacts to ActiveCampaign`);
+      console.log('contacts: ', JSON.stringify(contacts));
       await ac.importContacts(contacts);
     }
 
@@ -173,6 +175,9 @@ const prepareSyncUsersRequest = async (
             break;
           case ActiveCampaignSyncTypes.YEARLY:
             fields = await prepareYearlyUpdatedFields(userDocument, customFields, fields);
+            break;
+          case ActiveCampaignSyncTypes.LINKED_ACCOUNTS:
+            fields = await prepareLinkedAccountFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.BACKFILL:
             fields = await prepareBackfillSyncFields(userDocument, customFields, fields);

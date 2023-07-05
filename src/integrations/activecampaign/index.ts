@@ -93,6 +93,74 @@ const getShareableUserGroupFromUserGroupDocument = ({
   };
 };
 
+export const setLinkedCardData: CustomFieldSetter = async (
+  userId: string,
+  customFields: FieldIds,
+  fieldValues?: FieldValues,
+): Promise<FieldValues> => {
+  if (!customFields) {
+    console.log('No custom fields provided');
+    return fieldValues;
+  }
+  if (!fieldValues) {
+    fieldValues = [];
+  }
+
+  // get linked card data
+  try {
+    const cards = await CardModel.find({
+      userId,
+      status: CardStatus.Linked,
+    })
+      .lean()
+      .sort({ createdOn: 1 });
+
+    let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasLinkedCard);
+    if (customField) {
+      if (cards.length > 0) {
+        fieldValues.push({ id: customField.id, value: 'true' });
+
+        customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.lastLinkedCardDate);
+        if (!!customField && cards[cards.length - 1]?.createdOn) {
+          fieldValues.push({ id: customField.id, value: cards[cards.length - 1].createdOn.toISOString() });
+        }
+
+        customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.firstLinkedCardDate);
+        if (!!customField && cards[0]?.createdOn) {
+          fieldValues.push({ id: customField.id, value: cards[0].createdOn.toISOString() });
+        }
+      } else {
+        fieldValues.push({ id: customField.id, value: 'false' });
+      }
+    }
+
+    customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.numLinkedCards);
+    if (!!customField) {
+      fieldValues.push({ id: customField.id, value: cards.length.toString() });
+    }
+  } catch (err) {
+    console.error('error getting linked card data', err);
+  }
+  return fieldValues;
+};
+
+export const prepareLinkedAccountFields = async (
+  user: IUserDocument,
+  customFields: FieldIds,
+  fieldValues: FieldValues,
+): Promise<FieldValues> => {
+  if (!customFields) {
+    console.log('No custom fields provided');
+    return fieldValues;
+  }
+  if (!fieldValues) {
+    fieldValues = [];
+  }
+
+  fieldValues = await setLinkedCardData(user._id, customFields, fieldValues);
+  return fieldValues;
+};
+
 export const prepareYearlyUpdatedFields = async (
   user: IUserDocument,
   customFields: FieldIds,
@@ -218,57 +286,6 @@ export const prepareMonthlyUpdatedFields = async (
     fieldValues.push({ id: customField.id, value: 'false' });
   }
 
-  return fieldValues;
-};
-
-export const setLinkedCardData: CustomFieldSetter = async (
-  userId: string,
-  customFields: FieldIds,
-  fieldValues?: FieldValues,
-): Promise<FieldValues> => {
-  if (!customFields) {
-    console.log('No custom fields provided');
-    return fieldValues;
-  }
-  if (!fieldValues) {
-    fieldValues = [];
-  }
-
-  // get linked card data
-  try {
-    const cards = await CardModel.find({
-      userId,
-      status: CardStatus.Linked,
-    })
-      .lean()
-      .sort({ createdOn: 1 });
-
-    let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasLinkedCard);
-    if (customField) {
-      if (cards.length > 0) {
-        fieldValues.push({ id: customField.id, value: 'true' });
-
-        customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.lastLinkedCardDate);
-        if (!!customField && cards[cards.length - 1]?.createdOn) {
-          fieldValues.push({ id: customField.id, value: cards[cards.length - 1].createdOn.toISOString() });
-        }
-
-        customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.firstLinkedCardDate);
-        if (!!customField && cards[0]?.createdOn) {
-          fieldValues.push({ id: customField.id, value: cards[0].createdOn.toISOString() });
-        }
-      } else {
-        fieldValues.push({ id: customField.id, value: 'false' });
-      }
-    }
-
-    customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.numLinkedCards);
-    if (!!customField) {
-      fieldValues.push({ id: customField.id, value: cards.length.toString() });
-    }
-  } catch (err) {
-    console.error('error getting linked card data', err);
-  }
   return fieldValues;
 };
 

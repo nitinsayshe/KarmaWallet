@@ -38,7 +38,7 @@ export const getNextPayoutDate = (date: Date = getUtcDate().toDate()) => {
   const currentMonth = getUtcDate(date).month();
   let payoutDate;
   for (const month of CommissionPayoutMonths) {
-    if (month > currentMonth) {
+    if (month > currentMonth || (month === currentMonth && dayjs(date).date() < 15)) {
       payoutDate = getUtcDate(date).month(month).date(1).toDate();
       break;
     }

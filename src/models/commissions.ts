@@ -26,7 +26,7 @@ export enum KarmaCommissionStatus {
 }
 
 export interface IKardCommissionIntegration {
-  reward: EarnedReward;
+  reward?: EarnedReward;
   error?: string;
 }
 

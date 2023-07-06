@@ -39,26 +39,20 @@ export const exec = async () => {
       .group({ _id: '$userId' })
       .count('count');
 
-    const usersWithLinkedCardsCount = usersWithLinkedCards && usersWithLinkedCards.length > 0
-      ? usersWithLinkedCards[0]?.count
-      : 0;
+    const usersWithLinkedCardsCount = usersWithLinkedCards && usersWithLinkedCards.length > 0 ? usersWithLinkedCards[0]?.count : 0;
 
     const usersWithUnlinkedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Unlinked })
       .group({ _id: '$userId' })
       .count('count');
 
-    const usersWithUnlinkedCardsCount = usersWithUnlinkedCards && usersWithUnlinkedCards.length > 0
-      ? usersWithUnlinkedCards[0]?.count
-      : 0;
+    const usersWithUnlinkedCardsCount = usersWithUnlinkedCards && usersWithUnlinkedCards.length > 0 ? usersWithUnlinkedCards[0]?.count : 0;
 
     const usersWithRemovedCards = await CardModel.aggregate()
       .match({ status: CardStatus.Removed })
       .group({ _id: '$userId' })
       .count('count');
-    const usersWithRemovedCardsCount = usersWithRemovedCards && usersWithRemovedCards.length > 0
-      ? usersWithRemovedCards[0]?.count
-      : 0;
+    const usersWithRemovedCardsCount = usersWithRemovedCards && usersWithRemovedCards.length > 0 ? usersWithRemovedCards[0]?.count : 0;
 
     const linkeDepositoryCards = await CardModel.find({
       type: 'depository',
@@ -69,10 +63,7 @@ export const exec = async () => {
      * value) for those transactions. */
     const transactionData = await TransactionModel.aggregate()
       .match({
-        $and: [
-          { 'integrations.plaid': { $exists: true } },
-          { 'integrations.plaid': { $ne: null } },
-        ],
+        $and: [{ 'integrations.plaid': { $exists: true } }, { 'integrations.plaid': { $ne: null } }],
       })
       .group({
         _id: null,
@@ -152,52 +143,51 @@ export const exec = async () => {
     let totalCommissions = 0;
     const commissions = await CommissionModel.find({}).lean();
     if (!!commissions && commissions.length > 0) {
-      commissionDollars = commissions.reduce(
-        (partialSum, commission) => partialSum + commission.amount,
-        0,
-      );
+      commissionDollars = commissions.reduce((partialSum, commission) => partialSum + commission.amount, 0);
       totalCommissions = commissions.length;
     }
 
-    const totalWildfireCommissions = commissions.reduce(
-      (partialSum, commission) => {
-        if (!!commission?.integrations?.wildfire) {
-          return ++partialSum;
-        }
-        return partialSum;
-      },
-      0,
-    );
+    const totalWildfireCommissions = commissions.reduce((partialSum, commission) => {
+      if (!!commission?.integrations?.wildfire) {
+        return ++partialSum;
+      }
+      return partialSum;
+    }, 0);
 
-    const totalWildfireCommissionDollars = commissions.reduce(
-      (partialSum, commission) => {
-        if (!!commission?.integrations?.wildfire) {
-          return partialSum + commission.amount;
-        }
-        return partialSum;
-      },
-      0,
-    );
+    const totalWildfireCommissionDollars = commissions.reduce((partialSum, commission) => {
+      if (!!commission?.integrations?.wildfire) {
+        return partialSum + commission.amount;
+      }
+      return partialSum;
+    }, 0);
 
-    const totalKarmaWalletCommissions = commissions.reduce(
-      (partialSum, commission) => {
-        if (!!commission?.integrations?.karma) {
-          return ++partialSum;
-        }
-        return partialSum;
-      },
-      0,
-    );
+    const totalKardCommissions = commissions.reduce((partialSum, commission) => {
+      if (!!commission?.integrations?.kard?.reward?.commissionToIssuer) {
+        return ++partialSum;
+      }
+      return partialSum;
+    }, 0);
 
-    const totalKarmaWalletCommissionDollars = commissions.reduce(
-      (partialSum, commission) => {
-        if (!!commission?.integrations?.karma) {
-          return partialSum + commission.amount;
-        }
-        return partialSum;
-      },
-      0,
-    );
+    const totalKardCommissionDollars = commissions.reduce((partialSum, commission) => {
+      if (!!commission?.integrations?.kard?.reward?.commissionToIssuer) {
+        return partialSum + commission.amount;
+      }
+      return partialSum;
+    }, 0);
+
+    const totalKarmaWalletCommissions = commissions.reduce((partialSum, commission) => {
+      if (!!commission?.integrations?.karma) {
+        return ++partialSum;
+      }
+      return partialSum;
+    }, 0);
+
+    const totalKarmaWalletCommissionDollars = commissions.reduce((partialSum, commission) => {
+      if (!!commission?.integrations?.karma) {
+        return partialSum + commission.amount;
+      }
+      return partialSum;
+    }, 0);
 
     const loggedInLastSevenDays = await UserLogModel.aggregate()
       .match({
@@ -229,12 +219,8 @@ export const exec = async () => {
         withUnlinkedCard: usersWithUnlinkedCardsCount,
         withRemovedCard: usersWithRemovedCardsCount,
         withoutCard: totalUsersCount - usersWithLinkedCardsCount,
-        loggedInLastSevenDays: loggedInLastSevenDays
-          ? loggedInLastSevenDays.length
-          : 0,
-        loggedInLastThirtyDays: loggedInLastThirtyDays
-          ? loggedInLastThirtyDays.length
-          : 0,
+        loggedInLastSevenDays: loggedInLastSevenDays ? loggedInLastSevenDays.length : 0,
+        loggedInLastThirtyDays: loggedInLastThirtyDays ? loggedInLastThirtyDays.length : 0,
       },
       cards: {
         linked: {
@@ -254,73 +240,49 @@ export const exec = async () => {
         thirtyDayTotal: totalLoginsLastThirtyDays,
       },
       transactions: {
-        total: !!transactionData[0]?.count
-          ? (transactionData[0].count as number)
-          : 0,
+        total: !!transactionData[0]?.count ? (transactionData[0].count as number) : 0,
         totalDollars: !!transactionData[0]?.totalAmount
           ? roundToPercision(transactionData[0].totalAmount as number, 0)
           : 0,
-        totalDollarsExcludingCategories: !!transactionDataExcludingCategories[0]
-          ?.totalAmount
-          ? roundToPercision(
-            transactionDataExcludingCategories[0].totalAmount as number,
-            0,
-          )
+        totalDollarsExcludingCategories: !!transactionDataExcludingCategories[0]?.totalAmount
+          ? roundToPercision(transactionDataExcludingCategories[0].totalAmount as number, 0)
           : 0,
         totalExcludingCategories: !!transactionDataExcludingCategories[0]?.count
-          ? roundToPercision(
-            transactionDataExcludingCategories[0]?.count as number,
-            0,
-          )
+          ? roundToPercision(transactionDataExcludingCategories[0]?.count as number, 0)
           : 0,
-        matched: !!matchedTransactionData[0]?.count
-          ? (matchedTransactionData[0]?.count as number)
-          : 0,
+        matched: !!matchedTransactionData[0]?.count ? (matchedTransactionData[0]?.count as number) : 0,
         matchedExcludingCategories: !!matchedTransactionsExcludingCategories[0]
           ? (matchedTransactionsExcludingCategories[0]?.count as number)
           : 0,
         matchedDollars: !!matchedTransactionData[0]?.totalAmount
-          ? roundToPercision(
-            matchedTransactionData[0]?.totalAmount as number,
-            0,
-          )
+          ? roundToPercision(matchedTransactionData[0]?.totalAmount as number, 0)
           : 0,
-        matchedDollarsExcludingCategories:
-          !!matchedTransactionsExcludingCategories[0]?.totalAmount
-            ? roundToPercision(
-              matchedTransactionsExcludingCategories[0]
-                ?.totalAmount as number,
-              0,
-            )
-            : 0,
+        matchedDollarsExcludingCategories: !!matchedTransactionsExcludingCategories[0]?.totalAmount
+          ? roundToPercision(matchedTransactionsExcludingCategories[0]?.totalAmount as number, 0)
+          : 0,
         matchedRatio: roundToPercision(
           !!matchedTransactionData[0]?.count && !!transactionData[0].count
-            ? (((matchedTransactionData[0].count as number)
-                / transactionData[0].count) as number)
+            ? (((matchedTransactionData[0].count as number) / transactionData[0].count) as number)
             : 0,
           2,
         ),
         matchedRatioExcludingCategories: roundToPercision(
-          !!transactionDataExcludingCategories[0]?.count
-            && !!matchedTransactionsExcludingCategories[0]?.count
+          !!transactionDataExcludingCategories[0]?.count && !!matchedTransactionsExcludingCategories[0]?.count
             ? (((matchedTransactionsExcludingCategories[0].count as number)
                 / transactionDataExcludingCategories[0].count) as number)
             : 0,
           2,
         ),
         matchedDollarsRatio: roundToPercision(
-          !!matchedTransactionData[0]?.totalAmount
-            && !!transactionData[0]?.totalAmount
-            ? (((matchedTransactionData[0].totalAmount as number)
-                / transactionData[0].totalAmount) as number)
+          !!matchedTransactionData[0]?.totalAmount && !!transactionData[0]?.totalAmount
+            ? (((matchedTransactionData[0].totalAmount as number) / transactionData[0].totalAmount) as number)
             : 0,
           2,
         ),
         matchedDollarsRatioExcludingCategories: roundToPercision(
           !!matchedTransactionsExcludingCategories[0]?.totalAmount
             && !!transactionDataExcludingCategories[0]?.totalAmount
-            ? (((matchedTransactionsExcludingCategories[0]
-              .totalAmount as number)
+            ? (((matchedTransactionsExcludingCategories[0].totalAmount as number)
                 / transactionDataExcludingCategories[0].totalAmount) as number)
             : 0,
           2,
@@ -328,25 +290,20 @@ export const exec = async () => {
       },
       offsets: {
         total: totalOffsets[0]?.count,
-        dollars: roundToPercision(
-          !!totalOffsets[0]?.dollars ? totalOffsets[0].dollars : 0 / 100,
-          0,
-        ),
-        tons: totalOffsets[0]?.tonnes
-          ? roundToPercision(totalOffsets[0]?.tonnes, 2)
-          : 0,
+        dollars: roundToPercision(!!totalOffsets[0]?.dollars ? totalOffsets[0].dollars : 0 / 100, 0),
+        tons: totalOffsets[0]?.tonnes ? roundToPercision(totalOffsets[0]?.tonnes, 2) : 0,
       },
       commissions: {
         total: totalCommissions,
         dollars: commissionDollars ? roundToPercision(commissionDollars, 0) : 0,
         totalWildfire: totalWildfireCommissions,
-        totalWildfireDollars: totalWildfireCommissionDollars
-          ? roundToPercision(totalWildfireCommissionDollars, 0)
-          : 0,
+        totalWildfireDollars: totalWildfireCommissionDollars ? roundToPercision(totalWildfireCommissionDollars, 0) : 0,
         totalKarmaWallet: totalKarmaWalletCommissions,
         totalKarmaWalletDollars: totalKarmaWalletCommissionDollars
           ? roundToPercision(totalKarmaWalletCommissionDollars, 0)
           : 0,
+        totalKard: totalKardCommissions || 0,
+        totalKardDollars: totalKardCommissionDollars ? roundToPercision(totalKardCommissionDollars, 0) : 0,
       },
     };
 

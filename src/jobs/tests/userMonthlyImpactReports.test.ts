@@ -3,7 +3,6 @@ import dayjs from 'dayjs';
 import { MongoClient } from '../../clients/mongo';
 import {
   cleanUpDocuments,
-  createATestCompany,
   createNumMonthsOfTransactions,
   createSomeCompanies,
   createSomeTransactions,

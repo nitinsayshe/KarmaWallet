@@ -10,9 +10,16 @@ const setAuthHeader = (req: IRequest, res: Response, tkn?: string, Itkn?:string)
 
   if (token === TOKEN_REMOVE) {
     res.removeHeader(AUTHKEY_HEADER);
-  } else if (token) {
-    res.header(AUTHKEY_HEADER, token);
-    res.header(DEVICE_IDENTIFIER, deviceToken);
+  } else {
+    const headers: { [key: string]: string } = {
+      [AUTHKEY_HEADER]: token,
+    };
+
+    if (deviceToken) {
+      headers[DEVICE_IDENTIFIER] = deviceToken;
+    }
+
+    res.header(headers);
   }
 };
 

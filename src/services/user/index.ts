@@ -115,8 +115,8 @@ export const handleCreateAccountPromo = async (userId: string, promo: IPromo) =>
   }
 };
 
-export const storeNewLogin = async (userId: string, loginDate: Date) => {
-  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate }, { upsert: true }).sort({
+export const storeNewLogin = async (userId: string, loginDate: Date, authKey:string) => {
+  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate, authKey }, { upsert: true }).sort({
     date: -1,
   });
 };
@@ -197,7 +197,7 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
   try {
     let authKey = '';
     authKey = await Session.createSession(newUser._id.toString());
-    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate(), authKey);
     await updateNewUserSubscriptions(newUser);
     const responseInfo: any = {
       user: newUser,
@@ -240,7 +240,7 @@ export const login = async (req: IRequest, { email, password, biometricSignature
     }
   }
   const authKey = await Session.createSession(user._id.toString());
-  await storeNewLogin(user._id.toString(), getUtcDate().toDate());
+  await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
   return { user, authKey };
 };
 

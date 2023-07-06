@@ -60,7 +60,7 @@ export const verifyBiometric = async (email:string, biometricSignature:string, b
   const ellipticCurve = new ec('secp256k1');
   // Verify the signature
   try {
-    const isVerified = ellipticCurve.verify('Hello, World!', biometricSignature, biometricKey, 'hex');
+    const isVerified = ellipticCurve.verify(email, biometricSignature, biometricKey, 'hex');
     return isVerified;
   } catch (err) {
     return false;

@@ -3,6 +3,7 @@ import { ObjectId, Types } from 'mongoose';
 import { ArticleModel, IArticleDocument, ArticleTypes } from '../models/article';
 import { CardModel, ICardDocument } from '../models/card';
 import { CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
+import { IMerchantDocument, MerchantModel } from '../models/merchant';
 import { IPromoDocument, IPromoTypes, PromoModel } from '../models/promo';
 import { ITransactionDocument, TransactionModel } from '../models/transaction';
 import { IUserDocument, UserEmailStatus, UserModel } from '../models/user';
@@ -23,6 +24,10 @@ export type CreateTestCardsRequest = {
   cards?: Partial<ICardDocument>[];
 };
 
+export type CreateTestMerchantsRequest = {
+  merchants?: Partial<IMerchantDocument>[];
+};
+
 export type CreateTestArticlesRequest = {
   articles?: Partial<IArticleDocument>[];
 };
@@ -37,6 +42,7 @@ export interface IRemoveableDocument {
 
 export const cleanUpDocument = async (document: IRemoveableDocument) => {
   try {
+    if (!document?.remove) throw new Error('Document does not have a remove method');
     await document.remove();
   } catch (err) {
     console.error(err);
@@ -70,6 +76,15 @@ export const createSomeUsers = async (req: CreateTestUsersRequest): Promise<IUse
   }),
 )) || [];
 
+export const createSomeMerchants = async (req: CreateTestMerchantsRequest): Promise<IMerchantDocument[]> => (await Promise.all(
+  req.merchants.map(async (merchant) => {
+    const newMerchant = new MerchantModel();
+    newMerchant.name = merchant?.name || `Test Merchant_${new Types.ObjectId().toString()}`;
+    newMerchant.integrations = merchant.integrations;
+    return newMerchant.save();
+  }),
+)) || [];
+
 export const createSomePromos = async (req: CreateTestPromosRequest): Promise<IPromoDocument[]> => (await Promise.all(
   req.promos.map(async (promo) => {
     const newPromo = new PromoModel();
@@ -100,8 +115,6 @@ export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICar
     newCard.binToken = card?.binToken || undefined;
     newCard.networkToken = card?.networkToken || undefined;
     newCard.lastFourDigitsToken = card?.lastFourDigitsToken || undefined;
-    console.log('creating new card', JSON.stringify(newCard));
-    console.log('from requested card', JSON.stringify(card, null, 2));
     return newCard.save();
   }),
 )) || [];

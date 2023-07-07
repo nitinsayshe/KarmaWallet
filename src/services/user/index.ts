@@ -415,9 +415,10 @@ export const deleteLinkedCardData = async (userId: Types.ObjectId) => {
   const plaidClient = new PlaidClient();
 
   const cards = await CardModel.find({ userId, status: CardStatus.Linked });
+  const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
 
   // Unlinking Plaid Access Tokens
-  for (const card of cards) {
+  for (const card of plaidCards) {
     await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
   }
 

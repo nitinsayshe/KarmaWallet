@@ -1,9 +1,4 @@
-import {
-  Schema,
-  model,
-  Document,
-  Model,
-} from 'mongoose';
+import { Schema, model, Document, Model } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
 
@@ -19,10 +14,10 @@ export interface ITransactionsMonitor {
 }
 
 export interface IMultipleValueChartData {
-  data :{
-    label: string,
-    values: { value: string }[]
-  }[]
+  data: {
+    label: string;
+    values: { value: string }[];
+  }[];
 }
 
 export interface IAdminSummary {
@@ -34,24 +29,24 @@ export interface IAdminSummary {
     withRemovedCard: number;
     loggedInLastSevenDays: number;
     loggedInLastThirtyDays: number;
-  }
+  };
   cards: {
     linked: {
       total: number;
       depository: number;
       credit: number;
-    },
+    };
     unlinked: {
       total: number;
-    },
+    };
     removed: {
       total: number;
-    },
-  }
+    };
+  };
   logins: {
     sevenDayTotal: number;
     thirtyDayTotal: number;
-  }
+  };
   transactions: {
     total: number;
     totalDollars: number;
@@ -65,20 +60,22 @@ export interface IAdminSummary {
     matchedRatioExcludingCategories: number;
     matchedDollarsRatio: number;
     matchedDollarsRatioExcludingCategories: number;
-  }
+  };
   offsets: {
     total: number;
     dollars: number;
     tons: number;
-  }
+  };
   commissions: {
     total: number;
     dollars: number;
-    totalWildfire: number,
-    totalWildfireDollars: number,
-    totalKarmaWallet: number,
-    totalKarmaWalletDollars: number,
-  }
+    totalWildfire: number;
+    totalWildfireDollars: number;
+    totalKarmaWallet: number;
+    totalKarmaWalletDollars: number;
+    totalKard: number;
+    totalKardDollars: number;
+  };
 }
 
 export interface IReport {
@@ -94,31 +91,39 @@ export type IReportModel = IModel<IReport>;
 
 const userHistory = {
   type: {
-    data: [{
-      type: {
-        label: String,
-        values: [{
-          type: {
-            value: String,
-          },
-        }],
+    data: [
+      {
+        type: {
+          label: String,
+          values: [
+            {
+              type: {
+                value: String,
+              },
+            },
+          ],
+        },
       },
-    }],
+    ],
   },
 };
 
 const userMetrics = {
   type: {
-    data: [{
-      type: {
-        label: String,
-        values: [{
-          type: {
-            value: String,
-          },
-        }],
+    data: [
+      {
+        type: {
+          label: String,
+          values: [
+            {
+              type: {
+                value: String,
+              },
+            },
+          ],
+        },
       },
-    }],
+    ],
   },
 };
 
@@ -199,9 +204,10 @@ const adminSummary = {
       totalWildfireDollars: Number,
       totalKarmaWallet: Number,
       totalKarmaWalletDollars: Number,
+      totalKard: Number,
+      totalKardDollars: Number,
     },
   },
-
 };
 
 const reportSchema = new Schema({

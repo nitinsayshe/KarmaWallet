@@ -3,7 +3,7 @@ import { IRequestHandler } from '../../types/request';
 import * as CommissionService from '../../services/commission';
 import * as output from '../../services/output';
 
-export const getCommissionsForAllUsers: IRequestHandler<{ type: CommissionService.CommissionType }> = async (req, res) => {
+export const getCommissionsForAllUsers: IRequestHandler<CommissionService.ICommissionsRequestParams > = async (req, res) => {
   try {
     const commissions = await CommissionService.getCommissionsForAllUsers(req);
     output.api(req, res, commissions);

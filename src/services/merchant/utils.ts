@@ -1,9 +1,14 @@
+import { CommissionType } from '../../clients/kard';
+
 enum WildfireRateKinds {
   Percentage = 'percentage',
   Flat = 'flat',
 }
 
-export const getMaxWildfireMerchantRateDescription = (Kind: string, Amount: number) => {
+export const getMerchantRateDescription = (
+  Kind: string | CommissionType,
+  Amount: number,
+): { maxDescription: string; maxAmount: string; amount: number } => {
   let maxAmount = '';
   let maxDescription = '';
   let amount = 0;
@@ -11,29 +16,32 @@ export const getMaxWildfireMerchantRateDescription = (Kind: string, Amount: numb
     return {
       maxAmount,
       maxDescription,
+      amount,
     };
   }
-  switch (Kind.toLowerCase()) {
-    case WildfireRateKinds.Percentage: {
+
+  switch (Kind) {
+    case WildfireRateKinds.Percentage || CommissionType.PERCENT: {
       maxAmount = Amount % 1 === 0 ? `${Amount}%` : `${Amount.toFixed(2)}%`;
-      if (Amount === 0) maxAmount = '0';
-      maxDescription = `Up to ${maxAmount}`;
-      amount = Amount;
       break;
     }
-    case WildfireRateKinds.Flat: {
+    case WildfireRateKinds.Flat || CommissionType.FLAT: {
       maxAmount = Amount % 1 === 0 ? `$${Amount}` : `$${Amount.toFixed(2)}`;
-      if (Amount === 0) maxAmount = '0';
-      maxDescription = `Up to ${maxAmount}`;
-      amount = Amount;
       break;
     }
+
     default:
       return {
         maxDescription,
         maxAmount,
+        amount,
       };
   }
+
+  if (Amount === 0) maxAmount = '0';
+  maxDescription = `Up to ${maxAmount}`;
+  amount = Amount;
+
   return {
     maxDescription,
     maxAmount,

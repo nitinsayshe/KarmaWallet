@@ -1,5 +1,4 @@
 import { FieldValue } from 'aws-sdk/clients/cloudsearch';
-import { Field } from 'aws-sdk/clients/cloudwatchlogs';
 import isemail from 'isemail';
 import { FilterQuery, ObjectId, Types, UpdateQuery } from 'mongoose';
 import { IGetContactResponse } from '../../clients/activeCampaign';
@@ -58,18 +57,18 @@ export const updateNewUserSubscriptions = async (user: IUserDocument) => {
     // cancel monthly newsletter subscription if subscribed
     await SubscriptionModel.findOneAndUpdate(
       { visitor: visitor._id, code: SubscriptionCode.monthlyNewsletters },
-      { status: SubscriptionStatus.Cancelled }
+      { status: SubscriptionStatus.Cancelled },
     );
     // associate subscriptions with new user
     await SubscriptionModel.updateMany(
       { visitor: visitor._id },
-      { $set: { user: user._id, lastModified: getUtcDate() } }
+      { $set: { user: user._id, lastModified: getUtcDate() } },
     );
   } else {
     await updateActiveCampaignListStatus(
       email,
       [ActiveCampaignListId.AccountUpdates, ActiveCampaignListId.GeneralUpdates],
-      []
+      [],
     );
   }
   await SubscriptionModel.create({
@@ -87,7 +86,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument) => {
       status: SubscriptionStatus.Active,
     },
     {},
-    { upsert: true }
+    { upsert: true },
   );
 };
 
@@ -109,7 +108,7 @@ export const updateSubscriptionsOnEmailChange = async (
   userId: Types.ObjectId,
   name: string,
   prevEmail: string,
-  newEmail: string
+  newEmail: string,
 ): Promise<void> => {
   let prevSubs: SubscriptionCode[] = [];
   let prevCustomFields: FieldValues | {} = {};
@@ -121,11 +120,11 @@ export const updateSubscriptionsOnEmailChange = async (
     // get custom field values from the prev email
     prevContact = await getActiveCampaignContactByEmail(prevEmail);
     prevSubs = contactListToSubscribedListIDs(prevContact.contactLists).map(
-      (id) => ProviderProductIdToSubscriptionCode[id]
+      (id) => ProviderProductIdToSubscriptionCode[id],
     );
     prevCustomFields = prevContact.fieldValues
       ?.map((field) => {
-        let id = parseInt(field.field, 10);
+        const id = parseInt(field.field, 10);
         if (isNaN(id)) return {};
 
         return {
@@ -157,8 +156,7 @@ export const updateSubscriptionsOnEmailChange = async (
   }
 
   // remove any dupe subs that we actually want to keep
-  let unsubscribeLists: SubscriptionCode[] =
-    newEmailSubs.length > 0 ? newEmailSubs.filter((sub) => !(prevSubs?.includes(sub))) : [];
+  const unsubscribeLists: SubscriptionCode[] = newEmailSubs.length > 0 ? newEmailSubs.filter((sub) => !(prevSubs?.includes(sub))) : [];
 
   // subscribe new email to any active list subsctiptions in active campaign
   await updateActiveCampaignData({
@@ -177,7 +175,7 @@ export const updateSubscriptionsOnEmailChange = async (
 export const updateUserSubscriptions = async (
   user: string,
   subscribe: Array<SubscriptionCode>,
-  unsubscribe: Array<SubscriptionCode>
+  unsubscribe: Array<SubscriptionCode>,
 ) => {
   if (subscribe?.length > 0) {
     await Promise.all(
@@ -190,16 +188,16 @@ export const updateUserSubscriptions = async (
             lastModified: getUtcDate(),
             status: SubscriptionStatus.Active,
           },
-          { upsert: true }
+          { upsert: true },
         );
-      })
+      }),
     );
   }
 
   if (unsubscribe?.length > 0) {
     await SubscriptionModel.updateMany(
       { user, code: { $in: unsubscribe } },
-      { lastModified: getUtcDate(), status: SubscriptionStatus.Cancelled }
+      { lastModified: getUtcDate(), status: SubscriptionStatus.Cancelled },
     );
   }
 };
@@ -218,7 +216,7 @@ export const updateUsersSubscriptions = async (userSubs: UserSubscriptions[]) =>
   Promise.all(
     userSubs.map(async (userSub) => {
       await updateUserSubscriptions(userSub.userId, userSub.subscribe, userSub.unsubscribe);
-    })
+    }),
   );
 };
 
@@ -232,14 +230,13 @@ const reconcileActiveCampaignListSubscriptions = async (
   id: Types.ObjectId,
   activeCampaignSubs: ActiveCampaignListId[],
   subCodes: SubscriptionCode[] = [],
-  visitor: boolean = false
+  visitor: boolean = false,
 ) => {
   // get a list of all active campaign subscription codes
   const activeCampaignSubCodes = Object.values(ActiveCampaignListId).map(
-    (id) => ProviderProductIdToSubscriptionCode[id]
+    (id) => ProviderProductIdToSubscriptionCode[id],
   );
-  const codes =
-    activeCampaignSubs?.map((sub) => ProviderProductIdToSubscriptionCode[sub])?.concat(subCodes) || subCodes;
+  const codes = activeCampaignSubs?.map((sub) => ProviderProductIdToSubscriptionCode[sub])?.concat(subCodes) || subCodes;
 
   /* update any activeCampaignSubs in subs to Active -- with upsert */
   const subscribeFilter: FilterQuery<ISubscription> = visitor
@@ -258,7 +255,7 @@ const reconcileActiveCampaignListSubscriptions = async (
         lastModified: getUtcDate(),
         status: SubscriptionStatus.Active,
       },
-      { upsert: true }
+      { upsert: true },
     );
   }
 
@@ -288,7 +285,7 @@ const getNonActiveCampaignSubscriptions = async (userId: Types.ObjectId): Promis
 
 export const getUserGroupSubscriptionsToUpdate = async (
   user: Partial<IUser & { _id: ObjectId }>,
-  groupToBeDeleted?: ObjectId
+  groupToBeDeleted?: ObjectId,
 ): Promise<UserSubscriptions> => {
   try {
     const userSub: UserSubscriptions = {
@@ -313,7 +310,7 @@ export const getUserGroupSubscriptionsToUpdate = async (
     await reconcileActiveCampaignListSubscriptions(
       new Types.ObjectId(user._id.toString()),
       activeCampaignListIds,
-      nonActiveCampaignSubs
+      nonActiveCampaignSubs,
     );
 
     /* Should the user be enrolled in the admin list? */
@@ -366,7 +363,7 @@ export const getUserGroupSubscriptionsToUpdate = async (
 
 export const getUpdatedGroupChangeSubscriptions = async (
   group: IGroupDocument,
-  groupToBeDeleted: boolean
+  groupToBeDeleted: boolean,
 ): Promise<UserSubscriptions[]> => {
   try {
     const groupUsers = await UserGroupModel.find({
@@ -384,12 +381,10 @@ export const getUpdatedGroupChangeSubscriptions = async (
     }
 
     let userSubscriptions = await Promise.all(
-      groupUsers.map(async (userGroup) =>
-        getUserGroupSubscriptionsToUpdate(
-          userGroup.user as Partial<IUserDocument>,
-          groupToBeDeleted ? group._id : undefined
-        )
-      )
+      groupUsers.map(async (userGroup) => getUserGroupSubscriptionsToUpdate(
+        userGroup.user as Partial<IUserDocument>,
+        groupToBeDeleted ? group._id : undefined,
+      )),
     );
 
     userSubscriptions = userSubscriptions.filter((sub) => sub.subscribe.length > 0 || sub.unsubscribe.length > 0);
@@ -476,12 +471,12 @@ export const newsletterUnsubscribe = async (_: IRequest, email: string, preserve
 
     // filter out any in the perserve list
     const unsubscribeLists = activeCampaignListIds.filter(
-      (providerProductId) => !preserveSubscriptions.includes(ProviderProductIdToSubscriptionCode[providerProductId])
+      (providerProductId) => !preserveSubscriptions.includes(ProviderProductIdToSubscriptionCode[providerProductId]),
     );
 
     // update db subscriptions
     const unsubscribe: SubscriptionCode[] = unsubscribeLists.map(
-      (providerProductId) => ProviderProductIdToSubscriptionCode[providerProductId]
+      (providerProductId) => ProviderProductIdToSubscriptionCode[providerProductId],
     );
     if (!unsubscribe || unsubscribe?.length <= 0) {
       throw new CustomError(shareableUnsubscribeError, ErrorTypes.UNPROCESSABLE);

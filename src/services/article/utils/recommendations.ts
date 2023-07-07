@@ -160,8 +160,18 @@ export const getArticleRecommendationsBasedOnTransactionHistory = async (
     .map((articles) => articles.filter((article) => !!article?.company))
     .filter((articles) => !!articles?.length);
 
+  // filter out any articles that were queued within the date range
+  const articlesNotInDateRange = user.articles?.queued?.filter((article) => {
+    if (!startDate && !endDate) return true;
+    if (!!startDate && !!endDate) return article.date < startDate || article.date > endDate;
+    if (!!startDate && article.date < startDate) return true;
+    if (!!endDate && article.date > endDate) return true;
+
+    return false;
+  });
+
   // get queued user articles
-  const queuedUserArticleIds = user.articles?.queued?.map((article) => article.article);
+  const queuedUserArticleIds = articlesNotInDateRange?.map((article) => article.article);
 
   // filter out any that we've already sent the user.
   if (!!queuedUserArticleIds?.length && queuedUserArticleIds.length > 0) {

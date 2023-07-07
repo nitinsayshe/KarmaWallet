@@ -240,14 +240,16 @@ export const getAllUsersWithoutVerifiedPaypal = async () => {
   fs.writeFileSync(path.join(__dirname, '.tmp', 'no_verified_paypal.csv'), _csv);
 };
 
-export const sendOneOffPayout = async (commissionPayoutIds: string[], commissionOverviewId: string) => {
+export const resendFailedPayoutsonCommissionOverview = async (commissionOverviewId: string) => {
   try {
     let commissionPayoutAmount = 0;
+    const commissionOverview = await CommissionPayoutOverviewModel.findOne({ _id: commissionOverviewId });
+    const commissionPayoutIds = commissionOverview.commissionPayouts;
     const paypalClient = await new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
 
-    let paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
+    const paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
@@ -259,6 +261,7 @@ export const sendOneOffPayout = async (commissionPayoutIds: string[], commission
 
     for (const payout of commissionPayoutIds) {
       const payoutData = await CommissionPayoutModel.findById(payout);
+      if (payoutData.status !== KarmaCommissionPayoutStatus.Failed) continue;
 
       if (!payoutData) {
         console.log('[+] Commission payout not found. Skipping payout.');
@@ -286,7 +289,7 @@ export const sendOneOffPayout = async (commissionPayoutIds: string[], commission
         throw new CustomError('User does not have paypal payerId.', ErrorTypes.INVALID_ARG);
       }
 
-      paypalFormattedPayouts = [{
+      paypalFormattedPayouts.push({
         recipient_type: 'PAYPAL_ID',
         amount: {
           value: payoutData.amount.toString(),
@@ -295,7 +298,7 @@ export const sendOneOffPayout = async (commissionPayoutIds: string[], commission
         receiver: paypal.payerId,
         note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
         sender_item_id: payoutData._id.toString(),
-      }];
+      });
     }
 
     if (paypalPrimaryBalanceAmount < commissionPayoutAmount) {

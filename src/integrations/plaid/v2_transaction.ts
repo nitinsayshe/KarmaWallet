@@ -2,10 +2,13 @@
 import fs from 'fs';
 import dayjs from 'dayjs';
 import { FilterQuery, ObjectId } from 'mongoose';
+import { v4 as uuid } from 'uuid';
 import { IUser, IUserDocument, UserModel } from '../../models/user';
 import { ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IMatchedTransaction } from './types';
 import { CardModel, ICard, ICardDocument } from '../../models/card';
+import { TransactionStatus } from '../../clients/kard';
+import { queueSettledTransactions } from '../kard';
 
 export interface ICardsDictionary {
   [key: string]: ObjectId;
@@ -20,14 +23,21 @@ export const getTransactionDate = (date: string) => {
   return _date.toDate();
 };
 
-export const getTransactionSector = (transaction: IMatchedTransaction, primarySectorDictionary: any, plaidMappingSectorDictionary: any) => {
+export const getTransactionSector = (
+  transaction: IMatchedTransaction,
+  primarySectorDictionary: any,
+  plaidMappingSectorDictionary: any,
+) => {
   if (transaction.company) {
     const sector = primarySectorDictionary[transaction.company.toString()];
     if (sector) return sector;
   }
   // if there is no company, use the plaid category mapping to the sector
   if (!transaction?.category?.length) return;
-  const plaidCategoriesId = transaction?.category.map(x => x.trim().split(' ').join('-')).filter(x => !!x).join('-');
+  const plaidCategoriesId = transaction?.category
+    .map((x) => x.trim().split(' ').join('-'))
+    .filter((x) => !!x)
+    .join('-');
   const plaidCategory = plaidMappingSectorDictionary[plaidCategoriesId];
   if (plaidCategory) return plaidCategory.sector;
 };
@@ -46,6 +56,7 @@ export const mapPlaidTransactionToKarmaTransaction = (
     log(`card not found for plaid transaction ${plaidTransaction.transaction_id}`);
     cardToAssign = _card;
   }
+
   const transaction = new TransactionModel({
     user: userId,
     date: getTransactionDate(plaidTransaction.date),
@@ -61,29 +72,31 @@ export const mapPlaidTransactionToKarmaTransaction = (
 };
 
 export const filterDuplicatePlaidTransactions = async (transactions: ITransactionDocument[], user: IUserDocument) => {
-  const { amounts, dates } = transactions.reduce((acc, t) => {
-    acc.amounts.push(t.amount);
-    acc.dates.push(t.date);
-    return acc;
-  }, { amounts: [], dates: [] });
+  const { amounts, dates } = transactions.reduce(
+    (acc, t) => {
+      acc.amounts.push(t.amount);
+      acc.dates.push(t.date);
+      return acc;
+    },
+    { amounts: [], dates: [] },
+  );
 
-  const userTransactions = await TransactionModel.find(
-    {
-      $and: [
-        { 'integrations.plaid': { $ne: null } },
-        { user: user._id },
-        { $or: [
+  const userTransactions = await TransactionModel.find({
+    $and: [
+      { 'integrations.plaid': { $ne: null } },
+      { user: user._id },
+      {
+        $or: [
           {
-            amount: { $in: amounts } },
+            amount: { $in: amounts },
+          },
           {
             date: { $in: dates },
           },
         ],
-        },
-      ],
-    },
-  )
-    .lean();
+      },
+    ],
+  }).lean();
 
   const uniqueTransactions = transactions.filter((t) => {
     const exists = userTransactions.find((ut) => {
@@ -109,7 +122,7 @@ export const filterDuplicatePlaidTransactions = async (transactions: ITransactio
       const nameFingerprint = nameMatch || merchantMatch;
       fingerprints.push(nameFingerprint);
 
-      return fingerprints.every(x => x);
+      return fingerprints.every((x) => x);
     });
     return !exists;
   });
@@ -139,8 +152,45 @@ export const saveTransactions = async (
   if (!_user) return;
   log(`transaction count: ${transactions.length}`);
   log('saving transactions');
-  const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(t, _user._id.toString(), cardDictionary, primarySectorDictionary, plaidMappingSectorDictionary, _card));
-  const transactionsToSave = await filterDuplicatePlaidTransactions(mappedTransactions, _user);
+  const mappedTransactions = transactions.map((t) => mapPlaidTransactionToKarmaTransaction(
+    t,
+    _user._id.toString(),
+    cardDictionary,
+    primarySectorDictionary,
+    plaidMappingSectorDictionary,
+    _card,
+  ));
+  let transactionsToSave = await filterDuplicatePlaidTransactions(mappedTransactions, _user);
+
+  // assign Transactions a transaction id for kard
+  // store the status of the transaction
+  transactionsToSave = transactionsToSave.map((t) => {
+    t.card = cards.find((c) => c._id?.toString() === t.card?.toString());
+    const status = t?.integrations?.plaid?.pending ? TransactionStatus.APPROVED : TransactionStatus.SETTLED;
+    const card = t.card as ICard;
+    if (!!card?.integrations?.kard?.dateAdded) {
+      if (!t.integrations) t.integrations = {};
+      if (!t.integrations.kard) {
+        t.integrations.kard = {
+          id: uuid(),
+          status,
+        };
+      } else if (status !== t.integrations.kard.status) {
+        t.integrations.kard.status = status;
+      }
+    }
+    return t;
+  });
+
+  // send positive amount, non-pending, reward-program-registered card-related transactions to kard
+  const kardSyncTransactions = transactionsToSave.filter(
+    (t) => t.amount >= 0 && !t?.integrations?.plaid?.pending && !!(t?.card as ICard)?.integrations?.kard?.dateAdded,
+  );
+
+  if (kardSyncTransactions?.length > 0) {
+    await queueSettledTransactions(_user, kardSyncTransactions);
+  }
+
   log(`mapped transaction count: ${mappedTransactions.length}`);
   log(`transactions to save count: ${transactionsToSave.length}`);
   await TransactionModel.insertMany(mappedTransactions);
@@ -163,10 +213,13 @@ export const updateTransactions = async (
 
   const transactionsToSave: any = [];
 
-  const plaidIdTransactionDictionary: IPlaidIdTransactionDictionary = allUserTransactions.reduce((acc: { [key: string]: ITransactionDocument }, t) => {
-    acc[t.integrations.plaid.transaction_id] = t as ITransactionDocument;
-    return acc;
-  }, {});
+  const plaidIdTransactionDictionary: IPlaidIdTransactionDictionary = allUserTransactions.reduce(
+    (acc: { [key: string]: ITransactionDocument }, t) => {
+      acc[t.integrations.plaid.transaction_id] = t as ITransactionDocument;
+      return acc;
+    },
+    {},
+  );
 
   const timeString = `${logId}transactions comparison`;
   console.time(timeString);
@@ -175,10 +228,23 @@ export const updateTransactions = async (
     const transaction = plaidIdTransactionDictionary[newlyMatchedTransaction.transaction_id];
     if (!transaction) continue;
     transaction.integrations.plaid = newlyMatchedTransaction;
-    if ((transaction.company?.toString() === newlyMatchedTransaction.company?.toString()) || (!transaction.company && !newlyMatchedTransaction.company)) continue;
-    log(`updating transaction ${transaction._id} company from ${transaction.company} to ${newlyMatchedTransaction.company}`);
+    if (
+      transaction.company?.toString() === newlyMatchedTransaction.company?.toString()
+      || (!transaction.company && !newlyMatchedTransaction.company)
+    ) {
+      continue;
+    }
+    log(
+      `updating transaction ${transaction._id} company from ${transaction.company} to ${newlyMatchedTransaction.company}`,
+    );
 
-    transactionsToSave.push(TransactionModel.findOneAndUpdate({ _id: transaction._id }, { company: newlyMatchedTransaction.company }, { new: true }));
+    transactionsToSave.push(
+      TransactionModel.findOneAndUpdate(
+        { _id: transaction._id },
+        { company: newlyMatchedTransaction.company },
+        { new: true },
+      ),
+    );
   }
 
   log(`transactions to save count: ${transactionsToSave.length}`);
@@ -191,7 +257,7 @@ export interface IDuplicatePlaidTransactionDictionary {
 }
 
 export interface ICleanDuplicateTransactions {
-  userQuery : FilterQuery<IUserDocument>;
+  userQuery: FilterQuery<IUserDocument>;
   removeDuplicates?: boolean;
   writeToDisk?: boolean;
 }
@@ -225,8 +291,8 @@ export const identifyAndRemoveDuplicateTransactions = async ({
       }
 
       const duplicate = transactionsWithSameAmount.find((t) => {
-        if (_duplicateMatches.find(d => d === t._id.toString())) return false;
-        if (_duplicates.find(d => d._id.toString() === t._id.toString())) return false;
+        if (_duplicateMatches.find((d) => d === t._id.toString())) return false;
+        if (_duplicates.find((d) => d._id.toString() === t._id.toString())) return false;
         if (t._id.toString() === transaction._id.toString()) return false;
         if (t.integrations.plaid.transaction_id === transaction.integrations.plaid.transaction_id) return true;
         const fingerprints = [];
@@ -248,7 +314,7 @@ export const identifyAndRemoveDuplicateTransactions = async ({
         const nameFingerprint = nameMatch || merchantMatch;
         fingerprints.push(nameFingerprint);
 
-        return fingerprints.every(x => x);
+        return fingerprints.every((x) => x);
       });
 
       if (duplicate) {
@@ -257,10 +323,10 @@ export const identifyAndRemoveDuplicateTransactions = async ({
         _duplicateMatches.push(transaction._id.toString());
       }
     }
-    if (_duplicates.length) duplicates[user._id.toString()] = _duplicates.map(d => d._id.toString());
+    if (_duplicates.length) duplicates[user._id.toString()] = _duplicates.map((d) => d._id.toString());
     console.log(`[i] user ${user._id} has ${_duplicates.length} duplicates`);
     if (removeDuplicates && _duplicates.length > 0) {
-      const duplicateIds = _duplicates.map(d => d._id);
+      const duplicateIds = _duplicates.map((d) => d._id);
       const d = await TransactionModel.deleteMany({ user, _id: { $in: duplicateIds } });
       console.log(`[-] deleted ${d.deletedCount} duplicates for user ${user._id}`);
     }

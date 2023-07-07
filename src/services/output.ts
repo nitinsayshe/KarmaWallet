@@ -26,7 +26,7 @@ const setAuthHeader = (req: IRequest, res: Response, tkn?: string, Itkn?:string)
 export const api = (req: IRequest, res: Response, data: any, authToken = '', code = 200, deviceToken = '') => {
   setAuthHeader(req, res, authToken, deviceToken);
   res.set('Content-Type', 'application/json');
-  res.set('Access-Control-Expose-Headers', 'authKey,identifierKey');
+  res.set('Access-Control-Expose-Headers', 'authKey, identifierKey');
   res.statusCode = code;
   res.send(data);
 };

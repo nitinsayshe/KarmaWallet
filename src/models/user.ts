@@ -4,6 +4,7 @@ import { IModel, IRef } from '../types/model';
 import { UserRoles } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IPromo, IPromoDocument } from './promo';
+import { IArticle } from './article';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -98,6 +99,12 @@ export interface IUser extends IShareableUser {
   password: string;
   lastModified: Date;
   integrations?: IUserIntegrations;
+  articles?: {
+    queued?: {
+      date: Date;
+      article: IRef<ObjectId, IArticle>;
+    }[];
+  };
 }
 
 export interface IUserDocument extends IUser, Document {}
@@ -129,6 +136,18 @@ const userSchema = new Schema({
   },
   lastModified: { type: Date, default: () => getUtcDate() },
   legacyId: { type: String },
+  articles: {
+    type: {
+      queued: [
+        {
+          type: {
+            date: { type: Date, required: true },
+            article: { type: Schema.Types.ObjectId, ref: 'article', required: true },
+          },
+        },
+      ],
+    },
+  },
   integrations: {
     rare: {
       type: {

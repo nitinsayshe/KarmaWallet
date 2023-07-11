@@ -52,18 +52,6 @@ export const createMerchantRates = async (merchant: any, merchantRates: any) => 
   }
 };
 
-// pulls the most recent merchants, domains, and rates from the Wildfire API and saves to file locally, run this before associating or matching
-export const pullRecentFromDatabaseAndSave = async () => {
-  const wildfireClient = await new WildfireClient();
-  const merchants = await wildfireClient.getMerchants();
-  const rates = await wildfireClient.getMerchantRates();
-  const domains = await wildfireClient.getActiveDomains();
-
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmerchants.json'), JSON.stringify(merchants));
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfrates.json'), JSON.stringify(rates));
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfdomains.json'), JSON.stringify(domains));
-};
-
 // Add merchants to our database based on a csv of matches
 export const associateWildfireMatches = async () => {
   const errors = [];

@@ -149,11 +149,11 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
       console.log(`[+] Skipping user ${user._id} - no paypal integration`);
       continue;
     }
-
-    if (!user.integrations.paypal.verified_account) {
-      console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
-      continue;
-    }
+    // revisit this when we have a better way to verify paypal accounts
+    // if (!user.integrations.paypal.verified_account) {
+    //   console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
+    //   continue;
+    // }
 
     let dateQuery: any = { $lte: dayjs().utc().toDate() };
 
@@ -252,7 +252,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
     if (!commissionPayoutOverview) throw new CustomError('Commission payout overview not found.', ErrorTypes.INVALID_ARG);
-    if (commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified) {
+    if (commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified && commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Success) {
       throw new CustomError('Commission payout overview is not verified.', ErrorTypes.GEN);
     }
     const paypalClient = await new PaypalClient();
@@ -269,7 +269,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
-        sender_batch_id: commissionPayoutOverviewId,
+        sender_batch_id: `${commissionPayoutOverviewId}-${getUtcDate().unix()}`,
         email_subject: 'You\'ve received a cashback payout from Karma Wallet!',
         email_message: 'You\'ve earned cashback from Karma Wallet. Great job!.',
       },
@@ -282,6 +282,11 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
         continue;
       }
 
+      if (payoutData.status === KarmaCommissionPayoutStatus.Paid) {
+        console.log('[+] Commission payout already paid. Skipping payout.');
+        continue;
+      }
+
       const user = await UserModel.findById(payoutData.user);
       if (!user) {
         console.log('[+] User not found. Skipping payout.');
@@ -289,6 +294,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
       }
 
       const { paypal } = user.integrations;
+
       if (!paypal) {
         console.log('[+] User does not have paypal integration. Skipping payout.');
         continue;
@@ -296,11 +302,6 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
 
       if (!paypal.payerId) {
         console.log('[+] User does not have paypal payerId. Skipping payout.');
-        continue;
-      }
-
-      if (payoutData.status === KarmaCommissionPayoutStatus.Paid) {
-        console.log('[+] Commission payout already paid. Skipping payout.');
         continue;
       }
 

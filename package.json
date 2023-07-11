@@ -46,7 +46,8 @@
     "@types/mongoose-paginate-v2": "1.4.3",
     "@types/multer": "1.4.7",
     "@types/node": "17.0.13",
-    "@types/paypal-rest-sdk": "^1.7.6",
+    "@types/paypal-rest-sdk": "1.7.6",
+    "@types/sanitize-html": "2.9.0",
     "@types/uuid": "9.0.0",
     "@typescript-eslint/eslint-plugin": "5.10.1",
     "@typescript-eslint/parser": "5.10.1",
@@ -55,7 +56,11 @@
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.25.4",
     "eslint-plugin-unused-imports": "2.0.0",
+<<<<<<< HEAD
     "husky": "^8.0.0",
+=======
+    "husky": "8.0.0",
+>>>>>>> 14deac5f000491f3a5e6d3f6c8f1438dce52d069
     "jest": "29.5.0",
     "nodemon": "2.0.15",
     "ts-jest": "29.0.5",
@@ -99,6 +104,7 @@
     "pino-http": "6.6.0",
     "plaid": "9.10.0",
     "rate-limiter-flexible": "2.3.6",
+    "sanitize-html": "2.10.0",
     "slugify": "1.6.5",
     "socket.io": "4.4.1",
     "typescript": "4.5.5",

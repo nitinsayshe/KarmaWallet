@@ -15,7 +15,7 @@ import {
   getYearlyEmissionsTotal,
   getYearlyKarmaScore,
   getYearlyLoginCount,
-} from '../../lib/userMetrics';
+} from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
 import { CompanyModel } from '../../models/company';

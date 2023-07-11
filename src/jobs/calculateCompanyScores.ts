@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc';
 import { FilterQuery } from 'mongoose';
 import { getCompanyRatingFromScore } from '../lib/company';
 import { CompanyRating } from '../lib/constants/company';
-import { CompanyCreationStatus, CompanyModel, ICategoryScore, ICompany, ICompanyCreation, ICompanyDocument, ISubcategoryScore } from '../models/company';
+import { CompanyModel, ICategoryScore, ICompany, ICompanyDocument, ISubcategoryScore } from '../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceModel } from '../models/companyDataSource';
 import { CompanyUnsdgModel, ICompanyUnsdgDocument } from '../models/companyUnsdg';
 import { DataSourceMappingModel, IDataSourceMappingModel } from '../models/dataSourceMapping';
@@ -25,7 +25,6 @@ interface IUpdatableCompanyData {
   rating: CompanyRating;
   subcategoryScores: ISubcategoryScore[];
   categoryScores: ICategoryScore[];
-  creation?: ICompanyCreation;
 }
 
 const UNSDG_MAX_SCORE = 1;
@@ -219,13 +218,6 @@ export const exec = async ({ jobReportId, companyIds = [] }: ICalculateCompanySc
     }));
 
     const updatedData: IUpdatableCompanyData = { combinedScore, rating, subcategoryScores, categoryScores };
-
-    if (company.creation?.status === CompanyCreationStatus.PendingScoreCalculations) {
-      updatedData.creation = {
-        ...company.creation,
-        status: CompanyCreationStatus.Completed,
-      };
-    }
 
     try {
       await CompanyModel.updateOne({ _id: company._id }, updatedData);

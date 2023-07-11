@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import { MongoClient } from '../../../clients/mongo';
-import { createSomeCards, createSomePromos, createSomeUsers } from '../../../lib/testingUtils';
+import { cleanUpDocuments, createSomeCards, createSomePromos, createSomeUsers } from '../../../lib/testingUtils';
 import { ICardDocument } from '../../../models/card';
 import { IPromoDocument } from '../../../models/promo';
 import { IUserDocument, IUserIntegrations } from '../../../models/user';
@@ -80,37 +80,7 @@ describe('promo report generation logic tests', () => {
 
   afterAll(async () => {
     /* clean up linked accounts */
-    await Promise.all(
-      testCards?.map(async (card) => {
-        try {
-          await card.remove();
-        } catch (err) {
-          console.log('error removing cards', err);
-        }
-      }),
-    );
-
-    /* clean up users */
-    await Promise.all(
-      testUsers?.map(async (user) => {
-        try {
-          await user.remove();
-        } catch (err) {
-          console.log('error removing users', err);
-        }
-      }),
-    );
-
-    /* clean up promos */
-    await Promise.all(
-      testPromos?.map(async (promo) => {
-        try {
-          await promo.remove();
-        } catch (err) {
-          console.log('error removing promos', err);
-        }
-      }),
-    );
+    await cleanUpDocuments([...testCards, ...testUsers, ...testPromos]);
 
     // clean up db
     MongoClient.disconnect();
@@ -167,15 +137,10 @@ describe('promo report generation logic tests', () => {
 
     let userCampaigns = campaignAggData.data.map((campaignData) => campaignData?.campaigns);
     userCampaigns = userCampaigns.filter((campaign) => Object.keys(campaign)?.length > 0);
-    console.log(JSON.stringify(userCampaigns, null, 2));
     campaigns.forEach((campaign) => {
-      console.log('campaign', campaign);
       const usersInCampaign = userCampaigns.filter((c) => !!Object.keys(c)?.find((key) => key === campaign.name));
-      console.log('usersInCampaign', JSON.stringify(usersInCampaign, null, 2));
 
       const numUsersInCampaign = usersInCampaign.reduce((acc, curr) => acc + (curr[campaign.name] || 0), 0);
-      console.log('numUsersInCampaign', numUsersInCampaign);
-
       expect(numUsersInCampaign).toBeGreaterThanOrEqual(campaign.total);
     });
   });

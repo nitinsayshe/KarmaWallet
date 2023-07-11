@@ -58,6 +58,7 @@ export class _MainBullClient extends _BullClient {
 
     if (process.env.NODE_ENV === 'production') {
       // active campaign sync
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION }, { jobId: `${JobNames.SyncActiveCampaign}-article-recommendation`, repeat: { cron: '0 2 * * 1' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.UNLINKED_AND_REMOVED_ACCOUNTS }, { jobId: `${JobNames.SyncActiveCampaign}-unlinked-and-removed-accounts`, repeat: { cron: '0 4 9 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.CASHBACK_SIMULATION }, { jobId: `${JobNames.SyncActiveCampaign}-cashback-simulation`, repeat: { cron: '0 4 1 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.CASHBACK_SIMULATION }, { jobId: `${JobNames.SyncActiveCampaign}-cashback-simulation-weekly`, repeat: { cron: '0 4 * * MON' } });

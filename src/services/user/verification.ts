@@ -1,5 +1,6 @@
 import isemail from 'isemail';
 import dayjs from 'dayjs';
+import { ec } from 'elliptic';
 import {
   IUserDocument, UserModel,
   UserEmailStatus,
@@ -52,4 +53,16 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
   // TODO: update to verified when support for owner approval is added.
   await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
   return { email };
+};
+
+export const verifyBiometric = async (email:string, biometricSignature:string, biometricKey:any) => {
+  // eslint-disable-next-line new-cap
+  const ellipticCurve = new ec('secp256k1');
+  // Verify the signature
+  try {
+    const isVerified = ellipticCurve.verify(email, biometricSignature, biometricKey, 'hex');
+    return isVerified;
+  } catch (err) {
+    return false;
+  }
 };

@@ -66,6 +66,12 @@ export interface IReferrals {
   params: IUrlParam[];
 }
 
+export interface IBiometrics {
+  _id?:string;
+  biometricKey: string,
+  isBiometricEnabled: Boolean,
+}
+
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
@@ -74,6 +80,7 @@ export interface IUserIntegrations {
   shareasale?: IShareASale;
   referrals?: IReferrals;
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
+  biometrics?: IBiometrics[];
 }
 
 export interface IShareableUser {
@@ -185,6 +192,14 @@ const userSchema = new Schema({
     promos: {
       type: [{ type: Schema.Types.ObjectId, ref: 'promo' }],
     },
+    biometrics: [
+      {
+        type: {
+          biometricKey: { type: String },
+          isBiometricEnabled: { type: Boolean },
+        },
+      },
+    ],
   },
 });
 userSchema.plugin(mongoosePaginate);

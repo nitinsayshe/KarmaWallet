@@ -33,7 +33,7 @@ import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
-import { resendEmailVerification } from './verification';
+import { resendEmailVerification, verifyBiometric } from './verification';
 import { deleteKardUser } from '../../integrations/kard';
 
 dayjs.extend(utc);
@@ -45,6 +45,7 @@ export interface IVerifyTokenBody {
 export interface ILoginData {
   email: string;
   password?: string;
+  biometricSignature? :string;
   token?: string;
 }
 
@@ -114,8 +115,8 @@ export const handleCreateAccountPromo = async (userId: string, promo: IPromo) =>
   }
 };
 
-export const storeNewLogin = async (userId: string, loginDate: Date) => {
-  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate }, { upsert: true }).sort({
+export const storeNewLogin = async (userId: string, loginDate: Date, authKey:string) => {
+  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate, authKey }, { upsert: true }).sort({
     date: -1,
   });
 };
@@ -196,7 +197,7 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
   try {
     let authKey = '';
     authKey = await Session.createSession(newUser._id.toString());
-    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
+    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate(), authKey);
     await updateNewUserSubscriptions(newUser);
     const responseInfo: any = {
       user: newUser,
@@ -213,20 +214,33 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
   }
 };
 
-export const login = async (_: IRequest, { email, password }: ILoginData) => {
+export const login = async (req: IRequest, { email, password, biometricSignature }: ILoginData) => {
   email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
+
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
-  const passwordMatch = await argon2.verify(user.password, password);
-  if (!passwordMatch) {
-    throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
+  if (password) {
+    const passwordMatch = await argon2.verify(user.password, password);
+    if (!passwordMatch) {
+      throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
+    }
+  }
+  if (biometricSignature) {
+    const { identifierKey } = req;
+    const { biometrics } = user.integrations;
+
+    // get the publicKey to verify the signature
+    const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
+    const isVerified = await verifyBiometric(email, biometricSignature, biometricKey);
+
+    if (!isVerified) {
+      throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
+    }
   }
   const authKey = await Session.createSession(user._id.toString());
-
-  await storeNewLogin(user._id.toString(), getUtcDate().toDate());
-
+  await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
   return { user, authKey };
 };
 
@@ -282,6 +296,7 @@ export const getShareableUser = ({
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
+  if (integrations?.biometrics) _integrations.biometrics = integrations.biometrics;
   return {
     _id,
     email,

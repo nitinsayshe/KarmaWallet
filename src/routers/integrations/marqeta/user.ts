@@ -10,4 +10,16 @@ router.route('/create')
 router.route('/list')
   .get(UserController.listUser);
 
+router.route('/profile/:userToken')
+  .get(UserController.getUser);
+
+router.route('/update/:userToken')
+  .put(UserController.updateUser);
+
+router.route('/transition')
+  .post(UserController.userTransition);
+
+router.route('/transition/:userToken')
+  .get(UserController.listUserTransition);
+
 export default router;

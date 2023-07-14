@@ -23,7 +23,6 @@ export interface IMarqetaCreateUser {
   last_name: string;
   token?: string;
   email: string;
-  password: string;
   identifications: Identification[];
   birth_date: string;
   address1: string;
@@ -35,6 +34,13 @@ export interface IMarqetaCreateUser {
   gender: string;
   uses_parent_account: boolean;
   metadata: Metadata;
+}
+
+export interface IMarqetaUserTransition extends IMarqetaUserToken{
+  channel:string;
+  reason:string;
+  reason_code:string;
+  status:string;
 }
 
 export interface IMarqetaCreateCard extends IMarqetaUserToken {
@@ -54,4 +60,20 @@ export interface IMarqetaCardTransition {
   card_token: string;
   channel:string;
   state:string;
+}
+
+enum kyc_required {
+  ALWAYS = 'ALWAYS',
+  CONDITIONAL = 'CONDITIONAL',
+  NEVER = 'NEVER'
+}
+
+interface IMarqetaACHGroupConfig{
+  is_reloadable:boolean;
+  kyc_required:kyc_required;
+}
+
+export interface IMarqetaACHGroup{
+  name: string;
+  config: IMarqetaACHGroupConfig;
 }

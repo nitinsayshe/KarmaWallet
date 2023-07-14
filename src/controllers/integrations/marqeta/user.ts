@@ -1,4 +1,4 @@
-import { IMarqetaCreateUser } from '../../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaUserTransition } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
@@ -9,13 +9,13 @@ import { ErrorTypes } from '../../../lib/constants';
 export const createUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['first_name', 'last_name', 'email', 'birth_date', 'address1', 'city', 'state', 'country', 'postal_code'];
+    const requiredFields = ['first_name', 'last_name', 'email', 'birth_date', 'address1', 'city', 'state', 'country', 'postal_code', 'phone', 'identifications'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const data = await UserService.createUser(req);
+    const { data } = await UserService.createUser(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -24,7 +24,52 @@ export const createUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (re
 
 export const listUser: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const data = await UserService.listUsers();
+    const { data } = await UserService.listUsers();
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getUser: IRequestHandler<{userToken:string}, {}, {}> = async (req, res) => {
+  try {
+    const { userToken } = req.params;
+    const { data } = await UserService.getUser(userToken);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const updateUser: IRequestHandler<{userToken:string}, {}, IMarqetaCreateUser> = async (req, res) => {
+  try {
+    const { data } = await UserService.updateUser(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const userTransition: IRequestHandler<{}, {}, IMarqetaUserTransition> = async (req, res) => {
+  try {
+    const { body } = req;
+    const requiredFields = ['user_token', 'status', 'reason_code', 'reason', 'channel'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    if (!isValid) {
+      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+    const { data } = await UserService.userTransition(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const listUserTransition: IRequestHandler<{userToken:string}, {}, {}> = async (req, res) => {
+  try {
+    const { userToken } = req.params;
+    const { data } = await UserService.listUserTransition(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

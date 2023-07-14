@@ -1,7 +1,7 @@
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { User } from '../../clients/marqeta/user';
 import { IRequest } from '../../types/request';
-import { IMarqetaCreateUser, IMarqetaUserTransition } from './types';
+import { IMarqetaCreateUser, IMarqetaUserTransition, IMarqetaClientAccessToken } from './types';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -40,5 +40,16 @@ export const userTransition = async (req: IRequest<{}, {}, IMarqetaUserTransitio
 
 export const listUserTransition = async (userToken:string) => {
   const userResponse = await user.listUserTransition(userToken);
+  return { data: userResponse };
+};
+
+export const createClientAccessToken = async (req:IRequest<{}, {}, IMarqetaClientAccessToken>) => {
+  const params = req.body;
+  const userResponse = await user.createClientAccessToken(params);
+  return { data: userResponse };
+};
+
+export const getClientAccessToken = async (accessToken:string) => {
+  const userResponse = await user.getClientAccessToken(accessToken);
   return { data: userResponse };
 };

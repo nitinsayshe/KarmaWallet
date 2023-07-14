@@ -1,4 +1,4 @@
-import { IMarqetaCreateUser, IMarqetaUserTransition } from '../../integrations/marqeta/types';
+import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaUserTransition } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { MarqetaClient } from './marqetaClient';
 
@@ -68,6 +68,28 @@ export class User {
   async listUserTransition(userToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/usertransitions/user/${userToken}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  // Create client access toke
+  async createClientAccessToken(params:IMarqetaClientAccessToken) {
+    try {
+      const { data } = await this._marqetaClient._client.post('/users/auth/clientaccesstoken', params);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  // Retrieve client access token
+  async getClientAccessToken(accessToken: string) {
+    try {
+      const { data } = await this._marqetaClient._client.get(`//users/auth/clientaccesstoken/${accessToken}`);
       return data;
     } catch (err) {
       console.log(err);

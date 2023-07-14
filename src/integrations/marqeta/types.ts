@@ -49,6 +49,7 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   amount: number;
+  fees: number;
   currency_code:string;
   funding_source_token:string;
 }
@@ -76,4 +77,9 @@ interface IMarqetaACHGroupConfig{
 export interface IMarqetaACHGroup{
   name: string;
   config: IMarqetaACHGroupConfig;
+}
+
+export interface IMarqetaClientAccessToken{
+  card_token: string;
+  application_token: string;
 }

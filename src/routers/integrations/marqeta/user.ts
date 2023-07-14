@@ -22,4 +22,10 @@ router.route('/transition')
 router.route('/transition/:userToken')
   .get(UserController.listUserTransition);
 
+router.route('/accesstoken')
+  .post(UserController.createClientAccessToken);
+
+router.route('/accesstoken/:accessToken')
+  .get(UserController.listUserTransition);
+
 export default router;

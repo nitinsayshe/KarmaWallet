@@ -1,4 +1,4 @@
-import { IMarqetaCreateUser, IMarqetaUserTransition } from '../../../integrations/marqeta/types';
+import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaUserTransition } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
@@ -70,6 +70,32 @@ export const listUserTransition: IRequestHandler<{userToken:string}, {}, {}> = a
   try {
     const { userToken } = req.params;
     const { data } = await UserService.listUserTransition(userToken);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const createClientAccessToken: IRequestHandler<{}, {}, IMarqetaClientAccessToken> = async (req, res) => {
+  try {
+    const { body } = req;
+    const requiredFields = ['card_token'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    if (!isValid) {
+      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+    const { data } = await UserService.createClientAccessToken(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getClientAccessToken: IRequestHandler<{accessToken:string}, {}, {}> = async (req, res) => {
+  try {
+    const { accessToken } = req.params;
+    const { data } = await UserService.getClientAccessToken(accessToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

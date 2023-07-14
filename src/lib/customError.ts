@@ -20,7 +20,7 @@ export const asCustomError = (err: any, code?: IErrorType) => {
   } else if (typeof err === 'string') {
     error = new CustomError(err, code);
   } else if (err.config) {
-    error = new CustomError(err.response.data.error_message, err.response.status);
+    error = new CustomError(err.response.data.error_message, ErrorTypes.SERVER);
   } else {
     error = new CustomError(err.message, code);
   }

@@ -42,7 +42,6 @@ export interface IActiveCampaignUserIntegration {
 export interface IKardIntegration {
   userId: string;
   dateAccountCreated: Date;
-  dateAccountUpdated?: Date;
 }
 
 export interface IUrlParam {
@@ -169,7 +168,6 @@ const userSchema = new Schema({
       type: {
         userId: { type: String },
         dateAccountCreated: { type: Date },
-        dateAccountUpdated: { type: Date },
       },
     },
     shareasale: {

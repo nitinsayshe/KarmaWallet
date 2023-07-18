@@ -2,8 +2,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import fs from 'fs';
 import path from 'path';
 import { Types } from 'mongoose';
+import dayjs from 'dayjs';
 import { MongoClient } from '../../../clients/mongo';
-import { cleanUpDocuments, createSomeCompanies, createSomeMerchants } from '../../../lib/testingUtils';
+import {
+  cleanUpDocuments,
+  createSomeCompanies,
+  createSomeMerchantRates,
+  createSomeMerchants,
+} from '../../../lib/testingUtils';
 import { CompanyModel, ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument, MerchantModel } from '../../../models/merchant';
 import {
@@ -12,15 +18,22 @@ import {
   matchKardCompanies,
   narrowDownMatchesByScore,
   SearchMatch,
+  updateKardMerchantRates,
+  updateKardMerchants,
 } from '../kardMerchantUpdate';
+import { MerchantSource, CardNetwork, CommissionType, OfferType } from '../../../clients/kard';
+import { IMerchantRateDocument, MerchantRateModel } from '../../../models/merchantRate';
 
-describe('tests kardMerchantUpdate logic', () => {
+describe.skip('tests kardMerchantUpdate logic', () => {
   let testCompanyNameMatchWithNoMerchant: ICompanyDocument;
   let testCompanyUrlMatchWithNoMerchant: ICompanyDocument;
   let testCompanyNameMatchWithMerchant: ICompanyDocument;
   let testCompanyUrlMatchWithMerchant: ICompanyDocument;
   let testMerchantWithWildfireIntegration: IMerchantDocument;
   let testUrlMatchMerchantWithWildfireIntegration: IMerchantDocument;
+  let testMerchantToBeUpdated: IMerchantDocument;
+  let testCompanyToBeUpdated: ICompanyDocument;
+  let testMerchantRates: IMerchantRateDocument[];
 
   afterEach(() => {
     /* clean up between tests */
@@ -40,6 +53,9 @@ describe('tests kardMerchantUpdate logic', () => {
       testCompanyUrlMatchWithMerchant,
       testMerchantWithWildfireIntegration,
       testUrlMatchMerchantWithWildfireIntegration,
+      testMerchantToBeUpdated,
+      testCompanyToBeUpdated,
+      ...testMerchantRates,
     ]);
 
     MongoClient.disconnect();
@@ -49,7 +65,7 @@ describe('tests kardMerchantUpdate logic', () => {
     await MongoClient.init();
 
     // create merchant with wildfire integration
-    [testMerchantWithWildfireIntegration, testUrlMatchMerchantWithWildfireIntegration] = await createSomeMerchants({
+    [testMerchantWithWildfireIntegration, testUrlMatchMerchantWithWildfireIntegration, testMerchantToBeUpdated] = await createSomeMerchants({
       merchants: [
         {
           name: 'Auto Evolution',
@@ -99,6 +115,89 @@ describe('tests kardMerchantUpdate logic', () => {
             },
           },
         },
+        {
+          name: 'Focal Point',
+          integrations: {
+            kard: {
+              id: '629f6e2db5df7700096f8848',
+              name: 'Focal Point',
+              description:
+                  'Celebrating a Special Occasion? Sharing and Announcement? Create photo books, cards, invitations, and personalized gifts all from the Focal Point Website and App. ',
+              source: MerchantSource.NATIONAL,
+              category: 'Books & Digital Media',
+              imgUrl: 'https://assets.getkard.com/public/logos/kard.jpg',
+              bannerImgUrl: 'https://assets.getkard.com/public/banners/kard.jpg',
+              websiteURL: 'https://www.outdatedkardfocalpoint.com',
+              acceptedCards: [CardNetwork.Visa, CardNetwork.Mastercard, CardNetwork.Amex],
+              createdDate: '2022-06-07T15:26:37.783Z',
+              lastModified: '2023-05-10T19:43:10.320Z',
+              maxOffer: {
+                merchantId: '629f6e2db5df7700096f8848',
+                name: 'Focal Point Outdated',
+                offerType: OfferType.ONLINE,
+                isLocationSpecific: false,
+                optInRequired: false,
+                startDate: '2022-06-01T06:00:00.000Z',
+                expirationDate: '2024-06-01T06:00:00.000Z',
+                terms: 'N/A',
+                totalCommission: 2,
+                commissionType: CommissionType.FLAT,
+                createdDate: '2022-09-14T16:08:56.012Z',
+                lastModified: '2023-05-10T19:40:18.392Z',
+                redeemableOnce: false,
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    testMerchantRates = await createSomeMerchantRates({
+      merchantRates: [
+        {
+          merchant: testMerchantToBeUpdated._id,
+          lastModified: dayjs().subtract(1, 'day').toDate(),
+          integrations: {
+            kard: {
+              id: '6321fc98ab7ecc00097c88db',
+              merchantId: '629f6e2db5df7700096f8848',
+              name: 'Focal Point',
+              offerType: OfferType.INSTORE,
+              isLocationSpecific: false,
+              optInRequired: false,
+              startDate: '2022-06-01T06:00:00.000Z',
+              expirationDate: '2024-06-01T06:00:00.000Z',
+              terms: 'N/A',
+              totalCommission: 2,
+              commissionType: CommissionType.FLAT,
+              createdDate: '2022-09-14T16:08:56.012Z',
+              lastModified: '2023-05-10T19:40:18.392Z',
+              redeemableOnce: false,
+            },
+          },
+        },
+        {
+          merchant: testMerchantToBeUpdated._id,
+          lastModified: dayjs().subtract(1, 'day').toDate(),
+          integrations: {
+            kard: {
+              id: '629fc2cab7a4290009a188ed',
+              merchantId: '629f6e2db5df7700096f8848',
+              name: 'Focal Point',
+              offerType: OfferType.ONLINE,
+              isLocationSpecific: false,
+              optInRequired: false,
+              startDate: '2022-06-01T06:00:00.000Z',
+              expirationDate: '2024-06-01T06:00:00.000Z',
+              terms: 'N/A',
+              totalCommission: 2,
+              commissionType: CommissionType.PERCENT,
+              createdDate: '2022-06-07T21:27:38.645Z',
+              lastModified: '2023-05-10T19:43:10.173Z',
+              redeemableOnce: false,
+            },
+          },
+        },
       ],
     });
 
@@ -108,6 +207,7 @@ describe('tests kardMerchantUpdate logic', () => {
       testCompanyUrlMatchWithNoMerchant,
       testCompanyNameMatchWithMerchant,
       testCompanyUrlMatchWithMerchant,
+      testCompanyToBeUpdated,
     ] = await createSomeCompanies({
       companies: [
         {
@@ -127,11 +227,16 @@ describe('tests kardMerchantUpdate logic', () => {
           url: 'https://www.kardhilltopbbq.com',
           merchant: testUrlMatchMerchantWithWildfireIntegration._id,
         },
+        {
+          companyName: testMerchantToBeUpdated.name,
+          url: testMerchantToBeUpdated.integrations.kard.websiteURL,
+          merchant: testMerchantToBeUpdated._id,
+        },
       ],
     });
   });
 
-  it.skip('matchKardCompanies creates json with fuzzy matches', async () => {
+  it('matchKardCompanies creates json with fuzzy matches', async () => {
     await matchKardCompanies();
 
     const results: SearchMatch<Domain, string, Types.ObjectId>[] = JSON.parse(
@@ -142,7 +247,7 @@ describe('tests kardMerchantUpdate logic', () => {
     expect(results.length).toBeGreaterThanOrEqual(4);
   }, 50000);
 
-  it.skip('narrowDownMatchesByScore filters out matches that scored beneath the threshold given domain search results', async () => {
+  it('narrowDownMatchesByScore filters out matches that scored beneath the threshold given domain search results', async () => {
     // fakes the fuzzy matches using kard sandbox merchant data and injects our test company ids
     let testMatches: SearchMatch<Domain, string, Types.ObjectId>[] = JSON.parse(
       fs.readFileSync(path.resolve(__dirname, './data/test_kard_fuzzy_matches.json'), 'utf8'),
@@ -171,7 +276,7 @@ describe('tests kardMerchantUpdate logic', () => {
     expect(results.length).toEqual(4);
   });
 
-  it.skip('associateKardMatches creates new merchant on company if it does not exist and creates json report if it does', async () => {
+  it('associateKardMatches creates new merchant on company if it does not exist and creates json report if it does', async () => {
     fs.writeFileSync(
       path.resolve(__dirname, '../.tmp/kard_matches_confirmed.json'),
       JSON.stringify([
@@ -234,4 +339,35 @@ describe('tests kardMerchantUpdate logic', () => {
     expect(updatedUrlMatchMerchant?.integrations?.kard).not.toBeNull();
     expect(updatedUrlMatchMerchant?.integrations?.kard?.id).toEqual('629f6fa4b5df7700096f884a');
   }, 10000);
+
+  it('updateKardMerchants pulls data from Kard and updates websiteUrl, maxOffer, and lastModified', async () => {
+    try {
+      await updateKardMerchants();
+      // check that the merchant to be updated has new websiteUrl, maxOffer, and lastModified
+      const updatedMerchant = await MerchantModel.findById(testMerchantToBeUpdated._id);
+      expect(updatedMerchant?.integrations?.kard?.websiteURL).toEqual('https://www.kardfocalpoint.com');
+      expect(updatedMerchant?.integrations?.kard?.maxOffer.name).toEqual('Focal Point');
+      expect(updatedMerchant?.integrations?.kard?.maxOffer.totalCommission).toEqual(3);
+    } catch (err) {
+      expect(err).toBeNull();
+    }
+  });
+
+  // check the kard offers get updated
+  it('updateKardMerchantRates pulls data from Kard and updates all merchant rates associated with the merchant', async () => {
+    try {
+      await updateKardMerchantRates();
+      // test that old merchant rates are removed and new ones are added
+      const updatedMerchantRates = await MerchantRateModel.find({ merchant: testMerchantToBeUpdated._id });
+      expect(updatedMerchantRates.length).toEqual(2);
+      const testRateIds = testMerchantRates.map((testRate) => testRate._id.toString());
+      updatedMerchantRates.forEach((rate) => {
+        expect(testRateIds).not.toContainEqual(rate._id);
+      });
+
+      await cleanUpDocuments(updatedMerchantRates);
+    } catch (err) {
+      expect(err).toBeNull();
+    }
+  });
 });

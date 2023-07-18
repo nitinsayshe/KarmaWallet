@@ -68,6 +68,7 @@ export class _MainBullClient extends _BullClient {
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 7 1 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
+      this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-daily`, repeat: { cron: '0 2 * * *' } });
 
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,

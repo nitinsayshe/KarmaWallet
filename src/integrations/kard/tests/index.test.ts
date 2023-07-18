@@ -1,46 +1,59 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { AxiosResponse } from 'axios';
 import { randomUUID } from 'crypto';
-import { deleteKardUser, getCardInfo, updateKardData } from '..';
-import { KardClient } from '../../../clients/kard';
+import dayjs from 'dayjs';
+import { now } from 'lodash';
+import { createKardUserAndAddIntegrations, getCardInfo, deleteKardUser, queueSettledTransactions } from '..';
+import { MerchantSource, OfferType, CommissionType, KardClient, TransactionStatus } from '../../../clients/kard';
 import { MongoClient } from '../../../clients/mongo';
 import { CardNetwork, CardStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { encrypt } from '../../../lib/encryption';
 import { getRandomInt } from '../../../lib/number';
-import { createSomeCards, createSomeUsers, CreateTestCardsRequest } from '../../../lib/testingUtils';
-import { CardModel, ICardDocument } from '../../../models/card';
+import {
+  cleanUpDocuments,
+  createSomeUsers,
+  CreateTestCardsRequest,
+  createSomeCards,
+  createSomeMerchants,
+  createSomeMerchantRates,
+  createSomeCompanies,
+  createSomeTransactions,
+} from '../../../lib/testingUtils';
+import { ICardDocument, CardModel } from '../../../models/card';
+import { ICompanyDocument } from '../../../models/company';
+import { IMerchantDocument } from '../../../models/merchant';
+import { IMerchantRateDocument } from '../../../models/merchantRate';
+import { ITransactionDocument } from '../../../models/transaction';
 import { IUserDocument, UserEmailStatus, UserModel } from '../../../models/user';
 
 describe.skip('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
-  const OLD_ENV = process.env;
-
   let testUserWithLinkedAccountNoKardIntegration: IUserDocument;
   let testUserWithKardIntegration: IUserDocument;
   let testUserWithNoCard: IUserDocument;
   let testCards: ICardDocument[];
+  let transactionsToQueue: ITransactionDocument[];
+  let testMerchant: IMerchantDocument;
+  let testMerchantRates: IMerchantRateDocument[];
+  let testCompany: ICompanyDocument;
   const dateCardAdded: Date = getUtcDate().toDate();
-  const dateKardAccountCreated: Date = getUtcDate().toDate();
+  const testsStartDate: Date = getUtcDate().toDate();
 
   const testUserWithKardIntegrationCardInfo = {
     last4: getRandomInt(1000, 9999).toString(),
-    bin: getRandomInt(100000, 999999).toString(),
+    bin: `4${getRandomInt(10000, 99999).toString()}`,
     issuer: 'test issuer',
     network: CardNetwork.Visa,
   };
+
   const testUserWithLinkedAccountNoKardIntegrationCardInfo = {
     last4: getRandomInt(1000, 9999).toString(),
-    bin: getRandomInt(100000, 999999).toString(),
+    bin: `5${getRandomInt(10000, 99999).toString()}`,
     issuer: 'test issuer',
     network: CardNetwork.Mastercard,
   };
-  beforeEach(() => {
-    jest.resetModules(); // clears the cache
-    process.env = { ...OLD_ENV }; // Make a copy of the current environment
-    process.env.ENCRYPTION_SECRET_KEY = 'TestSecretKey';
-    process.env.ENCRYPTION_SECRET_INITIALIZATION_VECTOR = 'TestSecretInitializationVector';
-    process.env.ENCRYPTION_METHOD = 'aes-256-cbc';
-  });
+
+  beforeEach(() => {});
 
   afterEach(() => {
     /* clean up between tests */
@@ -48,15 +61,18 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
 
   afterAll(async () => {
     // clean up db
-    await Promise.all(testCards.map(async (card) => card.remove()));
-
-    await testUserWithLinkedAccountNoKardIntegration.remove();
-    await testUserWithKardIntegration.remove();
-    await testUserWithNoCard.remove();
+    await cleanUpDocuments([
+      ...testCards,
+      ...transactionsToQueue,
+      ...testMerchantRates,
+      testCompany,
+      testUserWithLinkedAccountNoKardIntegration,
+      testUserWithKardIntegration,
+      testUserWithNoCard,
+      testMerchant,
+    ]);
 
     MongoClient.disconnect();
-
-    process.env = OLD_ENV; // Restore old environment
   });
 
   beforeAll(async () => {
@@ -71,6 +87,22 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
           ],
         },
         {
+          name: 'testUserWithKardIntegration User',
+          emails: [
+            {
+              email: 'testUserWithKardIntegration@testEmail.com',
+              primary: true,
+              status: UserEmailStatus.Verified,
+            },
+          ],
+          integrations: {
+            kard: {
+              userId: randomUUID(),
+              dateAccountCreated: testsStartDate,
+            },
+          },
+        },
+        {
           name: 'testUserWithLinkedAccountNoKardIntegration User',
           emails: [
             {
@@ -79,33 +111,9 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
               status: UserEmailStatus.Verified,
             },
           ],
-          integrations: {
-            kard: {
-              userId: randomUUID(),
-              dateAccountCreated: dateKardAccountCreated,
-              dateAccountUpdated: dateKardAccountCreated,
-            },
-          },
-        },
-        {
-          name: 'testUserWithKardIntegration User',
-          emails: [
-            { email: 'testUserWithKardIntegration@testEmail.com', primary: true, status: UserEmailStatus.Verified },
-          ],
-          integrations: {
-            kard: {
-              userId: randomUUID(),
-              dateAccountCreated: dateKardAccountCreated,
-              dateAccountUpdated: dateKardAccountCreated,
-            },
-          },
         },
       ],
     });
-
-    process.env.ENCRYPTION_SECRET_KEY = 'TestSecretKey';
-    process.env.ENCRYPTION_SECRET_INITIALIZATION_VECTOR = 'TestSecretInitializationVector';
-    process.env.ENCRYPTION_METHOD = 'aes-256-cbc';
 
     const createCardsReq: CreateTestCardsRequest = {
       cards: [
@@ -115,7 +123,6 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
           institution: testUserWithKardIntegrationCardInfo.issuer,
           lastFourDigitsToken: encrypt(testUserWithKardIntegrationCardInfo.last4),
           binToken: encrypt(testUserWithKardIntegrationCardInfo.bin),
-          networkToken: encrypt(testUserWithKardIntegrationCardInfo.network),
           integrations: { kard: { dateAdded: dateCardAdded } },
         },
         {
@@ -124,42 +131,234 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
           institution: testUserWithLinkedAccountNoKardIntegrationCardInfo.issuer,
           lastFourDigitsToken: encrypt(testUserWithLinkedAccountNoKardIntegrationCardInfo.last4),
           binToken: encrypt(testUserWithLinkedAccountNoKardIntegrationCardInfo.bin),
-          networkToken: encrypt(testUserWithLinkedAccountNoKardIntegrationCardInfo.network),
         },
       ],
     };
+
     testCards = await createSomeCards(createCardsReq);
+
+    [testMerchant] = await createSomeMerchants({
+      merchants: [
+        {
+          name: 'Focal Point',
+          integrations: {
+            kard: {
+              id: '629f6e2db5df7700096f8848',
+              name: 'Focal Point',
+              description:
+                'Celebrating a Special Occasion? Sharing and Announcement? Create photo books, cards, invitations, and personalized gifts all from the Focal Point Website and App. ',
+              source: MerchantSource.NATIONAL,
+              category: 'Books & Digital Media',
+              imgUrl: 'https://assets.getkard.com/public/logos/kard.jpg',
+              bannerImgUrl: 'https://assets.getkard.com/public/banners/kard.jpg',
+              websiteURL: 'https://www.kardfocalpoint.com',
+              acceptedCards: [CardNetwork.Visa, CardNetwork.Mastercard, CardNetwork.Amex],
+              createdDate: '2022-06-07T15:26:37.783Z',
+              lastModified: '2023-05-10T19:43:10.320Z',
+              maxOffer: {
+                merchantId: '629f6e2db5df7700096f8848',
+                name: 'Focal Point Outdated',
+                offerType: OfferType.ONLINE,
+                isLocationSpecific: false,
+                optInRequired: false,
+                startDate: '2022-06-01T06:00:00.000Z',
+                expirationDate: '2024-06-01T06:00:00.000Z',
+                terms: 'N/A',
+                totalCommission: 2,
+                commissionType: CommissionType.FLAT,
+                createdDate: '2022-09-14T16:08:56.012Z',
+                lastModified: '2023-05-10T19:40:18.392Z',
+                redeemableOnce: false,
+              },
+            },
+          },
+        },
+      ],
+    });
+
+    testMerchantRates = await createSomeMerchantRates({
+      merchantRates: [
+        {
+          merchant: testMerchant._id,
+          lastModified: dayjs().subtract(1, 'day').toDate(),
+          integrations: {
+            kard: {
+              id: '6321fc98ab7ecc00097c88db',
+              merchantId: '629f6e2db5df7700096f8848',
+              name: 'Focal Point',
+              offerType: OfferType.INSTORE,
+              isLocationSpecific: false,
+              optInRequired: false,
+              startDate: '2022-06-01T06:00:00.000Z',
+              expirationDate: '2024-06-01T06:00:00.000Z',
+              terms: 'N/A',
+              totalCommission: 2,
+              commissionType: CommissionType.FLAT,
+              createdDate: '2022-09-14T16:08:56.012Z',
+              lastModified: '2023-05-10T19:40:18.392Z',
+              redeemableOnce: false,
+            },
+          },
+        },
+        {
+          merchant: testMerchant._id,
+          lastModified: dayjs().subtract(1, 'day').toDate(),
+          integrations: {
+            kard: {
+              id: '629fc2cab7a4290009a188ed',
+              merchantId: '629f6e2db5df7700096f8848',
+              name: 'Focal Point',
+              offerType: OfferType.ONLINE,
+              isLocationSpecific: false,
+              optInRequired: false,
+              startDate: '2022-06-01T06:00:00.000Z',
+              expirationDate: '2024-06-01T06:00:00.000Z',
+              terms: 'N/A',
+              totalCommission: 2,
+              commissionType: CommissionType.PERCENT,
+              createdDate: '2022-06-07T21:27:38.645Z',
+              lastModified: '2023-05-10T19:43:10.173Z',
+              redeemableOnce: false,
+            },
+          },
+        },
+      ],
+    });
+
+    // create companies
+    [testCompany] = await createSomeCompanies({
+      companies: [
+        {
+          companyName: testMerchant.name,
+          url: testMerchant.integrations.kard.websiteURL,
+          merchant: testMerchant._id,
+        },
+      ],
+    });
+
+    transactionsToQueue = await createSomeTransactions({
+      transactions: [
+        {
+          userId: testUserWithKardIntegration._id,
+          companyId: testCompany._id,
+          company: testCompany,
+          card: testCards[0],
+          date: dayjs().subtract(1, 'week').toDate(),
+          integrations: {
+            kard: { id: randomUUID(), status: TransactionStatus.SETTLED },
+            plaid: { iso_currency_code: 'USD' },
+          },
+        },
+        {
+          userId: testUserWithKardIntegration._id,
+          companyId: testCompany._id,
+          company: testCompany,
+          card: testCards[0],
+          date: dayjs().subtract(2, 'week').toDate(),
+          integrations: {
+            kard: { id: randomUUID(), status: TransactionStatus.SETTLED },
+            plaid: { iso_currency_code: 'USD' },
+          },
+        },
+        {
+          userId: testUserWithKardIntegration._id,
+          companyId: testCompany._id,
+          company: testCompany,
+          card: testCards[0],
+          date: dayjs().subtract(3, 'week').toDate(),
+          integrations: {
+            kard: { id: randomUUID(), status: TransactionStatus.SETTLED },
+            plaid: { iso_currency_code: 'USD' },
+          },
+        },
+      ],
+    });
   });
 
-  // jest isn't working with mongoose here
-  it.skip('updateKardData creates new kard user and adds new card', async () => {
-    await updateKardData(testUserWithLinkedAccountNoKardIntegration._id);
+  it('createKardUserAndAddIntegrations creates new kard user and adds new card', async () => {
+    await createKardUserAndAddIntegrations(testUserWithLinkedAccountNoKardIntegration, testCards[1]);
     // check that the user has a kard integration object
-    const updatedUser = await UserModel.find({ userId: testUserWithLinkedAccountNoKardIntegration._id });
+    const updatedUser = await UserModel.find({ _id: testUserWithLinkedAccountNoKardIntegration._id });
 
     expect(updatedUser?.[0]?.integrations.kard).toBeDefined();
-    expect(updatedUser?.[0]?.integrations.kard.dateAccountCreated).toBe(dateKardAccountCreated);
-    expect(updatedUser?.[0]?.integrations.kard.userId).toBe(testUserWithNoCard._id);
-    expect(updatedUser?.[0]?.integrations.kard.dateAccountUpdated).toBe(dateKardAccountCreated);
+    expect(updatedUser?.[0]?.integrations.kard.dateAccountCreated).toBeDefined();
+    expect(dayjs(updatedUser?.[0]?.integrations.kard.dateAccountCreated).diff(testsStartDate)).toBeGreaterThan(0);
+    expect(dayjs(updatedUser?.[0]?.integrations.kard.dateAccountCreated).diff(now())).toBeLessThan(0);
 
-    const userCards = await CardModel.find({ userId: testUserWithNoCard._id });
+    const userCards = await CardModel.find({ userId: testUserWithLinkedAccountNoKardIntegration._id });
     expect(userCards.length).toBe(1);
-    expect(userCards[0].integrations.kard.dateAdded).toBe(dateCardAdded);
+    expect(userCards[0].integrations.kard.dateAdded).toBeDefined();
+    expect(dayjs(userCards[0].integrations.kard.dateAdded).diff(dateCardAdded)).toBeGreaterThan(0);
+    expect(dayjs(userCards[0].integrations.kard.dateAdded).diff(now())).toBeLessThan(0);
   });
 
-  it.skip('deleteKardUser looks up user by their id and removes user from kard', async () => {
-    // add this test user to kard
-
-    const kardClient = new KardClient();
+  it('deleteKardUser looks up user by their id and removes user from kard', async () => {
+    // create kard user to be deleted
     const cardInfo = getCardInfo(testCards[0]);
-    await kardClient.createUser({
+    const kardClient = new KardClient();
+    const newKardUser = await kardClient.createUser({
       email: testUserWithKardIntegration.emails[0].email,
       referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
-
+    /* sleep(1000); */
+    expect(newKardUser).toBeDefined();
     const res = await deleteKardUser(testUserWithKardIntegration._id);
-    expect((res as AxiosResponse).status).toBe(200);
+    expect((res as AxiosResponse)?.status).toBe(200);
+  });
+
+  it('deleteKardUser works when provided user document', async () => {
+    // create kard user to be deleted
+    const cardInfo = getCardInfo(testCards[0]);
+    const kardClient = new KardClient();
+    const newKardUser = await kardClient.createUser({
+      email: testUserWithKardIntegration.emails[0].email,
+      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
+      cardInfo,
+    });
+    /* sleep(1000); */
+    expect(newKardUser).toBeDefined();
+    const res = await deleteKardUser(testUserWithKardIntegration);
+    expect((res as AxiosResponse)?.status).toBe(200);
+  });
+
+  it('queueSettledTransactions prepares and submits transactions to Kard', async () => {
+    // create kard user to be deleted
+    const cardInfo = getCardInfo(testCards[0]);
+    const kardClient = new KardClient();
+    const newKardUser = await kardClient.createUser({
+      email: testUserWithKardIntegration.emails[0].email,
+      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
+      cardInfo,
+    });
+    expect(newKardUser).toBeDefined();
+    const res = await queueSettledTransactions(testUserWithKardIntegration._id, transactionsToQueue);
+    expect(res).toBeDefined();
+    expect((res as AxiosResponse)?.status).toBe(201);
+
+    // clean up
+    await deleteKardUser(testUserWithKardIntegration);
+  });
+
+  it('queueSettledTransactions works when provided the user document', async () => {
+    // create kard user to be deleted
+    const cardInfo = getCardInfo(testCards[0]);
+    const kardClient = new KardClient();
+    const newKardUser = await kardClient.createUser({
+      email: testUserWithKardIntegration.emails[0].email,
+      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
+      cardInfo,
+    });
+    expect(newKardUser).toBeDefined();
+    const res = await queueSettledTransactions(testUserWithKardIntegration, transactionsToQueue);
+    expect(res).toBeDefined();
+    expect((res as AxiosResponse)?.status).toBe(201);
+
+    // clean up
+    await deleteKardUser(testUserWithKardIntegration);
   });
 });

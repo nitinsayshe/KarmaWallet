@@ -402,8 +402,22 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       },
     },
     {
+      $lookup: {
+        from: 'merchants',
+        localField: 'merchant',
+        foreignField: '_id',
+        as: 'merchant',
+      },
+    },
+    {
       $unwind: {
         path: '$parentCompany',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$merchant',
         preserveNullAndEmptyArrays: true,
       },
     },

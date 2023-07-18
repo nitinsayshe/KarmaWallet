@@ -366,7 +366,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
 
   if (search) {
     delete filter.companyName;
-    searchQuery = { $text: { $search: search } };
+    searchQuery = { $text: { $search: String(search) } };
   }
 
   const cleanedFilter = convertFilterToObjectId(filter);

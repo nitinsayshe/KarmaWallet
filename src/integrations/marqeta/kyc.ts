@@ -11,13 +11,11 @@ const kyc = new Kyc(marqetaClient);
 
 export const processUserKyc = async (req: IRequest<{}, {}, IMarqetaProcessKyc>) => {
   const params = req.body;
-  const responseMessage = '';
   const userResponse = await kyc.processKyc(params);
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
 };
 
 export const listUserKyc = async (userToken:string) => {
-  const responseMessage = '';
   const userResponse = await kyc.listKyc(userToken);
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
 };

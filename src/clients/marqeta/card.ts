@@ -41,4 +41,16 @@ export class Card {
       throw asCustomError(err);
     }
   }
+
+  // get card details (PAN, CVV)
+  async getCardDetails(cardToken: string, queryParams: Record<string, string>) {
+    try {
+      const queryString = new URLSearchParams(queryParams).toString();
+      const { data } = await this._marqetaClient._client.get(`/cards/${cardToken}/showpan?${queryString}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
 }

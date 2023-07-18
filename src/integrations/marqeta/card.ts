@@ -12,20 +12,24 @@ const card = new Card(marqetaClient);
 
 export const createCard = async (req: IRequest<{}, {}, IMarqetaCreateCard>) => {
   const { user_token, card_product_token } = req.body;
-  const responseMessage = '';
   const userResponse = await card.createCard({ user_token, card_product_token });
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
 };
 
 export const listCards = async (userToken:string) => {
-  const responseMessage = '';
   const userResponse = await card.listCards(userToken);
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
 };
 
 export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransition>) => {
   const { card_token, channel, state } = req.body;
-  const responseMessage = '';
   const userResponse = await card.cardTransition({ card_token, channel, state });
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
+};
+
+export const getCardDetails = async (req: IRequest<{ cardToken: string }, { showCvv: string }, {}>) => {
+  const { cardToken } = req.params;
+  const { showCvv } = req.query;
+  const userResponse = await card.getCardDetails(cardToken, { show_cvv_number: showCvv });
+  return { data: userResponse };
 };

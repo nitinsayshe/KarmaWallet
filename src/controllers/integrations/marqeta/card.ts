@@ -47,3 +47,12 @@ export const cardTransition: IRequestHandler<{}, {}, IMarqetaCardTransition> = a
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getCardDetails: IRequestHandler<{cardToken:string}, {showCvv:string}, {}> = async (req, res) => {
+  try {
+    const { data } = await CardService.getCardDetails(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

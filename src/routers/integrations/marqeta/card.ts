@@ -13,4 +13,7 @@ router.route('/list/:userToken')
 router.route('/transition')
   .post(CardController.cardTransition);
 
+router.route('/:cardToken')
+  .get(CardController.getCardDetails);
+
 export default router;

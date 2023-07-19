@@ -29,6 +29,9 @@ const valueSchema = new Schema({
     required: true,
     unique: true,
   },
+  icon: {
+    type: String,
+  },
   /**
    * The weight of the value to be used for sorting
    * and surfacing the most important values in

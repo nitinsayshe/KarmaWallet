@@ -1,26 +1,27 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
-import { mapTransactions } from '../integrations/rare';
-import { api, error } from '../services/output';
-import CustomError, { asCustomError } from '../lib/customError';
-import { ErrorTypes } from '../lib/constants';
-import { IRequestHandler } from '../types/request';
-import { IRareTransaction } from '../integrations/rare/transaction';
 import { MainBullClient } from '../clients/bull/main';
-import { JobNames } from '../lib/constants/jobScheduler';
-import { IGroupOffsetMatchData, matchMemberOffsets, getGroup } from '../services/groups';
+import { EarnedRewardWebhookBody, KardInvalidSignatureError, verifyWebhookSignature } from '../clients/kard';
+import { PaypalClient } from '../clients/paypal';
+import { PlaidClient } from '../clients/plaid';
+import { processPaypalWebhook } from '../integrations/paypal';
+import { mapTransactions } from '../integrations/rare';
+import { IRareTransaction } from '../integrations/rare/transaction';
 import { IRareRelayedQueryParams } from '../integrations/rare/types';
-import { Logger } from '../services/logger';
-import { validateStatementList } from '../services/statements';
+import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
+import { ErrorTypes } from '../lib/constants';
+import { JobNames } from '../lib/constants/jobScheduler';
+import CustomError, { asCustomError } from '../lib/customError';
+import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
 import { UserModel } from '../models/user';
-import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { _getCard } from '../services/card';
-import { PlaidClient } from '../clients/plaid';
-import { mapWildfireCommissionToKarmaCommission } from '../services/commission/utils';
-import { WildfireCommissionStatus } from '../models/commissions';
-import { PaypalClient } from '../clients/paypal';
-import { processPaypalWebhook } from '../integrations/paypal';
+import { mapWildfireCommissionToKarmaCommission, processKardWebhook } from '../services/commission/utils';
+import { getGroup, IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
+import { Logger } from '../services/logger';
+import { api, error } from '../services/output';
+import { validateStatementList } from '../services/statements';
+import { IRequestHandler } from '../types/request';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
@@ -35,37 +36,37 @@ interface IRareTransactionBody {
 }
 
 interface IWildfireWebhookBody {
-  ID: string,
-  Type: string,
-  Action: string,
+  ID: string;
+  Type: string;
+  Action: string;
   Payload: {
-    CommissionID: number,
-    ApplicationID: number,
-    MerchantID: number,
-    DeviceID: number,
+    CommissionID: number;
+    ApplicationID: number;
+    MerchantID: number;
+    DeviceID: number;
     SaleAmount: {
-      Amount: string,
-      Currency: string,
-    },
+      Amount: string;
+      Currency: string;
+    };
     Amount: {
-      Amount: string,
-      Currency: string,
-    },
-    Status: WildfireCommissionStatus,
-    TrackingCode: string,
-    EventDate: Date,
-    CreatedDate: Date,
-    ModifiedDate: Date,
-    MerchantOrderID: string,
-    MerchantSKU: string
-    TC: string,
-  },
-  CreatedDate: string
+      Amount: string;
+      Currency: string;
+    };
+    Status: WildfireCommissionStatus;
+    TrackingCode: string;
+    EventDate: Date;
+    CreatedDate: Date;
+    ModifiedDate: Date;
+    MerchantOrderID: string;
+    MerchantSKU: string;
+    TC: string;
+  };
+  CreatedDate: string;
 }
 
 interface IUserPlaidTransactionsMapBody {
   userId: string;
-  accessToken: String
+  accessToken: string;
 }
 
 interface IPlaidWebhookBody {
@@ -75,6 +76,10 @@ interface IPlaidWebhookBody {
   item_id: string;
   new_transactions?: number;
 }
+
+type KardRequestHeaders = {
+  'notify-signature': string;
+};
 
 interface IPaypalRequestHeaders {
   'paypal-transmission-id': string;
@@ -93,6 +98,8 @@ interface IPaypalWebhookBody {
   any: any;
 }
 
+type IKardWebhookBody = EarnedRewardWebhookBody;
+
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
   if (
     process.env.KW_ENV !== 'staging'
@@ -107,7 +114,7 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
 
     const rareTransaction = req?.body?.transaction;
     const uid = rareTransaction?.user?.external_id;
-    const { groupId, statementIds } = (req.body.forwarded_query_params || {});
+    const { groupId, statementIds } = req.body.forwarded_query_params || {};
 
     let group;
     if (groupId) {
@@ -158,10 +165,14 @@ export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> =
 };
 
 export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransactionsMapBody> = async (req, res) => {
-  if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+  if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) {
+    return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+  }
   try {
     const { userId, accessToken } = req.body;
-    MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
+    MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, {
+      onComplete: UserPlaidTransactionMapJob.onComplete,
+    });
     api(req, res, { message: `${JobNames.UserPlaidTransactionMapper} added to queue` });
   } catch (e) {
     error(req, res, asCustomError(e));
@@ -178,7 +189,12 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
     if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
       const card = await _getCard({ 'integrations.plaid.items': item_id });
       if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
-      MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId: card.userId, accessToken: card.integrations.plaid.accessToken }, null, { onComplete: UserPlaidTransactionMapJob.onComplete });
+      MainBullClient.createJob(
+        JobNames.UserPlaidTransactionMapper,
+        { userId: card.userId, accessToken: card.integrations.plaid.accessToken },
+        null,
+        { onComplete: UserPlaidTransactionMapJob.onComplete },
+      );
     }
     api(req, res, { message: 'Plaid webhook processed successfully.' });
   } catch (e) {
@@ -192,7 +208,9 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
     const wildfireSignature = req?.headers['x-wf-signature']?.replace('sha256=', '');
     const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
     try {
-      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) {
+        throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+      }
       // do work here
       console.log('Wildfire webhook processed successfully.');
       console.log('------- BEG WF Transaction -------\n');
@@ -203,7 +221,11 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
       } catch (e) {
         console.log('Error mapping wildfire commission to karma commission');
         console.log(e);
-        return error(req, res, new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE));
+        return error(
+          req,
+          res,
+          new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE),
+        );
       }
       api(req, res, { message: 'Wildfire comission processed successfully.' });
     } catch (e) {
@@ -235,6 +257,40 @@ export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = 
     }
     processPaypalWebhook(req.body);
     api(req, res, { message: 'Paypal webhook processed successfully.' });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = async (req, res) => {
+  try {
+    const { headers } = <{ headers: KardRequestHeaders }>req;
+
+    const eventId = (req.body as any).id;
+    if (!headers['notify-signature']) {
+      console.log('\n KARD WEBHOOK: Authentication Failed \n');
+      console.log(`Event ID: ${eventId}`);
+      return error(req, res, new CustomError('A token is required for authentication', ErrorTypes.FORBIDDEN));
+    }
+
+    const errorVerifyingSignature = verifyWebhookSignature(req.body, headers['notify-signature']);
+    if (errorVerifyingSignature) {
+      if (errorVerifyingSignature === KardInvalidSignatureError) {
+        console.log('\n KARD WEBHOOK: Invalid Token Provided \n');
+        console.log(`Event ID: ${eventId}`);
+        return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.AUTHENTICATION));
+      }
+      console.log('\n KARD WEBHOOK: Bad Request \n');
+      console.log(`Event ID: ${eventId}`);
+      return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
+    }
+
+    const processingError = await processKardWebhook(req.body);
+    if (!!processingError) {
+      return error(req, res, processingError);
+    }
+
+    api(req, res, { message: 'Kard webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
   }

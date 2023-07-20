@@ -16,6 +16,7 @@ import campaignRouter from './campaign';
 import transaction from './transaction';
 import bannerRouter from './banner';
 import articleRouter from './article';
+import utilitiesRouter from './utilities';
 
 const adminRouter = Router();
 
@@ -36,5 +37,6 @@ adminRouter.use('/campaign', campaignRouter);
 adminRouter.use('/transaction', transaction);
 adminRouter.use('/banner', bannerRouter);
 adminRouter.use('/article', articleRouter);
+adminRouter.use('/utilities', utilitiesRouter);
 
 export default (app: Express) => app.use('/admin', adminRouter);

@@ -11,6 +11,7 @@ import {
   prepareBackfillSyncFields,
   prepareDailyUpdatedFields,
   prepareInitialSyncFields,
+  prepareLinkedAccountFields,
   prepareMonthlyUpdatedFields,
   prepareWeeklyUpdatedFields,
   prepareYearlyUpdatedFields,
@@ -115,6 +116,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
 
     if (contacts?.contacts?.length > 0) {
       console.log(`Sending ${contacts.contacts.length} contacts to ActiveCampaign`);
+      console.log('contacts: ', JSON.stringify(contacts));
       await ac.importContacts(contacts);
     }
 
@@ -173,6 +175,9 @@ const prepareSyncUsersRequest = async (
             break;
           case ActiveCampaignSyncTypes.YEARLY:
             fields = await prepareYearlyUpdatedFields(userDocument, customFields, fields);
+            break;
+          case ActiveCampaignSyncTypes.LINKED_ACCOUNTS:
+            fields = await prepareLinkedAccountFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.BACKFILL:
             fields = await prepareBackfillSyncFields(userDocument, customFields, fields);
@@ -614,24 +619,22 @@ const prepareArticleRecommendationSyncRequest = async (
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
-  let articleRecommendationData: { email: string; urls: URLs }[] = (
-    await Promise.all(
-      userBatch?.docs?.map(async (user) => {
-        const email = user?.emails?.find((e) => e.primary)?.email;
-        const urls = await getArticleRecommendationsBasedOnTransactionHistory(
-          user as unknown as IUserDocument,
-          req.fields.startDate,
-          req.fields.endDate,
-          req.fields.articlesByCompany,
-        );
-        return { urls, email };
-      }),
-    )
-  ).filter((data) => data?.urls?.length > 0);
+  let articleRecommendationData: { email: string; urls: URLs }[] = await Promise.all(
+    userBatch?.docs?.map(async (user) => {
+      const email = user?.emails?.find((e) => e.primary)?.email;
+      const urls = await getArticleRecommendationsBasedOnTransactionHistory(
+        user as unknown as IUserDocument,
+        req.fields.startDate,
+        req.fields.endDate,
+        req.fields.articlesByCompany,
+      );
+      return { urls, email };
+    }),
+  );
 
   const emailSchema = z.string().email();
   articleRecommendationData = articleRecommendationData?.filter((data) => {
-    const validationResult = emailSchema.safeParse(data.email);
+    const validationResult = emailSchema.safeParse(data?.email);
     return !!data.email && !(validationResult as SafeParseError<string>)?.error;
   });
 
@@ -647,16 +650,18 @@ const prepareArticleRecommendationSyncRequest = async (
   const contacts = articleRecommendationData.map((d) => {
     const contact: IContactsData = {
       email: d.email,
-      fields: [],
+      fields: [
+        {
+          id: recommendedArticles?.id,
+          value: !!d.urls?.length ? d.urls.join('||') : '',
+        },
+      ],
     };
-    contact.fields.push({
-      id: recommendedArticles.id,
-      value: d.urls.join('||'),
-    });
 
     return contact;
   });
 
+  console.log(JSON.stringify(contacts, null, 2));
   return { contacts };
 };
 

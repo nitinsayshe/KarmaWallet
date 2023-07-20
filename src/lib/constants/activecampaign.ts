@@ -13,6 +13,7 @@ export enum ActiveCampaignSyncTypes {
   UNLINKED_AND_REMOVED_ACCOUNTS = 'unlinkedAndRemovedAccounts',
   WEEKLY = 'weekly',
   YEARLY = 'yearly',
+  LINKED_ACCOUNTS= 'linkedAccounts',
 }
 
 export enum ActiveCampaignCustomFields {

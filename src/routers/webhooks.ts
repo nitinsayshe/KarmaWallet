@@ -15,6 +15,9 @@ router.route('/wildfire')
 router.route('/paypal')
   .post(WebhooksController.handlePaypalWebhook);
 
+router.route('/kard')
+  .post(WebhooksController.handleKardWebhook);
+
 // legacy api passthrough route
 router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);

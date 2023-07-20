@@ -134,7 +134,6 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
   // jest isn't working with mongoose here
   it.skip('updateKardData creates new kard user and adds new card', async () => {
     await updateKardData(testUserWithLinkedAccountNoKardIntegration._id);
-    console.log('testUserWithNoCard._id', testUserWithNoCard._id);
     // check that the user has a kard integration object
     const updatedUser = await UserModel.find({ userId: testUserWithLinkedAccountNoKardIntegration._id });
 

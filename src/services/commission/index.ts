@@ -1,16 +1,17 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { Types } from 'mongoose';
+import { FilterQuery, Types } from 'mongoose';
 import {
   CommissionModel,
+  ICommission,
   ICommissionDocument,
+  ICommissionIntegrations,
   IShareableCommission,
   KarmaCommissionStatus,
 } from '../../models/commissions';
 import { IRequest } from '../../types/request';
 import {
   CommissionPayoutModel,
-  ICommissionPayoutDocument,
   KarmaCommissionPayoutStatus,
 } from '../../models/commissionPayout';
 import {
@@ -21,7 +22,10 @@ import {
 } from './utils';
 import { CommissionPayoutDayForUser, ErrorTypes, UserRoles, ImpactKarmaCompanyData } from '../../lib/constants';
 import { UserModel } from '../../models/user';
-import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../models/commissionPayoutOverview';
+import {
+  CommissionPayoutOverviewModel,
+  KarmaCommissionPayoutOverviewStatus,
+} from '../../models/commissionPayoutOverview';
 import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
 import CustomError from '../../lib/customError';
 import { IPromo } from '../../models/promo';
@@ -32,11 +36,12 @@ dayjs.extend(utc);
 export enum CommissionType {
   'karma' = 'karma',
   'all' = 'all',
-  'wildfire' = 'wildfire'
+  'wildfire' = 'wildfire',
+  'kard' = 'kard',
 }
 
 export interface IAddKarmaCommissionToUserRequestParams {
-  userId: string,
+  userId: string;
   promo: IPromo;
 }
 
@@ -45,7 +50,7 @@ export interface IGetCommissionsForUserQuery {
 }
 
 export interface ICommissionsRequestParams {
-  type: CommissionType;
+  type: CommissionType | string;
 }
 
 export interface ICommissionPayoutOverviewUpdateBody {
@@ -63,6 +68,13 @@ const defaultCommissionPopulation = [
   },
 ];
 
+const getCommissionSource = (integrations: ICommissionIntegrations): 'kard' | 'wildfire' | 'karma' | undefined => {
+  if (!!integrations?.kard?.reward?.commissionToIssuer) return 'kard';
+  if (!!integrations?.wildfire?.Amount?.Amount) return 'wildfire';
+  if (!!integrations?.karma) return 'karma';
+  return undefined;
+};
+
 export const getShareableCommission = ({
   _id,
   merchant,
@@ -73,6 +85,7 @@ export const getShareableCommission = ({
   lastStatusUpdate,
   allocation,
   amount,
+  integrations,
 }: IShareableCommission) => ({
   _id,
   merchant,
@@ -83,20 +96,39 @@ export const getShareableCommission = ({
   lastStatusUpdate,
   amount,
   allocation: { user: allocation.user, karma: allocation.karma },
+  source: getCommissionSource(integrations),
 });
+
+const getCommissionTypes = (type: CommissionType | string): CommissionType[] => {
+  const split: CommissionType[] = type.split('+') as CommissionType[];
+  if (split.length < 1) {
+    return [];
+  }
+  return split?.filter(
+    (t) => t === CommissionType.karma
+      || t === CommissionType.wildfire
+      || t === CommissionType.kard
+      || t === CommissionType.all,
+  );
+};
 
 export const getCommissionsForAllUsers = async (req: IRequest<ICommissionsRequestParams, {}, {}>) => {
   const { type } = req.params;
-  let query = {};
+  const query: FilterQuery<ICommission> = {};
 
-  if (type === CommissionType.wildfire) query = { 'integrations.wildfire': { $ne: null } };
-  if (type === CommissionType.karma) query = { 'integrations.karma': { $ne: null } };
+  const commissionTypes = getCommissionTypes(type);
+  if (!!commissionTypes && commissionTypes.length > 0) {
+    query.$or = [];
+  }
+  commissionTypes.forEach((t) => {
+    if (t === CommissionType.wildfire) query.$or.push({ 'integrations.wildfire': { $ne: null } });
+    if (t === CommissionType.karma) query.$or.push({ 'integrations.karma': { $ne: null } });
+    if (t === CommissionType.kard) query.$or.push({ 'integrations.kard': { $ne: null } });
+  });
 
-  const commissions = await CommissionModel.find(query)
-    .sort({ createdOn: -1 })
-    .populate(defaultCommissionPopulation);
+  const commissions = await CommissionModel.find(query).sort({ createdOn: -1 }).populate(defaultCommissionPopulation);
 
-  return commissions.map(c => getShareableCommission(c));
+  return commissions.map((c) => getShareableCommission(c));
 };
 
 export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommissionsForUserQuery, {}>) => {
@@ -108,7 +140,7 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
       .sort({ createdOn: -1 })
       .populate(defaultCommissionPopulation);
     const total = await getUserCurrentAccrualsBalance(requestor?._id);
-    return { commissions: commissions.map(c => getShareableCommission(c)), total, date: getNextPayoutDate().date };
+    return { commissions: commissions.map((c) => getShareableCommission(c)), total, date: getNextPayoutDate().date };
   }
   const payout = await CommissionPayoutModel.findOne({ user: requestor?._id, _id: id })
     .select('commissions amount date status')
@@ -116,7 +148,11 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
   const total = payout?.amount || 0;
   let commissions: ICommissionDocument[] = payout?.commissions as any as ICommissionDocument[];
   commissions = commissions.sort((a, b) => b.createdOn.getTime() - a.createdOn.getTime());
-  return { total, commissions: commissions.map(c => getShareableCommission((c as any as IShareableCommission))), date: payout?.date };
+  return {
+    total,
+    commissions: commissions.map((c) => getShareableCommission(c as any as IShareableCommission)),
+    date: payout?.date,
+  };
 };
 
 export const getCommissionDashboardSummary = async (req: IRequest) => {
@@ -133,13 +169,13 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
   return {
     lifetimeCashback,
     payouts,
-    accruals: accruals.map(c => getShareableCommission(c)),
+    accruals: accruals.map((c) => getShareableCommission(c)),
     balance,
     nextPayoutDate: dayjs(getNextPayoutDate().date).date(CommissionPayoutDayForUser).toDate(),
   };
 };
 
-export const generateCommissionPayoutForUsers = async (min: number, endDate?: Date, startDate?: Date) => {
+export const generateCommissionPayoutForUsers = async (min: number) => {
   const users = await UserModel.find({});
 
   for (const user of users) {
@@ -149,29 +185,21 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
       console.log(`[+] Skipping user ${user._id} - no paypal integration`);
       continue;
     }
-    // revisit this when we have a better way to verify paypal accounts
-    // if (!user.integrations.paypal.verified_account) {
-    //   console.log(`[+] Skipping user ${user._id} - paypal account not verified`);
-    //   continue;
-    // }
-
-    let dateQuery: any = { $lte: dayjs().utc().toDate() };
 
     try {
-      // check time of date the dayjs endDate and startDate to ensure includes entire day
-      if (!!startDate || !!endDate) {
-        dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
-      }
-
       const validUserCommissions = await CommissionModel.aggregate([
         {
           $match: {
             user: user._id,
-            createdOn: dateQuery,
             status: {
               $in: [
                 KarmaCommissionStatus.ReceivedFromVendor,
                 KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+              ],
+              $nin: [
+                KarmaCommissionStatus.PendingPaymentToUser,
+                KarmaCommissionStatus.PaidToUser,
+                KarmaCommissionStatus.Failed,
               ],
             },
           },
@@ -180,11 +208,14 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
 
       if (!validUserCommissions.length) continue;
 
-      const [commissionsTotal, commissionIds] = validUserCommissions.reduce((acc, c) => {
-        acc[0] += c.allocation.user;
-        acc[1].push(c._id);
-        return acc;
-      }, [0, []]);
+      const [commissionsTotal, commissionIds] = validUserCommissions.reduce(
+        (acc, c) => {
+          acc[0] += c.allocation.user;
+          acc[1].push(c._id);
+          return acc;
+        },
+        [0, []],
+      );
 
       if (commissionsTotal < min) continue;
 
@@ -197,7 +228,10 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
         status: KarmaCommissionPayoutStatus.Pending,
       });
       await commissionPayout.save();
-      await CommissionModel.updateMany({ _id: { $in: commissionIds } }, { $set: { status: KarmaCommissionStatus.PendingPaymentToUser, lastStatusUpdate: getUtcDate() } });
+      await CommissionModel.updateMany(
+        { _id: { $in: commissionIds } },
+        { $set: { status: KarmaCommissionStatus.PendingPaymentToUser, lastStatusUpdate: getUtcDate() } },
+      );
       console.log(`[+] Created CommissionPayout for user ${user._id}`);
     } catch (err) {
       console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
@@ -205,17 +239,13 @@ export const generateCommissionPayoutForUsers = async (min: number, endDate?: Da
   }
 };
 
-export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate?: Date, startDate?: Date) => {
-  let commissionPayouts: ICommissionPayoutDocument[] = [];
+export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
+  const commissionPayouts = await CommissionPayoutModel.find({
+    status: KarmaCommissionPayoutStatus.Pending,
+  });
   let karmaAmount = 0;
   let wildfireAmount = 0;
 
-  if (!!startDate || !!endDate) {
-    const dateQuery = !startDate ? { $lte: endDate } : { $gte: startDate, $lte: endDate };
-    commissionPayouts = await CommissionPayoutModel.find({ date: dateQuery });
-  }
-
-  if (!endDate && !startDate) commissionPayouts = await CommissionPayoutModel.find({ });
   if (!commissionPayouts.length) throw new CustomError('No commission payouts found for this time period.', ErrorTypes.GEN);
 
   for (const payout of commissionPayouts) {
@@ -251,8 +281,13 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date, endDate
 export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId: string) => {
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
-    if (!commissionPayoutOverview) throw new CustomError('Commission payout overview not found.', ErrorTypes.INVALID_ARG);
-    if (commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified && commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Success) {
+    if (!commissionPayoutOverview) {
+      throw new CustomError('Commission payout overview not found.', ErrorTypes.INVALID_ARG);
+    }
+    if (
+      commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Verified
+      && commissionPayoutOverview.status !== KarmaCommissionPayoutOverviewStatus.Success
+    ) {
       throw new CustomError('Commission payout overview is not verified.', ErrorTypes.GEN);
     }
     const paypalClient = await new PaypalClient();
@@ -262,7 +297,10 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     const { commissionPayouts } = commissionPayoutOverview;
 
     if (paypalPrimaryBalanceAmount < commissionPayoutOverviewAmount) {
-      throw new CustomError(`[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout overview amount: ${commissionPayoutOverviewAmount}`, ErrorTypes.GEN);
+      throw new CustomError(
+        `[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout overview amount: ${commissionPayoutOverviewAmount}`,
+        ErrorTypes.GEN,
+      );
     }
 
     const paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
@@ -270,8 +308,8 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
         sender_batch_id: `${commissionPayoutOverviewId}-${getUtcDate().unix()}`,
-        email_subject: 'You\'ve received a cashback payout from Karma Wallet!',
-        email_message: 'You\'ve earned cashback from Karma Wallet. Great job!.',
+        email_subject: "You've received a cashback payout from Karma Wallet!",
+        email_message: "You've earned cashback from Karma Wallet. Great job!.",
       },
     };
 
@@ -333,15 +371,21 @@ export const getAllCommissionPayoutOverviews = async (req: IRequest) => {
   const { _id } = req.requestor;
   const user = await UserModel.findById(_id);
   if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
-  if (user.role !== UserRoles.Admin && user.role !== UserRoles.SuperAdmin) throw new CustomError('Unauthorized.', ErrorTypes.UNAUTHORIZED);
-  return CommissionPayoutOverviewModel.find({ }).sort({ date: -1 });
+  if (user.role !== UserRoles.Admin && user.role !== UserRoles.SuperAdmin) {
+    throw new CustomError('Unauthorized.', ErrorTypes.UNAUTHORIZED);
+  }
+  return CommissionPayoutOverviewModel.find({}).sort({ date: -1 });
 };
 
-export const updateCommissionPayoutOverviewStatus = async (req: IRequest<ICommissionPayoutOverviewUpdateRequestParams, {}, ICommissionPayoutOverviewUpdateBody>) => {
+export const updateCommissionPayoutOverviewStatus = async (
+  req: IRequest<ICommissionPayoutOverviewUpdateRequestParams, {}, ICommissionPayoutOverviewUpdateBody>,
+) => {
   const { commissionPayoutOverviewId } = req.params;
   const { status } = req.body;
 
-  if (!commissionPayoutOverviewId) throw new CustomError('A commission payout overview id is required.', ErrorTypes.INVALID_ARG);
+  if (!commissionPayoutOverviewId) {
+    throw new CustomError('A commission payout overview id is required.', ErrorTypes.INVALID_ARG);
+  }
   if (!status) throw new CustomError('A status is required.', ErrorTypes.INVALID_ARG);
   const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
   if (!commissionPayoutOverview) throw new CustomError('Commission payout overview not found.', ErrorTypes.NOT_FOUND);

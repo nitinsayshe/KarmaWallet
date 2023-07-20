@@ -96,9 +96,6 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
   await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, {
-    status: CardStatus.Removed,
-    removedDate: dayjs().utc().toDate(),
-    lastModified: dayjs().utc().toDate(),
     'integrations.plaid.accessToken': null,
     $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
   });
@@ -108,7 +105,6 @@ const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, re
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
   }
-  await CardModel.updateMany({ 'integrations.rare.card_id': card.integrations.rare.card_id }, { status: CardStatus.Removed });
 };
 
 export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCardBody>) => {
@@ -140,6 +136,11 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
     // for all integrations, remove the card
     // await _card.delete();
   }
+
+  _card.status = CardStatus.Removed;
+  _card.removedDate = dayjs().utc().toDate();
+  _card.lastModified = dayjs().utc().toDate();
+  await _card.save();
 
   // Todo: is there other data needed in the response?
   return { message: `Card ${card} ${removeData ? 'and associated data' : ''} has been removed.` };

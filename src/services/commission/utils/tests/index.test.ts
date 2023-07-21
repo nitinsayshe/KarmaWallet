@@ -56,7 +56,7 @@ describe('tests commission utils logic', () => {
               name: 'testMerchantWithKardIntegration',
               source: MerchantSource.NATIONAL,
               description: 'testMerchantWithKardIntegration',
-              imgURL: 'https://www.test.com',
+              imgUrl: 'https://www.test.com',
               bannerImgUrl: 'https://www.test.com',
               websiteURL: 'https://www.test.com',
               acceptedCards: [CardNetwork.Visa],
@@ -86,7 +86,6 @@ describe('tests commission utils logic', () => {
             kard: {
               userId: randomUUID(),
               dateAccountCreated: getUtcDate().toDate(),
-              dateAccountUpdated: getUtcDate().toDate(),
             },
           },
         },

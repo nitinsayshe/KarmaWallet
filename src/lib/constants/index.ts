@@ -234,6 +234,15 @@ export const MaxCompanayKarmaScore = 16;
 
 export const UserCommissionPercentage = 0.75;
 
+export enum FrontendTemplates {
+  OpenGraph = 'openGraph',
+  Title = 'title',
+}
+
+export enum OpenGraphTypes {
+  Article = 'article',
+}
+
 export const enum StateAbbreviation {
   'AL',
   'AK',

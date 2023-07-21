@@ -15,8 +15,13 @@ export const deleteAllUserQueuedArticles = async () => {
       async (_: IterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<IterationResponse<{}>[]> => {
         await Promise.all(
           userBatch.docs.map(async (user: IUserDocument) => {
+            console.log(`deleting queued articles for user ${user._id}, ${user.emails.find((e) => e.primary)?.email}`);
             user.articles = undefined;
-            await user.save();
+            try {
+              await user.save();
+            } catch (err) {
+              console.error(`Error saving user: ${err}`);
+            }
           }),
         );
 

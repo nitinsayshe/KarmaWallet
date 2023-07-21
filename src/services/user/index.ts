@@ -515,7 +515,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     await cancelUserSubscriptions(user._id.toString());
 
     if (!!user?.integrations?.kard?.userId) {
-      await deleteKardUser(user);
+      await deleteKardUser(user as IUserDocument | Types.ObjectId);
     }
 
     await deleteUserData(user._id);

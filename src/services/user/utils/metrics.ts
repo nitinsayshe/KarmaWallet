@@ -77,7 +77,7 @@ export const getYearlyCommissionTotal = async (user: IUserDocument): Promise<num
         { user: user._id },
         {
           status: {
-            $nin: [KarmaCommissionStatus.Canceled],
+            $nin: [KarmaCommissionStatus.Canceled, KarmaCommissionStatus.Failed],
           },
         },
         { createdOn: { $gte: oneYearAgo.startOf('year').toDate() } },
@@ -103,7 +103,7 @@ export const getMonthlyCommissionTotal = async (user: IUserDocument): Promise<nu
         { user: user._id },
         {
           status: {
-            $nin: [KarmaCommissionStatus.Canceled],
+            $nin: [KarmaCommissionStatus.Canceled, KarmaCommissionStatus.Failed],
           },
         },
         { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
@@ -267,7 +267,7 @@ export const getAvailableCommissionPayouts = async (user: IUserDocument): Promis
         { user: user._id },
         {
           status: {
-            $nin: [KarmaCommissionStatus.PaidToUser, KarmaCommissionStatus.Canceled],
+            $nin: [KarmaCommissionStatus.PaidToUser, KarmaCommissionStatus.Canceled, KarmaCommissionStatus.Failed],
           },
         },
       ],

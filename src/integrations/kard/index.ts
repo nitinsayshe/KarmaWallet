@@ -2,12 +2,16 @@ import { AxiosResponse } from 'axios';
 import { Types } from 'mongoose';
 import { v4 as uuid } from 'uuid';
 import { SafeParseError, z } from 'zod';
-import { CardInfo, CreateUserRequest, KardClient } from '../../clients/kard';
-import { CardStatus } from '../../lib/constants';
+import { CardInfo, CreateUserRequest, KardClient, KardIssuer, QueueTransactionsRequest, Transaction } from '../../clients/kard';
+import { CardStatus, CentsInUSD } from '../../lib/constants';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
-import { CardModel, ICardDocument } from '../../models/card';
+import { CardModel, ICard, ICardDocument } from '../../models/card';
+import { ICompanyDocument } from '../../models/company';
+import { ITransaction } from '../../models/transaction';
 import { IKardIntegration, IUser, IUserDocument, UserModel } from '../../models/user';
+
+const uuidSchema = z.string().uuid();
 
 // get accounts for this user that are linked, but don't have the kard integration object
 const getNotSyncedCardData = async (userId: Types.ObjectId): Promise<(ICardDocument & { user: IUserDocument })[]> => {
@@ -37,13 +41,12 @@ const getNotSyncedCardData = async (userId: Types.ObjectId): Promise<(ICardDocum
   return aggData;
 };
 
-export const getFormattedIssuer = (issuer: string): string => issuer?.trim()?.toUpperCase()?.split(' ')?.join('') || '';
 export const getFormattedUserName = (name: string): string => name?.trim()?.split(' ')?.join('') || '';
 
 export const getCardInfo = (card: ICardDocument): CardInfo => {
   const last4 = !!card?.lastFourDigitsToken ? decrypt(card.lastFourDigitsToken) : '';
   const bin = !!card?.binToken ? decrypt(card.binToken) : '';
-  const issuer = getFormattedIssuer(card?.institution);
+  const issuer = KardIssuer;
   const network = !!card?.networkToken ? decrypt(card.networkToken) : '';
   if (!last4 || !bin || !issuer || !network) {
     throw new Error('Missing card info');
@@ -107,29 +110,64 @@ export const updateKardData = async (userId: Types.ObjectId): Promise<void> => {
   }
 };
 
-export const isUserObject = (user: any): boolean => '_id' in Object.keys(user);
+export type UserIdOrObject = Types.ObjectId | (IUser & { _id: Types.ObjectId });
+export const isUserObject = (user: UserIdOrObject): boolean => '_id' in user;
 // delete a user from Kard
-export const deleteKardUser = async (
-  user: Types.ObjectId | (IUser & { _id: Types.ObjectId }),
-): Promise<AxiosResponse | void> => {
-  if (!isUserObject(user)) {
-    user = await UserModel.findById(user);
-  }
-  const u = user as IUserDocument;
-  const uuidSchema = z.string().uuid();
+export const deleteKardUser = async (user: UserIdOrObject): Promise<AxiosResponse | void> => {
+  try {
+    if (!isUserObject(user)) {
+      user = await UserModel.findById(user);
+    }
+    const u = user as IUserDocument;
 
-  if (
-    !u?.integrations?.kard?.userId
-    || !!(uuidSchema.safeParse(u.integrations.kard.userId) as SafeParseError<string>).error
-  ) {
-    console.error(
-      'Error deleting kard account.\nNo kard integration object or invalid kard user id.\nuser integrations:  ',
-      JSON.stringify(u.integrations, null, 2),
-    );
-    return;
-  }
+    if (
+      !u?.integrations?.kard?.userId
+      || !!(uuidSchema.safeParse(u.integrations.kard.userId) as SafeParseError<string>).error
+    ) {
+      console.error(
+        'Error deleting kard account.\nNo kard integration object or invalid kard user id.\nuser integrations:  ',
+        JSON.stringify(u.integrations, null, 2),
+      );
+      return;
+    }
 
-  console.log('deleting user, ', u._id, ', from kard');
-  const kc = new KardClient();
-  return kc.deleteUser(u.integrations.kard.userId);
+    console.log('deleting user, ', u._id, ', from kard');
+    const kc = new KardClient();
+    return await kc.deleteUser(u.integrations.kard.userId);
+  } catch (err) {
+    console.error('Error deleting kard user: ', err);
+  }
+};
+
+export const queueSettledTransactions = async (
+  user: UserIdOrObject,
+  transactions: Partial<ITransaction & { _id: Types.ObjectId }>[],
+): Promise<void> => {
+  try {
+    if (!isUserObject(user)) {
+      user = await UserModel.findById(user);
+    }
+    const u = user as IUserDocument;
+    if (!u?.integrations?.kard?.userId) {
+      throw new Error('No kard integration object or invalid kard user id.');
+    }
+
+    const req: QueueTransactionsRequest = transactions.map((t): Transaction => ({
+      transactionId: t.integrations?.kard?.id,
+      referringPartnerUserId: u?.integrations?.kard?.userId,
+      amount: t.amount * CentsInUSD,
+      status: t?.integrations?.kard?.status,
+      currency: t?.integrations?.plaid?.iso_currency_code,
+      description: (t.company as ICompanyDocument)?.companyName,
+      settledDate: t?.date?.toISOString(),
+      merchantName: (t.company as ICompanyDocument)?.companyName,
+      cardBIN: decrypt((t?.card as ICard)?.binToken),
+      cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
+    }));
+
+    const kc = new KardClient();
+    await kc.queueTransactionsForProcessing(req);
+  } catch (err) {
+    console.error('Error queuing transactions: ', err);
+  }
 };

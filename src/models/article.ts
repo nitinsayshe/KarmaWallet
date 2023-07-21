@@ -14,6 +14,7 @@ export enum ArticleTypes {
   CompanySpotlight = 'company-spotlight',
   IndustryReport = 'industry-report',
   General = 'general',
+  Feature = 'feature',
 }
 
 export enum ArticleHeaderTypes {
@@ -69,7 +70,7 @@ const articleSchema = new Schema({
   type: { type: String, enum: Object.values(ArticleTypes), required: true },
   featured: { type: Boolean, default: false },
   body: { type: String, required: false },
-  description: { type: String, required: true },
+  description: { type: String },
   introParagraph: { type: String, required: true },
   title: { type: String, required: true },
   headerTitle: { type: String, required: false },

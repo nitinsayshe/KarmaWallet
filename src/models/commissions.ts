@@ -1,16 +1,11 @@
-import {
-  Schema,
-  model,
-  Document,
-  PaginateModel,
-  ObjectId,
-} from 'mongoose';
-import { IModel, IRef } from '../types/model';
+import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
+import { EarnedReward, RewardStatus, RewardType } from '../clients/kard';
 import { getUtcDate } from '../lib/date';
-import { IShareableMerchant } from './merchant';
+import { IModel, IRef } from '../types/model';
 import { IShareableCompany } from './company';
-import { IShareableUser } from './user';
+import { IShareableMerchant } from './merchant';
 import { IPromo } from './promo';
+import { IShareableUser } from './user';
 
 // https://kb.wildfire-corp.com/article/ygwr-commission-history
 export enum WildfireCommissionStatus {
@@ -30,36 +25,42 @@ export enum KarmaCommissionStatus {
   Failed = 'failed',
 }
 
+export interface IKardCommissionIntegration {
+  reward?: EarnedReward;
+  error?: string;
+}
+
 export interface IWildfireCommissionIntegration {
-  CommissionID: number,
-  ApplicationID: number,
-  MerchantID: number,
-  DeviceID: number,
+  CommissionID: number;
+  ApplicationID: number;
+  MerchantID: number;
+  DeviceID: number;
   SaleAmount: {
-    Amount: string,
-    Currency: string
-  },
+    Amount: string;
+    Currency: string;
+  };
   Amount: {
-    Amount: string,
-    Currency: string
-  },
-  Status: WildfireCommissionStatus,
-  EventDate: Date,
-  CreatedDate: Date,
-  ModifiedDate: Date,
-  MerchantOrderID: string,
-  MerchantSKU: string
+    Amount: string;
+    Currency: string;
+  };
+  Status: WildfireCommissionStatus;
+  EventDate: Date;
+  CreatedDate: Date;
+  ModifiedDate: Date;
+  MerchantOrderID: string;
+  MerchantSKU: string;
 }
 
 export interface IKarmaInternalCommissionIntegration {
-  amount: number,
-  createdOn: Date,
-  promo: IRef<ObjectId, IPromo>,
+  amount: number;
+  createdOn: Date;
+  promo: IRef<ObjectId, IPromo>;
 }
 
 export interface ICommissionIntegrations {
   wildfire?: IWildfireCommissionIntegration;
   karma?: IKarmaInternalCommissionIntegration;
+  kard?: IKardCommissionIntegration;
 }
 
 export interface IShareableCommission {
@@ -71,8 +72,8 @@ export interface IShareableCommission {
   date: Date;
   lastStatusUpdate: Date;
   allocation: {
-    karma: number,
-    user: number,
+    karma: number;
+    user: number;
   };
   status: KarmaCommissionStatus;
   lastModified: Date;
@@ -102,6 +103,10 @@ const commission = new Schema({
   user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
+  },
+  transaction: {
+    type: Schema.Types.ObjectId,
+    ref: 'transaction',
   },
   // comission amount total from vendor (i.e. what Karma receives from vendor)
   amount: { type: Number },
@@ -140,6 +145,18 @@ const commission = new Schema({
       amount: { type: Number },
       createdOn: { type: Date, default: () => getUtcDate() },
       promo: { type: Schema.Types.ObjectId, ref: 'promo' },
+    },
+    kard: {
+      reward: {
+        name: { type: String }, // merchant name
+        merchantId: { type: String },
+        type: { type: String, enum: Object.values(RewardType) },
+        status: { type: String, enum: Object.values(RewardStatus) },
+        commissionToIssuer: { type: Number },
+      },
+      error: {
+        type: String,
+      },
     },
   },
 });

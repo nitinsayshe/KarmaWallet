@@ -296,3 +296,5 @@ export const enum StateAbbreviation {
   'WI',
   'WY',
 }
+
+export const CentsInUSD = 100;

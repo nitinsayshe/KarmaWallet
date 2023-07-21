@@ -212,4 +212,14 @@ describe('tests article recommendation logic', () => {
     expect(urls).not.toBeNull();
     expect(urls.length).toBe(0);
   });
+
+  it('getArticleRecommendationsBasedOnTransactionHistory expects output urls even if the user has already received the corresponding article if they were queued within the date range', async () => {
+    const urls = await getArticleRecommendationsBasedOnTransactionHistory(
+      testUserThatPreviouslyReceivedTwoArticleEmails,
+      dayjs().subtract(8, 'days').toDate(),
+      dayjs().toDate(),
+    );
+    expect(urls).not.toBeNull();
+    expect(urls.length).toBe(2);
+  });
 });

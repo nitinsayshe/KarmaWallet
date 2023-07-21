@@ -3,6 +3,7 @@ import plaidRouter from './plaid';
 import rareRouter from './rare';
 import paypalRouter from './paypal';
 import marqetaRouter from './marqeta';
+import biometricRouter from './biometric';
 
 /**
  * this file is used for direct communication with the integration APIs
@@ -17,5 +18,6 @@ integrationsRouter.use('/plaid', plaidRouter);
 integrationsRouter.use('/rare', rareRouter);
 integrationsRouter.use('/paypal', paypalRouter);
 integrationsRouter.use('/marqeta', marqetaRouter);
+integrationsRouter.use('/biometric', biometricRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

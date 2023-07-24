@@ -1,4 +1,5 @@
 /* eslint-disable camelcase */
+import 'dotenv/config';
 import crypto from 'crypto';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -74,6 +75,11 @@ export interface IExchangePublicTokenForAccessTokenParams {
   userId: string;
   metadata: IPlaidLinkOnSuccessMetadata;
 }
+// export interface IProcessorTokenCreateRequest{
+//   access_token:string;
+//   account_id: string;
+//   processor:string;
+// }
 
 export class PlaidClient extends SdkClient {
   _client: PlaidApi;
@@ -107,6 +113,25 @@ export class PlaidClient extends SdkClient {
     }
   };
 
+  getProcessorToken = async (accessToken: string) => {
+    try {
+      const { data } = await this._client.accountsGet({ access_token: accessToken });
+      const config = {
+        access_token: accessToken,
+        account_id: data.accounts[0].account_id,
+        processor: process.env.MARQETA,
+      };
+
+      // Get the processor token from plaid
+      const processorTokenResponse = await this._client.processorTokenCreate(config);
+      const processorToken = processorTokenResponse.data.processor_token;
+      return processorToken;
+    } catch (e) {
+      // Handle the error here or throw it to be handled elsewhere
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
+  };
+
   createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
     const configs: LinkTokenCreateRequest = {
@@ -125,7 +150,7 @@ export class PlaidClient extends SdkClient {
     }
     // products should be excluded if launching link in update mode
     if (!access_token) {
-      configs.products = [Products.Transactions];
+      configs.products = [Products.Transactions, Products.Auth, Products.Balance];
     }
     try {
       const response = await this._client.linkTokenCreate(configs);
@@ -139,15 +164,18 @@ export class PlaidClient extends SdkClient {
     if (!public_token) throw new CustomError('A public token is required.', ErrorTypes.INVALID_ARG);
     try {
       const response = await this._client.itemPublicTokenExchange({ public_token });
+      console.log('response', response.data);
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
-      await plaidUserInstance.addCards(plaidItem, true);
+      // await plaidUserInstance.addCards(plaidItem, true);
+      const processorToken = await this.getProcessorToken(accessToken);
       return {
         message: 'Successfully linked plaid account',
         itemId,
+        processorToken,
       };
     } catch (e) {
       this.handlePlaidError(e as IPlaidErrorResponse);

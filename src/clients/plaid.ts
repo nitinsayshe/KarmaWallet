@@ -75,12 +75,6 @@ export interface IExchangePublicTokenForAccessTokenParams {
   userId: string;
   metadata: IPlaidLinkOnSuccessMetadata;
 }
-// export interface IProcessorTokenCreateRequest{
-//   access_token:string;
-//   account_id: string;
-//   processor:string;
-// }
-
 export class PlaidClient extends SdkClient {
   _client: PlaidApi;
 
@@ -121,7 +115,6 @@ export class PlaidClient extends SdkClient {
         account_id: data.accounts[0].account_id,
         processor: process.env.MARQETA,
       };
-
       // Get the processor token from plaid
       const processorTokenResponse = await this._client.processorTokenCreate(config);
       const processorToken = processorTokenResponse.data.processor_token;

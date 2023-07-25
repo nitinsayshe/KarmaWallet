@@ -58,6 +58,7 @@ export interface IPlaidWebhookJWTPayload {
 export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
+  app?:boolean;
 }
 
 export interface ISandboxItemFireWebhookRequest {
@@ -125,7 +126,7 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
+  createLinkToken = async ({ userId, access_token, app }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
     const configs: LinkTokenCreateRequest = {
       user: {
@@ -143,7 +144,12 @@ export class PlaidClient extends SdkClient {
     }
     // products should be excluded if launching link in update mode
     if (!access_token) {
-      configs.products = [Products.Transactions, Products.Auth, Products.Balance];
+      configs.products = [Products.Transactions, Products.Auth];
+
+      // if request is coming from web set products to Transactions
+      if (!app) {
+        configs.products = [Products.Transactions];
+      }
     }
     try {
       const response = await this._client.linkTokenCreate(configs);

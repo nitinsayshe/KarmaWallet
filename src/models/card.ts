@@ -26,10 +26,23 @@ export interface IKardIntegration {
   dateAdded: Date;
 }
 
+export interface IMarqetaIntegration {
+  token:string;
+  expiration_time:Date;
+  user_token: String;
+  card_token: String,
+  card_product_token: String;
+  last_four: String;
+  expr_month: Number;
+  expr_year: Number;
+  pin_is_set: Boolean;
+  state: String;
+}
 export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;
   kard?: IKardIntegration;
+  marqeta?: IMarqetaIntegration[];
 }
 
 export interface IShareableCard {
@@ -102,6 +115,18 @@ const cardSchema = new Schema({
         dateAdded: { type: Date },
       },
     },
+    marqeta: [{
+      type: {
+        user_token: { type: String },
+        card_token: { type: String },
+        card_product_token: { type: String },
+        last_four: { type: String },
+        expr_month: { type: Number },
+        expr_year: { type: Number },
+        pin_is_set: { type: Boolean },
+        state: { type: String },
+      },
+    }],
   },
   initialTransactionsProcessing: { type: Boolean },
   createdOn: { type: Date },

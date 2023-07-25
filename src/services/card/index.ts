@@ -2,7 +2,7 @@
 import { FilterQuery, ObjectId } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { CardModel, ICard, ICardDocument } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IMarqetaIntegration } from '../../models/card';
 import { IRequest } from '../../types/request';
 import { IShareableUser, IUserDocument } from '../../models/user';
 import { IRef } from '../../types/model';
@@ -65,6 +65,7 @@ export const getShareableCard = ({
     // TODO: remove this after instituation logos are hosted and
     // logo property is added to cards.
     institutionId: integrations?.plaid?.institutionId,
+    integrations,
     createdOn,
     unlinkedDate,
     removedDate,
@@ -149,4 +150,36 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
 export const getCards = async (req: IRequest) => {
   const { requestor } = req;
   return _getCards({ $and: [{ status: { $nin: [CardStatus.Removed] } }, { userId: requestor._id }, { 'integrations.rare': null }] });
+};
+
+const extractYearAndMonth = (dateString:Date) => {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  return { year, month };
+};
+
+export const addCards = async (cardData:IMarqetaIntegration) => {
+  const { user_token, token, expiration_time } = cardData;
+  console.log('cardData', cardData);
+  if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
+
+  let card = await CardModel.findOne({ userId: user_token });
+  if (!card) {
+    // If the card document doesn't exist, you may choose to create a new one
+    card = new CardModel({ userId: user_token, status: CardStatus.Linked });
+  }
+  // extract the expiration year & month of the card
+  const { year, month } = extractYearAndMonth(expiration_time);
+
+  // prepare the cardItem Details
+  const cardItem = { card_token: token,
+    expr_month: month,
+    expr_year: year,
+    ...cardData };
+
+  // Update the Marqeta details in the integrations.marqeta field
+  card.integrations.marqeta.push(cardItem);
+  // Save the updated card document
+  await card.save();
 };

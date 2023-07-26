@@ -146,7 +146,7 @@ export class PlaidClient extends SdkClient {
     if (!access_token) {
       configs.products = [Products.Transactions, Products.Auth];
 
-      // if request is coming from web set products to Transactions
+      // if request is coming from web set products to Transactions only
       if (!app) {
         configs.products = [Products.Transactions];
       }
@@ -163,18 +163,25 @@ export class PlaidClient extends SdkClient {
     if (!public_token) throw new CustomError('A public token is required.', ErrorTypes.INVALID_ARG);
     try {
       const response = await this._client.itemPublicTokenExchange({ public_token });
-      console.log('response', response.data);
       const accessToken = response.data.access_token;
       const itemId = response.data.item_id;
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
-      // await plaidUserInstance.addCards(plaidItem, true);
-      const processorToken = await this.getProcessorToken(accessToken);
+
+      // if accounts is empty generete a preocessor token
+      if (!plaidItem.accounts) {
+        const processorToken = await this.getProcessorToken(accessToken);
+        return {
+          message: 'Processor token successfully generated',
+          itemId,
+          processorToken,
+        };
+      }
+      await plaidUserInstance.addCards(plaidItem, true);
       return {
         message: 'Successfully linked plaid account',
         itemId,
-        processorToken,
       };
     } catch (e) {
       this.handlePlaidError(e as IPlaidErrorResponse);

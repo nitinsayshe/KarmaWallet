@@ -1,31 +1,21 @@
-import { IMarqetaCreateGPAorder } from '../../../integrations/marqeta/types';
+import { IMarqetaACHPlaidFundingSource } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
-import * as GPAService from '../../../integrations/marqeta/gpa';
+import * as ACHFundingSourceService from '../../../integrations/marqeta/accountFundingSource';
 import { ErrorTypes } from '../../../lib/constants';
 
-export const fundUserGPA: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = async (req, res) => {
+export const createAchFundingSource: IRequestHandler<{}, {}, IMarqetaACHPlaidFundingSource> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['amount', 'currency_code', 'funding_source_token'];
+    const requiredFields = ['partner_account_link_reference_token', 'partner', 'is_default_account'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const data = await GPAService.createGPAorder(req);
-    output.api(req, res, data);
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
-export const getGPAbalance: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = async (req, res) => {
-  try {
-    const { _id: userId } = req.requestor;
-    const { user: data } = await GPAService.getGPABalance(userId);
+    const { data } = await ACHFundingSourceService.createAchFundingSource(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -31,17 +31,17 @@ export const listUser: IRequestHandler<{}, {}, {}> = async (req, res) => {
   }
 };
 
-export const getUser: IRequestHandler<{userToken:string}, {}, {}> = async (req, res) => {
+export const getUser: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const { userToken } = req.params;
-    const { data } = await UserService.getUser(userToken);
+    const { _id: userId } = req.requestor;
+    const { data } = await UserService.getUser(userId);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const updateUser: IRequestHandler<{userToken:string}, {}, IMarqetaCreateUser> = async (req, res) => {
+export const updateUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (req, res) => {
   try {
     const { data } = await UserService.updateUser(req);
     output.api(req, res, data);
@@ -53,7 +53,7 @@ export const updateUser: IRequestHandler<{userToken:string}, {}, IMarqetaCreateU
 export const userTransition: IRequestHandler<{}, {}, IMarqetaUserTransition> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['user_token', 'status', 'reason_code', 'reason', 'channel'];
+    const requiredFields = ['status', 'reason_code', 'reason', 'channel'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
@@ -66,9 +66,9 @@ export const userTransition: IRequestHandler<{}, {}, IMarqetaUserTransition> = a
   }
 };
 
-export const listUserTransition: IRequestHandler<{userToken:string}, {}, {}> = async (req, res) => {
+export const listUserTransition: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const { userToken } = req.params;
+    const { _id: userToken } = req.requestor;
     const { data } = await UserService.listUserTransition(userToken);
     output.api(req, res, data);
   } catch (err) {

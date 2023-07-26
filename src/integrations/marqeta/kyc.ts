@@ -11,7 +11,8 @@ const kyc = new Kyc(marqetaClient);
 
 export const processUserKyc = async (req: IRequest<{}, {}, IMarqetaProcessKyc>) => {
   const params = req.body;
-  const userResponse = await kyc.processKyc(params);
+  const { _id: userId } = req.requestor;
+  const userResponse = await kyc.processKyc({ user_token: userId, ...params });
   return { user: userResponse };
 };
 

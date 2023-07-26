@@ -11,7 +11,8 @@ const gpa = new GPA(marqetaClient);
 
 export const createGPAorder = async (req: IRequest<{}, {}, IMarqetaCreateGPAorder>) => {
   const params = req.body;
-  const userResponse = await gpa.gpaOrder(params);
+  const { _id: userId } = req.requestor;
+  const userResponse = await gpa.gpaOrder({ user_token: userId, ...params });
   return { user: userResponse };
 };
 

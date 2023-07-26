@@ -21,7 +21,7 @@ export interface IMarqetaUserToken {
 export interface IMarqetaCreateUser {
   first_name: string;
   last_name: string;
-  token?: string;
+  token?: any;
   email: string;
   identifications: Identification[];
   birth_date: string;
@@ -82,4 +82,10 @@ export interface IMarqetaACHGroup{
 export interface IMarqetaClientAccessToken{
   card_token: string;
   application_token: string;
+}
+
+export interface IMarqetaACHPlaidFundingSource{
+  user_token: any;
+  partner_account_link_reference_token: string;
+  partner:string;
 }

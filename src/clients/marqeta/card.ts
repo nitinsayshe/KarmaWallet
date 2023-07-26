@@ -12,7 +12,7 @@ export class Card {
   // create new card
   async createCard(params: IMarqetaCreateCard) {
     try {
-      const { data } = await this._marqetaClient._client.post('/cards', params);
+      const { data } = await this._marqetaClient._client.post('/cards?show_cvv_number=true&show_pan=true', params);
       return data;
     } catch (err) {
       console.log(err);

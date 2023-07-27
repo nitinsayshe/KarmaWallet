@@ -197,6 +197,7 @@ const userSchema = new Schema({
         type: {
           biometricKey: { type: String },
           isBiometricEnabled: { type: Boolean },
+          dateKeyCreated: { type: Date, default: () => getUtcDate() },
         },
       },
     ],

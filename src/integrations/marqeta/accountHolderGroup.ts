@@ -6,7 +6,7 @@ import { IMarqetaACHGroup } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
-// Instantiate the User class
+// Instantiate the ACH Group class
 const achGroup = new ACHGroup(marqetaClient);
 
 export const createACHGroup = async (req: IRequest<{}, {}, IMarqetaACHGroup>) => {

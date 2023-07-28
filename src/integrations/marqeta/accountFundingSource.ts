@@ -6,7 +6,7 @@ import { IMarqetaACHPlaidFundingSource } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
-// Instantiate the User class
+// Instantiate the ACH source class
 const achFundingSource = new ACHSource(marqetaClient);
 
 export const createAchFundingSource = async (req: IRequest<{}, {}, IMarqetaACHPlaidFundingSource>) => {

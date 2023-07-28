@@ -89,3 +89,33 @@ export interface IMarqetaACHPlaidFundingSource{
   partner_account_link_reference_token: string;
   partner:string;
 }
+
+export enum ControlTokenType {
+  set_pin = 'SET_PIN',
+  reveal_pin = 'REVEAL_PIN',
+}
+
+export enum CardholderVerificationMethod {
+  biometric_face = 'BIOMETRIC_FACE',
+  biometric_fingerprint = 'BIOMETRIC_FINGERPRINT',
+  exp_cvv ='EXP_CVV',
+  login= 'LOGIN',
+  otp='OTP',
+  otp_cvv='OTP_CVV',
+  other='OTHER'
+}
+export interface IMarqetaPinControlToken{
+  cardToken:string;
+  controlTokenType?:ControlTokenType;
+}
+
+export interface IMarqetaCreatePin{
+  cardToken:string;
+  pinNumber:Number;
+  controlTokenType?:ControlTokenType;
+}
+
+export interface IMarqetaRevealPin{
+  cardholder_verification_method:CardholderVerificationMethod;
+  control_token:string;
+}

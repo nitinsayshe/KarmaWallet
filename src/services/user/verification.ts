@@ -58,7 +58,7 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
 export const verifyBiometric = async (email:string, biometricSignature:string, biometricKey:any) => {
   try {
     // Create a verifier using the public key
-    const verifier = crypto.createVerify('RSA-SHA512');
+    const verifier = crypto.createVerify('RSA-SHA256');
     verifier.update(email);
     // Verify the signature
     const isValid = verifier.verify(biometricKey, biometricSignature, 'base64');

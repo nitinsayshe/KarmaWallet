@@ -45,8 +45,8 @@ jobs:
     - run: echo 'AWS_SECRET_ACCESS_KEY=${{secrets.STAGING_AWS_SECRET_ACCESS_KEY}}' >> .env
     - run: echo 'S3_BUCKET=cdn.karmawallet.io' >> .env
     - run: echo 'PLAID_CLIENT_ID=${{secrets.STAGING_PLAID_CLIENT_ID}}' >> .env
-    - run: echo 'PLAID_SECRET=${{secrets.STAGING_PLAID_SECRET}}' >> .env
-    - run: echo 'PLAID_ENV=${{secrets.STAGING_PLAID_ENV}}' >> .env
+    - run: echo 'PLAID_SECRET=${{secrets.SANDBOX_PLAID_SECRET}}' >> .env
+    - run: echo 'PLAID_ENV=${{secrets.SANDBOX_PLAID_ENV}}' >> .env
     - run: echo 'PLAID_WEBHOOK_URI=https://backend.staging.karmawallet.io/webhook/plaid' >> .env
     - run: echo 'PLAID_REDIRECT_URI=https://ui.staging.karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
@@ -90,6 +90,9 @@ jobs:
     - run: echo 'KARD_ONLINE_REWARD_ID=${{secrets.STAGING_KARD_ONLINE_REWARD_ID}}' >> .env
     - run: echo 'KARD_ISSUER_NAME=${{secrets.STAGING_KARD_ISSUER_NAME}}' >> .env
     - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_TRANSACTION_ID_ROOT}}' >> .env
+    - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.SANDBOX_MARQETA_APPLICATION_TOKEN}}' >> .env
+    - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
+    - run: echo 'MARQETA_BASE_URL=https://sandbox-api.marqeta.com/v3/' >> .env
     - run: npm i
     - run: pm2 restart all
 

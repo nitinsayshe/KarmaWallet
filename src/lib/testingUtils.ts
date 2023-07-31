@@ -1,14 +1,27 @@
 import dayjs from 'dayjs';
-import { ObjectId, Types } from 'mongoose';
+import { ObjectId, Schema, Types } from 'mongoose';
 import { ArticleModel, ArticleTypes, IArticleDocument } from '../models/article';
 import { CardModel, ICardDocument } from '../models/card';
-import { CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
+import { CategoryModel } from '../models/category';
+import {
+  CompanyHideReasons,
+  CompanyModel,
+  ICategoryScore,
+  ICompanyDocument,
+  ICompanySector,
+  IEvaluatedCompanyUnsdg,
+  ISubcategoryScore,
+} from '../models/company';
 import { IMerchantDocument, MerchantModel } from '../models/merchant';
 import { IMerchantRateDocument, MerchantRateModel } from '../models/merchantRate';
 import { IPromoDocument, IPromoTypes, PromoModel } from '../models/promo';
+import { ISectorDocument, SectorModel } from '../models/sector';
+import { SubcategoryModel } from '../models/subcategory';
 import { ITransactionDocument, ITransactionIntegrations, TransactionModel } from '../models/transaction';
+import { UnsdgModel } from '../models/unsdg';
 import { IUserDocument, UserEmailStatus, UserModel } from '../models/user';
 import { getMonthStartDate } from '../services/impact/utils';
+import { IRef } from '../types/model';
 import { CardStatus } from './constants';
 import { CompanyRating } from './constants/company';
 import { getUtcDate } from './date';
@@ -50,9 +63,28 @@ export interface IRemoveableDocument {
   remove: () => Promise<this>;
 }
 
+export interface ISaveableDocument {
+  save: () => Promise<this>;
+}
+
+export const saveDocument = async (document: ISaveableDocument): Promise<ISaveableDocument> => {
+  try {
+    if (!document?.save) {
+      throw new Error('Document does not have a save method');
+    }
+    return await document.save();
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+export const saveDocuments = async (documents: ISaveableDocument[]): Promise<ISaveableDocument[]> => Promise.all(documents.map(async (d) => saveDocument(d)));
+
 export const cleanUpDocument = async (document: IRemoveableDocument) => {
   try {
-    if (!document?.remove) throw new Error('Document does not have a remove method');
+    if (!document?.remove) {
+      throw new Error('Document does not have a remove method');
+    }
     await document.remove();
   } catch (err) {
     console.error(err);
@@ -73,10 +105,13 @@ export const createSomeUsers = async (req: CreateTestUsersRequest): Promise<IUse
     newUser.password = user?.password || 'password';
     newUser.name = user?.name || `Test User_${new Types.ObjectId().toString()}`;
     newUser.emails = user?.emails || [];
+    newUser.role = user?.role || 'member';
+    newUser.zipcode = user?.zipcode || '12345';
     newUser.articles = user?.articles || undefined;
+    newUser.isTestIdentity = user?.isTestIdentity || false;
     if (newUser.emails.length === 0) {
       newUser.emails.push({
-        email: `testemail_${new Types.ObjectId().toString()}@theimpactkarma.com`,
+        email: `testemail_${new Types.ObjectId().toString()}@karmawallet.com`,
         primary: true,
         status: UserEmailStatus.Verified,
       });
@@ -130,9 +165,13 @@ export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICar
     newCard.removedDate = card?.removedDate || undefined;
     newCard.lastModified = card?.lastModified || undefined;
     newCard.institution = card?.institution || 'Test Institution';
+    newCard.initialTransactionsProcessing = card?.initialTransactionsProcessing || false;
+    newCard.lastTransactionSync = card?.lastTransactionSync || undefined;
+    newCard.mask = card?.mask || getRandomInt(1000, 9999).toString();
     newCard.name = card?.name || `Test Card_${new Types.ObjectId().toString()}`;
     newCard.integrations = card?.integrations || undefined;
     newCard.type = card?.type || undefined;
+    newCard.subtype = card?.subtype || undefined;
     newCard.binToken = card?.binToken || undefined;
     newCard.lastFourDigitsToken = card?.lastFourDigitsToken || undefined;
     return newCard.save();
@@ -157,22 +196,120 @@ export const createSomeArticles = async (req: CreateTestArticlesRequest): Promis
   }),
 )) || [];
 
+export const getSomeGrade = (): string => {
+  const grades = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+  return grades[getRandomInt(0, grades.length - 1)];
+};
+
+export const getSomeCompanySectors = async (numSectors?: number): Promise<ICompanySector[]> => {
+  try {
+    const sectors = await SectorModel.find();
+
+    if (!numSectors) numSectors = getRandomInt(1, 3);
+
+    return sectors
+      .map((s, i) => {
+        if (i + 1 > numSectors) return undefined;
+        return {
+          sector: s._id as unknown as Schema.Types.ObjectId,
+          primary: i === 0,
+        } as ICompanySector;
+      })
+      .filter((e) => !!e);
+  } catch (err) {
+    return undefined;
+  }
+};
+
+export const getSomeSubcategoryScores = async (numScores?: number): Promise<ISubcategoryScore[]> => {
+  try {
+    const subcategories = await SubcategoryModel.find();
+
+    if (!numScores) numScores = getRandomInt(1, 3);
+
+    const scored = subcategories
+      .map((s, i) => {
+        if (i + 1 > numScores) return undefined;
+        const e = {
+          subcategory: s._id as unknown as Schema.Types.ObjectId,
+          score: getRandomInt(-16, 16),
+        } as ISubcategoryScore;
+
+        return e;
+      })
+      .filter((e) => !!e);
+    return scored;
+  } catch (err) {
+    return undefined;
+  }
+};
+
+export const getSomeCategoryScores = async (numScores?: number): Promise<ICategoryScore[]> => {
+  try {
+    const categories = await CategoryModel.find();
+
+    if (!numScores) numScores = getRandomInt(1, 3);
+
+    const scored = categories
+      .map((c, i) => {
+        if (i + 1 > numScores) return undefined;
+        const e = {
+          category: c._id as unknown as Schema.Types.ObjectId,
+          score: getRandomInt(-16, 16),
+        } as ICategoryScore;
+
+        return e;
+      })
+      .filter((e) => !!e);
+    return scored;
+  } catch (err) {
+    return undefined;
+  }
+};
+
+export const getSomeEvaluatedUnsdgs = async (): Promise<IEvaluatedCompanyUnsdg[]> => {
+  try {
+    const unsdgs = await UnsdgModel.find();
+    const numEvaluated = getRandomInt(0, unsdgs.length);
+
+    const evaluated = unsdgs.map((unsdg, i) => {
+      const e = {
+        unsdg: unsdg._id as unknown as Schema.Types.ObjectId,
+        score: getRandomInt(-16, 16),
+        evaluated: i + 1 < numEvaluated,
+      };
+
+      return e;
+    });
+    return evaluated;
+  } catch (err) {
+    return undefined;
+  }
+};
+
+const companyRatings = Object.values(CompanyRating);
 export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Promise<ICompanyDocument[]> => (await Promise.all(
   req.companies.map(async (company) => {
     const newCompany = new CompanyModel();
-    newCompany.companyName = company?.companyName || 'Test Company{new Types.ObjectId().toString()}';
-    newCompany.combinedScore = company?.combinedScore || undefined;
+    newCompany.companyName = company?.companyName || `Test Company${new Types.ObjectId().toString()}`;
+    newCompany.combinedScore = company?.combinedScore || getRandomInt(-16, 16);
     newCompany.grade = company?.grade || undefined;
     newCompany.merchant = company?.merchant || undefined;
     newCompany.parentCompany = company?.parentCompany || undefined;
     newCompany.createdAt = company?.createdAt || dayjs().utc().toDate();
+    newCompany.logo = company?.logo || undefined;
+    newCompany.url = company?.url || undefined;
     newCompany.evaluatedUnsdgs = company?.evaluatedUnsdgs || [];
+    newCompany.categoryScores = company?.categoryScores || [];
+    newCompany.subcategoryScores = company?.subcategoryScores || [];
+    newCompany.sectors = company?.sectors || [];
+    newCompany.grade = company?.grade || getSomeGrade();
     newCompany.hidden = company?.hidden || {
       status: false,
       reason: CompanyHideReasons.None,
       lastModified: new Date(),
     };
-    newCompany.rating = company?.rating || CompanyRating.Neutral;
+    newCompany.rating = company?.rating || companyRatings[getRandomInt(0, companyRatings.length - 1)];
     newCompany.sectors = company?.sectors || [];
     return newCompany.save();
   }),
@@ -180,10 +317,14 @@ export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Prom
 
 export const createATestCompany = async (): Promise<ICompanyDocument> => {
   const company = new CompanyModel();
-  company.companyName = `Test Company_${new Types.ObjectId().toString}`;
+  company.companyName = `Test Company_${new Types.ObjectId().toString()}`;
   company.combinedScore = getRandomInt(-16, 16);
   company.createdAt = dayjs().subtract(1, 'week').toDate();
-  company.hidden = { status: false, reason: CompanyHideReasons.None, lastModified: new Date() };
+  company.hidden = {
+    status: false,
+    reason: CompanyHideReasons.None,
+    lastModified: new Date(),
+  };
   return company.save();
 };
 
@@ -195,6 +336,7 @@ export const createSomeTransactions = async (req: CreateTestTransactionsRequest)
     newTransaction.company = t.company;
     newTransaction.amount = t.amount || getRandomInt(1, 100);
     newTransaction.card = t.card;
+    newTransaction.sector = t.sector;
     newTransaction.integrations = t.integrations;
     if (!!t.integrations) {
       newTransaction.integrations = {};
@@ -221,6 +363,7 @@ export const createSomeTransactionsWithCompany = async (
     transaction.user = userId;
     transaction.company = company;
     transaction.amount = getRandomInt(1, 100);
+    transaction.sector = (company?.sectors?.find((s) => s.primary)?.sector as IRef<ObjectId, ISectorDocument>) || undefined;
     transaction.card = card;
     transaction.integrations = integrations;
     const updatedTransaction = await transaction.save();

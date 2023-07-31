@@ -5,6 +5,7 @@ import { ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
+import * as UserTestIdentityService from '../services/user/testIdentities';
 
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
@@ -13,7 +14,11 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
 
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
-      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      output.error(
+        req,
+        res,
+        new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG),
+      );
       return;
     }
     const { password, name, token, promo } = body;
@@ -29,7 +34,8 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
     const { password, email } = req.body;
     const { user, authKey } = await UserService.login(req, {
-      password, email,
+      password,
+      email,
     });
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
@@ -90,7 +96,10 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVeri
   }
 };
 
-export const resetPasswordFromToken: IRequestHandler<{}, {}, (UserService.ILoginData & UserService.IUpdatePasswordBody)> = async (req, res) => {
+export const resetPasswordFromToken: IRequestHandler<{}, {}, UserService.ILoginData & UserService.IUpdatePasswordBody> = async (
+  req,
+  res,
+) => {
   try {
     const user = await UserService.resetPasswordFromToken(req);
     output.api(req, res, UserService.getShareableUser(user));
@@ -112,6 +121,19 @@ export const verifyEmail: IRequestHandler<{}, {}, Partial<UserService.IEmailVeri
   try {
     const data = await UserVerificationService.verifyEmail(req);
     output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getTestIdentities: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const data = await UserTestIdentityService.getTestIdentities();
+    output.api(
+      req,
+      res,
+      data.map((d) => UserService.getShareableUser(d)),
+    );
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

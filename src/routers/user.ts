@@ -11,6 +11,8 @@ router.post('/password/token/create', UserController.createPasswordResetToken);
 router.post('/password/token/verify', UserController.verifyPasswordResetToken);
 router.put('/password/token', UserController.resetPasswordFromToken);
 
+router.get('/test-identities', UserController.getTestIdentities);
+
 // Authenticated
 router.post('/logout', authenticate, UserController.logout);
 router.get('/profile', authenticate, UserController.getProfile);

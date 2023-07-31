@@ -185,7 +185,7 @@ export type Offer = {
   _id: string;
   name: string;
   merchantId: string;
-  merchantLocationIds: string[]; // locatin ids when isLocationSpecific is true
+  merchantLocationIds?: string[]; // locatin ids when isLocationSpecific is true
   offerType: OfferType;
   source: OfferSource;
   commissionType: CommissionType;
@@ -200,7 +200,7 @@ export type Offer = {
   maxRewardAmount: number;
   minTransactionAmount: number;
   maxTransactionAmount: number;
-  redeemableOnceForOffer: boolean;
+  redeemableOnce: boolean;
 };
 
 export type Merchant = {
@@ -208,7 +208,7 @@ export type Merchant = {
   name: string;
   source: MerchantSource;
   description: string;
-  imgURL: string;
+  imgUrl: string;
   bannerImgUrl: string;
   websiteURL: string;
   acceptedCards: CardNetwork[];

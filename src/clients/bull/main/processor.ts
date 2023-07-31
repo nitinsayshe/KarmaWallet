@@ -22,6 +22,7 @@ import * as UpdateBatchCompanyDataSources from '../../../jobs/updateBatchCompany
 import * as UpdateBatchCompanyParentChildrenRelationships from '../../../jobs/updateBatchCompanyParentChildrenRelationships';
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
 import * as UpdateWildfireMerchantsAndData from '../../../jobs/updateWildfireMerchantsAndData';
+import * as UpdateKardMerchantsAndData from '../../../jobs/updateKardMerchantsAndData';
 import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayouts';
 import * as GenerateAdminSummaryReport from '../../../jobs/generateAdminSummaryReport';
 import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
@@ -151,6 +152,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateWildfireMerchantsAndData:
       result = await UpdateWildfireMerchantsAndData.exec();
+      break;
+    case JobNames.UpdateKardMerchantsAndData:
+      result = await UpdateKardMerchantsAndData.exec();
       break;
     case JobNames.GenerateCommissionPayouts:
       result = await GenerateCommissionPayouts.exec();

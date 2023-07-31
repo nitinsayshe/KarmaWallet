@@ -42,6 +42,7 @@ export enum JobNames {
   UploadCsvToGoogleDrive = 'upload-csv-to-google-drive',
   DeleteUserAndAssociatedData = 'delete-user-and-associated-data',
   UpdateWildfireMerchantsAndData = 'update-wildfire-merchants-and-data',
+  UpdateKardMerchantsAndData = 'update-kard-merchants-and-data',
   GenerateCommissionPayouts = 'generate-commission-payouts',
   GenerateAdminSummaryReport = 'generate-admin-summary-report',
   GenerateUserReport = 'generate-user-report',

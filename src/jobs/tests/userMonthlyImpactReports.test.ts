@@ -5,7 +5,7 @@ import {
   cleanUpDocuments,
   createNumMonthsOfTransactions,
   createSomeCompanies,
-  createSomeTransactions,
+  createSomeTransactionsWithCompany,
   createSomeUsers,
 } from '../../lib/testingUtils';
 import { ICompanyDocument } from '../../models/company';
@@ -48,7 +48,7 @@ describe('user impact report generation', () => {
     [testUser, testUserWithThreeMonthsOfTransactions] = await createSomeUsers({ users: [{}, {}] });
 
     [testCompany] = await createSomeCompanies({ companies: [{}] });
-    twoTestTransactions = await createSomeTransactions(2, testUser._id, testCompany);
+    twoTestTransactions = await createSomeTransactionsWithCompany(2, testUser._id, testCompany);
     threeMonthsOfTransactions = await createNumMonthsOfTransactions(
       3,
       testUserWithThreeMonthsOfTransactions,

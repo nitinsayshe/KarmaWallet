@@ -13,6 +13,7 @@ export interface IValue {
   category: IRef<ObjectId, IUnsdgCategory>;
   weight: number;
   name: string;
+  icon?: string;
 }
 
 export interface IValueDocument extends IValue, Document {}
@@ -29,6 +30,9 @@ const valueSchema = new Schema({
     required: true,
     unique: true,
   },
+  icon: {
+    type: String,
+  },
   /**
    * The weight of the value to be used for sorting
    * and surfacing the most important values in
@@ -43,6 +47,7 @@ const valueSchema = new Schema({
     default: 0,
   },
 });
+
 valueSchema.plugin(mongoosePaginate);
 
 export const ValueModel = model<IValueDocument, PaginateModel<IValue>>('value', valueSchema);

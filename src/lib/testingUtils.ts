@@ -1,15 +1,17 @@
 import dayjs from 'dayjs';
 import { ObjectId, Types } from 'mongoose';
-import { ArticleModel, IArticleDocument, ArticleTypes } from '../models/article';
+import { ArticleModel, ArticleTypes, IArticleDocument } from '../models/article';
 import { CardModel, ICardDocument } from '../models/card';
 import { CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
 import { IMerchantDocument, MerchantModel } from '../models/merchant';
+import { IMerchantRateDocument, MerchantRateModel } from '../models/merchantRate';
 import { IPromoDocument, IPromoTypes, PromoModel } from '../models/promo';
-import { ITransactionDocument, TransactionModel } from '../models/transaction';
+import { ITransactionDocument, ITransactionIntegrations, TransactionModel } from '../models/transaction';
 import { IUserDocument, UserEmailStatus, UserModel } from '../models/user';
 import { getMonthStartDate } from '../services/impact/utils';
 import { CardStatus } from './constants';
 import { CompanyRating } from './constants/company';
+import { getUtcDate } from './date';
 import { getRandomInt } from './number';
 
 export type CreateTestUsersRequest = {
@@ -28,12 +30,20 @@ export type CreateTestMerchantsRequest = {
   merchants?: Partial<IMerchantDocument>[];
 };
 
+export type CreateTestMerchantRatesRequest = {
+  merchantRates?: Partial<IMerchantRateDocument>[];
+};
+
 export type CreateTestArticlesRequest = {
   articles?: Partial<IArticleDocument>[];
 };
 
 export type CreateTestCompaniesRequest = {
   companies?: Partial<ICompanyDocument>[];
+};
+
+export type CreateTestTransactionsRequest = {
+  transactions?: Partial<ITransactionDocument>[];
 };
 
 export interface IRemoveableDocument {
@@ -85,6 +95,17 @@ export const createSomeMerchants = async (req: CreateTestMerchantsRequest): Prom
   }),
 )) || [];
 
+export const createSomeMerchantRates = async (req: CreateTestMerchantRatesRequest): Promise<IMerchantRateDocument[]> => (await Promise.all(
+  req.merchantRates.map(async (mr) => {
+    const newMerchantRate = new MerchantRateModel();
+    newMerchantRate.merchant = mr?.merchant || undefined;
+    newMerchantRate.createdOn = mr?.createdOn || getUtcDate().toDate();
+    newMerchantRate.lastModified = mr?.lastModified || getUtcDate().toDate();
+    newMerchantRate.integrations = mr.integrations;
+    return newMerchantRate.save();
+  }),
+)) || [];
+
 export const createSomePromos = async (req: CreateTestPromosRequest): Promise<IPromoDocument[]> => (await Promise.all(
   req.promos.map(async (promo) => {
     const newPromo = new PromoModel();
@@ -113,7 +134,6 @@ export const createSomeCards = async (req: CreateTestCardsRequest): Promise<ICar
     newCard.integrations = card?.integrations || undefined;
     newCard.type = card?.type || undefined;
     newCard.binToken = card?.binToken || undefined;
-    newCard.networkToken = card?.networkToken || undefined;
     newCard.lastFourDigitsToken = card?.lastFourDigitsToken || undefined;
     return newCard.save();
   }),
@@ -167,11 +187,32 @@ export const createATestCompany = async (): Promise<ICompanyDocument> => {
   return company.save();
 };
 
-export const createSomeTransactions = async (
+export const createSomeTransactions = async (req: CreateTestTransactionsRequest): Promise<ITransactionDocument[]> => (await Promise.all(
+  req.transactions.map(async (t) => {
+    const newTransaction = new TransactionModel();
+    newTransaction.date = t.date || dayjs().subtract(1, 'week').toDate();
+    newTransaction.user = t.userId;
+    newTransaction.company = t.company;
+    newTransaction.amount = t.amount || getRandomInt(1, 100);
+    newTransaction.card = t.card;
+    newTransaction.integrations = t.integrations;
+    if (!!t.integrations) {
+      newTransaction.integrations = {};
+    }
+    newTransaction.integrations.plaid = t.integrations?.plaid;
+    newTransaction.integrations.kard = t.integrations?.kard;
+
+    return newTransaction.save();
+  }),
+)) || [];
+
+export const createSomeTransactionsWithCompany = async (
   count: number,
   userId: ObjectId,
   company: ICompanyDocument,
   date?: Date,
+  card?: ICardDocument,
+  integrations?: ITransactionIntegrations,
 ): Promise<ITransactionDocument[]> => {
   const transactions: ITransactionDocument[] = [];
   for (let i = 0; i < count; i++) {
@@ -180,8 +221,10 @@ export const createSomeTransactions = async (
     transaction.user = userId;
     transaction.company = company;
     transaction.amount = getRandomInt(1, 100);
-    await transaction.save();
-    transactions.push(transaction);
+    transaction.card = card;
+    transaction.integrations = integrations;
+    const updatedTransaction = await transaction.save();
+    transactions.push(updatedTransaction);
   }
   return transactions;
 };

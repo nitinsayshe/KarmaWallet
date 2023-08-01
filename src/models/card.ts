@@ -68,7 +68,6 @@ export interface ICard extends IShareableCard {
   integrations: ICardIntegrations;
   lastFourDigitsToken?: string;
   binToken?: string;
-  networkToken?: string;
 }
 
 export interface ICardDocument extends ICard, Document {}
@@ -138,7 +137,6 @@ const cardSchema = new Schema({
   lastTransactionSync: { type: Date },
   lastFourDigitsToken: { type: String },
   binToken: { type: String },
-  networkToken: { type: String },
   unlinkedDate: { type: Date },
   removedDate: { type: Date },
 });

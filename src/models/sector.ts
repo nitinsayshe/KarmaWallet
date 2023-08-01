@@ -24,6 +24,7 @@ export interface ISector {
   carbonMultiplier: number;
   parentSectors: IRef<Schema.Types.ObjectId, ISector>[];
   averageScores: ISectorAverageScores;
+  icon: string;
 }
 
 export interface ISectorDocument extends ISector, Document {}
@@ -40,6 +41,9 @@ const sectorSchema = new Schema({
   },
   carbonMultiplier: {
     type: Number,
+  },
+  icon: {
+    type: String,
   },
   averageScores: {
     numCompanies: { type: Number },

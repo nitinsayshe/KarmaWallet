@@ -59,16 +59,20 @@ const getOfferDictionary = (offers: Offer[]) => offers.reduce((acc: { [key: stri
 }, {});
 
 // Creates a new merchant in the database
-const createKardMerchant = async (merchant: Merchant): Promise<IMerchantDocument | null> => {
+const createKardMerchant = async (merchant: Merchant, offers: Offer[]): Promise<IMerchantDocument | null> => {
+  if (!merchant || !offers?.length) return null;
   try {
     const id = merchant._id;
     delete merchant._id;
 
     // add max rate
-    const maxOffer = merchant.offers.reduce((acc, curr) => {
-      if (curr.totalCommission > acc.totalCommission) return curr;
-      return acc;
-    }, null);
+    const maxOffer = offers?.reduce(
+      (acc, curr) => {
+        if (curr.totalCommission > acc.totalCommission) return curr;
+        return acc;
+      },
+      { totalCommission: 0 } as Offer,
+    );
     const kardMerchant: IKardMerchantIntegration = { id, ...merchant, maxOffer };
     const merchantInstance = new MerchantModel({
       name: merchant.name,
@@ -289,7 +293,7 @@ export const associateKardMatches = async () => {
             return;
           }
 
-          const newMerchant = await createKardMerchant(merchant);
+          const newMerchant = await createKardMerchant(merchant, merchantOffers);
           if (!newMerchant) throw new Error(`Error creating Merchant: ${merchant._id}`);
           const rates = await createKardMerchantRates(newMerchant, merchantOffers);
           if (!rates) throw new Error(`Error creating Merchant Rates: ${merchant._id}`);
@@ -350,10 +354,13 @@ export const updateKardMerchants = async () => {
   }
 
   const newActiveDomains: Domain[] = merchants.map((merchant) => {
-    const maxRate = merchant.offers.reduce((acc, offer) => {
-      if (offer.totalCommission > acc.totalCommission) return offer;
-      return acc;
-    }, null);
+    const maxRate = merchant.offers.reduce(
+      (acc, offer) => {
+        if (offer.totalCommission > acc.totalCommission) return offer;
+        return acc;
+      },
+      { totalCommission: 0 } as Offer,
+    );
     return {
       ID: merchant._id,
       Domain: merchant.websiteURL,
@@ -381,7 +388,6 @@ export const updateKardMerchants = async () => {
         const existingMerchant = await MerchantModel.findOneAndUpdate(
           {
             'integrations.kard.id': domain.Merchant.ID,
-            'integrations.kard.websiteURL': domain.Domain,
           },
           {
             'integrations.kard.websiteURL': domain.Domain,
@@ -421,6 +427,7 @@ export const updateKardMerchantRates = async () => {
 
   await Promise.all(
     merchants.map(async (merchant) => {
+      if (!merchant?.integrations?.kard) return null;
       const { id } = merchant.integrations.kard;
       const newOffersForMerchant = newOffers.filter((offer) => offer.merchantId === id);
 
@@ -449,7 +456,7 @@ export const updateKardMerchantRates = async () => {
           )?.filter((r) => !!r);
         } catch (err: any) {
           await MerchantRateModel.deleteMany({
-            'integrations.kard.id': id,
+            'integrations.kard.merchantId': id,
             lastModified: lastModifiedDate,
           });
           console.log('Error updating merchant rates for merchant', id, err);
@@ -459,7 +466,7 @@ export const updateKardMerchantRates = async () => {
 
       // after the newMerchantsRate loop, delete all the merchantRates last modified before the current date
       await MerchantRateModel.deleteMany({
-        'integrations.kard.id': id,
+        'integrations.kard.merchantId': id,
         lastModified: { $lt: lastModifiedDate },
       });
     }),

@@ -7,6 +7,8 @@ import depositAccRouter from './depositAccount';
 import achGroupRouter from './accountGroupHolder';
 import achFundingRouter from './accountFundingSource';
 import pinRouter from './pin';
+import transactionRouter from './transactions';
+
 // import authenticate from '../../middleware/authenticate';
 
 const marqetaRouter = Router();
@@ -19,5 +21,6 @@ marqetaRouter.use('/deposit', depositAccRouter);
 marqetaRouter.use('/achgroup', achGroupRouter);
 marqetaRouter.use('/fundingsource', achFundingRouter);
 marqetaRouter.use('/pin', pinRouter);
+marqetaRouter.use('/transaction', transactionRouter);
 
 export default marqetaRouter;

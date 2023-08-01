@@ -1,4 +1,3 @@
-import { IMarqetaCreatePin } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
@@ -11,9 +10,10 @@ export class Transactions {
   }
 
   // list transactions
-  async listTransactions(params: IMarqetaCreatePin) {
+  async listTransaction(queryParams: Record<string, string>) {
     try {
-      const { data } = await this._marqetaClient._client.post('/pins/controltoken', camelToSnakeCase(params));
+      const queryString = new URLSearchParams(camelToSnakeCase(queryParams)).toString();
+      const { data } = await this._marqetaClient._client.get(`transactions?${queryString}`);
       return data;
     } catch (err) {
       console.log(err);

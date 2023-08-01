@@ -11,7 +11,7 @@ router.route('/list')
   .get(authenticate, CardController.listCards);
 
 router.route('/transition')
-  .post(authenticate, CardController.cardTransition);
+  .post(CardController.cardTransition);
 
 router.route('/:cardToken')
   .get(authenticate, CardController.getCardDetails);

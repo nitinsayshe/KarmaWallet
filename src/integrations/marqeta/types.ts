@@ -15,50 +15,49 @@ interface Metadata {
 }
 
 export interface IMarqetaUserToken {
-  user_token:string;
+  userToken:string;
 }
 
 export interface IMarqetaCreateUser {
-  first_name: string;
-  last_name: string;
-  token?: any;
+  firstName: string;
+  lastName: string;
+  token?: string;
   email: string;
   identifications: Identification[];
-  birth_date: string;
+  birthDate: string;
   address1: string;
   city: string;
   state: string;
   country: string;
-  postal_code: string;
+  postalCode: string;
   phone: string;
   gender: string;
-  uses_parent_account: boolean;
   metadata: Metadata;
 }
 
 export interface IMarqetaUserTransition extends IMarqetaUserToken{
   channel:string;
   reason:string;
-  reason_code:string;
+  reasonCode:string;
   status:string;
 }
 
 export interface IMarqetaCreateCard extends IMarqetaUserToken {
-  card_product_token: string;
+  cardProductToken: string;
 }
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   amount: number;
   fees: number;
-  currency_code:string;
-  funding_source_token:string;
+  currencyCode:string;
+  fundingSourceToken:string;
 }
 
 export interface IMarqetaProcessKyc extends IMarqetaUserToken {
 }
 
 export interface IMarqetaCardTransition {
-  card_token: string;
+  cardToken: string;
   channel:string;
   state:string;
 }
@@ -70,8 +69,8 @@ enum kyc_required {
 }
 
 interface IMarqetaACHGroupConfig{
-  is_reloadable:boolean;
-  kyc_required:kyc_required;
+  isReloadable:boolean;
+  kycRequired:kyc_required;
 }
 
 export interface IMarqetaACHGroup{
@@ -80,13 +79,13 @@ export interface IMarqetaACHGroup{
 }
 
 export interface IMarqetaClientAccessToken{
-  card_token: string;
-  application_token: string;
+  cardToken: string;
+  applicationToken: string;
 }
 
 export interface IMarqetaACHPlaidFundingSource{
-  user_token: any;
-  partner_account_link_reference_token: string;
+  userToken: any;
+  partnerAccountLinkReferenceToken: string;
   partner:string;
 }
 
@@ -110,12 +109,13 @@ export interface IMarqetaPinControlToken{
 }
 
 export interface IMarqetaCreatePin{
-  cardToken:string;
-  pinNumber:Number;
+  controlToken?:string;
+  cardToken?:string;
+  pin?:Number;
   controlTokenType?:ControlTokenType;
 }
 
 export interface IMarqetaRevealPin{
-  cardholder_verification_method:CardholderVerificationMethod;
-  control_token:string;
+  cardholderVerificationMethod:CardholderVerificationMethod;
+  controlToken:string;
 }

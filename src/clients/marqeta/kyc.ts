@@ -1,5 +1,6 @@
 import { IMarqetaProcessKyc } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
+import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
 export class Kyc {
@@ -12,7 +13,7 @@ export class Kyc {
   // perform user kyc
   async processKyc(params: IMarqetaProcessKyc) {
     try {
-      const { data } = await this._marqetaClient._client.post('/kyc', params);
+      const { data } = await this._marqetaClient._client.post('/kyc', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

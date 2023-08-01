@@ -1,5 +1,6 @@
 import { IMarqetaUserToken } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
+import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
 export class DepositAccount {
@@ -12,7 +13,7 @@ export class DepositAccount {
   // Create deposit account
   async createDepositAccount(params: IMarqetaUserToken) {
     try {
-      const { data } = await this._marqetaClient._client.post('/depositaccounts', params);
+      const { data } = await this._marqetaClient._client.post('/depositaccounts', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

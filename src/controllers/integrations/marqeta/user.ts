@@ -9,7 +9,7 @@ import { ErrorTypes } from '../../../lib/constants';
 export const createUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['first_name', 'last_name', 'email', 'birth_date', 'address1', 'city', 'state', 'country', 'postal_code', 'phone', 'identifications'];
+    const requiredFields = ['firstName', 'lastName', 'email', 'birthDate', 'address1', 'city', 'state', 'country', 'postalCode', 'phone', 'identifications'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
@@ -53,7 +53,7 @@ export const updateUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (re
 export const userTransition: IRequestHandler<{}, {}, IMarqetaUserTransition> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['status', 'reason_code', 'reason', 'channel'];
+    const requiredFields = ['status', 'reasonCode', 'reason', 'channel'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
@@ -79,7 +79,7 @@ export const listUserTransition: IRequestHandler<{}, {}, {}> = async (req, res) 
 export const createClientAccessToken: IRequestHandler<{}, {}, IMarqetaClientAccessToken> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['card_token'];
+    const requiredFields = ['cardToken'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));

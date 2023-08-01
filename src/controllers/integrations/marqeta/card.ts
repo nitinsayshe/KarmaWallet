@@ -9,7 +9,7 @@ import { ErrorTypes } from '../../../lib/constants';
 export const createCard: IRequestHandler<{}, {}, IMarqetaCreateCard> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['card_product_token'];
+    const requiredFields = ['cardProductToken'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
@@ -35,7 +35,7 @@ export const listCards: IRequestHandler<{}, {}, {}> = async (req, res) => {
 export const cardTransition: IRequestHandler<{}, {}, IMarqetaCardTransition> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['card_token', 'channel', 'state'];
+    const requiredFields = ['cardToken', 'channel', 'state'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));

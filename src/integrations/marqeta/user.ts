@@ -10,9 +10,11 @@ const marqetaClient = new MarqetaClient();
 const user = new User(marqetaClient);
 
 export const createUser = async (req: IRequest<{}, {}, IMarqetaCreateUser>) => {
-  const { _id: token } = req.requestor;
-  // use the userId as a marqeta userId (user_token)
-  const params = { token, ...req.body };
+  const { _id: userId } = req.requestor;
+
+  // use the userId as a marqeta user token (user_token)
+  const params = { token: userId.toString(), ...req.body };
+
   const userResponse = await user.createUser(params);
   return { data: userResponse };
 };
@@ -37,8 +39,8 @@ export const updateUser = async (req: IRequest<{}, {}, IMarqetaCreateUser>) => {
 export const userTransition = async (req: IRequest<{}, {}, IMarqetaUserTransition>) => {
   const { _id: userId } = req.requestor;
   // use the userId as a marqeta userId (user_token)
-  const params = req.body;
-  const userResponse = await user.userTransition({ user_token: userId, ...params });
+  const params = { userToken: userId.toString(), ...req.body };
+  const userResponse = await user.userTransition(params);
   return { data: userResponse };
 };
 

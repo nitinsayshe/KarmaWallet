@@ -6,6 +6,7 @@ import kycRouter from './kyc';
 import depositAccRouter from './depositAccount';
 import achGroupRouter from './accountGroupHolder';
 import achFundingRouter from './accountFundingSource';
+import pinRouter from './pin';
 // import authenticate from '../../middleware/authenticate';
 
 const marqetaRouter = Router();
@@ -17,5 +18,6 @@ marqetaRouter.use('/kyc', kycRouter);
 marqetaRouter.use('/deposit', depositAccRouter);
 marqetaRouter.use('/achgroup', achGroupRouter);
 marqetaRouter.use('/fundingsource', achFundingRouter);
+marqetaRouter.use('/pin', pinRouter);
 
 export default marqetaRouter;

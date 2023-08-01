@@ -1,5 +1,6 @@
-import { IMarqetaRevealPin, IMarqetaPinControlToken, IMarqetaCreatePin } from '../../integrations/marqeta/types';
+import { IMarqetaRevealPin, IMarqetaCreatePin } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
+import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
 export class Pin {
@@ -10,9 +11,9 @@ export class Pin {
   }
 
   // create pin control token
-  async createPinControlToken(params: IMarqetaPinControlToken) {
+  async createPinControlToken(params: IMarqetaCreatePin) {
     try {
-      const { data } = await this._marqetaClient._client.post('/pins/controltoken', params);
+      const { data } = await this._marqetaClient._client.post('/pins/controltoken', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -23,7 +24,7 @@ export class Pin {
   // set and update the pin
   async setPin(params: IMarqetaCreatePin) {
     try {
-      const { data } = await this._marqetaClient._client.put('/pins', params);
+      const { data } = await this._marqetaClient._client.put('/pins', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -34,7 +35,7 @@ export class Pin {
   // get pin
   async getPin(params: IMarqetaRevealPin) {
     try {
-      const { data } = await this._marqetaClient._client.post('/pins/reveal', params);
+      const { data } = await this._marqetaClient._client.post('/pins/reveal', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

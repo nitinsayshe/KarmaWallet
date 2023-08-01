@@ -31,7 +31,7 @@ export const getShareableMerchantRate = ({
     const descriptions = getMerchantRateDescription(integrations.kard?.commissionType, maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxDescription = descriptions.maxDescription;
-    name = integrations?.wildfire.Name;
+    name = integrations?.kard.name;
   }
 
   return {

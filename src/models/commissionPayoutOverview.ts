@@ -19,6 +19,7 @@ export enum KarmaCommissionPayoutOverviewStatus {
 export interface ICommissionsBreakdown {
   karma: number;
   wildfire: number;
+  kard?: number;
 }
 
 export interface IShareableCommissionPayoutOverview {

@@ -7,7 +7,7 @@ import {
   cleanUpDocuments,
   createSomeArticles,
   createSomeCompanies,
-  createSomeTransactions,
+  createSomeTransactionsWithCompany,
   createSomeUsers,
 } from '../../../../lib/testingUtils';
 import { ArticleTypes, IArticleDocument } from '../../../../models/article';
@@ -93,10 +93,12 @@ describe('tests article recommendation logic', () => {
 
     // create a transaction for each company
     testTransactions = [
-      (await createSomeTransactions(1, testUser._id, testCompanies[0]))[0],
-      (await createSomeTransactions(1, testUser._id, testCompanies[1], dayjs().subtract(2, 'week').toDate()))[0],
+      (await createSomeTransactionsWithCompany(1, testUser._id, testCompanies[0]))[0],
       (
-        await createSomeTransactions(
+        await createSomeTransactionsWithCompany(1, testUser._id, testCompanies[1], dayjs().subtract(2, 'week').toDate())
+      )[0],
+      (
+        await createSomeTransactionsWithCompany(
           1,
           testUserThatPreviouslyReceivedTwoArticleEmails._id,
           testCompanies[0],
@@ -104,7 +106,7 @@ describe('tests article recommendation logic', () => {
         )
       )[0],
       (
-        await createSomeTransactions(
+        await createSomeTransactionsWithCompany(
           1,
           testUserThatPreviouslyReceivedTwoArticleEmails._id,
           testCompanies[1],

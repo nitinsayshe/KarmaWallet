@@ -245,6 +245,7 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
   });
   let karmaAmount = 0;
   let wildfireAmount = 0;
+  let kardAmount = 0;
 
   if (!commissionPayouts.length) throw new CustomError('No commission payouts found for this time period.', ErrorTypes.GEN);
 
@@ -252,8 +253,9 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
     const payoutCommissions = payout.commissions;
     for (const commission of payoutCommissions) {
       const commissionData = await CommissionModel.findById(commission);
-      if (!!commissionData.integrations.karma.amount) karmaAmount += commissionData.allocation.user;
-      if (!!commissionData.integrations.wildfire.CommissionID) wildfireAmount += commissionData.allocation.user;
+      if (!!commissionData?.integrations?.karma?.amount) karmaAmount += commissionData.allocation.user;
+      if (!!commissionData?.integrations?.wildfire?.CommissionID) wildfireAmount += commissionData.allocation.user;
+      if (!!commissionData?.integrations?.kard?.reward) kardAmount += commissionData.allocation.user;
       // add kard here
     }
   }
@@ -262,12 +264,12 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
     const commissionPayoutOverview = new CommissionPayoutOverviewModel({
       payoutDate: getUtcDate(payoutDate).toDate(),
       commissionPayouts,
-      amount: commissionPayouts.reduce((acc, c) => acc + c.amount, 0),
+      amount: commissionPayouts?.reduce((acc, c) => acc + c.amount, 0),
       status: KarmaCommissionPayoutOverviewStatus.AwaitingVerification,
       breakdown: {
         karma: karmaAmount,
         wildfire: wildfireAmount,
-        // add kard at some point
+        kard: kardAmount,
       },
     });
 
@@ -290,7 +292,7 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     ) {
       throw new CustomError('Commission payout overview is not verified.', ErrorTypes.GEN);
     }
-    const paypalClient = await new PaypalClient();
+    const paypalClient = new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
     const commissionPayoutOverviewAmount = commissionPayoutOverview.amount;

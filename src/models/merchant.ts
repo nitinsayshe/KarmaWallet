@@ -8,9 +8,9 @@ export interface IKardOffer {
   id: string;
   name: string;
   merchantId: string;
-  merchantLocationIds: string[]; // location ids when isLocationSpecific is true
+  merchantLocationIds?: string[]; // location ids when isLocationSpecific is true
   offerType: OfferType;
-  source: OfferSource;
+  source?: OfferSource;
   commissionType: CommissionType;
   isLocationSpecific: boolean;
   optInRequired?: boolean;
@@ -18,12 +18,13 @@ export interface IKardOffer {
   expirationDate: string;
   createdDate: string;
   lastModified: string;
+  startDate?: string;
+  redeemableOnce?: boolean;
   totalCommission: number;
   minRewardAmount?: number;
   maxRewardAmount?: number;
   minTransactionAmount?: number;
   maxTransactionAmount?: number;
-  redeemableOnceForOffer?: boolean;
 }
 export interface IWildfireDomain {
   Domain: string;
@@ -59,7 +60,7 @@ export interface IKardMerchantIntegration {
   name: string;
   source: MerchantSource;
   description: string;
-  imgURL: string;
+  imgUrl: string;
   bannerImgUrl: string;
   websiteURL: string;
   acceptedCards: CardNetwork[];
@@ -140,7 +141,7 @@ const merchant = new Schema({
         name: { type: String },
         source: { type: String, enum: Object.values(MerchantSource) },
         description: { type: String },
-        imgURL: { type: String },
+        imgUrl: { type: String },
         bannerImgUrl: { type: String },
         websiteURL: { type: String },
         acceptdCards: [{ type: String, enum: Object.values(CardNetwork) }],
@@ -155,6 +156,7 @@ const merchant = new Schema({
           isLocationSpecific: { type: Boolean },
           optInRequired: { type: Boolean },
           terms: { type: String },
+          startDate: { type: String },
           expirationDate: { type: String },
           createdDate: { type: String },
           totalCommission: { type: Number },
@@ -162,7 +164,7 @@ const merchant = new Schema({
           maxRewardAmount: { type: Number },
           minTransactionAmount: { type: Number },
           maxTransactionAmount: { type: Number },
-          redeemableOnceForOffer: { type: Boolean },
+          redeemableOnce: { type: Boolean },
         },
         createdDate: { type: String },
         lastModified: { type: String },

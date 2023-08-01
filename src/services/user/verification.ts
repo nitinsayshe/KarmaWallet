@@ -1,6 +1,6 @@
 import isemail from 'isemail';
 import dayjs from 'dayjs';
-import { ec } from 'elliptic';
+import crypto from 'crypto';
 import {
   IUserDocument, UserModel,
   UserEmailStatus,
@@ -56,12 +56,13 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
 };
 
 export const verifyBiometric = async (email:string, biometricSignature:string, biometricKey:any) => {
-  // eslint-disable-next-line new-cap
-  const ellipticCurve = new ec('secp256k1');
-  // Verify the signature
   try {
-    const isVerified = ellipticCurve.verify(email, biometricSignature, biometricKey, 'hex');
-    return isVerified;
+    // Create a verifier using the public key
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(email);
+    // Verify the signature
+    const isValid = verifier.verify(biometricKey, biometricSignature, 'base64');
+    return isValid;
   } catch (err) {
     return false;
   }

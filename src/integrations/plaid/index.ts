@@ -84,7 +84,7 @@ export const reset = async (_: IRequest) => {
   await mapper.reset();
 };
 
-export const createLinkToken = async (req: IRequest<{app:boolean}, {}, ICreateLinkTokenBody>) => {
+export const createLinkToken = async (req: IRequest<{app: boolean}, {}, ICreateLinkTokenBody>) => {
   const userId = req.requestor._id.toString();
   const { cardId } = req.body;
   const { app } = req.params;

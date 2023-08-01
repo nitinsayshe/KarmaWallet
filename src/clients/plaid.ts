@@ -1,5 +1,4 @@
 /* eslint-disable camelcase */
-import 'dotenv/config';
 import crypto from 'crypto';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -55,10 +54,11 @@ export interface IPlaidWebhookJWTPayload {
   'iat': number;
   'request_body_sha256': string;
 }
+
 export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
-  app?:boolean;
+  app?: boolean;
 }
 
 export interface ISandboxItemFireWebhookRequest {
@@ -76,6 +76,7 @@ export interface IExchangePublicTokenForAccessTokenParams {
   userId: string;
   metadata: IPlaidLinkOnSuccessMetadata;
 }
+
 export class PlaidClient extends SdkClient {
   _client: PlaidApi;
 

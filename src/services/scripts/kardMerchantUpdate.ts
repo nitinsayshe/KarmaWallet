@@ -2,23 +2,10 @@ import fs from 'fs';
 import Fuse from 'fuse.js';
 import { Types } from 'mongoose';
 import path from 'path';
-import {
-  CommissionType,
-  KardClient,
-  Merchant,
-  Offer,
-  OfferType,
-} from '../../clients/kard';
+import { CommissionType, KardClient, Merchant, Offer, OfferType } from '../../clients/kard';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
-import {
-  IKardMerchantIntegration,
-  IMerchantDocument,
-  MerchantModel,
-} from '../../models/merchant';
-import {
-  IMerchantRateDocument,
-  MerchantRateModel,
-} from '../../models/merchantRate';
+import { IKardMerchantIntegration, IMerchantDocument, MerchantModel } from '../../models/merchant';
+import { IMerchantRateDocument, MerchantRateModel } from '../../models/merchantRate';
 
 export type Domain = {
   ID: string;
@@ -51,12 +38,12 @@ export type SearchMatch<ResultType, MerchantIndexType, SearchItemIndexType> = {
 };
 
 export type KWMatch = {
-  _id: Types.ObjectId;
+  id: Types.ObjectId | string;
   name: string;
   url: string;
   candidateUrl: string;
   candidateName: string;
-  searchItemId: string;
+  searchItemId: string | Types.ObjectId;
   score: number;
 };
 
@@ -72,10 +59,7 @@ const getOfferDictionary = (offers: Offer[]) => offers.reduce((acc: { [key: stri
 }, {});
 
 // Creates a new merchant in the database
-const createKardMerchant = async (
-  merchant: Merchant,
-  offers: Offer[],
-): Promise<IMerchantDocument | null> => {
+const createKardMerchant = async (merchant: Merchant, offers: Offer[]): Promise<IMerchantDocument | null> => {
   if (!merchant || !offers?.length) return null;
   try {
     const id = merchant._id;
@@ -89,11 +73,7 @@ const createKardMerchant = async (
       },
       { totalCommission: 0 } as Offer,
     );
-    const kardMerchant: IKardMerchantIntegration = {
-      id,
-      ...merchant,
-      maxOffer,
-    };
+    const kardMerchant: IKardMerchantIntegration = { id, ...merchant, maxOffer };
     const merchantInstance = new MerchantModel({
       name: merchant.name,
       integrations: {
@@ -137,11 +117,7 @@ const createKardMerchantRates = async (
   }
 };
 
-const getKardOfferData = async (): Promise<{
-  merchants: Merchant[];
-  offers: Offer[];
-  domains: Domain[];
-} | null> => {
+const getKardOfferData = async (): Promise<{ merchants: Merchant[]; offers: Offer[]; domains: Domain[] } | null> => {
   try {
     const kc = new KardClient();
     const merchants = await kc.getRewardsMerchants();
@@ -149,10 +125,7 @@ const getKardOfferData = async (): Promise<{
 
     const domains: Domain[] = merchants.map((merchant) => {
       const maxRate = merchant.offers
-        .filter(
-          (offer) => offer.offerType === OfferType.ONLINE
-            && offer.commissionType === CommissionType.PERCENT,
-        )
+        .filter((offer) => offer.offerType === OfferType.ONLINE && offer.commissionType === CommissionType.PERCENT)
         .reduce((acc, offer) => {
           const rate = offer.totalCommission;
           if (rate > acc) return rate;
@@ -197,14 +170,8 @@ export const fetchMerchantOffersAndSaveToJSON = async () => {
       }),
     ),
   );
-  fs.writeFileSync(
-    path.resolve(__dirname, './.tmp', 'kard_domains.json'),
-    JSON.stringify(domains),
-  );
-  fs.writeFileSync(
-    path.resolve(__dirname, './.tmp', 'kard_rates.json'),
-    JSON.stringify(offers),
-  );
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'kard_domains.json'), JSON.stringify(domains));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'kard_rates.json'), JSON.stringify(offers));
 };
 
 const getMatchFromDomainFuseResult = (
@@ -269,10 +236,7 @@ const addKardIntegrationToMerchant = async (
 // Add merchants to our database based on a csv of matches
 export const associateKardMatches = async () => {
   // update to name of file that you are using, should have _id, and merchantId where _id is the Company id and merchantId is the kard merchant id
-  const matchesRaw = fs.readFileSync(
-    path.resolve(__dirname, './.tmp', 'kard_matches_confirmed.json'),
-    'utf8',
-  );
+  const matchesRaw = fs.readFileSync(path.resolve(__dirname, './.tmp', 'kard_matches_confirmed.json'), 'utf8');
   const matches: { _id: Types.ObjectId; merchantId: string }[] = JSON.parse(matchesRaw);
 
   const { merchants, offers, domains } = await getKardOfferData();
@@ -318,48 +282,25 @@ export const associateKardMatches = async () => {
 
         try {
           if (!!company.merchant) {
-            console.log(
-              `[info] ${company.companyName} already has a merchant associated with it`,
-            );
             const updatedMerchant = await addKardIntegrationToMerchant(
               company.merchant as unknown as Types.ObjectId,
               merchant,
             );
-            if (!updatedMerchant) {
-              throw new Error(`Error updating Merchant: ${merchant._id}`);
-            }
+            if (!updatedMerchant) throw new Error(`Error updating Merchant: ${merchant._id}`);
             // update merchant rates
-            const updatedRates = await createKardMerchantRates(
-              updatedMerchant,
-              merchantOffers,
-            );
-            if (!updatedRates) {
-              throw new Error(`Error updating Merchant Rates: ${merchant._id}`);
-            }
+            const updatedRates = await createKardMerchantRates(updatedMerchant, merchantOffers);
+            if (!updatedRates) throw new Error(`Error updating Merchant Rates: ${merchant._id}`);
             return;
           }
 
-          const newMerchant = await createKardMerchant(
-            merchant,
-            merchantOffers,
-          );
-          if (!newMerchant) {
-            throw new Error(`Error creating Merchant: ${merchant._id}`);
-          }
-          console.log(`created new merchant: ${newMerchant._id}`);
-          const rates = await createKardMerchantRates(
-            newMerchant,
-            merchantOffers,
-          );
-          if (!rates) {
-            throw new Error(`Error creating Merchant Rates: ${merchant._id}`);
-          }
+          const newMerchant = await createKardMerchant(merchant, merchantOffers);
+          if (!newMerchant) throw new Error(`Error creating Merchant: ${merchant._id}`);
+          const rates = await createKardMerchantRates(newMerchant, merchantOffers);
+          if (!rates) throw new Error(`Error creating Merchant Rates: ${merchant._id}`);
           company.merchant = newMerchant._id;
           await company.save();
         } catch (err: any) {
-          console.log(
-            `[err] ${company.companyName} - ${merchant?._id} - ${domain} - ${merchantOffers?.length}`,
-          );
+          console.log(`[err] ${company.companyName} - ${merchant?._id} - ${domain} - ${merchantOffers?.length}`);
           return JSON.stringify({ companyId, merchantId, error: err.message });
         }
 
@@ -369,16 +310,10 @@ export const associateKardMatches = async () => {
   ).filter((error) => !!error);
 
   if (errors?.length > 0) {
-    fs.writeFileSync(
-      path.resolve(__dirname, './.tmp', 'kardAssociationErrors.json'),
-      JSON.stringify(errors),
-    );
+    fs.writeFileSync(path.resolve(__dirname, './.tmp', 'kardAssociationErrors.json'), JSON.stringify(errors));
   }
   if (matches?.length > 0) {
-    fs.writeFileSync(
-      path.resolve(__dirname, './.tmp/kard_associated_matches.json'),
-      JSON.stringify(matches),
-    );
+    fs.writeFileSync(path.resolve(__dirname, './.tmp/kard_associated_matches.json'), JSON.stringify(matches));
   }
 };
 
@@ -396,10 +331,7 @@ export const removeDuplicateKardMerchants = async () => {
     const trimmedList = (
       await Promise.all(
         duplicateMerchants?.slice(1)?.map(async (duplicateMerchant) => {
-          if (
-            !duplicateMerchant?.integrations?.wildfire
-            && !duplicateMerchant.integrations?.karma
-          ) {
+          if (!duplicateMerchant?.integrations?.wildfire && !duplicateMerchant.integrations?.karma) {
             return duplicateMerchant.remove();
           }
           return null;
@@ -453,8 +385,6 @@ export const updateKardMerchants = async () => {
   const updatedMerchants = (
     await Promise.all(
       newActiveDomains.map(async (domain) => {
-        console.log('Updating Domain: ', JSON.stringify(domain, null, 2));
-        console.log('Domain: ', domain.Domain);
         const existingMerchant = await MerchantModel.findOneAndUpdate(
           {
             'integrations.kard.id': domain.Merchant.ID,
@@ -466,10 +396,7 @@ export const updateKardMerchants = async () => {
           },
         );
         if (existingMerchant) {
-          console.log(
-            '[+] updated existing merchant domain for ',
-            existingMerchant.name,
-          );
+          console.log('[+] updated existing merchant domain for ', existingMerchant.name);
           return existingMerchant;
         }
         return null;
@@ -482,16 +409,12 @@ export const updateKardMerchants = async () => {
     { lastModified: { $ne: lastModifiedDate } },
     { 'integrations.kard.websiteURL': undefined },
   );
-  console.log(
-    `[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant website removed`,
-  );
+  console.log(`[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant website removed`);
 };
 
 export const updateKardMerchantRates = async () => {
   const kc = new KardClient();
-  const newOffers = (await kc.getRewardsMerchants())
-    ?.map((merchant) => merchant.offers)
-    .flat();
+  const newOffers = (await kc.getRewardsMerchants())?.map((merchant) => merchant.offers).flat();
   if (!newOffers) {
     console.error('[-] no new offers found');
     return;
@@ -506,9 +429,7 @@ export const updateKardMerchantRates = async () => {
     merchants.map(async (merchant) => {
       if (!merchant?.integrations?.kard) return null;
       const { id } = merchant.integrations.kard;
-      const newOffersForMerchant = newOffers.filter(
-        (offer) => offer.merchantId === id,
-      );
+      const newOffersForMerchant = newOffers.filter((offer) => offer.merchantId === id);
 
       if (newOffersForMerchant) {
         try {
@@ -591,9 +512,7 @@ export const matchKardCompanies = async () => {
           let domainMatch: Fuse.FuseResult<Domain>[] = [];
           if (!!cleanUrl) domainMatch = fuse.search(cleanUrl);
           let merchantMatch: Fuse.FuseResult<Domain>[] = [];
-          if (!!company?.companyName) {
-            merchantMatch = fuse.search(company.companyName);
-          }
+          if (!!company?.companyName) merchantMatch = fuse.search(company.companyName);
 
           if (!domainMatch?.length && !merchantMatch?.length) {
             return;
@@ -604,11 +523,7 @@ export const matchKardCompanies = async () => {
             companyName: company.companyName,
             url: company.url,
           };
-          const match = getMatchFromDomainFuseResult(
-            merchantMatch,
-            domainMatch,
-            matchObj,
-          );
+          const match = getMatchFromDomainFuseResult(merchantMatch, domainMatch, matchObj);
           matches.push(match);
         } catch (err: any) {
           return { company, message: err?.message };
@@ -617,48 +532,32 @@ export const matchKardCompanies = async () => {
     )
   ).filter((e) => !!e);
 
-  console.log(
-    `[+] ${matches?.length} matches found for ${domains?.length} domains`,
-  );
+  console.log(`[+] ${matches?.length} matches found for ${domains?.length} domains`);
   console.log(`[-] ${errors?.length} errors found`);
 
   if (errors?.length) {
-    fs.writeFileSync(
-      path.resolve(__dirname, './.tmp/kard_matches_errors.json'),
-      JSON.stringify(errors),
-    );
+    fs.writeFileSync(path.resolve(__dirname, './.tmp/kard_matches_errors.json'), JSON.stringify(errors));
   }
   if (matches?.length) {
-    fs.writeFileSync(
-      path.resolve(__dirname, './.tmp/kard_fuzzy_matches.json'),
-      JSON.stringify(matches),
-    );
+    fs.writeFileSync(path.resolve(__dirname, './.tmp/kard_fuzzy_matches.json'), JSON.stringify(matches));
   }
 };
 
 // Once the above function has been run, we can manually review the matches and confirm them, this function will create a json with the confirmed matches
-export const narrowDownMatchesByScore = async (
-  inputFilePath?: string,
-  outputFilePath?: string,
-) => {
+export const narrowDownMatchesByScore = async (inputFilePath?: string, outputFilePath?: string) => {
   let searchResultsRaw = '';
   if (!inputFilePath) {
-    searchResultsRaw = fs.readFileSync(
-      path.resolve(__dirname, './.tmp/kard_fuzzy_matches.json'),
-      'utf8',
-    );
+    searchResultsRaw = fs.readFileSync(path.resolve(__dirname, './.tmp/kard_fuzzy_matches.json'), 'utf8');
   } else {
-    searchResultsRaw = fs.readFileSync(
-      path.resolve(__dirname, inputFilePath),
-      'utf8',
-    );
+    searchResultsRaw = fs.readFileSync(path.resolve(__dirname, inputFilePath), 'utf8');
   }
 
+  console.log('matches to be narrowed down', JSON.stringify(searchResultsRaw, null, 2));
   const searchResults: SearchMatch<Domain, string, Types.ObjectId>[] = JSON.parse(searchResultsRaw);
   const matches: KWMatch[] = searchResults
     ?.map((searchResult: SearchMatch<Domain, string, Types.ObjectId>) => {
       const {
-        _id,
+        _id: id,
         topMerchantMatchScore,
         topDomainMatchScore,
         companyName,
@@ -666,7 +565,6 @@ export const narrowDownMatchesByScore = async (
         topMerchantMatches,
         topDomainMatches,
         topMerchantMatchMerchantName,
-        topMerchantMatchMerchantId,
         topMerchantMatchDomain,
         topDomainMatchMerchantName,
         topDomainMatchDomain,
@@ -675,76 +573,59 @@ export const narrowDownMatchesByScore = async (
 
       let merchantMatch = false;
       let domainMatch = false;
-      const candidate = {
-        name: '',
-        url: '',
-        companyId: '',
-        merchantId: '',
-      };
+      let candidateName = '';
+      let candidateUrl = '';
+      let candidateId = '';
 
       let minScore = topMerchantMatchScore;
       if (!!topMerchantMatchScore && topMerchantMatchScore < 0.01) {
         merchantMatch = true;
-        candidate.name = topMerchantMatchMerchantName;
-        candidate.url = topMerchantMatchDomain;
-        candidate.companyId = topMerchantMatches?.[0]?.item?.Merchant?.ID;
-        candidate.merchantId = topMerchantMatchMerchantId;
+        candidateName = topMerchantMatchMerchantName;
+        candidateUrl = topMerchantMatchDomain;
+        candidateId = topMerchantMatches?.[0]?.item?.Merchant?.ID;
       }
       if (!!topDomainMatchScore && topDomainMatchScore < 0.01) {
         domainMatch = true;
         minScore = topDomainMatchScore;
-        candidate.name = topDomainMatchMerchantName;
-        candidate.url = topDomainMatchDomain;
-        candidate.companyId = topDomainMatches?.[0]?.item?.Merchant?.ID;
-        candidate.merchantId = topDomainMatchMerchantId;
+        candidateName = topDomainMatchMerchantName;
+        candidateUrl = topDomainMatchDomain;
+        candidateId = topDomainMatches?.[0]?.item?.Merchant?.ID;
       }
 
       if (!!merchantMatch && !!domainMatch) {
         if (topMerchantMatchScore < topDomainMatchScore) {
-          merchantMatch = true;
           minScore = topMerchantMatchScore;
-          candidate.name = topMerchantMatchMerchantName;
-          candidate.url = topMerchantMatchDomain;
-          candidate.companyId = topMerchantMatches?.[0]?.item?.Merchant?.ID;
-          candidate.merchantId = topMerchantMatchMerchantId;
+          candidateName = topMerchantMatchMerchantName;
+          candidateUrl = topMerchantMatchDomain;
+          candidateId = topMerchantMatches?.[0]?.item?.Merchant?.ID;
         } else {
-          domainMatch = true;
           minScore = topDomainMatchScore;
-          candidate.name = topDomainMatchMerchantName;
-          candidate.url = topDomainMatchDomain;
-          candidate.companyId = topDomainMatches?.[0]?.item?.Merchant?.ID;
-          candidate.merchantId = topDomainMatchMerchantId;
+          candidateName = topDomainMatchMerchantName;
+          candidateUrl = topDomainMatchDomain;
+          candidateId = topDomainMatches?.[0]?.item?.Merchant?.ID;
         }
       }
 
       if (merchantMatch || domainMatch) {
-        const newMatch = {
-          _id,
-          merchantId: candidate.merchantId,
+        console.log(`[+] top match: ${topDomainMatchDomain} - ${topDomainMatchMerchantId}`);
+        return {
+          id,
           name: companyName,
           url,
-          candidateUrl: candidate.url,
-          candidateName: candidate.name,
-          searchItemId: candidate.companyId,
+          candidateUrl,
+          candidateName,
+          searchItemId: candidateId,
           score: minScore,
         };
-        return newMatch;
       }
-
       return null;
     })
     .filter((e) => e !== null);
 
   if (!outputFilePath) {
-    fs.writeFileSync(
-      path.resolve(__dirname, './.tmp/kard_matches_confirmed.json'),
-      JSON.stringify(matches),
-    );
+    fs.writeFileSync(path.resolve(__dirname, './.tmp/kard_matches_confirmed.json'), JSON.stringify(matches));
   } else {
-    fs.writeFileSync(
-      path.resolve(__dirname, outputFilePath),
-      JSON.stringify(matches),
-    );
+    fs.writeFileSync(path.resolve(__dirname, outputFilePath), JSON.stringify(matches));
   }
 
   console.log(`[#] ${matches?.length} matches`);

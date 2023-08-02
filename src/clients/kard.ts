@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
-import crypto, { createHmac } from 'crypto';
+import { createHmac } from 'crypto';
 import { StateAbbreviation } from '../lib/constants';
 import { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
@@ -228,7 +228,7 @@ export const verifyWebhookSignature = (body: EarnedRewardWebhookBody, signature:
     const stringified = JSON.stringify(body);
 
     const hash = createHmac('sha256', KARD_WEBHOOK_KEY).update(stringified).digest('base64');
-    if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
+    if (hash === signature) {
       return null;
     }
 

@@ -26,7 +26,6 @@ import { CategoryModel } from '../../models/category';
 import { SubcategoryModel } from '../../models/subcategory';
 import { IPlaidCategoriesToSectorMappingDocument, PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
 import { IPlaidItem } from './types';
-import { UserModel } from '../../models/user';
 
 const pythonScriptPath = path.join(__dirname, '..', '..', 'lib', 'companyTextMatch.py');
 
@@ -313,16 +312,11 @@ export class PlaidMapper {
     console.log(`[+] ${cards.length} cards and ${accessTokens.size} access tokens retrieved\n`);
 
     this._totalAccessTokens = accessTokens.size;
-    const user = await UserModel.findById(cards[0]?.userId)?.lean();
 
     console.log('retrieving transactions from Plaid...');
     const Plaid = new PlaidClient();
     for (const accessToken of Array.from(accessTokens)) {
       let plaidTransactions = null;
-
-      if (user.isTestIdentity) {
-        continue;
-      }
 
       plaidTransactions = await Plaid.getPlaidTransactions({
         access_token: accessToken,

@@ -98,7 +98,6 @@ export interface IUser extends IShareableUser {
   password: string;
   lastModified: Date;
   integrations?: IUserIntegrations;
-  isTestIdentity?: boolean;
   articles?: {
     queued?: {
       date: Date;
@@ -129,7 +128,6 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   dateJoined: { type: Date, default: () => getUtcDate() },
   zipcode: { type: String },
-  isTestIdentity: { type: Boolean },
   role: {
     type: String,
     default: 'none',

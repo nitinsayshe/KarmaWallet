@@ -4,7 +4,11 @@ import utc from 'dayjs/plugin/utc';
 import { FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import { PlaidClient } from '../../clients/plaid';
-import { addKardIntegrationToCard, createKardUserAndAddIntegrations, registerCardInKardRewards } from '../../integrations/kard';
+import {
+  addKardIntegrationToCard,
+  createKardUserAndAddIntegrations,
+  registerCardInKardRewards,
+} from '../../integrations/kard';
 import { CardStatus, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
@@ -63,7 +67,9 @@ export const getShareableCard = ({
   initialTransactionsProcessing,
   lastTransactionSync,
 }: ICardDocument) => {
-  const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name ? getShareableUser(userId as IUserDocument) : userId;
+  const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name
+    ? getShareableUser(userId as IUserDocument)
+    : userId;
 
   return {
     _id,
@@ -91,7 +97,8 @@ export const _getCard = async (query: FilterQuery<ICard>) => CardModel.findOne(q
 
 export const _getCards = async (query: FilterQuery<ICard>) => CardModel.find(query);
 
-export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<ICard>) => CardModel.updateMany(query, { ...updates, lastModified: dayjs().utc().toDate() });
+export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<ICard>) =>
+  CardModel.updateMany(query, { ...updates, lastModified: dayjs().utc().toDate() });
 
 // internal functions to handle cleanup for individual integrations
 // when a user removes a card
@@ -174,7 +181,7 @@ const removeBinAndLastFourFromCard = async (card: ICardDocument): Promise<ICard>
 };
 
 export const registerInKardRewards = async (
-  req: IRequest<KardRewardsRegisterParams, {}, KardRewardsRegisterRequest>,
+  req: IRequest<KardRewardsRegisterParams, {}, KardRewardsRegisterRequest>
 ): Promise<ICardDocument> => {
   // validate data
   const kardRewardsRegisterRequestSchema = z.object({
@@ -194,7 +201,7 @@ export const registerInKardRewards = async (
   const parsed = kardRewardsRegisterRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     const formattedError = formatZodFieldErrors(
-      ((parsed as SafeParseError<KardRewardsRegisterRequest>)?.error as ZodError)?.formErrors?.fieldErrors,
+      ((parsed as SafeParseError<KardRewardsRegisterRequest>)?.error as ZodError)?.formErrors?.fieldErrors
     );
     throw new CustomError(`${formattedError || 'Error parsing request body'}`, ErrorTypes.INVALID_ARG);
   }
@@ -218,6 +225,7 @@ export const registerInKardRewards = async (
   if (!card) {
     throw new CustomError('Card not found', ErrorTypes.NOT_FOUND);
   }
+  console.log('card', JSON.stringify(card));
 
   // check if the card is already registered and error out if it is
   if (!!card.integrations?.kard?.dateAdded && !!card.lastFourDigitsToken && !!card.binToken) {
@@ -228,9 +236,6 @@ export const registerInKardRewards = async (
     // add the encrypted data to the card
     card.binToken = encrypt(parsed.data.bin);
     card.lastFourDigitsToken = encrypt(parsed.data.lastFour);
-    if (!card?.integrations) card.integrations = {};
-    card.integrations.kard = { dateAdded: dayjs().utc().toDate() };
-    card.lastModified = dayjs().utc().toDate();
     card = await card.save();
   } catch (e) {
     console.error(e);

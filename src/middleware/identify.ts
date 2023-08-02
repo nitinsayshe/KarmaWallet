@@ -19,6 +19,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
   try {
     const uid = await Session.verifySession(authKey);
     const session = await LegacySessionModel.findOne({ authKey }).lean();
+
     if (!uid && !session) return next();
 
     if (session?.uid) {
@@ -29,18 +30,13 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
 
     if (uid) {
       const user = await UserService.getUserById(req, uid);
-      const latestUserLogin = await UserLogModel.findOne({ userId: user._id }).sort({ date: -1 });
-
-      if (latestUserLogin.authKey !== authKey) {
-        return next();
-      }
-
       (req as IRequest).requestor = user as IUserDocument;
       (req as IRequest).authKey = authKey;
 
       const now = getUtcDate().toDate();
+      const latestUserLogin = await UserLogModel.findOne({ userId: user._id }).sort({ date: -1 });
       if (!latestUserLogin || !latestUserLogin.date || areMoreThanOneDayApart(latestUserLogin.date, now)) {
-        await UserService.storeNewLogin(user._id.toString(), now, authKey);
+        await UserService.storeNewLogin(user._id.toString(), now);
       }
     }
   } catch (e) {

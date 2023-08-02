@@ -1,12 +1,11 @@
 import { Express, Router } from 'express';
 import * as UserController from '../controllers/user';
 import authenticate from '../middleware/authenticate';
-import biometricAuthenticate from '../middleware/biometricAuthenticate';
 
 const router = Router();
 
 router.post('/register', UserController.register);
-router.post('/login', biometricAuthenticate, UserController.login);
+router.post('/login', UserController.login);
 
 router.post('/password/token/create', UserController.createPasswordResetToken);
 router.post('/password/token/verify', UserController.verifyPasswordResetToken);

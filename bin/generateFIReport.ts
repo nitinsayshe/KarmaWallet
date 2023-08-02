@@ -1,12 +1,15 @@
-/* WARNING: This consumes a ton of memory! */
-/* Allows node to use ~16GB of memory */
-/* node --max_old_space_size=16384 --require ts-node/register -r dotenv/config generateFIReport.ts */
+/* eslint-disable unused-imports/no-unused-imports */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable camelcase */
+/* eslint-disable no-unused-vars */
 import 'dotenv/config';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { Logger } from '../src/services/logger';
 import { generateFIUserReport, generateFIReport } from '../src/services/scripts/generate_financial_institution_report';
 
+const email = 'an.dy@theimpactkarma.com';
+const userId = '63921faeeab8cdbb11798ad5';
 (async () => {
   try {
     await MongoClient.init();

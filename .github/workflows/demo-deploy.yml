@@ -31,7 +31,7 @@ jobs:
     - run: echo 'PUBLIC_TOKEN=${{secrets.STAGING_PUBLIC_TOKEN}}' >> .env
     - run: echo 'NODE_ENV=staging' >> .env
     - run: echo 'PORT=8012' >> .env
-    - run: echo 'FRONTEND_DOMAIN=https://frontend.staging.karmawallet.io' >> .env
+    - run: echo 'FRONTEND_DOMAIN=https://frontend.demo.karmawallet.io' >> .env
     - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
     - run: echo 'DB_USER=${{secrets.STAGING_DB_USER}}' >> .env
     - run: echo 'DB_NAME=${{secrets.STAGING_DB_NAME}}' >> .env
@@ -47,8 +47,8 @@ jobs:
     - run: echo 'PLAID_CLIENT_ID=${{secrets.STAGING_PLAID_CLIENT_ID}}' >> .env
     - run: echo 'PLAID_SECRET=${{secrets.STAGING_PLAID_SECRET}}' >> .env
     - run: echo 'PLAID_ENV=${{secrets.STAGING_PLAID_ENV}}' >> .env
-    - run: echo 'PLAID_WEBHOOK_URI=https://backend.staging.karmawallet.io/webhook/plaid' >> .env
-    - run: echo 'PLAID_REDIRECT_URI=https://ui.staging.karmawallet.io/account' >> .env
+    - run: echo 'PLAID_WEBHOOK_URI=https://backend.demo.karmawallet.io/webhook/plaid' >> .env
+    - run: echo 'PLAID_REDIRECT_URI=https://frontend.demo.karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
     - run: echo 'MAILCHIMP_KEY=' >> .env
     - run: echo 'MAILCHIMP_SERVER=' >> .env

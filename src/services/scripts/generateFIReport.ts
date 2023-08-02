@@ -2,10 +2,10 @@
 /* Allows node to use ~16GB of memory */
 /* node --max_old_space_size=16384 --require ts-node/register -r dotenv/config generateFIReport.ts */
 import 'dotenv/config';
-import { MongoClient } from '../src/clients/mongo';
-import { asCustomError } from '../src/lib/customError';
-import { Logger } from '../src/services/logger';
-import { generateFIUserReport, generateFIReport } from '../src/services/scripts/generate_financial_institution_report';
+import { MongoClient } from '../../clients/mongo';
+import { asCustomError } from '../../lib/customError';
+import { Logger } from '../logger';
+import { generateFIUserReport, generateFIReport } from './generate_financial_institution_report';
 
 (async () => {
   try {
@@ -16,6 +16,6 @@ import { generateFIUserReport, generateFIReport } from '../src/services/scripts/
     Logger.error(asCustomError(err));
     console.log(err);
   } finally {
-    await MongoClient.disconnect();
+    MongoClient.disconnect();
   }
 })();

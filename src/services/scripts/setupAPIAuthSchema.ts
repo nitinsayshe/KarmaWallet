@@ -1,14 +1,12 @@
 import 'dotenv/config';
 import argon2 from 'argon2';
-import { MongoClient } from '../src/clients/mongo';
-import { asCustomError } from '../src/lib/customError';
-import { ApiKeyModel } from '../src/models/apiKey';
-import { IApp, AppModel, IAppDocument } from '../src/models/app';
-import { ClientModel, IClientDocument } from '../src/models/client';
-import { Logger } from '../src/services/logger';
-import { ApiKeyStatus } from '../src/lib/constants';
-
-const { KW_API_PUBLIC_TOKEN } = process.env;
+import { MongoClient } from '../../clients/mongo';
+import { ApiKeyStatus } from '../../lib/constants';
+import { asCustomError } from '../../lib/customError';
+import { ApiKeyModel } from '../../models/apiKey';
+import { IApp, AppModel, IAppDocument } from '../../models/app';
+import { ClientModel, IClientDocument } from '../../models/client';
+import { Logger } from '../logger';
 
 function createKWClient(name: string) {
   // create new client

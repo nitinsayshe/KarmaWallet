@@ -22,3 +22,12 @@ export const listUserKyc: IRequestHandler<{}, {}, {}> = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getKycResult: IRequestHandler<{kycToken:string}, {}, {}> = async (req, res) => {
+  try {
+    const { user: data } = await KYCService.getKycResult(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

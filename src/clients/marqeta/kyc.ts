@@ -31,4 +31,15 @@ export class Kyc {
       throw asCustomError(err);
     }
   }
+
+  // get user kyc result
+  async getKycResult(kycToken: string) {
+    try {
+      const { data } = await this._marqetaClient._client.get(`/kyc/${kycToken}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
 }

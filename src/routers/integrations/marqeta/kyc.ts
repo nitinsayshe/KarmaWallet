@@ -10,4 +10,6 @@ router.route('/process')
 router.route('/list')
   .get(authenticate, KycController.listUserKyc);
 
+router.route('/:kycToken')
+  .get(authenticate, KycController.getKycResult);
 export default router;

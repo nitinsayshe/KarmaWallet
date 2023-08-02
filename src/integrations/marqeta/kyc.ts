@@ -20,3 +20,9 @@ export const listUserKyc = async (userToken:string) => {
   const userResponse = await kyc.listKyc(userToken);
   return { user: userResponse };
 };
+
+export const getKycResult = async (req: IRequest<{kycToken:string}, {}, {}>) => {
+  const { kycToken } = req.params;
+  const userResponse = await kyc.getKycResult(kycToken);
+  return { user: userResponse };
+};

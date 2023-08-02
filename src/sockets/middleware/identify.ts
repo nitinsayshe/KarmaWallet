@@ -32,7 +32,7 @@ export default () => async (socket: Socket, next: (err?: ExtendedError) => void)
       const now = new Date();
       const latestUserLogin = await UserLogModel.findOne({ userId: user._id }).sort({ date: -1 });
       if (!latestUserLogin || !latestUserLogin.date || areMoreThanOneDayApart(latestUserLogin.date, now)) {
-        await UserService.storeNewLogin(user._id.toString(), now, authKey);
+        await UserService.storeNewLogin(user._id.toString(), now);
       }
     }
   } catch (e) {

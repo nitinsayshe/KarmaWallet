@@ -13,7 +13,6 @@ import { IShareableUser, IUser } from './user';
 export interface IUserLog {
   user: IRef<ObjectId, (IShareableUser | IUser)>;
   date: Date;
-  authKey: string;
 }
 
 export interface IUserLogDocument extends IUserLog, Document {}
@@ -26,7 +25,6 @@ const userLogSchema = new Schema({
     required: true,
   },
   date: { type: Date, default: () => getUtcDate() },
-  authKey: { type: String },
 });
 userLogSchema.plugin(mongoosePaginate);
 

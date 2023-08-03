@@ -7,7 +7,7 @@ import jwkToPem from 'jwk-to-pem';
 import pino from 'pino';
 import {
   Configuration, CountryCode, ItemPublicTokenExchangeRequest, LinkTokenCreateRequest, PlaidApi,
-  PlaidEnvironments, Products, SandboxItemFireWebhookRequestWebhookCodeEnum,
+  PlaidEnvironments, ProcessorTokenCreateRequestProcessorEnum, Products, SandboxItemFireWebhookRequestWebhookCodeEnum,
   SandboxPublicTokenCreateRequest, Transaction, TransactionsGetRequest, WebhookVerificationKeyGetRequest,
 } from 'plaid';
 import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
@@ -115,7 +115,7 @@ export class PlaidClient extends SdkClient {
       const config = {
         access_token: accessToken,
         account_id: data.accounts[0].account_id,
-        processor: process.env.MARQETA,
+        processor: ProcessorTokenCreateRequestProcessorEnum.Marqeta,
       };
       // Get the processor token from plaid
       const processorTokenResponse = await this._client.processorTokenCreate(config);

@@ -90,6 +90,7 @@ export const ErrorTypes = {
 
 export const AUTHKEY_HEADER = 'authKey';
 export const TOKEN_REMOVE = 'remove_me';
+export const DEVICE_IDENTIFIER = 'identifierKey';
 
 // used for V2 api calls
 export const SERVICE_NAME_HEADER = 'serviceName';

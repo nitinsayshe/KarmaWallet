@@ -1,4 +1,3 @@
-import { IMarqetaProcessKyc } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
@@ -11,7 +10,7 @@ export class CardProduct {
   }
 
   // create card product
-  async createCardProduct(params: IMarqetaProcessKyc) {
+  async createCardProduct(params: any) {
     try {
       const { data } = await this._marqetaClient._client.post('/cardproducts', camelToSnakeCase(params));
       return data;

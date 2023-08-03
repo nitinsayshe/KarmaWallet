@@ -17,9 +17,7 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
   requestor?: IUserDocument;
   apiRequestor?: IAppDocument;
   authKey?: string;
-  identifierKey?:string;
   headers: any;
-  get: any
 }
 
 /**

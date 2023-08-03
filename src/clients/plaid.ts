@@ -54,11 +54,9 @@ export interface IPlaidWebhookJWTPayload {
   'iat': number;
   'request_body_sha256': string;
 }
-
 export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
-  app?: boolean;
 }
 
 export interface ISandboxItemFireWebhookRequest {
@@ -109,25 +107,7 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  getProcessorToken = async (accessToken: string) => {
-    try {
-      const { data } = await this._client.accountsGet({ access_token: accessToken });
-      const config = {
-        access_token: accessToken,
-        account_id: data.accounts[0].account_id,
-        processor: process.env.MARQETA,
-      };
-      // Get the processor token from plaid
-      const processorTokenResponse = await this._client.processorTokenCreate(config);
-      const processorToken = processorTokenResponse.data.processor_token;
-      return processorToken;
-    } catch (e) {
-      // Handle the error here or throw it to be handled elsewhere
-      this.handlePlaidError(e as IPlaidErrorResponse);
-    }
-  };
-
-  createLinkToken = async ({ userId, access_token, app }: ICreateLinkTokenParams) => {
+  createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
     const configs: LinkTokenCreateRequest = {
       user: {
@@ -145,12 +125,7 @@ export class PlaidClient extends SdkClient {
     }
     // products should be excluded if launching link in update mode
     if (!access_token) {
-      configs.products = [Products.Transactions, Products.Auth];
-
-      // if request is coming from web set products to Transactions only
-      if (!app) {
-        configs.products = [Products.Transactions];
-      }
+      configs.products = [Products.Transactions];
     }
     try {
       const response = await this._client.linkTokenCreate(configs);
@@ -169,16 +144,6 @@ export class PlaidClient extends SdkClient {
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
       await plaidUserInstance.load();
-
-      // if accounts is empty generete a preocessor token
-      if (!plaidItem.accounts) {
-        const processorToken = await this.getProcessorToken(accessToken);
-        return {
-          message: 'Processor token successfully generated',
-          itemId,
-          processorToken,
-        };
-      }
       await plaidUserInstance.addCards(plaidItem, true);
       return {
         message: 'Successfully linked plaid account',

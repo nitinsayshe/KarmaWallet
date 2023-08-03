@@ -124,6 +124,10 @@ export const globalPlaidTransactionMapping = async ({
     const timeString = `${logId}matching for user ${card.user.toString()}`;
     console.time(timeString);
 
+    if (user.isTestIdentity) {
+      continue;
+    }
+
     remainingTransactions = await plaidClient.getPlaidTransactions({
       start_date: startDate,
       end_date: endDate,

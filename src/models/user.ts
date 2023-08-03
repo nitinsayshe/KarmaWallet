@@ -65,6 +65,12 @@ export interface IReferrals {
   params: IUrlParam[];
 }
 
+export interface IBiometrics {
+  _id?:string;
+  biometricKey: string,
+  isBiometricEnabled: Boolean,
+}
+
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
@@ -73,6 +79,7 @@ export interface IUserIntegrations {
   shareasale?: IShareASale;
   referrals?: IReferrals;
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
+  biometrics?: IBiometrics[];
 }
 
 export interface IShareableUser {
@@ -91,6 +98,7 @@ export interface IUser extends IShareableUser {
   password: string;
   lastModified: Date;
   integrations?: IUserIntegrations;
+  isTestIdentity?: boolean;
   articles?: {
     queued?: {
       date: Date;
@@ -121,6 +129,7 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   dateJoined: { type: Date, default: () => getUtcDate() },
   zipcode: { type: String },
+  isTestIdentity: { type: Boolean },
   role: {
     type: String,
     default: 'none',
@@ -183,6 +192,15 @@ const userSchema = new Schema({
     promos: {
       type: [{ type: Schema.Types.ObjectId, ref: 'promo' }],
     },
+    biometrics: [
+      {
+        type: {
+          biometricKey: { type: String },
+          isBiometricEnabled: { type: Boolean },
+          dateKeyCreated: { type: Date, default: () => getUtcDate() },
+        },
+      },
+    ],
   },
 });
 userSchema.plugin(mongoosePaginate);

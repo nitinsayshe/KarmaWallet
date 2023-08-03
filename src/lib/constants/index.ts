@@ -90,6 +90,7 @@ export const ErrorTypes = {
 
 export const AUTHKEY_HEADER = 'authKey';
 export const TOKEN_REMOVE = 'remove_me';
+export const DEVICE_IDENTIFIER = 'identifierKey';
 
 // used for V2 api calls
 export const SERVICE_NAME_HEADER = 'serviceName';
@@ -146,8 +147,6 @@ export const AllowedOrigins = [
   'http://cu.sandbox.karmawallet.io',
   'https://dev.cu.sandbox.karmawallet.io',
   'http://dev.cu.sandbox.karmawallet.io',
-  'https://frontend.demo.karmawallet.io',
-  'http://frontend.demo.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;

@@ -27,18 +27,18 @@ export interface IKardIntegration {
 }
 
 export interface IMarqetaIntegration {
-  token:string;
-  expiration_time:Date;
-  user_token: String;
-  card_token: String,
-  card_product_token: String;
-  last_four: String;
-  expr_month: Number;
-  expr_year: Number;
-  pan:Number,
-  cvv_number:Number,
-  pin_is_set: Boolean;
-  state: String;
+  token: string;
+  expiration_time: Date;
+  user_token: string;
+  card_token: string,
+  card_product_token: string;
+  last_four: string;
+  expr_month: number;
+  expr_year: number;
+  pan: number,
+  cvv_number: number,
+  pin_is_set: boolean;
+  state: string;
 }
 export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;

@@ -1,28 +1,21 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-<<<<<<< HEAD
-import { CardModel, ICard, ICardDocument, IMarqetaIntegration } from '../../models/card';
-import { IRequest } from '../../types/request';
-import { IShareableUser, IUserDocument } from '../../models/user';
-import { IRef } from '../../types/model';
-import { getShareableUser } from '../user';
-=======
 import { FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
->>>>>>> 467e913de320b02b9e811ec3aa1c3cbb4edb860a
+import { CardModel, ICard, ICardDocument, IMarqetaIntegration } from '../../models/card';
+import { IRequest } from '../../types/request';
+import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { IRef } from '../../types/model';
+import { getShareableUser } from '../user';
 import { PlaidClient } from '../../clients/plaid';
 import { addKardIntegrationToCard, createKardUserAndAddIntegrations, registerCardInKardRewards } from '../../integrations/kard';
 import { CardStatus, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
-import { CardModel, ICard, ICardDocument } from '../../models/card';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
-import { IRef } from '../../types/model';
-import { IRequest } from '../../types/request';
-import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
+import { extractYearAndMonth } from '../../lib/date';
 
 dayjs.extend(utc);
 
@@ -273,16 +266,8 @@ export const registerInKardRewards = async (
   return updatedCard;
 };
 
-const extractYearAndMonth = (dateString:Date) => {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-  return { year, month };
-};
-
 export const addCards = async (cardData:IMarqetaIntegration) => {
   const { user_token, token, expiration_time } = cardData;
-  console.log('cardData', cardData);
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
 
   let card = await CardModel.findOne({ userId: user_token });
@@ -294,10 +279,12 @@ export const addCards = async (cardData:IMarqetaIntegration) => {
   const { year, month } = extractYearAndMonth(expiration_time);
 
   // prepare the cardItem Details
-  const cardItem = { card_token: token,
+  const cardItem = {
+    card_token: token,
     expr_month: month,
     expr_year: year,
-    ...cardData };
+    ...cardData,
+  };
 
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta.push(cardItem);

@@ -325,6 +325,7 @@ export const createATestCompany = async (): Promise<ICompanyDocument> => {
     reason: CompanyHideReasons.None,
     lastModified: new Date(),
   };
+  company.hidden = { status: false, reason: CompanyHideReasons.None, lastModified: new Date() };
   return company.save();
 };
 

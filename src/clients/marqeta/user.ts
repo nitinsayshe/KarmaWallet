@@ -1,5 +1,6 @@
 import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaUserTransition } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
+import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
 export class User {
@@ -12,7 +13,7 @@ export class User {
   // create new user
   async createUser(params: IMarqetaCreateUser) {
     try {
-      const { data } = await this._marqetaClient._client.post('/users', params);
+      const { data } = await this._marqetaClient._client.post('/users', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -45,7 +46,7 @@ export class User {
   // update user
   async updateUser(userToken:string, params:IMarqetaCreateUser) {
     try {
-      const { data } = await this._marqetaClient._client.put(`/users/${userToken}`, params);
+      const { data } = await this._marqetaClient._client.put(`/users/${userToken}`, camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -56,7 +57,7 @@ export class User {
   // user transition
   async userTransition(params: IMarqetaUserTransition) {
     try {
-      const { data } = await this._marqetaClient._client.post('/usertransitions', params);
+      const { data } = await this._marqetaClient._client.post('/usertransitions', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -78,7 +79,7 @@ export class User {
   // Create client access toke
   async createClientAccessToken(params:IMarqetaClientAccessToken) {
     try {
-      const { data } = await this._marqetaClient._client.post('/users/auth/clientaccesstoken', params);
+      const { data } = await this._marqetaClient._client.post('/users/auth/clientaccesstoken', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

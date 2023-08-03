@@ -10,14 +10,13 @@ const marqetaClient = new MarqetaClient();
 const depositAccount = new DepositAccount(marqetaClient);
 
 export const createDepositAccount = async (req: IRequest<{}, {}, IMarqetaUserToken>) => {
-  const params = req.body;
-  const responseMessage = '';
+  const { _id: userId } = req.requestor;
+  const params = { userToken: userId.toString(), ...req.body };
   const userResponse = await depositAccount.createDepositAccount(params);
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
 };
 
 export const listDepositAccount = async (userToken:string) => {
-  const responseMessage = '';
   const userResponse = await depositAccount.listDepositAccount(userToken);
-  return { message: responseMessage, user: userResponse };
+  return { user: userResponse };
 };

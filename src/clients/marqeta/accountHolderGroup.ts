@@ -1,5 +1,6 @@
 import { IMarqetaACHGroup } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
+import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
 export class ACHGroup {
@@ -12,7 +13,7 @@ export class ACHGroup {
   // create Account holder group
   async createACHGroup(params: IMarqetaACHGroup) {
     try {
-      const { data } = await this._marqetaClient._client.post('/accountholdergroups', params);
+      const { data } = await this._marqetaClient._client.post('/accountholdergroups', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -45,7 +46,10 @@ export class ACHGroup {
   // update Account holder group
   async updateACHGroup(accountGroupToken:string, params:IMarqetaACHGroup) {
     try {
-      const { data } = await this._marqetaClient._client.put(`/accountholdergroups/${accountGroupToken}`, params);
+      const { data } = await this._marqetaClient._client.put(
+        `/accountholdergroups/${accountGroupToken}`,
+        camelToSnakeCase(params),
+      );
       return data;
     } catch (err) {
       console.log(err);

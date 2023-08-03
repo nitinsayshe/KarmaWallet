@@ -1,5 +1,6 @@
 import { IMarqetaCardTransition, IMarqetaCreateCard } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
+import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
 export class Card {
@@ -12,7 +13,7 @@ export class Card {
   // create new card
   async createCard(params: IMarqetaCreateCard) {
     try {
-      const { data } = await this._marqetaClient._client.post('/cards?show_cvv_number=true&show_pan=true', params);
+      const { data } = await this._marqetaClient._client.post('/cards?show_cvv_number=true&show_pan=true', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);
@@ -34,7 +35,7 @@ export class Card {
   // card trnas
   async cardTransition(params: IMarqetaCardTransition) {
     try {
-      const { data } = await this._marqetaClient._client.post('/cardtransitions', params);
+      const { data } = await this._marqetaClient._client.post('/cardtransitions', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

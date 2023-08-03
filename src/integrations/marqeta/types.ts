@@ -15,52 +15,51 @@ interface Metadata {
 }
 
 export interface IMarqetaUserToken {
-  user_token:string;
+  userToken: string;
 }
 
 export interface IMarqetaCreateUser {
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
   token?: string;
   email: string;
   identifications: Identification[];
-  birth_date: string;
+  birthDate: string;
   address1: string;
   city: string;
   state: string;
   country: string;
-  postal_code: string;
+  postalCode: string;
   phone: string;
   gender: string;
-  uses_parent_account: boolean;
   metadata: Metadata;
 }
 
 export interface IMarqetaUserTransition extends IMarqetaUserToken{
-  channel:string;
-  reason:string;
-  reason_code:string;
-  status:string;
+  channel: string;
+  reason: string;
+  reasonCode: string;
+  status: string;
 }
 
 export interface IMarqetaCreateCard extends IMarqetaUserToken {
-  card_product_token: string;
+  cardProductToken: string;
 }
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   amount: number;
   fees: number;
-  currency_code:string;
-  funding_source_token:string;
+  currencyCode: string;
+  fundingSourceToken: string;
 }
 
 export interface IMarqetaProcessKyc extends IMarqetaUserToken {
 }
 
 export interface IMarqetaCardTransition {
-  card_token: string;
-  channel:string;
-  state:string;
+  cardToken: string;
+  channel: string;
+  state: string;
 }
 
 enum kyc_required {
@@ -70,8 +69,8 @@ enum kyc_required {
 }
 
 interface IMarqetaACHGroupConfig{
-  is_reloadable:boolean;
-  kyc_required:kyc_required;
+  isReloadable: boolean;
+  kycRequired: kyc_required;
 }
 
 export interface IMarqetaACHGroup{
@@ -80,6 +79,43 @@ export interface IMarqetaACHGroup{
 }
 
 export interface IMarqetaClientAccessToken{
-  card_token: string;
-  application_token: string;
+  cardToken: string;
+  applicationToken: string;
+}
+
+export interface IMarqetaACHPlaidFundingSource{
+  userToken: any;
+  partnerAccountLinkReferenceToken: string;
+  partner: string;
+}
+
+export enum ControlTokenType {
+  set_pin = 'SET_PIN',
+  reveal_pin = 'REVEAL_PIN',
+}
+
+export enum CardholderVerificationMethod {
+  biometric_face = 'BIOMETRIC_FACE',
+  biometric_fingerprint = 'BIOMETRIC_FINGERPRINT',
+  exp_cvv ='EXP_CVV',
+  login= 'LOGIN',
+  otp='OTP',
+  otp_cvv='OTP_CVV',
+  other='OTHER'
+}
+export interface IMarqetaPinControlToken{
+  cardToken: string;
+  controlTokenType?: ControlTokenType;
+}
+
+export interface IMarqetaCreatePin{
+  controlToken?: string;
+  cardToken?: string;
+  pin?: number;
+  controlTokenType?: ControlTokenType;
+}
+
+export interface IMarqetaRevealPin{
+  cardholderVerificationMethod: CardholderVerificationMethod;
+  controlToken: string;
 }

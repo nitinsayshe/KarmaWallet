@@ -10,9 +10,9 @@ const marqetaClient = new MarqetaClient();
 const card = new Card(marqetaClient);
 
 export const createCard = async (req: IRequest<{}, {}, IMarqetaCreateCard>) => {
-  const { card_product_token } = req.body;
   const { _id: userId } = req.requestor;
-  const userResponse = await card.createCard({ user_token: userId, card_product_token });
+  const params = { userToken: userId.toString(), ...req.body };
+  const userResponse = await card.createCard(params);
   return { user: userResponse };
 };
 export const listCards = async (userToken:string) => {
@@ -21,8 +21,8 @@ export const listCards = async (userToken:string) => {
 };
 
 export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransition>) => {
-  const { card_token, channel, state } = req.body;
-  const userResponse = await card.cardTransition({ card_token, channel, state });
+  const params = { ...req.body };
+  const userResponse = await card.cardTransition(params);
   return { user: userResponse };
 };
 

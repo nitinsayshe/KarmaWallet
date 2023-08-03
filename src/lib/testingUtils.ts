@@ -183,6 +183,11 @@ export const createATestCompany = async (): Promise<ICompanyDocument> => {
   company.companyName = `Test Company_${new Types.ObjectId().toString}`;
   company.combinedScore = getRandomInt(-16, 16);
   company.createdAt = dayjs().subtract(1, 'week').toDate();
+  company.hidden = {
+    status: false,
+    reason: CompanyHideReasons.None,
+    lastModified: new Date(),
+  };
   company.hidden = { status: false, reason: CompanyHideReasons.None, lastModified: new Date() };
   return company.save();
 };

@@ -90,7 +90,7 @@ export class User {
   // Retrieve client access token
   async getClientAccessToken(accessToken: string) {
     try {
-      const { data } = await this._marqetaClient._client.get(`//users/auth/clientaccesstoken/${accessToken}`);
+      const { data } = await this._marqetaClient._client.get(`/users/auth/clientaccesstoken/${accessToken}`);
       return data;
     } catch (err) {
       console.log(err);

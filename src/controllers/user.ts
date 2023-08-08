@@ -90,6 +90,15 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVeri
   }
 };
 
+export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserService.IEmail > = async (req, res) => {
+  try {
+    const data = await UserService.checkIfEmailAlreadyInUse(req.body.email);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const resetPasswordFromToken: IRequestHandler<{}, {}, (UserService.ILoginData & UserService.IUpdatePasswordBody)> = async (req, res) => {
   try {
     const user = await UserService.resetPasswordFromToken(req);

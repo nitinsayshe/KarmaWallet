@@ -10,6 +10,7 @@ router.post('/login', UserController.login);
 router.post('/password/token/create', UserController.createPasswordResetToken);
 router.post('/password/token/verify', UserController.verifyPasswordResetToken);
 router.put('/password/token', UserController.resetPasswordFromToken);
+router.post('/checkEmail', UserController.checkIfEmailAlreadyInUse);
 
 // Authenticated
 router.post('/logout', authenticate, UserController.logout);

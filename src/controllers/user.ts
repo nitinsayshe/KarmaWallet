@@ -95,10 +95,16 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVeri
   }
 };
 
-export const resetPasswordFromToken: IRequestHandler<{}, {}, UserService.ILoginData & UserService.IUpdatePasswordBody> = async (
-  req,
-  res,
-) => {
+export const verifyUserDoesNotAlreadyExist: IRequestHandler<{}, {}, UserVerificationService.IEmail> = async (req, res) => {
+  try {
+    const data = await UserVerificationService.verifyUserDoesNotAlreadyExist(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const resetPasswordFromToken: IRequestHandler<{}, {}, (UserService.ILoginData & UserService.IUpdatePasswordBody)> = async (req, res) => {
   try {
     const user = await UserService.resetPasswordFromToken(req);
     output.api(req, res, UserService.getShareableUser(user));

@@ -18,7 +18,7 @@ import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { IEmail, IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
+import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -41,6 +41,10 @@ dayjs.extend(utc);
 
 export interface IVerifyTokenBody {
   token: string;
+}
+
+export interface IEmail {
+  email: string;
 }
 
 export interface ILoginData {
@@ -152,8 +156,8 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
   if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
 
   // confirm email does not already belong to another user
-  const userWithEmailAlreadyExists = await checkIfUserWithEmailExists(email);
-  if (!!userWithEmailAlreadyExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+  const emailAlreadyInUse = await checkIfUserWithEmailExists(email);
+  if (!!emailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
 
   // start building the user information
   const { urlParams, shareASale, groupCode } = visitor.integrations;
@@ -559,4 +563,11 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     throw asCustomError(err);
   }
   return { message: 'OK' };
+};
+
+export const checkIfEmailAlreadyInUse = async (email: string) => {
+  email = email?.toLowerCase();
+  const user = await UserModel.findOne({ 'emails.email': email });
+  if (!!user) throw new CustomError(`Email: ${email} already belongs to a user.`, ErrorTypes.CONFLICT);
+  return true;
 };

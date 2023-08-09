@@ -9,17 +9,17 @@ export const getTotalDollarsFromPlaidItems = async () => {
   const totals: {[key: string]: { gas: number; gasTransactions: number; airline: number; airlineTransactions: number } } = {};
 
   for (const item of plaidItems) {
-    if (!totals[item.userId]) {
-      totals[item.userId] = { gas: 0, gasTransactions: 0, airline: 0, airlineTransactions: 0 };
+    if (!totals[item.userId as string]) {
+      totals[item.userId as string] = { gas: 0, gasTransactions: 0, airline: 0, airlineTransactions: 0 };
     }
 
     for (const transaction of item.transactions) {
       if ((transaction.category || []).includes('Gas Stations')) {
-        totals[item.userId].gas += transaction.amount;
-        totals[item.userId].gasTransactions += 1;
+        totals[item.userId as string].gas += transaction.amount;
+        totals[item.userId as string].gasTransactions += 1;
       } else if ((transaction.category || []).includes('Airlines and Aviation Services') || (transaction.category || []).includes('Airports')) {
-        totals[item.userId].airline += transaction.amount;
-        totals[item.userId].airlineTransactions += 1;
+        totals[item.userId as string].airline += transaction.amount;
+        totals[item.userId as string].airlineTransactions += 1;
       }
     }
   }

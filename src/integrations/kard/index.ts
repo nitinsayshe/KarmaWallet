@@ -15,7 +15,7 @@ import { CentsInUSD } from '../../lib/constants';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
 import { ICard, ICardDocument } from '../../models/card';
-import { ICompanyDocument } from '../../models/company';
+import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ITransaction } from '../../models/transaction';
 import { IKardIntegration, IUserDocument, UserModel } from '../../models/user';
 import { getNetworkFromBin } from '../../services/card/utils';
@@ -155,6 +155,23 @@ export const deleteKardUser = async (user: IUserDocument | Types.ObjectId): Prom
   }
 };
 
+const populateCompaniesOnTransactions = async (
+  transactions: Partial<ITransaction & { _id: Types.ObjectId }>[],
+): Promise<Partial<ITransaction & { _id: Types.ObjectId }>[]> => {
+  const companies: { [key: string]: ICompanyDocument } = {};
+  return Promise.all(
+    transactions.map(async (t) => {
+      let company = companies[t.company?.toString()];
+      if (!company) {
+        company = await CompanyModel.findById(t.company);
+        companies[t.company.toString()] = company;
+      }
+      t.company = company;
+      return t;
+    }),
+  );
+};
+
 export const queueSettledTransactions = async (
   user: IUserDocument | Types.ObjectId,
   transactions: Partial<ITransaction & { _id: Types.ObjectId }>[],
@@ -168,20 +185,27 @@ export const queueSettledTransactions = async (
       throw new Error('No kard integration object or invalid kard user id.');
     }
 
-    const req: QueueTransactionsRequest = transactions.map(
-      (t): Transaction => ({
+    // populate companies
+    transactions = await populateCompaniesOnTransactions(transactions);
+
+    // map to KardTransaction
+    const req: QueueTransactionsRequest = transactions.map((t): Transaction => {
+      const description = `Transaction with ${
+        (t.company as ICompanyDocument)?.companyName
+      } on ${t.date.toISOString()} for ${t.amount * CentsInUSD} USD cents`;
+      return {
         transactionId: t.integrations?.kard?.id,
         referringPartnerUserId: u?.integrations?.kard?.userId,
         amount: t.amount * CentsInUSD,
         status: t?.integrations?.kard?.status,
         currency: t?.integrations?.plaid?.iso_currency_code,
-        description: (t.company as ICompanyDocument)?.companyName,
+        description,
         settledDate: t?.date?.toISOString(),
         merchantName: (t.company as ICompanyDocument)?.companyName,
         cardBIN: decrypt((t?.card as ICard)?.binToken),
         cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
-      }),
-    );
+      };
+    });
 
     const kc = new KardClient();
     return kc.queueTransactionsForProcessing(req);

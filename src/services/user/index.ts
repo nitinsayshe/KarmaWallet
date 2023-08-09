@@ -42,6 +42,10 @@ export interface IVerifyTokenBody {
   token: string;
 }
 
+export interface IEmail {
+  email: string;
+}
+
 export interface ILoginData {
   email: string;
   password?: string;
@@ -540,4 +544,11 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     throw asCustomError(err);
   }
   return { message: 'OK' };
+};
+
+export const checkIfEmailAlreadyInUse = async (email: string) => {
+  email = email?.toLowerCase();
+  const user = await UserModel.findOne({ 'emails.email': email });
+  if (!!user) throw new CustomError(`Email: ${email} already belongs to a user.`, ErrorTypes.CONFLICT);
+  return true;
 };

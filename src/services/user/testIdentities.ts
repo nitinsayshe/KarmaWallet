@@ -132,7 +132,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '01741',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('Walden1854!'),
       },
@@ -146,7 +146,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '04556',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('SilentSpring1962@'),
       },
@@ -160,7 +160,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '64755',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('CropRotation1930s#'),
       },
@@ -174,7 +174,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '69980',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('SaveTheRainforest1988$'),
       },
@@ -789,4 +789,23 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     console.error(`Error creating test identity data: ${err}`);
     return null;
   }
+};
+
+export const triggerResetTestIdentities = (): void => {
+  if (!MainBullClient.queue) {
+    console.error('MainBullClient queue is not intitalized');
+    return;
+  }
+  MainBullClient.createJob(
+    JobNames.ResetTestIdentities,
+    {},
+    { jobId: `${JobNames.ResetTestIdentities}` },
+    {
+      onComplete: () => {
+        console.log(`${JobNames.ResetTestIdentities} finished`);
+        console.log(`Triggering ${JobNames.GenerateUserImpactTotals}`);
+        MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {}, { jobId: `${JobNames.GenerateUserImpactTotals}` });
+      },
+    },
+  );
 };

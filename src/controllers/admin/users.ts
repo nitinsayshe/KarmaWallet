@@ -1,9 +1,9 @@
 import aqp from 'api-query-params';
-import { IRequestHandler } from '../../types/request';
+import { asCustomError } from '../../lib/customError';
 import * as output from '../../services/output';
 import * as UserService from '../../services/user';
-import { asCustomError } from '../../lib/customError';
 import * as UserTestIdentityService from '../../services/user/testIdentities';
+import { IRequestHandler } from '../../types/request';
 
 export const getUsersPaginated: IRequestHandler = async (req, res) => {
   try {
@@ -42,12 +42,11 @@ export const deleteUser: IRequestHandler<{}, { userId: string }, {}> = async (re
 
 export const resetTestIdentities: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    await UserTestIdentityService.deleteTestIdentites();
-    const data = await UserTestIdentityService.createTestIdentities();
+    UserTestIdentityService.triggerResetTestIdentities();
     output.api(
       req,
       res,
-      Object.values(data)?.map((d) => UserService.getShareableUser(d)),
+      'Reset test identities job has been queued for execution.',
     );
   } catch (err) {
     output.error(req, res, asCustomError(err));

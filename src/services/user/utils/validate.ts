@@ -1,3 +1,5 @@
+import { UserModel } from '../../../models/user';
+
 export const validatePassword = (password: string) => {
   if (password.length < 8) {
     return { valid: false, errorType: 'length', message: 'Please provide a password at least 8 characters long.' };
@@ -14,3 +16,8 @@ export const validatePassword = (password: string) => {
 };
 
 export const isValidPassword = (password: string) => validatePassword(password).valid;
+
+export const checkIfUserWithEmailExists = async (email: string) => {
+  const userExists = await UserModel.findOne({ 'emails.email': email });
+  return !!userExists;
+};

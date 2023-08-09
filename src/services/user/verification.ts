@@ -14,11 +14,16 @@ import { IRequest } from '../../types/request';
 import { sendEmailVerification } from '../email';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
+import { checkIfUserWithEmailExists } from './utils/validate';
 
 export interface IEmailVerificationData {
   email: string;
   code: string;
   tokenValue: string;
+}
+
+export interface IEmail {
+  email: string;
 }
 
 export const emailChecks = (user: IUserDocument, email: string) => {
@@ -66,4 +71,13 @@ export const verifyBiometric = async (email:string, biometricSignature:string, b
   } catch (err) {
     return false;
   }
+};
+
+// provides endpoint for UI to check if an email already exists on a user
+export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
+  const email = req.body.email?.toLowerCase();
+  if (!email) throw new CustomError('No email provided.', ErrorTypes.INVALID_ARG);
+  const userExists = await checkIfUserWithEmailExists(email);
+  if (!!userExists) throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
+  return 'User with this email does not exist';
 };

@@ -32,7 +32,7 @@ import { sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
-import { validatePassword } from './utils/validate';
+import { checkIfUserWithEmailExists, validatePassword } from './utils/validate';
 import { resendEmailVerification, verifyBiometric } from './verification';
 import { deleteKardUser } from '../../integrations/kard';
 
@@ -148,8 +148,7 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
   if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
 
   // confirm email does not already belong to another user
-  const emailExists: IUserDocument = await UserModel.findOne({ 'emails.email': email });
-  if (!!emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+  if (!!checkIfUserWithEmailExists(email)) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
 
   // start building the user information
   const { urlParams, shareASale, groupCode } = visitor.integrations;

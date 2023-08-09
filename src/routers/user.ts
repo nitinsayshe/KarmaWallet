@@ -11,7 +11,7 @@ router.post('/login', biometricAuthenticate, UserController.login);
 router.post('/password/token/create', UserController.createPasswordResetToken);
 router.post('/password/token/verify', UserController.verifyPasswordResetToken);
 router.put('/password/token', UserController.resetPasswordFromToken);
-router.post('/checkEmail', UserController.checkIfEmailAlreadyInUse);
+router.post('/check-email', UserController.verifyUserDoesNotAlreadyExist);
 
 router.get('/test-identities', UserController.getTestIdentities);
 

@@ -14,7 +14,7 @@ import { IRequest } from '../../types/request';
 import { sendEmailVerification } from '../email';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
-import { checkIfUserWithEmailExists } from './utils/validate';
+import { checkIfUserWithEmailExists } from './utils';
 
 export interface IEmailVerificationData {
   email: string;

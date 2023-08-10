@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { ObjectId, Schema, Types } from 'mongoose';
 import { ArticleModel, ArticleTypes, IArticleDocument } from '../models/article';
 import { CardModel, ICardDocument } from '../models/card';
+import { CommissionModel, ICommissionDocument, KarmaCommissionStatus } from '../models/commissions';
 import { CategoryModel } from '../models/category';
 import {
   CompanyHideReasons,
@@ -29,6 +30,9 @@ import { getRandomInt } from './number';
 
 export type CreateTestUsersRequest = {
   users?: Partial<IUserDocument>[];
+};
+export type CreateTestCommissionsRequest = {
+  commissions?: Partial<ICommissionDocument>[];
 };
 
 export type CreateTestPromosRequest = {
@@ -98,6 +102,23 @@ export const cleanUpDocuments = async (document: IRemoveableDocument[]) => {
     }),
   );
 };
+
+export const createSomeCommissions = async (req: CreateTestCommissionsRequest): Promise<ICommissionDocument[]> => (await Promise.all(
+  req.commissions?.map(async (commission) => {
+    const newCommission = new CommissionModel();
+    newCommission.amount = commission.amount || getRandomInt(1, 20);
+    newCommission.merchant = commission?.merchant || undefined;
+    newCommission.company = commission?.company || undefined;
+    newCommission.user = commission?.user || undefined;
+    newCommission.transaction = commission?.transaction || undefined;
+    newCommission.date = commission.date || getUtcDate().toDate();
+    newCommission.status = commission.status || KarmaCommissionStatus.Pending;
+    newCommission.allocation = commission.allocation || { karma: newCommission.amount * 0.25, user: newCommission.amount * 0.75 };
+    newCommission.integrations = commission.integrations || undefined;
+    newCommission.lastStatusUpdate = commission.lastStatusUpdate || getUtcDate().toDate();
+    return newCommission.save();
+  }),
+)) || [];
 
 export const createSomeUsers = async (req: CreateTestUsersRequest): Promise<IUserDocument[]> => (await Promise.all(
   req.users.map(async (user) => {
@@ -291,7 +312,7 @@ const companyRatings = Object.values(CompanyRating);
 export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Promise<ICompanyDocument[]> => (await Promise.all(
   req.companies.map(async (company) => {
     const newCompany = new CompanyModel();
-    newCompany.companyName = company?.companyName || `Test Company${new Types.ObjectId().toString()}`;
+    newCompany.companyName = company?.companyName || `Test Company ${new Types.ObjectId().toString()}`;
     newCompany.combinedScore = company?.combinedScore || getRandomInt(-16, 16);
     newCompany.grade = company?.grade || undefined;
     newCompany.merchant = company?.merchant || undefined;

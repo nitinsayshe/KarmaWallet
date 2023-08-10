@@ -186,7 +186,7 @@ export const registerInKardRewards = async (
       .string()
       .length(6)
       .refine((val) => /^\d+$/.test(val), { message: 'Must be a number' })
-      .refine((val) => getNetworkFromBin(val), {
+      .refine((val) => !!getNetworkFromBin(val), {
         message: 'Must be with a participating network: Visa, MasterCard, Discover, or American Express',
       }),
   });

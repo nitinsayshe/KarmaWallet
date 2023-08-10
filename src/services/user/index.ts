@@ -352,7 +352,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
 export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
   const email = req.body.email?.toLowerCase();
   const userExists = checkIfUserWithEmailExists(email);
-  if (!userExists) return true;
+  if (!userExists) return 'User with this email does not exist';
   throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
 };
 

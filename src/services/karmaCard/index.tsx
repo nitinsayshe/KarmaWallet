@@ -57,12 +57,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   };
 
   if (address2) marqetaKYCInfo.address2 = address2;
-
+  // perform the KYC logic and Marqeta stuff here
   const marqetaResponse = await performMarqetaCreateAndKYC(marqetaKYCInfo);
   console.log('/////// This is the marqeta response', marqetaResponse);
-  // perform the KYC logic and Marqeta stuff here
-
-  // Create a User if Approved or Pending status from marqetaResponse once we build out performMarqetaCreateAndKYC
+  // This is just a placeholder until we have a response from performMarqetaCreateandKYC, replace with the actual response
   const isApprovedOrPending = true;
 
   if (isApprovedOrPending) {

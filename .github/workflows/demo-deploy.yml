@@ -94,5 +94,5 @@ jobs:
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
     - run: echo 'MARQETA_BASE_URL=https://sandbox-api.marqeta.com/v3/' >> .env
     - run: npm i
-    - run: pm2 restart all
+    - run: pm2 restart all --update-env
 

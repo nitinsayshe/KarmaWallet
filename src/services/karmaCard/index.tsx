@@ -28,8 +28,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const { requestor } = req;
   let newVisitor;
   const { firstName, lastName, address1, address2, birthDate, postalCode, state, ssn, email, city, urlParams } = req.body;
-  console.log('///// this is the birthdate', birthDate);
   if (!firstName || !lastName || !address1 || !birthDate || !postalCode || !state || !ssn || !city) throw new Error('Missing required fields');
+  if (!requestor && !email) throw new Error('Missing required fields');
 
   if (!requestor) {
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor({ params: urlParams, email });
@@ -57,12 +57,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   };
 
   if (address2) marqetaKYCInfo.address2 = address2;
-
+  // perform the KYC logic and Marqeta stuff here
   const marqetaResponse = await performMarqetaCreateAndKYC(marqetaKYCInfo);
   console.log('/////// This is the marqeta response', marqetaResponse);
-  // perform the KYC logic and Marqeta stuff here
-
-  // Create a User if Approved or Pending status from marqetaResponse once we build out performMarqetaCreateAndKYC
+  // This is just a placeholder until we have a response from performMarqetaCreateandKYC, replace with the actual response
   const isApprovedOrPending = true;
 
   if (isApprovedOrPending) {

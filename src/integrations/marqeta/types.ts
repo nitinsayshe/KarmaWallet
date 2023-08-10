@@ -3,16 +3,16 @@ interface Identification {
   value: string;
 }
 
-interface Metadata {
-  notification_email: string;
-  notification_language: string;
-  authentication_question1: string;
-  authentication_question2: string;
-  authentication_question3: string;
-  authentication_answer1: string;
-  authentication_answer2: string;
-  authentication_answer3: string;
-}
+// interface Metadata {
+//   notification_email: string;
+//   notification_language: string;
+//   authentication_question1: string;
+//   authentication_question2: string;
+//   authentication_question3: string;
+//   authentication_answer1: string;
+//   authentication_answer2: string;
+//   authentication_answer3: string;
+// }
 
 export interface IMarqetaUserToken {
   userToken: string;
@@ -26,13 +26,13 @@ export interface IMarqetaCreateUser {
   identifications: Identification[];
   birthDate: string;
   address1: string;
+  address2?: string;
   city: string;
   state: string;
   country: string;
   postalCode: string;
-  phone: string;
-  gender: string;
-  metadata: Metadata;
+  // do we need this??
+  // metadata: Metadata;
 }
 
 export interface IMarqetaUserTransition extends IMarqetaUserToken{
@@ -97,11 +97,11 @@ export enum ControlTokenType {
 export enum CardholderVerificationMethod {
   biometric_face = 'BIOMETRIC_FACE',
   biometric_fingerprint = 'BIOMETRIC_FINGERPRINT',
-  exp_cvv ='EXP_CVV',
-  login= 'LOGIN',
-  otp='OTP',
-  otp_cvv='OTP_CVV',
-  other='OTHER'
+  exp_cvv = 'EXP_CVV',
+  login = 'LOGIN',
+  otp = 'OTP',
+  otp_cvv = 'OTP_CVV',
+  other = 'OTHER'
 }
 export interface IMarqetaPinControlToken{
   cardToken: string;

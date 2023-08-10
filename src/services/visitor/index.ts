@@ -92,8 +92,8 @@ export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email:
   }
 };
 
-// Endpoint for user to request account creation
-const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+// Create a visitor with the provided email and params
+export const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
     const visitorInfo: any = {
       email: info.email,

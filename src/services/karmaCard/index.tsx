@@ -28,8 +28,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const { requestor } = req;
   let newVisitor;
   const { firstName, lastName, address1, address2, birthDate, postalCode, state, ssn, email, city, urlParams } = req.body;
-  console.log('///// this is the birthdate', birthDate);
   if (!firstName || !lastName || !address1 || !birthDate || !postalCode || !state || !ssn || !city) throw new Error('Missing required fields');
+  if (!requestor && !email) throw new Error('Missing required fields');
 
   if (!requestor) {
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor({ params: urlParams, email });

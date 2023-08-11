@@ -14,6 +14,7 @@ import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import { IUrlParam, IVerifyTokenBody } from '../user';
+import { filterToValidQueryParams } from '../../lib/validation';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -92,17 +93,18 @@ export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email:
   }
 };
 
-// Endpoint for user to request account creation
-const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+// Create a visitor with the provided email and params
+export const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
     const visitorInfo: any = {
       email: info.email,
     };
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
+      const _validParams = filterToValidQueryParams(info.params);
       visitorInfo.integrations = {};
       if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
-      if (!!info.params) visitorInfo.integrations.urlParams = info.params;
+      if (_validParams.length > 0) visitorInfo.integrations.urlParams = _validParams;
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
     }
     const visitor = await VisitorModel.create(visitorInfo);

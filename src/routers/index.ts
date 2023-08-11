@@ -25,6 +25,7 @@ import values from './values';
 import visitor from './visitor';
 import promo from './promo';
 import banner from './banner';
+import karmaCard from './karmaCard';
 
 const routers = (app: Express) => {
   admin(app);
@@ -53,6 +54,7 @@ const routers = (app: Express) => {
   webhook(app);
   promo(app);
   banner(app);
+  karmaCard(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

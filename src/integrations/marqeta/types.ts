@@ -89,6 +89,12 @@ export interface IMarqetaACHPlaidFundingSource{
   partner: string;
 }
 
+export interface IMarqetaACHBankTransfer{
+  amount: number;
+  fundingSourceToken: string;
+  type: string;
+}
+
 export enum ControlTokenType {
   set_pin = 'SET_PIN',
   reveal_pin = 'REVEAL_PIN',
@@ -111,11 +117,28 @@ export interface IMarqetaPinControlToken{
 export interface IMarqetaCreatePin{
   controlToken?: string;
   cardToken?: string;
-  pin?: Number;
+  pin?: number;
   controlTokenType?: ControlTokenType;
 }
 
 export interface IMarqetaRevealPin{
   cardholderVerificationMethod: CardholderVerificationMethod;
   controlToken: string;
+}
+
+export interface IMarqetaMakeTransaction{
+  cardToken: string;
+  amount: number;
+  mid: string;
+}
+
+export interface IMarqetaMakeTransactionAdvice{
+  originalTransactionToken: string;
+  amount: number;
+}
+
+export interface IMarqetaMakeTransactionClearing{
+  originalTransactionToken: string;
+  amount: number;
+  isRefund : boolean;
 }

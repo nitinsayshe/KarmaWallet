@@ -53,7 +53,7 @@ export const exec = async ({
     if (!userEmailObject) return;
     // no emails should be sent with these statuses
     if (userEmailObject.status === UserEmailStatus.Bounced || userEmailObject.status === UserEmailStatus.Complained) return;
-    if (type !== EmailTemplateTypes.Essential) {
+    if (type !== EmailTemplateTypes.Essential && type !== EmailTemplateTypes.CashbackNotificaiton) {
       // marketing check for subscribed updates
       if (type === EmailTemplateTypes.Marketing) return;
       // any email other than verification or essential, check verification status

@@ -105,6 +105,7 @@ export interface ICompany extends IShareableCompany {
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, ICompanyDocument>;
   notes: string;
+  mcc: number;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -119,6 +120,7 @@ const companySchema = new Schema(
     // TODO: update this field whenver unsdgs are updated.
     // too expensive to make virtual
     combinedScore: { type: Number },
+    mcc: { type: Number },
     rating: {
       type: String,
       enum: Object.values(CompanyRating),

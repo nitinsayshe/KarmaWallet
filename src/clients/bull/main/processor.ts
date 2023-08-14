@@ -13,6 +13,7 @@ import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements'
 import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotals';
 import * as GenerateUserReport from '../../../jobs/generateUserReport';
 import * as GenerateUserTransactionTotals from '../../../jobs/generateUserTransactionTotals';
+import * as ResetTestIdentities from '../../../jobs/resetTestIdentities';
 import * as TotalOffsetsForAllUsers from '../../../jobs/calculateTotalOffsetsForAllUsers';
 import * as UserMonthlyImpactReport from '../../../jobs/userMonthlyImpactReports';
 import * as UserPlaidTransactionMapper from '../../../jobs/userPlaidTransactionMap';
@@ -115,6 +116,9 @@ export default async (job: SandboxedJob) => {
         ],
       };
 
+      break;
+    case JobNames.ResetTestIdentities:
+      result = await ResetTestIdentities.exec();
       break;
     case JobNames.TotalOffsetsForAllUsers:
       result = await TotalOffsetsForAllUsers.exec();

@@ -232,6 +232,7 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
           companyName: testMerchant.name,
           url: testMerchant.integrations.kard.websiteURL,
           merchant: testMerchant._id,
+          mcc: 7002,
         },
       ],
     });

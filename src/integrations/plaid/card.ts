@@ -33,10 +33,10 @@ class Card {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
-    this._accessToken = plaidItem.access_token;
-    this._publicToken = plaidItem.public_token;
-    this._linkSessionId = plaidItem.link_session_id;
-    this._institution = plaidItem.institution;
+    this._accessToken = plaidItem.access_token as string;
+    this._publicToken = plaidItem.public_token as string;
+    this._linkSessionId = plaidItem.link_session_id as string;
+    this._institution = plaidItem.institution as Institution | IPlaidInstitution;
   }
 
   get _id() { return this._card?._id || null; }

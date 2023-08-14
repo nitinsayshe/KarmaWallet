@@ -56,9 +56,10 @@ const executeNotificaitonEffect = async <DataType>(
       const d = data as unknown as EarnedCashbackNotificationData;
       if (channel === NotificationChannel.Email) {
         await sendEarnedCashbackRewardEmail({
+          user: user._id,
           recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
           name: d?.name,
-          companyName: d.companyName,
+          companyName: d?.companyName,
         });
       }
     }
@@ -67,6 +68,7 @@ const executeNotificaitonEffect = async <DataType>(
       const d = data as unknown as PayoutNotificationData;
       if (channel === NotificationChannel.Email) {
         await sendCashbackPayoutEmail({
+          user: user._id,
           recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
           name: d?.name,
           amount: d?.payoutAmount,
@@ -253,7 +255,7 @@ export const createNotification = async <DataType>(
     createdOn: getUtcDate(),
   });
 
-  await executeNotificaitonEffect(type, userDoc, data);
+  await executeNotificaitonEffect(type, userDoc, data, channel);
   return saveNotification(notification);
 };
 

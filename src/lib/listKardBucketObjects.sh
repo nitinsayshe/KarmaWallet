@@ -24,9 +24,9 @@ export AWS_SESSION_TOKEN=${session2_token}
 
 echo $session2
 
-echo "Backup"
+echo "Backup:"
 aws s3 ls "s3://rewards-transactions/$KARD_AWS_ENV/kard/reconciliation/karmawallet/daily/backup/"
 
-echo "Upload"
+echo "Upload:"
 aws s3 ls "s3://rewards-transactions/$KARD_AWS_ENV/kard/reconciliation/karmawallet/daily/upload/"
 

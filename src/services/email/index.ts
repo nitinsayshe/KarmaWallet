@@ -31,6 +31,7 @@ interface ICreateSentEmailParams {
 interface IEmailTemplateParams {
   user?: Types.ObjectId;
   name: string;
+  amount?: string;
   recipientEmail: string;
   senderEmail?: string;
   replyToAddresses?: string[];
@@ -345,6 +346,7 @@ export const sendPasswordResetEmail = async ({
 };
 
 export const sendEarnedCashbackRewardEmail = async ({
+  user,
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
@@ -357,12 +359,13 @@ export const sendEarnedCashbackRewardEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, companyName } });
   const subject = 'Great job! You earned a cashback reward.';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig };
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
 export const sendCashbackPayoutEmail = async ({
+  user,
   recipientEmail,
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
@@ -370,12 +373,12 @@ export const sendCashbackPayoutEmail = async ({
   name,
   amount,
   sendEmail = true }: Partial<IEmailVerificationTemplateParams>) => {
-  const emailTemplateConfig = EmailTemplateConfigs.CashbackPayout;
+  const emailTemplateConfig = EmailTemplateConfigs.CashbackPayoutNotification;
   const { isValid, missingFields } = verifyRequiredFields(['amount', 'domain', 'recipientEmail', 'name'], { amount, domain, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, amount } });
-  const subject = 'Casback rewards have been dispresed!';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig };
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, amount } } as IBuildTemplateParams);
+  const subject = 'Casback rewards have been dispersed!';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

@@ -10,42 +10,36 @@
     text-decoration: none !important;
   }
 
-  body {
-    width: 100%;
-    margin: 0;
-    padding: 0;
-  }
-
   .bold {
     font-weight: 700;
   }
 
   .email-wrapper {
-    max-width: 800px;
+    width: 600px;
+    margin: 0 auto 0 auto;
     padding: 40px;
     background-color: {{colors.blue}};
   }
 
   div.card {
+    margin: 0 auto 40px auto;
     background-color: {{colors.white}};
     padding: 20px;
-    border-radius: 10px;
-    width: 100%;
+    border-radius: 8px;
+    width: 90%;
 
   }
 
   .email-container {
-    display: flex;
-    gap: 40px;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
+    margin: 0 auto 0 auto;
     width: 100%;
   }
 
-
-  img.brand {
-    width: 20%;
+  div.brand-container {
+    width: 50%;
+    margin-left:auto;
+    margin-right:auto;
+    margin-bottom: 40px;
   }
 
   p.email-body {
@@ -53,7 +47,6 @@
   }
 
   p.email-body.support a {
-
     color: {{colors.blue}} !important;
     font-size: 14px;
     font-style: normal;
@@ -64,7 +57,7 @@
 
   p.email-body.support {
     text-decoration: underline;
-    /* 185.714% */
+    text-decoration-color: {{colors.blue}};
   }
 
   p.salutation {
@@ -81,38 +74,30 @@
     font-style: normal;
     font-weight: 500;
     line-height: 26px;
+    margin-bottom: 40px;
   }
 
   div.footer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 40px;
+    margin-right: auto;
+    margin-left: auto;
   }
 
   div.icons-container {
-    display: flex;
-    justify-content: flex-start;
-    gap: 16px;
+    margin-right: auto;
+    margin-left: auto;
+    margin-bottom: 40px;
   }
-
 
   .email-container .cta-link {
     color: {{colors.offWhite}};
     text-align: center;
-    font-size: 16px;
-    font-style: normal;
-    font-weight: 600;
-    line-height: normal;
-
-    cursor: pointer !important;
-  }
-
-  .email-container a.cta-link {
-    display: flex;
-    max-width: 170px;
+    margin: 0 auto 30px auto;
+    margin-left: auto;
+    margin-right: auto;
     margin-bottom: 20px;
     padding: 11px 25px;
+    max-width: 170px;
+    width: 20%;
     border-radius: 70px;
     background-color: {{colors.blue}};
     font-family: Arial;
@@ -129,6 +114,19 @@
 
   .link-container .link {
     text-decoration: underline;
+    text-decoration-color: {{colors.white}};
+    margin: 0;
+    padding: 0;
+    margin-right: 12px;
+  }
+
+  .link-separator {
+    color: {{colors.white}};
+    margin-right: 12px;
+  }
+
+  .last {
+    margin-right: 0;
   }
 
   span.link a {

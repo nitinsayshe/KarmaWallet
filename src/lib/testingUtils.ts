@@ -325,6 +325,7 @@ export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Prom
     newCompany.subcategoryScores = company?.subcategoryScores || [];
     newCompany.sectors = company?.sectors || [];
     newCompany.grade = company?.grade || getSomeGrade();
+    newCompany.mcc = company?.mcc || undefined;
     newCompany.hidden = company?.hidden || {
       status: false,
       reason: CompanyHideReasons.None,
@@ -335,21 +336,6 @@ export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Prom
     return newCompany.save();
   }),
 )) || [];
-
-export const createATestCompany = async (): Promise<ICompanyDocument> => {
-  const company = new CompanyModel();
-  company.companyName = `Test Company_${new Types.ObjectId().toString()}`;
-  company.combinedScore = getRandomInt(-16, 16);
-  company.createdAt = dayjs().subtract(1, 'week').toDate();
-  company.hidden = {
-    status: false,
-    reason: CompanyHideReasons.None,
-    lastModified: new Date(),
-  };
-
-  company.hidden = { status: false, reason: CompanyHideReasons.None, lastModified: new Date() };
-  return company.save();
-};
 
 export const createSomeTransactions = async (req: CreateTestTransactionsRequest): Promise<ITransactionDocument[]> => (await Promise.all(
   req.transactions.map(async (t) => {

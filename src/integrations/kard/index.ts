@@ -202,6 +202,7 @@ export const queueSettledTransactions = async (
         description,
         settledDate: t?.date?.toISOString(),
         merchantName: (t.company as ICompanyDocument)?.companyName,
+        merchantId: (t.company as ICompanyDocument)?.mcc?.toString(),
         cardBIN: decrypt((t?.card as ICard)?.binToken),
         cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
       };

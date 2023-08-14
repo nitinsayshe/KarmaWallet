@@ -313,6 +313,11 @@ const createTestCards = async (
 } | null> => {
   try {
     const { henry, george, chico } = users;
+    const masks = {
+      henry: `7${getRandomInt(100, 999)}`,
+      george: `5${getRandomInt(100, 999)}`,
+      chico: `4${getRandomInt(100, 999)}`,
+    };
     const [henrysCard, georgesCard, chicosCard] = await createSomeCards({
       cards: [
         {
@@ -330,7 +335,7 @@ const createTestCards = async (
               publicToken: 'public-sandbox-test',
               linkSessionId: 'link-session-sandbox-test',
               institutionId: 'ins_test',
-              unlinkedAccessTokens: ['unlinked-access-token-123'],
+              unlinkedAccessTokens: [],
             },
             kard: {
               dateAdded: dayjs().toDate(),
@@ -338,13 +343,13 @@ const createTestCards = async (
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
           lastModified: dayjs().subtract(2, 'week').toDate(),
-          mask: '7722',
-          lastFourDigitsToken: encrypt('7722'),
-          binToken: encrypt('442266'),
+          mask: masks.henry,
+          lastFourDigitsToken: encrypt(masks.henry),
+          binToken: encrypt(`4${getRandomInt(10000, 99999)}`),
         },
         {
           userId: george._id,
-          status: CardStatus.Unlinked,
+          status: CardStatus.Linked,
           name: 'Adv Checking',
           subtype: 'checking',
           type: 'depository',
@@ -357,18 +362,14 @@ const createTestCards = async (
               publicToken: 'public-sandbox-test',
               linkSessionId: 'link-session-sandbox-test',
               institutionId: 'ins_test',
-              unlinkedAccessTokens: ['unlinked-access-token-123'],
-            },
-            kard: {
-              dateAdded: dayjs().toDate(),
+              unlinkedAccessTokens: [],
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
-          unlinkedDate: dayjs().subtract(1, 'week').toDate(),
-          lastModified: dayjs().subtract(1, 'week').toDate(),
-          mask: '5523',
-          lastFourDigitsToken: encrypt('5523'),
-          binToken: encrypt('542233'),
+          lastModified: dayjs().subtract(3, 'month').toDate(),
+          mask: masks.george,
+          lastFourDigitsToken: encrypt(masks.george),
+          binToken: encrypt(`5${getRandomInt(10000, 99999)}`),
         },
         {
           userId: chico._id,
@@ -394,9 +395,9 @@ const createTestCards = async (
           createdOn: dayjs().subtract(3, 'month').toDate(),
           removedDate: dayjs().subtract(1, 'week').toDate(),
           lastModified: dayjs().subtract(1, 'week').toDate(),
-          mask: '4422',
-          lastFourDigitsToken: encrypt('4422'),
-          binToken: encrypt('442233'),
+          mask: masks.chico,
+          lastFourDigitsToken: encrypt(masks.chico),
+          binToken: encrypt(`4${getRandomInt(10000, 99999)}`),
         },
       ],
     });
@@ -728,10 +729,6 @@ export const createChicosTransactions = async (userId: Types.ObjectId, card: ICa
 };
 
 const triggerMonthlyImpactReport = (userId: Types.ObjectId): void => {
-  if (!MainBullClient.queue) {
-    console.error('MainBullClient queue is not intitalized');
-    return;
-  }
   MainBullClient.createJob(
     JobNames.UserMonthlyImpactReport,
     { generateFullHistory: true, uid: userId },
@@ -761,7 +758,6 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     console.log('adding users to kard...');
     await addUsersToKard([
       { user: henry, card: henrysCard },
-      { user: george, card: georgesCard },
       { user: chico, card: chicosCard },
     ]);
 
@@ -792,11 +788,7 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
 };
 
 export const triggerResetTestIdentities = (): void => {
-  if (!MainBullClient.queue) {
-    console.error('MainBullClient queue is not intitalized');
-    return;
-  }
-  MainBullClient.createJob(
+  MainBullClient?.createJob(
     JobNames.ResetTestIdentities,
     {},
     { jobId: `${JobNames.ResetTestIdentities}` },

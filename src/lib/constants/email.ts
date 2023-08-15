@@ -10,6 +10,7 @@ export enum EmailTemplateKeys {
   WelcomeCCG1 = 'welcomeCCG1',
   TransactionsProcessed = 'transactionsProcessed',
   PasswordReset = 'passwordReset',
+  ChangePassword = 'changePassword',
   EarnedCashbackNotification = 'earnedCashbackNotification',
   CashbackPayoutNotification = 'cashbackPayoutNotification',
 }
@@ -33,6 +34,11 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   PasswordReset: {
     name: EmailTemplateKeys.PasswordReset,
     type: EmailTemplateTypes.Essential,
+  },
+  // email to prompt user to change password after user account auto-created
+  ChangePassword: {
+    name: EmailTemplateKeys.ChangePassword,
+    type: EmailTemplateTypes.Verification,
   },
   GroupVerification: {
     name: EmailTemplateKeys.GroupVerification,

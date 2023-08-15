@@ -192,6 +192,27 @@ export const sendAccountCreationVerificationEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+export const sendChangePasswordEmail = async ({
+  name,
+  user,
+  token,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ChangePassword;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail, token });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const passwordResetLink = `${domain}/?createpassword=${token}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
+  const subject = 'Change Your Karma Wallet Password';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 // Nudge email for a visitor who has not completed account creation
 export const sendAccountCreationReminderEmail = async ({
   name,

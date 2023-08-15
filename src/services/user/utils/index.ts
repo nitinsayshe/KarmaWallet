@@ -46,6 +46,5 @@ export const iterateOverUsersAndExecWithDelay = async <Req, Res>(
 
 export const checkIfUserWithEmailExists = async (email: string) => {
   const userExists = await UserModel.findOne({ 'emails.email': email });
-  console.log('///// this is the user with the email', userExists);
   return !!userExists;
 };

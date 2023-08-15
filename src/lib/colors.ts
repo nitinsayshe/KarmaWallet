@@ -7,6 +7,7 @@ export const colors = {
   lightGray2: '#E4E4E4',
   lightGray3: '#F4F4F4',
   green: '#95D28B',
+  green2: '#5CC87F',
   lightGreen1: '#B8E0B6',
   lightGreen2: '#E2F5E1',
   darkGreen1: '#6E9370',
@@ -29,4 +30,6 @@ export const colors = {
   warning2: '#F44336',
   red: '#FF0D25',
   white: '#FFF',
+  offWhite: '#FCFDEC',
+  dark: '#001C20',
 };

@@ -371,7 +371,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
 
   const cleanedFilter = convertFilterToObjectId(filter);
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
-  const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
 
   const options: any = {
     projection: query?.projection || '',
@@ -381,7 +380,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   };
 
   let matchQuery: any = {
-    ...creationQuery,
     ...hiddenQuery,
     ...unsdgQuery,
     ...searchQuery,
@@ -392,34 +390,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const aggregateSteps: any = [
     {
       $match: matchQuery,
-    },
-    {
-      $lookup: {
-        from: 'companies',
-        localField: 'parentCompany',
-        foreignField: '_id',
-        as: 'parentCompany',
-      },
-    },
-    {
-      $lookup: {
-        from: 'merchants',
-        localField: 'merchant',
-        foreignField: '_id',
-        as: 'merchant',
-      },
-    },
-    {
-      $unwind: {
-        path: '$parentCompany',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$merchant',
-        preserveNullAndEmptyArrays: true,
-      },
     },
   ];
 
@@ -503,7 +473,26 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   }
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
-  return CompanyModel.aggregatePaginate(companyAggregate, options);
+  const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
+
+  // avoiding $lookup in aggregate pipeline to avoid performance issues while joining parentCompany and merchant on results
+
+  const parentCompanyIds = companies.docs.map(c => c.parentCompany);
+  const parentCompanies = await CompanyModel.find({ _id: { $in: parentCompanyIds } });
+  // assign parent companies to companies
+  companies.docs.forEach(company => {
+    const parentCompany = parentCompanies.find(c => c._id?.toString() === company.parentCompany?.toString());
+    company.parentCompany = parentCompany;
+  });
+
+  const merchantIds = companies.docs.map(c => c.merchant);
+  const merchants = await MerchantModel.find({ _id: { $in: merchantIds } });
+  companies.docs.forEach(company => {
+    const merchant = merchants.find(c => c._id?.toString() === company.merchant?.toString());
+    company.merchant = merchant;
+  });
+
+  return companies;
 };
 
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
@@ -513,7 +502,6 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
 
   const _query: FilterQuery<ICompany> = {
     _id: { $in: query.companies },
-    'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
   };
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)

@@ -10,6 +10,8 @@ export enum EmailTemplateKeys {
   WelcomeCCG1 = 'welcomeCCG1',
   TransactionsProcessed = 'transactionsProcessed',
   PasswordReset = 'passwordReset',
+  EarnedCashbackNotification = 'earnedCashbackNotification',
+  CashbackPayoutNotification = 'cashbackPayoutNotification',
 }
 
 export enum EmailTemplateTypes {
@@ -19,6 +21,7 @@ export enum EmailTemplateTypes {
   CreateAccountVerification = 'createAccountVerification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   Essential = 'essential',
+  CashbackNotificaiton = 'cashbackNotification',
 }
 
 export interface IEmailTemplateConfig {
@@ -26,7 +29,7 @@ export interface IEmailTemplateConfig {
   type: EmailTemplateTypes;
 }
 
-export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
+export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   PasswordReset: {
     name: EmailTemplateKeys.PasswordReset,
     type: EmailTemplateTypes.Essential,
@@ -66,6 +69,14 @@ export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
   TransactionsProcessed: {
     name: EmailTemplateKeys.TransactionsProcessed,
     type: EmailTemplateTypes.Essential,
+  },
+  EarnedCashbackReward: {
+    name: EmailTemplateKeys.EarnedCashbackNotification,
+    type: EmailTemplateTypes.CashbackNotificaiton,
+  },
+  CashbackPayoutNotification: {
+    name: EmailTemplateKeys.CashbackPayoutNotification,
+    type: EmailTemplateTypes.CashbackNotificaiton,
   },
 };
 

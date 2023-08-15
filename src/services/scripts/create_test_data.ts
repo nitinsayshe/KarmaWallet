@@ -1,3 +1,4 @@
+import { randomInt } from 'crypto';
 import { KardClient } from '../../clients/kard';
 import { getUtcDate } from '../../lib/date';
 import {
@@ -16,10 +17,16 @@ export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocume
     // pull all merchants from kard
     const kc = new KardClient();
     const merchants = await kc.getRewardsMerchants();
+    const mccs: Set<number> = new Set();
 
     // create companies from merchants
     let companies = await Promise.all(
       merchants.map(async (merchant) => {
+        let mcc = randomInt(1000, 9999);
+        while (mccs.has(mcc)) {
+          mcc = randomInt(1000, 9999);
+        }
+        mccs.add(mcc);
         const company = new CompanyModel({
           companyName: merchant.name,
           url: merchant.websiteURL,
@@ -29,6 +36,7 @@ export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocume
           categoryScores: await getSomeCategoryScores(),
           subcategoryScores: await getSomeSubcategoryScores(),
           sectors: await getSomeCompanySectors(),
+          mcc,
         });
         return company;
       }),

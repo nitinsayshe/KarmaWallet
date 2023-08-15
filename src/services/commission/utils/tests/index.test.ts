@@ -12,11 +12,19 @@ import {
 import { MongoClient } from '../../../../clients/mongo';
 import { getUtcDate } from '../../../../lib/date';
 import { getRandomInt } from '../../../../lib/number';
-import { createSomeCompanies, createSomeMerchants, createSomeUsers } from '../../../../lib/testingUtils';
+import {
+  cleanUpDocuments,
+  createSomeCommissions,
+  createSomeCompanies,
+  createSomeMerchants,
+  createSomeUsers,
+} from '../../../../lib/testingUtils';
 import { ICommissionDocument } from '../../../../models/commissions';
 import { ICompanyDocument } from '../../../../models/company';
 import { IMerchantDocument } from '../../../../models/merchant';
+import { INotificationDocument, NotificationStatus, NotificationType } from '../../../../models/notification';
 import { IUserDocument, UserEmailStatus } from '../../../../models/user';
+import { createEarnedCashbackNotificationFromCommission } from '../../../notification';
 
 describe('tests commission utils logic', () => {
   let testUserWithKardIntegration: IUserDocument;
@@ -28,6 +36,7 @@ describe('tests commission utils logic', () => {
     network: CardNetwork.Visa,
   };
   let testEarnedWebhookBody: EarnedRewardWebhookBody | null = null;
+  let testCommission: ICommissionDocument;
 
   afterEach(() => {
     /* clean up between tests */
@@ -35,9 +44,8 @@ describe('tests commission utils logic', () => {
 
   afterAll(async () => {
     // clean up db
-    await testUserWithKardIntegration?.remove();
-    await testMerchantWithKardIntegration?.remove();
-    await testMerchantCompany?.remove();
+    await cleanUpDocuments([testUserWithKardIntegration, testMerchantWithKardIntegration, testMerchantCompany, testCommission]);
+
     MongoClient.disconnect();
   });
 
@@ -92,6 +100,15 @@ describe('tests commission utils logic', () => {
       ],
     });
 
+    [testCommission] = await createSomeCommissions({
+      commissions: [
+        {
+          user: testUserWithKardIntegration,
+          merchant: testMerchantWithKardIntegration,
+          company: testMerchantCompany,
+        },
+      ],
+    });
     testEarnedWebhookBody = {
       issuer: process.env.KARD_ISSUER_NAME || 'test issuer',
       user: {
@@ -118,6 +135,23 @@ describe('tests commission utils logic', () => {
     } as EarnedRewardWebhookBody;
   });
 
+  it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
+    const earnedRewardNotification = await createEarnedCashbackNotificationFromCommission(testCommission);
+    expect(earnedRewardNotification).toBeDefined();
+    expect(earnedRewardNotification).not.toBeNull();
+    const n = earnedRewardNotification as INotificationDocument;
+    expect((n.user as IUserDocument)._id.toString()).toBe((testCommission.user as IUserDocument)._id.toString());
+    expect(n.type).toBe(NotificationType.EarnedCashback);
+    expect(n.status).toBe(NotificationStatus.Unread);
+    expect(n.data).toBeDefined();
+    expect(n.data).not.toBeNull();
+    expect(n.data).toHaveProperty('name');
+    expect(n.data).toHaveProperty('companyName');
+    expect(n.body).toBeDefined();
+    expect(n.body).not.toBeNull();
+    await n.remove();
+  });
+
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
     const karmaCommission = (await mapKardCommissionToKarmaCommisison(testEarnedWebhookBody)) as ICommissionDocument;
 
@@ -127,5 +161,5 @@ describe('tests commission utils logic', () => {
     expect(karmaCommission.allocation.user).toBe(7.5);
     expect(karmaCommission.allocation.karma).toBe(2.5);
     await karmaCommission.remove();
-  });
+  }, 10000);
 });

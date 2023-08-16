@@ -70,7 +70,20 @@ export interface IBiometrics {
   biometricKey: string,
   isBiometricEnabled: Boolean,
 }
-
+enum IMarqetaKycState{
+  failuer = 'failuer',
+  success = 'success',
+  pending = 'pending'
+}
+interface IMarqetaKycResult{
+  status : IMarqetaKycState,
+  codes : string[]
+}
+export interface IMarqetaUserIntegrations{
+  userToken: string;
+  email?: string;
+  kycResult: IMarqetaKycResult
+}
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
@@ -80,6 +93,7 @@ export interface IUserIntegrations {
   referrals?: IReferrals;
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
   biometrics?: IBiometrics[];
+  marqeta?: IMarqetaUserIntegrations;
 }
 
 export interface IShareableUser {
@@ -152,6 +166,16 @@ const userSchema = new Schema({
     },
   },
   integrations: {
+    marqeta: {
+      type: {
+        userToken: { type: String },
+        email: { type: String },
+        kycResult: {
+          status: { type: String },
+          codes: { type: Array },
+        },
+      },
+    },
     rare: {
       type: {
         userId: { type: String },

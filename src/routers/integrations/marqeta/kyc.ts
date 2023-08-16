@@ -4,8 +4,8 @@ import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
-router.route('/process')
-  .post(authenticate, KycController.processUserKyc);
+router.route('/process/:userToken')
+  .post(KycController.processUserKyc);
 
 router.route('/list')
   .get(authenticate, KycController.listUserKyc);

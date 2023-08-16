@@ -5,7 +5,7 @@ import authenticate from '../../../middleware/authenticate';
 const router = Router();
 
 router.route('/create')
-  .post(authenticate, CardController.createCard);
+  .post(CardController.createCard);
 
 router.route('/list')
   .get(authenticate, CardController.listCards);

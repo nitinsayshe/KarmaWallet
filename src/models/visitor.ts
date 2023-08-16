@@ -6,10 +6,25 @@ import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
 
+enum IMarqetaKycState{
+  failuer = 'failuer',
+  success = 'success',
+  pending = 'pending'
+}
+interface IMarqetaKycResult{
+  status : IMarqetaKycState,
+  codes : string[]
+}
+export interface IMarqetaVisitorData{
+  userToken: string;
+  email: string;
+  kycResult: IMarqetaKycResult;
+}
 export interface IVisitorIntegrations {
   groupCode?: string;
   urlParams?: IUrlParam[];
   shareASale?: boolean;
+  marqeta? : IMarqetaVisitorData;
 }
 
 export interface IShareableVisitor {
@@ -51,6 +66,16 @@ const visitorSchema = new Schema({
     groupCode: String,
     urlParams: { type: Array },
     shareASale: Boolean,
+    marqeta: {
+      type: {
+        userToken: String,
+        email: String,
+        kycResult: {
+          status: { type: String },
+          codes: { type: Array },
+        },
+      },
+    },
   },
   createdOn: { type: Date, default: () => getUtcDate() },
 });

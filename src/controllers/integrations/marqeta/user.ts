@@ -31,17 +31,17 @@ export const listUser: IRequestHandler<{}, {}, {}> = async (req, res) => {
   }
 };
 
-export const getUser: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const getUser: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
-    const { _id: userId } = req.requestor;
-    const { data } = await UserService.getUser(userId);
+    const { userToken } = req.params;
+    const { data } = await UserService.getUser(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const updateUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (req, res) => {
+export const updateUser: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateUser> = async (req, res) => {
   try {
     const { data } = await UserService.updateUser(req);
     output.api(req, res, data);
@@ -92,7 +92,7 @@ export const createClientAccessToken: IRequestHandler<{}, {}, IMarqetaClientAcce
   }
 };
 
-export const getClientAccessToken: IRequestHandler<{accessToken:string}, {}, {}> = async (req, res) => {
+export const getClientAccessToken: IRequestHandler<{ accessToken: string }, {}, {}> = async (req, res) => {
   try {
     const { accessToken } = req.params;
     const { data } = await UserService.getClientAccessToken(accessToken);

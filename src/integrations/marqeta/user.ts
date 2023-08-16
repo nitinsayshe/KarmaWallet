@@ -10,11 +10,7 @@ const marqetaClient = new MarqetaClient();
 const user = new User(marqetaClient);
 
 export const createUser = async (req: IRequest<{}, {}, IMarqetaCreateUser>) => {
-  const { _id: userId } = req.requestor;
-
-  // use the userId as a marqeta user token (user_token)
-  const params = { token: userId.toString(), ...req.body };
-
+  const params = { ...req.body };
   const userResponse = await user.createUser(params);
   return { data: userResponse };
 };
@@ -24,15 +20,15 @@ export const listUsers = async () => {
   return { data: userResponse };
 };
 
-export const getUser = async (userToken:string) => {
+export const getUser = async (userToken: string) => {
   const userResponse = await user.getUser(userToken);
   return { data: userResponse };
 };
 
-export const updateUser = async (req: IRequest<{}, {}, IMarqetaCreateUser>) => {
-  const { _id: userId } = req.requestor;
+export const updateUser = async (req: IRequest<{ userToken: string }, {}, IMarqetaCreateUser>) => {
+  const { userToken } = req.params;
   const params = req.body;
-  const userResponse = await user.updateUser(userId, params);
+  const userResponse = await user.updateUser(userToken, params);
   return { data: userResponse };
 };
 
@@ -44,18 +40,18 @@ export const userTransition = async (req: IRequest<{}, {}, IMarqetaUserTransitio
   return { data: userResponse };
 };
 
-export const listUserTransition = async (userToken:string) => {
+export const listUserTransition = async (userToken: string) => {
   const userResponse = await user.listUserTransition(userToken);
   return { data: userResponse };
 };
 
-export const createClientAccessToken = async (req:IRequest<{}, {}, IMarqetaClientAccessToken>) => {
+export const createClientAccessToken = async (req: IRequest<{}, {}, IMarqetaClientAccessToken>) => {
   const params = req.body;
   const userResponse = await user.createClientAccessToken(params);
   return { data: userResponse };
 };
 
-export const getClientAccessToken = async (accessToken:string) => {
+export const getClientAccessToken = async (accessToken: string) => {
   const userResponse = await user.getClientAccessToken(accessToken);
   return { data: userResponse };
 };

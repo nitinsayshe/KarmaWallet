@@ -13,10 +13,10 @@ export const processUserKyc: IRequestHandler<{ userToken: string }, {}, IMarqeta
   }
 };
 
-export const listUserKyc: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const listUserKyc: IRequestHandler<{userToken: string}, {}, {}> = async (req, res) => {
   try {
-    const { _id: userId } = req.requestor;
-    const { user: data } = await KYCService.listUserKyc(userId);
+    const { userToken } = req.params;
+    const { user: data } = await KYCService.listUserKyc(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -50,7 +50,7 @@ export const updateUser: IRequestHandler<{ userToken: string }, {}, IMarqetaCrea
   }
 };
 
-export const userTransition: IRequestHandler<{}, {}, IMarqetaUserTransition> = async (req, res) => {
+export const userTransition: IRequestHandler<{ userToken: string }, {}, IMarqetaUserTransition> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['status', 'reasonCode', 'reason', 'channel'];
@@ -66,9 +66,9 @@ export const userTransition: IRequestHandler<{}, {}, IMarqetaUserTransition> = a
   }
 };
 
-export const listUserTransition: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const listUserTransition: IRequestHandler<{userToken:string}, {}, {}> = async (req, res) => {
   try {
-    const { _id: userToken } = req.requestor;
+    const { userToken } = req.params;
     const { data } = await UserService.listUserTransition(userToken);
     output.api(req, res, data);
   } catch (err) {

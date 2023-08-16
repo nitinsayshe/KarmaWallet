@@ -9,16 +9,16 @@ router.route('/create')
 router.route('/list')
   .get(UserController.listUser);
 
-router.route('/:userToken')
+router.route('/profile/:userToken')
   .get(UserController.getUser);
 
 router.route('/update/:userToken')
   .put(UserController.updateUser);
 
-router.route('/transition')
+router.route('/transition/:userToken')
   .post(UserController.userTransition);
 
-router.route('/transition')
+router.route('/transition/:userToken')
   .get(UserController.listUserTransition);
 
 router.route('/accesstoken')

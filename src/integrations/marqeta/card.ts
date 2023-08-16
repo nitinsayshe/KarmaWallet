@@ -9,13 +9,14 @@ const marqetaClient = new MarqetaClient();
 // Instantiate the CARD class
 const card = new Card(marqetaClient);
 
-export const createCard = async (req: IRequest<{}, {}, IMarqetaCreateCard>) => {
-  const { _id: userId } = req.requestor;
-  const params = { userToken: userId.toString(), ...req.body };
+export const createCard = async (req: IRequest<{ userToken: string }, {}, IMarqetaCreateCard>) => {
+  const { userToken } = req.params;
+  const params = { userToken, ...req.body };
   const userResponse = await card.createCard(params);
   return { user: userResponse };
 };
-export const listCards = async (userToken:string) => {
+
+export const listCards = async (userToken: string) => {
   const userResponse = await card.listCards(userToken);
   return { user: userResponse };
 };

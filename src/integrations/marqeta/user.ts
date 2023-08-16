@@ -32,10 +32,9 @@ export const updateUser = async (req: IRequest<{ userToken: string }, {}, IMarqe
   return { data: userResponse };
 };
 
-export const userTransition = async (req: IRequest<{}, {}, IMarqetaUserTransition>) => {
-  const { _id: userId } = req.requestor;
-  // use the userId as a marqeta userId (user_token)
-  const params = { userToken: userId.toString(), ...req.body };
+export const userTransition = async (req: IRequest<{userToken: string}, {}, IMarqetaUserTransition>) => {
+  const { userToken } = req.params;
+  const params = { userToken, ...req.body };
   const userResponse = await user.userTransition(params);
   return { data: userResponse };
 };

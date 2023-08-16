@@ -25,7 +25,7 @@ export const createAchFundingSource: IRequestHandler<{}, {}, IMarqetaACHPlaidFun
 export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTransfer> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['fundingSourceToken'];
+    const requiredFields = ['fundingSourceToken', 'type', 'amount'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));

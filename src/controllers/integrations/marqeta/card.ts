@@ -6,7 +6,7 @@ import CustomError, { asCustomError } from '../../../lib/customError';
 import * as CardService from '../../../integrations/marqeta/card';
 import { ErrorTypes } from '../../../lib/constants';
 
-export const createCard: IRequestHandler<{}, {}, IMarqetaCreateCard> = async (req, res) => {
+export const createCard: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateCard> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['cardProductToken'];
@@ -22,10 +22,10 @@ export const createCard: IRequestHandler<{}, {}, IMarqetaCreateCard> = async (re
   }
 };
 
-export const listCards: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const listCards: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
-    const { _id: userId } = req.requestor;
-    const data = await CardService.listCards(userId);
+    const { userToken } = req.params;
+    const data = await CardService.listCards(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -48,7 +48,7 @@ export const cardTransition: IRequestHandler<{}, {}, IMarqetaCardTransition> = a
   }
 };
 
-export const getCardDetails: IRequestHandler<{cardToken:string}, {showCvv:string}, {}> = async (req, res) => {
+export const getCardDetails: IRequestHandler<{ cardToken: string }, { showCvv: string }, {}> = async (req, res) => {
   try {
     const { data } = await CardService.getCardDetails(req);
     output.api(req, res, data);

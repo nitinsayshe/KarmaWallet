@@ -9,9 +9,9 @@ const marqetaClient = new MarqetaClient();
 // Instantiate the depositAccount class
 const depositAccount = new DepositAccount(marqetaClient);
 
-export const createDepositAccount = async (req: IRequest<{}, {}, IMarqetaUserToken>) => {
-  const { _id: userId } = req.requestor;
-  const params = { userToken: userId.toString(), ...req.body };
+export const createDepositAccount = async (req: IRequest<{userToken: string}, {}, IMarqetaUserToken>) => {
+  const { userToken } = req.params;
+  const params = { userToken, ...req.body };
   const userResponse = await depositAccount.createDepositAccount(params);
   return { user: userResponse };
 };

@@ -187,7 +187,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
   }
 };
 
-const getCompaniesByName = async (names: string[]): Promise<ICompanyDocument[]> => {
+export const getCompaniesByName = async (names: string[]): Promise<ICompanyDocument[]> => {
   try {
     const companies = await CompanyModel.find({ companyName: { $in: names } });
     if (!companies) {
@@ -484,7 +484,7 @@ IMatchedTransaction & {
   return transactions;
 };
 
-export const createTransactionsForIdentity = async (
+export const createTestTransactions = async (
   userId: Types.ObjectId,
   card: ICardDocument,
   companies: ICompanyDocument[],
@@ -526,7 +526,7 @@ export const createTransactionsWithWalmartAndAmazonThisMonth = async (
     if (!walmart || !amazon) {
       throw new Error('Could not find Walmart or Amazon');
     }
-    await createTransactionsForIdentity(userId, card, [walmart, amazon]);
+    await createTestTransactions(userId, card, [walmart, amazon]);
   } catch (err) {
     console.error(err);
   }
@@ -767,11 +767,16 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     await createChicosTransactions(chico._id, chicosCard);
 
     // trigger monthly impact reports for each user
+    console.log('triggering monthly impact reports...');
     triggerMonthlyImpactReport(henry._id);
     triggerMonthlyImpactReport(george._id);
     triggerMonthlyImpactReport(chico._id);
 
+    console.log('saving updated documents...');
     const updatedUsers = await saveDocuments([henry, george, chico]);
+    if (!updatedUsers) {
+      throw new Error('Error saving updated users');
+    }
 
     const testIdentities = {
       henry: (updatedUsers as IUserDocument[])?.find((user) => user._id.toString() === henry._id.toString()),
@@ -788,10 +793,11 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
 };
 
 export const triggerResetTestIdentities = (): void => {
-  MainBullClient?.createJob(
+  console.log('triggering reset test identities');
+  MainBullClient.createJob(
     JobNames.ResetTestIdentities,
-    {},
     { jobId: `${JobNames.ResetTestIdentities}` },
+    {},
     {
       onComplete: () => {
         console.log(`${JobNames.ResetTestIdentities} finished`);

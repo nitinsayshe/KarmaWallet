@@ -1,13 +1,17 @@
 import { randomInt } from 'crypto';
+import { Types } from 'mongoose';
 import { KardClient } from '../../clients/kard';
 import { getUtcDate } from '../../lib/date';
 import {
-  createSomeCompanies, getSomeCategoryScores,
+  createSomeCompanies,
+  getSomeCategoryScores,
   getSomeCompanySectors,
   getSomeEvaluatedUnsdgs,
   getSomeSubcategoryScores,
 } from '../../lib/testingUtils';
+import { ICardDocument } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
+import { createTestTransactions, getCompaniesByName } from '../user/testIdentities';
 
 export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocument[]> => {
   if (process.env.NODE_ENV === 'production') {
@@ -51,4 +55,13 @@ export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocume
     console.error(err);
     return [];
   }
+};
+
+// assumes that the user and card are already registered in the Kard rewards program
+export const addTestTransactionsToUserWithCard = async (userId: Types.ObjectId, card: ICardDocument): Promise<void> => {
+  const companies = await getCompaniesByName(['Noble Treat', 'Focal Point']);
+  if (!companies[0] || !companies[1]) {
+    throw new Error('Could not find Noble Treat or Focal Point');
+  }
+  await createTestTransactions(userId, card, companies);
 };

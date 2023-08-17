@@ -10,6 +10,7 @@ import { addCards } from '../../../services/card';
 export const createCard: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateCard> = async (req, res) => {
   try {
     const { body } = req;
+    const { _id: _userId } = req.requestor;
     const requiredFields = ['cardProductToken'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
@@ -17,7 +18,7 @@ export const createCard: IRequestHandler<{ userToken: string }, {}, IMarqetaCrea
       return;
     }
     const { user: data } = await CardService.createCard(req);
-    await addCards(data);
+    await addCards(_userId, data);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -50,7 +51,7 @@ export const cardTransition: IRequestHandler<{}, {}, IMarqetaCardTransition> = a
   }
 };
 
-export const getCardDetails: IRequestHandler<{ cardToken: string }, { showCvv: string }, {}> = async (req, res) => {
+export const getCardDetails: IRequestHandler<{ cardToken: string }, {}, {}> = async (req, res) => {
   try {
     const { data } = await CardService.getCardDetails(req);
     output.api(req, res, data);

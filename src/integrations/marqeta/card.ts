@@ -27,9 +27,8 @@ export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransitio
   return { user: userResponse };
 };
 
-export const getCardDetails = async (req: IRequest<{ cardToken: string }, { showCvv: string }, {}>) => {
+export const getCardDetails = async (req: IRequest<{ cardToken: string }, {}, {}>) => {
   const { cardToken } = req.params;
-  const { showCvv } = req.query;
-  const userResponse = await card.getCardDetails(cardToken, { show_cvv_number: showCvv });
+  const userResponse = await card.getCardDetails(cardToken);
   return { data: userResponse };
 };

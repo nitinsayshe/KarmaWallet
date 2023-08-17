@@ -36,7 +36,7 @@ class Card {
     this._accessToken = plaidItem.access_token as string;
     this._publicToken = plaidItem.public_token as string;
     this._linkSessionId = plaidItem.link_session_id as string;
-    this._institution = plaidItem.institution as IPlaidInstitution;
+    this._institution = plaidItem.institution as Institution | IPlaidInstitution;
   }
 
   get _id() { return this._card?._id || null; }

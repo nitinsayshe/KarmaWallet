@@ -1,10 +1,5 @@
 import { CommissionType } from '../../clients/kard';
 
-enum WildfireRateKinds {
-  Percentage = 'percentage',
-  Flat = 'flat',
-}
-
 export const getMerchantRateDescription = (
   Kind: string | CommissionType,
   Amount: number,
@@ -20,12 +15,16 @@ export const getMerchantRateDescription = (
     };
   }
 
-  switch (Kind) {
-    case WildfireRateKinds.Percentage || CommissionType.PERCENT: {
+  switch (Kind?.toLowerCase()) {
+    case 'percent': {
       maxAmount = Amount % 1 === 0 ? `${Amount}%` : `${Amount.toFixed(2)}%`;
       break;
     }
-    case WildfireRateKinds.Flat || CommissionType.FLAT: {
+    case 'percentage': {
+      maxAmount = Amount % 1 === 0 ? `${Amount}%` : `${Amount.toFixed(2)}%`;
+      break;
+    }
+    case 'flat': {
       maxAmount = Amount % 1 === 0 ? `$${Amount}` : `$${Amount.toFixed(2)}`;
       break;
     }

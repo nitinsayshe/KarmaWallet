@@ -34,7 +34,7 @@ import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscription
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
 import { resendEmailVerification } from './verification';
-import { deleteKardUser } from '../../integrations/kard';
+import { deleteKardUsersForUser } from '../../integrations/kard';
 
 dayjs.extend(utc);
 
@@ -517,10 +517,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     // delete user from active campaign
     if (email) await deleteContact(email);
     await cancelUserSubscriptions(user._id.toString());
-
-    if (!!user?.integrations?.kard?.userId) {
-      await deleteKardUser(user as IUserDocument | Types.ObjectId);
-    }
+    await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
 
     await deleteUserData(user._id);
 

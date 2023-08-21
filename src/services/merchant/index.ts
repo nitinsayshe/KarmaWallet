@@ -92,7 +92,7 @@ export const getShareableMerchant = ({
       ? Math.round((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
       : 0;
     const previousMaxAmount = parseFloat(maxAmount);
-    if (!maxAmount || isNaN(previousMaxAmount) || maxAmountNumber > previousMaxAmount) {
+    if ((!previousMaxAmount || isNaN(previousMaxAmount)) || (!!maxAmountNumber && maxAmountNumber > previousMaxAmount)) {
       const descriptions = getMerchantRateDescription(integrations.kard?.maxOffer?.commissionType, maxAmountNumber);
       maxAmount = descriptions.maxAmount;
       maxRateType = getMerchantRateTypeFromString(integrations.kard?.maxOffer?.commissionType);

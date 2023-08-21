@@ -11,14 +11,14 @@ import {
   QueueTransactionsRequest,
   Transaction,
 } from '../../clients/kard';
-import { CentsInUSD, ErrorTypes } from '../../lib/constants';
+import { CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
-import { ICard, ICardDocument } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IKardIntegration } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ITransaction } from '../../models/transaction';
-import { IKardIntegration, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { getNetworkFromBin } from '../../services/card/utils';
 
 const uuidSchema = z.string().uuid();
@@ -61,27 +61,15 @@ export const registerCardInKardRewards = async (
   }
 };
 
-export const addKardIntegrationToUser = async (
-  user: IUserDocument,
-  kardIntegration: IKardIntegration,
-): Promise<IUserDocument> => {
-  try {
-    if (!user.integrations) {
-      user.integrations = {};
-    }
-    user.integrations.kard = kardIntegration;
-    return user.save();
-  } catch (error) {
-    console.error('Error adding kard integration to user', error);
-  }
-};
-
-export const addKardIntegrationToCard = async (card: ICardDocument): Promise<ICardDocument> => {
+export const addKardIntegrationToCard = async (
+  card: ICardDocument,
+  integration: IKardIntegration,
+): Promise<ICardDocument> => {
   try {
     if (!card.integrations) {
       card.integrations = {};
     }
-    card.integrations.kard = { dateAdded: getUtcDate().toDate() };
+    card.integrations.kard = integration;
     return card.save();
   } catch (error) {
     console.error('Error adding kard integration to card', error);
@@ -91,99 +79,118 @@ export const addKardIntegrationToCard = async (card: ICardDocument): Promise<ICa
 export const createKardUserFromUser = async (
   user: IUserDocument,
   card: ICardDocument,
-): Promise<{ error: CustomError | void; userIntegration: IKardIntegration | null }> => {
+): Promise<{ error: CustomError | void; integration: IKardIntegration | null }> => {
   try {
     const email = user?.emails?.find((e) => e.primary)?.email;
 
-    const dateKardAccountCreated = user?.integrations?.kard?.dateAccountCreated;
+    const dateKardAccountCreated = card?.integrations?.kard?.createdOn;
     if (!!dateKardAccountCreated) {
-      return { error: new CustomError('User already has a kard account', ErrorTypes.CONFLICT), userIntegration: null };
+      return {
+        error: new CustomError('Card already has related user account with Kard', ErrorTypes.CONFLICT),
+        integration: null,
+      };
     }
 
     const kard = new KardClient();
-    const userKardIntegration: IKardIntegration = {
+    const kardIntegration: IKardIntegration = {
       userId: uuid(),
-      dateAccountCreated: getUtcDate().toDate(),
+      createdOn: getUtcDate().toDate(),
+      enrollmentStatus: KardEnrollmentStatus.Enrolled,
     };
 
     const req: CreateUserRequest = {
       email,
       userName: getFormattedUserName(user?.name),
       cardInfo: getCardInfo(card),
-      referringPartnerUserId: userKardIntegration.userId,
+      referringPartnerUserId: kardIntegration.userId,
     };
 
-    console.log('creating new kard user for userId: ', user._id);
+    console.log('creating new kard user for userId: ', user._id, 'on card id: ', card._id);
     const res = await kard.createUser(req);
     if (res.status !== 201) {
       return {
         error: new CustomError("Error: new Kard user couldn't be created", ErrorTypes.SERVER),
-        userIntegration: null,
+        integration: null,
       };
     }
-    return { error: null, userIntegration: userKardIntegration };
+    return { error: null, integration: kardIntegration };
   } catch (error) {
-    return { error: new CustomError('Error creating kard user', ErrorTypes.SERVER), userIntegration: null };
+    return { error: new CustomError('Error creating kard user', ErrorTypes.SERVER), integration: null };
   }
-};
-
-export const addKardIntegrationToUserAndCard = async (
-  user: IUserDocument,
-  card: ICardDocument,
-  userKardIntegration: IKardIntegration,
-): Promise<{ error: CustomError | null; updatedUser: IUserDocument | null; updatedCard: ICardDocument | null }> => {
-  // create a kard integration object with id and date created and save it to the user
-  const updatedUser = await addKardIntegrationToUser(user, userKardIntegration);
-  if (!updatedUser || !updatedUser.integrations?.kard) {
-    return { updatedUser: null, updatedCard: null, error: new CustomError('Error adding kard integration to user', ErrorTypes.SERVER) };
-  }
-
-  const updatedCard = await addKardIntegrationToCard(card);
-  if (!updatedCard || !updatedCard.integrations?.kard) {
-    return { updatedUser: null, updatedCard: null, error: new CustomError('Error adding kard integration to card', ErrorTypes.SERVER) };
-  }
-  return { updatedUser, updatedCard, error: null };
 };
 
 export const createKardUserAndAddIntegrations = async (
   user: IUserDocument,
   card: ICardDocument,
-): Promise<{ updatedUser: IUserDocument; updatedCard: ICardDocument }> => {
-  const kardUserIntegrationData = await createKardUserFromUser(user, card);
-  if (!!kardUserIntegrationData.error) {
-    throw kardUserIntegrationData.error;
+): Promise<ICardDocument> => {
+  const kardIntegrationData = await createKardUserFromUser(user, card);
+  if (!!kardIntegrationData.error || !kardIntegrationData.integration) {
+    throw kardIntegrationData.error || new CustomError('Error creating kard user', ErrorTypes.SERVER);
   }
 
-  const { error: addIntegrationsError, updatedUser, updatedCard } = await addKardIntegrationToUserAndCard(user, card, kardUserIntegrationData.userIntegration);
-  if (addIntegrationsError) {
-    throw addIntegrationsError;
+  const updatedCard = await addKardIntegrationToCard(card, kardIntegrationData.integration);
+  if (!updatedCard || !updatedCard.integrations?.kard) {
+    throw new CustomError('Error adding kard integration to card', ErrorTypes.SERVER);
   }
-  return { updatedUser, updatedCard };
+  return updatedCard;
 };
 
+export const deleteKardUserForCard = async (card: ICardDocument | Types.ObjectId): Promise<ICardDocument | null> => {
+  try {
+    if (!(card as ICardDocument)?.name) {
+      card = await CardModel.findById(card);
+    }
+    const c = card as ICardDocument;
+    const kardUserId = c?.integrations?.kard?.userId;
+    if (!kardUserId || !!(uuidSchema.safeParse(kardUserId) as SafeParseError<string>).error) {
+      console.error(
+        'Error deleting kard account.\nNo kard integration object or invalid kard user id.\ncard integrations:  ',
+        JSON.stringify(c.integrations, null, 2),
+      );
+      return;
+    }
+
+    console.log('unenrolling card, ', c._id, ', from kard and deleting associated user.');
+    const kc = new KardClient();
+    await kc.deleteUser(kardUserId);
+    c.integrations.kard.enrollmentStatus = KardEnrollmentStatus.Unenrolled;
+    return c.save();
+  } catch (err) {
+    console.error('Error deleting kard user: ', err);
+    return null;
+  }
+};
 // delete a user from Kard
-export const deleteKardUser = async (user: IUserDocument | Types.ObjectId): Promise<AxiosResponse | void> => {
+export const deleteKardUsersForUser = async (user: IUserDocument | Types.ObjectId): Promise<ICardDocument[]> => {
   try {
     if (!(user as IUserDocument)?.name) {
       user = await UserModel.findById(user);
     }
     const u = user as IUserDocument;
-    if (
-      !u?.integrations?.kard?.userId
-      || !!(uuidSchema.safeParse(u.integrations.kard.userId) as SafeParseError<string>).error
-    ) {
-      console.error(
-        'Error deleting kard account.\nNo kard integration object or invalid kard user id.\nuser integrations:  ',
-        JSON.stringify(u.integrations, null, 2),
-      );
-      return;
-    }
+    // delete each one from kard
+    const cards = await CardModel.find({ userId: u._id });
+    const updatedCards = await Promise.all(
+      cards.map(async (c) => {
+        const kardUserId = c?.integrations?.kard?.userId;
+        if (!kardUserId || !!(uuidSchema.safeParse(kardUserId) as SafeParseError<string>).error) {
+          console.error(
+            'Error deleting kard account.\nNo kard integration object or invalid kard user id.\ncard integrations:  ',
+            JSON.stringify(c.integrations, null, 2),
+          );
+          return;
+        }
 
-    console.log('deleting user, ', u._id, ', from kard');
-    const kc = new KardClient();
-    return await kc.deleteUser(u.integrations.kard.userId);
+        console.log('unenrolling card, ', c._id, ', from kard and deleting associated user.');
+        const kc = new KardClient();
+        await kc.deleteUser(kardUserId);
+        c.integrations.kard.enrollmentStatus = KardEnrollmentStatus.Unenrolled;
+        return c.save();
+      }),
+    );
+    return updatedCards;
   } catch (err) {
     console.error('Error deleting kard user: ', err);
+    return [];
   }
 };
 
@@ -205,16 +212,16 @@ const populateCompaniesOnTransactions = async (
 };
 
 export const queueSettledTransactions = async (
-  user: IUserDocument | Types.ObjectId,
+  card: ICardDocument | Types.ObjectId,
   transactions: Partial<ITransaction & { _id: Types.ObjectId }>[],
 ): Promise<AxiosResponse<{}, any> | void> => {
   try {
-    if (!(user as IUserDocument)?.name) {
-      user = await UserModel.findById(user);
+    if (!(card as ICardDocument)?.name) {
+      card = await CardModel.findById(card);
     }
-    const u = user as IUserDocument;
-    if (!u?.integrations?.kard?.userId) {
-      throw new Error('No kard integration object or invalid kard user id.');
+    const c = card as ICardDocument;
+    if (!c?.integrations?.kard?.userId) {
+      throw new Error('No kard integration object on card.');
     }
 
     // populate companies
@@ -222,12 +229,11 @@ export const queueSettledTransactions = async (
 
     // map to KardTransaction
     const req: QueueTransactionsRequest = transactions.map((t): Transaction => {
-      const description = `Transaction with ${
-        (t.company as ICompanyDocument)?.companyName
+      const description = `Transaction with ${(t.company as ICompanyDocument)?.companyName
       } on ${t.date.toISOString()} for ${t.amount * CentsInUSD} USD cents`;
       return {
         transactionId: t.integrations?.kard?.id,
-        referringPartnerUserId: u?.integrations?.kard?.userId,
+        referringPartnerUserId: c?.integrations?.kard?.userId,
         amount: t.amount * CentsInUSD,
         status: t?.integrations?.kard?.status,
         currency: t?.integrations?.plaid?.iso_currency_code,

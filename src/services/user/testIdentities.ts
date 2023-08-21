@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import { randomUUID } from 'crypto';
 import dayjs from 'dayjs';
 import { Types } from 'mongoose';
 import { TransactionPaymentChannelEnum, TransactionTransactionTypeEnum } from 'plaid';
@@ -11,7 +12,7 @@ import {
   getPlaidCategoryMappingDictionary,
 } from '../../integrations/plaid/v2_matching';
 import { saveTransactions } from '../../integrations/plaid/v2_transaction';
-import { CardStatus, UserRoles } from '../../lib/constants';
+import { CardStatus, KardEnrollmentStatus, UserRoles } from '../../lib/constants';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { encrypt } from '../../lib/encryption';
 import { getRandomInt } from '../../lib/number';
@@ -283,7 +284,7 @@ const registerUserWithKardAndAddCard = async (
   card: ICardDocument,
 ): Promise<ICardDocument | null> => {
   try {
-    const { updatedCard } = await createKardUserAndAddIntegrations(user, card);
+    const updatedCard = await createKardUserAndAddIntegrations(user, card);
     return updatedCard || null;
   } catch (err) {
     console.error(err);
@@ -338,7 +339,9 @@ const createTestCards = async (
               unlinkedAccessTokens: [],
             },
             kard: {
-              dateAdded: dayjs().toDate(),
+              createdOn: dayjs().toDate(),
+              userId: randomUUID(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
@@ -389,7 +392,9 @@ const createTestCards = async (
               unlinkedAccessTokens: ['unlinked-access-token-123'],
             },
             kard: {
-              dateAdded: dayjs().toDate(),
+              createdOn: dayjs().toDate(),
+              userId: randomUUID(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
@@ -404,8 +409,6 @@ const createTestCards = async (
     if (!henrysCard || !georgesCard || !chicosCard) {
       throw new Error('Could not create test cards');
     }
-    // send cards to Kard
-
     return { henrysCard, georgesCard, chicosCard };
   } catch (err) {
     console.error(err);

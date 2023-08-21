@@ -39,11 +39,6 @@ export interface IActiveCampaignUserIntegration {
   latestSync: Date;
 }
 
-export interface IKardIntegration {
-  userId: string;
-  dateAccountCreated: Date;
-}
-
 export interface IUrlParam {
   key: string;
   value: string;
@@ -69,7 +64,6 @@ export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
-  kard?: IKardIntegration;
   shareasale?: IShareASale;
   referrals?: IReferrals;
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
@@ -164,12 +158,6 @@ const userSchema = new Schema({
     activecampaign: {
       type: {
         latestSyncDate: { type: Date },
-      },
-    },
-    kard: {
-      type: {
-        userId: { type: String },
-        dateAccountCreated: { type: Date },
       },
     },
     shareasale: {

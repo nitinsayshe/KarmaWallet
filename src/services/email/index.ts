@@ -31,6 +31,7 @@ interface ICreateSentEmailParams {
 interface IEmailTemplateParams {
   user?: Types.ObjectId;
   name: string;
+  amount?: string;
   recipientEmail: string;
   senderEmail?: string;
   replyToAddresses?: string[];
@@ -46,6 +47,8 @@ interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
   groupName?: string;
   visitor?: IVisitorDocument;
+  companyName?: string;
+  amount?: string;
 }
 
 interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
@@ -68,6 +71,7 @@ export interface IEmailJobData {
   replyToAddresses: string[];
   emailTemplateConfig?: IEmailTemplateConfig;
   groupName?: string;
+  companyName?: string;
   verificationLink?: string;
   domain?: string;
   name?: string;
@@ -75,12 +79,14 @@ export interface IEmailJobData {
   token?: string;
   isSuccess?: boolean;
   passwordResetLink?: string;
+  amount?: string;
 }
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
   data: Partial<IEmailJobData>;
   templatePath?: string;
   stylePath?: string;
+
 }
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
@@ -182,6 +188,27 @@ export const sendAccountCreationVerificationEmail = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'Verify your Email Address';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendChangePasswordEmail = async ({
+  name,
+  user,
+  token,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ChangePassword;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail, token });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const passwordResetLink = `${domain}/?createpassword=${token}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
+  const subject = 'Change Your Karma Wallet Password';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -335,6 +362,44 @@ export const sendPasswordResetEmail = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
   const subject = 'Reset your Karma Wallet Password';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendEarnedCashbackRewardEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  companyName,
+  name,
+  sendEmail = true }: Partial<IEmailVerificationTemplateParams>) => {
+  const emailTemplateConfig = EmailTemplateConfigs.EarnedCashbackReward;
+  const { isValid, missingFields } = verifyRequiredFields(['companyName', 'domain', 'recipientEmail', 'name'], { companyName, domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, companyName } });
+  const subject = 'Great job! You earned a cashback reward.';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendCashbackPayoutEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  sendEmail = true }: Partial<IEmailVerificationTemplateParams>) => {
+  const emailTemplateConfig = EmailTemplateConfigs.CashbackPayoutNotification;
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'domain', 'recipientEmail', 'name'], { amount, domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, amount } } as IBuildTemplateParams);
+  const subject = 'Casback rewards have been dispersed!';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

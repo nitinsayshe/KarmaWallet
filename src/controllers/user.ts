@@ -34,7 +34,9 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
     const { password, email, biometricSignature } = req.body;
     const { user, authKey } = await UserService.login(req, {
-      password, email, biometricSignature,
+      biometricSignature,
+      password,
+      email,
     });
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {

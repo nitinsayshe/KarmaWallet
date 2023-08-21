@@ -15,6 +15,10 @@ router.post('/check-email', UserController.verifyUserDoesNotAlreadyExist);
 
 router.get('/test-identities', UserController.getTestIdentities);
 
+router.get('/test-identities', UserController.getTestIdentities);
+
+router.get('/test-identities', UserController.getTestIdentities);
+
 // Authenticated
 router.post('/logout', authenticate, UserController.logout);
 router.get('/profile', authenticate, UserController.getProfile);

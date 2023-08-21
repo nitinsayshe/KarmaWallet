@@ -14,3 +14,5 @@ dump.rdb
 *.rdb
 *.backups
 bin/scripts.ts
+.env_testing
+.env_main

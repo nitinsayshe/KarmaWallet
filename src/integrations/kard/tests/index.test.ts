@@ -27,7 +27,7 @@ import { IMerchantRateDocument } from '../../../models/merchantRate';
 import { ITransactionDocument } from '../../../models/transaction';
 import { IUserDocument, UserEmailStatus, UserModel } from '../../../models/user';
 
-describe.skip('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
+describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
   let testUserWithLinkedAccountNoKardIntegration: IUserDocument;
   let testUserWithKardIntegration: IUserDocument;
   let testUserWithNoCard: IUserDocument;
@@ -232,6 +232,7 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
           companyName: testMerchant.name,
           url: testMerchant.integrations.kard.websiteURL,
           merchant: testMerchant._id,
+          mcc: 7002,
         },
       ],
     });
@@ -341,7 +342,7 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
 
     // clean up
     await deleteKardUser(testUserWithKardIntegration);
-  });
+  }, 15000);
 
   it('queueSettledTransactions works when provided the user document', async () => {
     // create kard user to be deleted
@@ -360,5 +361,5 @@ describe.skip('kard client interface can fetch session tokes, create, update, an
 
     // clean up
     await deleteKardUser(testUserWithKardIntegration);
-  });
+  }, 15000);
 });

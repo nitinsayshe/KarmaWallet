@@ -5,6 +5,7 @@ import { UserRoles } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IPromo, IPromoDocument } from './promo';
 import { IArticle } from './article';
+import { IMarqetaKycState } from '../integrations/marqeta/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -66,20 +67,15 @@ export interface IReferrals {
 }
 
 export interface IBiometrics {
-  _id?:string;
+  _id?: string;
   biometricKey: string,
   isBiometricEnabled: Boolean,
 }
-enum IMarqetaKycState{
-  failuer = 'failuer',
-  success = 'success',
-  pending = 'pending'
+interface IMarqetaKycResult {
+  status: IMarqetaKycState,
+  codes: string[]
 }
-interface IMarqetaKycResult{
-  status : IMarqetaKycState,
-  codes : string[]
-}
-export interface IMarqetaUserIntegrations{
+export interface IMarqetaUserIntegrations {
   userToken: string;
   email?: string;
   kycResult: IMarqetaKycResult
@@ -122,7 +118,7 @@ export interface IUser extends IShareableUser {
   };
 }
 
-export interface IUserDocument extends IUser, Document {}
+export interface IUserDocument extends IUser, Document { }
 export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({

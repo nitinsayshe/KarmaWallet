@@ -348,7 +348,6 @@ export const logout = async (_: IRequest, authKey: string) => {
 
 export const updateUser = async (_: IRequest, user: IUserDocument, updates: Partial<IUser>) => {
   try {
-    console.log('updates>>>>>>>>?////', updates);
     if (!!updates?.emails) {
       updates.emails.forEach((email) => {
         if (!isemail.validate(email.email)) throw new CustomError('Invalid email found.', ErrorTypes.INVALID_ARG);

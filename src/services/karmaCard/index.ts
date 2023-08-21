@@ -1,17 +1,15 @@
 import { Kyc } from '../../clients/marqeta/kyc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { User } from '../../clients/marqeta/user';
-import { IMarqetaCreateUser } from '../../integrations/marqeta/types';
-import { generateRandomPasswordString } from '../../lib/misc';
+import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
+import { ErrorTypes } from '../../lib/constants';
+import CustomError from '../../lib/customError';
 import { IUrlParam } from '../../models/user';
 import { VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
 
-const marqetaClient = new MarqetaClient(); // Instantiate the MarqetaClient
-const user = new User(marqetaClient); // Instantiate the marqeta User class
-const kyc = new Kyc(marqetaClient); // Instantiate the marqeta Kyc class
 export interface IKarmaCardRequestBody {
   address1: string;
   address2?: string;
@@ -27,6 +25,10 @@ export interface IKarmaCardRequestBody {
 }
 
 export const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
+  const marqetaClient = new MarqetaClient(); // Instantiate the MarqetaClient
+  const user = new User(marqetaClient); // Instantiate the marqeta User class
+  const kyc = new Kyc(marqetaClient); // Instantiate the marqeta Kyc class
+
   // find the email is already register with marqeta or not
   const { data } = await user.getUserByEmail({ email: userData.email });
 
@@ -38,9 +40,8 @@ export const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) =
     // if not register then register user to marqeta
     marqetaResponse = await user.createUser(userData);
   }
-
   // perform the kyc theough marqeta
-  if (marqetaResponse) {
+  if (!!marqetaResponse && marqetaResponse?.status !== 'ACTIVE') {
     const kycResponse = await kyc.processKyc({ userToken: marqetaResponse.token });
     marqetaResponse = { marqetaResponse, kycResult: { ...kycResponse.result } };
   }
@@ -48,20 +49,26 @@ export const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) =
 };
 
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
-  const { requestor } = req;
+  let { requestor } = req;
   let _visitor;
+
   const { firstName, lastName, address1, address2, birthDate, postalCode, state, ssn, email, city, urlParams } = req.body;
   if (!firstName || !lastName || !address1 || !birthDate || !postalCode || !state || !ssn || !city) throw new Error('Missing required fields');
   if (!requestor && !email) throw new Error('Missing required fields');
 
-  if (!requestor) {
-    const existingVisitor = await VisitorModel.findOne({ email: email.toLowerCase() });
-    if (!!existingVisitor) {
-      _visitor = existingVisitor;
-    } else {
-      const newVisitorResponse = await VisitorService.createCreateAccountVisitor({ params: urlParams, email });
-      _visitor = newVisitorResponse;
+  if (!!requestor && requestor.emails[0].email !== email) {
+    requestor = null;
+  }
+
+  const existingVisitor = await VisitorModel.findOne({ email: email.toLowerCase() });
+  if (!!existingVisitor) {
+    _visitor = existingVisitor;
+    if (_visitor?.integrations?.marqeta?.kycResult?.status === IMarqetaKycState.success) {
+      throw new CustomError('This user is already register in KM', ErrorTypes.INVALID_ARG);
     }
+  } else {
+    const newVisitorResponse = await VisitorService.createCreateAccountVisitor({ params: urlParams, email });
+    _visitor = newVisitorResponse;
   }
 
   const marqetaKYCInfo: IMarqetaCreateUser = {
@@ -95,36 +102,41 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     kycResult: { status: kycResult.status, codes: kycErrorCodes },
     email,
   };
+
   if (!requestor) {
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email });
   }
 
-  const isApprovedOrPending = kycResult.status;
+  const kycStatus = kycResult?.status;
 
-  if (isApprovedOrPending !== 'success') {
-    return { status: kycResult.status, error: kycErrorCodes, message: 'Your application has been in ( Pending OR declined ). Please check your email for next steps.', _visitor };
+  // if marqeta Kyc failed / pending
+  if (kycStatus !== IMarqetaKycState.success) {
+    return _visitor;
   }
 
-  let userObject;
-  // if there is an existing user, add the marqeta integration to the existing user
-  if (!!requestor) {
-    // save the marqeta user data
-    requestor.integrations.marqeta = marqeta;
-    userObject = await requestor.save();
-  }
+  // if marqeta Kyc Approved/success
+  if (kycStatus === IMarqetaKycState.success) {
+    let userObject;
+    // if there is an existing user, add the marqeta integration to the existing user
+    if (!!requestor) {
+      // save the marqeta user data
+      requestor.integrations.marqeta = marqeta;
+      userObject = await requestor.save();
+    }
 
-  if (!requestor) {
-    // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
-    // add the marqeta integration to the newly created user or the existing user (userObject)
-    userObject = await UserService.register(req, {
-      name: `${firstName} ${lastName}`,
-      password: generateRandomPasswordString(14),
-      visitorId: _visitor._id,
-      isAutoGenerated: true,
-    });
+    if (!requestor) {
+      // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
+      // add the marqeta integration to the newly created user or the existing user (userObject)
+      const { user } = await UserService.register(req, {
+        name: `${firstName} ${lastName}`,
+        password: 'K4-Cg9QMAQrSkBTJv!', // generateRandomPasswordString(14),
+        visitorId: _visitor._id,
+        isAutoGenerated: true,
+      });
+      userObject = user;
+    }
+    return userObject;
+    // determine the appropriate next steps for getting the user to update their password and login to their profile, maybe an email so that we can also verify their email while we're at it?
   }
-  console.log(userObject);
-  // determine the appropriate next steps for getting the user to update their password and login to their profile, maybe an email so that we can also verify their email while we're at it?
-  return { status: kycResult.status, message: 'Your application has been submitted. Please check your email to finish setting up your account.', userObject };
 };

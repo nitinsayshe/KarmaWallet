@@ -26,7 +26,7 @@ export interface IKardIntegration {
   dateAdded: Date;
 }
 
-export interface IMarqetaIntegration {
+export interface IMarqetaCardIntegration {
   token: string;
   expiration_time: Date;
   user_token: string;
@@ -45,7 +45,7 @@ export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;
   kard?: IKardIntegration;
-  marqeta?: IMarqetaIntegration[];
+  marqeta?: IMarqetaCardIntegration[];
 }
 
 export interface IShareableCard {
@@ -71,7 +71,7 @@ export interface ICard extends IShareableCard {
   binToken?: string;
 }
 
-export interface ICardDocument extends ICard, Document {}
+export interface ICardDocument extends ICard, Document { }
 export type ICardModel = IModel<ICard>;
 
 const cardSchema = new Schema({

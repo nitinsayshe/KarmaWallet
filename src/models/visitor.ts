@@ -2,20 +2,16 @@ import {
   Document, model, ObjectId, PaginateModel, Schema,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
+import { IMarqetaKycState } from '../integrations/marqeta/types';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
 
-enum IMarqetaKycState{
-  failuer = 'failuer',
-  success = 'success',
-  pending = 'pending'
+interface IMarqetaKycResult {
+  status: IMarqetaKycState,
+  codes: string[]
 }
-interface IMarqetaKycResult{
-  status : IMarqetaKycState,
-  codes : string[]
-}
-export interface IMarqetaVisitorData{
+export interface IMarqetaVisitorData {
   userToken: string;
   email: string;
   kycResult: IMarqetaKycResult;
@@ -24,7 +20,7 @@ export interface IVisitorIntegrations {
   groupCode?: string;
   urlParams?: IUrlParam[];
   shareASale?: boolean;
-  marqeta? : IMarqetaVisitorData;
+  marqeta?: IMarqetaVisitorData;
 }
 
 export interface IShareableVisitor {
@@ -39,7 +35,7 @@ export interface IVisitor extends IShareableVisitor {
   user?: IRef<ObjectId, (IShareableUser | IUser)>;
 }
 
-export interface IVisitorDocument extends IVisitor, Document {}
+export interface IVisitorDocument extends IVisitor, Document { }
 export type IVisitorModel = IModel<IVisitor>;
 
 const visitorSchema = new Schema({

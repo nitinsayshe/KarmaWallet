@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
-import { CardModel, ICard, ICardDocument, IMarqetaIntegration } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IMarqetaCardIntegration } from '../../models/card';
 import { IRequest } from '../../types/request';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
@@ -266,7 +266,7 @@ export const registerInKardRewards = async (
   return updatedCard;
 };
 
-export const addCards = async (_userId: string, cardData: IMarqetaIntegration) => {
+export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
   const { user_token, token, expiration_time } = cardData;
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
 

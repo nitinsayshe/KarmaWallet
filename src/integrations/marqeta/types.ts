@@ -35,7 +35,7 @@ export interface IMarqetaCreateUser {
   // metadata: Metadata;
 }
 
-export interface IMarqetaUserTransition extends IMarqetaUserToken{
+export interface IMarqetaUserTransition extends IMarqetaUserToken {
   channel: string;
   reason: string;
   reasonCode: string;
@@ -68,28 +68,34 @@ enum kyc_required {
   NEVER = 'NEVER'
 }
 
-interface IMarqetaACHGroupConfig{
+export enum IMarqetaKycState {
+  failure = 'failure',
+  success = 'success',
+  pending = 'pending'
+}
+
+interface IMarqetaACHGroupConfig {
   isReloadable: boolean;
   kycRequired: kyc_required;
 }
 
-export interface IMarqetaACHGroup{
+export interface IMarqetaACHGroup {
   name: string;
   config: IMarqetaACHGroupConfig;
 }
 
-export interface IMarqetaClientAccessToken{
+export interface IMarqetaClientAccessToken {
   cardToken: string;
   applicationToken: string;
 }
 
-export interface IMarqetaACHPlaidFundingSource{
+export interface IMarqetaACHPlaidFundingSource {
   userToken: any;
   partnerAccountLinkReferenceToken: string;
   partner: string;
 }
 
-export interface IMarqetaACHBankTransfer{
+export interface IMarqetaACHBankTransfer {
   amount: number;
   fundingSourceToken: string;
   type: string;
@@ -109,36 +115,36 @@ export enum CardholderVerificationMethod {
   otp_cvv = 'OTP_CVV',
   other = 'OTHER'
 }
-export interface IMarqetaPinControlToken{
+export interface IMarqetaPinControlToken {
   cardToken: string;
   controlTokenType?: ControlTokenType;
 }
 
-export interface IMarqetaCreatePin{
+export interface IMarqetaCreatePin {
   controlToken?: string;
   cardToken?: string;
   pin?: number;
   controlTokenType?: ControlTokenType;
 }
 
-export interface IMarqetaRevealPin{
+export interface IMarqetaRevealPin {
   cardholderVerificationMethod: CardholderVerificationMethod;
   controlToken: string;
 }
 
-export interface IMarqetaMakeTransaction{
+export interface IMarqetaMakeTransaction {
   cardToken: string;
   amount: number;
   mid: string;
 }
 
-export interface IMarqetaMakeTransactionAdvice{
+export interface IMarqetaMakeTransactionAdvice {
   originalTransactionToken: string;
   amount: number;
 }
 
-export interface IMarqetaMakeTransactionClearing{
+export interface IMarqetaMakeTransactionClearing {
   originalTransactionToken: string;
   amount: number;
-  isRefund : boolean;
+  isRefund: boolean;
 }

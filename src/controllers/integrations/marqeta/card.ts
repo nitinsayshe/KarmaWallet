@@ -5,7 +5,7 @@ import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as CardService from '../../../integrations/marqeta/card';
 import { ErrorTypes } from '../../../lib/constants';
-import { addCards } from '../../../services/card';
+import { mapMarqetaCardtoCard } from '../../../services/card';
 
 export const createCard: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateCard> = async (req, res) => {
   try {
@@ -18,7 +18,7 @@ export const createCard: IRequestHandler<{ userToken: string }, {}, IMarqetaCrea
       return;
     }
     const { user: data } = await CardService.createCard(req);
-    await addCards(_userId, data);
+    await mapMarqetaCardtoCard(_userId, data);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

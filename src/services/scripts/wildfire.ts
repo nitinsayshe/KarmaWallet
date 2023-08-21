@@ -229,10 +229,10 @@ export const getCurrentWildfireData = async () => {
 // Updates existing merchants in database to ensure there are currently active domains
 export const updateWildfireMerchants = async () => {
   const wildfireClient = new WildfireClient();
-  // const merchants: IMerchantDocument[] = await MerchantModel.find({});
   const res = await wildfireClient.getActiveDomains();
   const newActiveDomains: any[] = res.data;
   const lastModifiedDate = new Date();
+
   let count = 0;
   // caching date for cleanup purposes
   if (!newActiveDomains) {
@@ -256,9 +256,11 @@ export const updateWildfireMerchants = async () => {
       count += 1;
     }
   }
+
   console.log(`[+] updated ${count} merchants`);
+  // after the newDomains loop, delete all the wildfire merchantRates last modified before the current date (since once we just updated should have been updated on current date)
   const merchantsWithoutActiveDomains = await MerchantModel.updateMany(
-    { lastModified: { $ne: lastModifiedDate } },
+    { lastModified: { $ne: lastModifiedDate }, 'integrations.wildfire': { $exists: true } },
     { 'integrations.wildfire.domains.0.Merchant.MaxRate': null },
   );
   console.log(`[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant max rates removed`);
@@ -266,7 +268,7 @@ export const updateWildfireMerchants = async () => {
 
 export const updateWildfireMerchantRates = async () => {
   const wildfireClient = new WildfireClient();
-  const merchants: IMerchantDocument[] = await MerchantModel.find({});
+  const merchants: IMerchantDocument[] = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
   const res = await wildfireClient.getMerchantRates();
   const newRates: { [key: string]: { ID: number; Name: string; Kind: string; Amount: string; Currency?: string }[] } = res.data;
   // caching date for cleanup purposes

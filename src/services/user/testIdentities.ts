@@ -1,4 +1,5 @@
 import argon2 from 'argon2';
+import { randomUUID } from 'crypto';
 import dayjs from 'dayjs';
 import { Types } from 'mongoose';
 import { TransactionPaymentChannelEnum, TransactionTransactionTypeEnum } from 'plaid';
@@ -11,7 +12,7 @@ import {
   getPlaidCategoryMappingDictionary,
 } from '../../integrations/plaid/v2_matching';
 import { saveTransactions } from '../../integrations/plaid/v2_transaction';
-import { CardStatus, UserRoles } from '../../lib/constants';
+import { CardStatus, KardEnrollmentStatus, UserRoles } from '../../lib/constants';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { encrypt } from '../../lib/encryption';
 import { getRandomInt } from '../../lib/number';
@@ -187,7 +188,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
   }
 };
 
-const getCompaniesByName = async (names: string[]): Promise<ICompanyDocument[]> => {
+export const getCompaniesByName = async (names: string[]): Promise<ICompanyDocument[]> => {
   try {
     const companies = await CompanyModel.find({ companyName: { $in: names } });
     if (!companies) {
@@ -283,7 +284,7 @@ const registerUserWithKardAndAddCard = async (
   card: ICardDocument,
 ): Promise<ICardDocument | null> => {
   try {
-    const { updatedCard } = await createKardUserAndAddIntegrations(user, card);
+    const updatedCard = await createKardUserAndAddIntegrations(user, card);
     return updatedCard || null;
   } catch (err) {
     console.error(err);
@@ -338,7 +339,9 @@ const createTestCards = async (
               unlinkedAccessTokens: [],
             },
             kard: {
-              dateAdded: dayjs().toDate(),
+              createdOn: dayjs().toDate(),
+              userId: randomUUID(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
@@ -389,7 +392,9 @@ const createTestCards = async (
               unlinkedAccessTokens: ['unlinked-access-token-123'],
             },
             kard: {
-              dateAdded: dayjs().toDate(),
+              createdOn: dayjs().toDate(),
+              userId: randomUUID(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
@@ -404,8 +409,6 @@ const createTestCards = async (
     if (!henrysCard || !georgesCard || !chicosCard) {
       throw new Error('Could not create test cards');
     }
-    // send cards to Kard
-
     return { henrysCard, georgesCard, chicosCard };
   } catch (err) {
     console.error(err);
@@ -484,7 +487,7 @@ IMatchedTransaction & {
   return transactions;
 };
 
-export const createTransactionsForIdentity = async (
+export const createTestTransactions = async (
   userId: Types.ObjectId,
   card: ICardDocument,
   companies: ICompanyDocument[],
@@ -526,7 +529,7 @@ export const createTransactionsWithWalmartAndAmazonThisMonth = async (
     if (!walmart || !amazon) {
       throw new Error('Could not find Walmart or Amazon');
     }
-    await createTransactionsForIdentity(userId, card, [walmart, amazon]);
+    await createTestTransactions(userId, card, [walmart, amazon]);
   } catch (err) {
     console.error(err);
   }
@@ -767,11 +770,16 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     await createChicosTransactions(chico._id, chicosCard);
 
     // trigger monthly impact reports for each user
+    console.log('triggering monthly impact reports...');
     triggerMonthlyImpactReport(henry._id);
     triggerMonthlyImpactReport(george._id);
     triggerMonthlyImpactReport(chico._id);
 
+    console.log('saving updated documents...');
     const updatedUsers = await saveDocuments([henry, george, chico]);
+    if (!updatedUsers) {
+      throw new Error('Error saving updated users');
+    }
 
     const testIdentities = {
       henry: (updatedUsers as IUserDocument[])?.find((user) => user._id.toString() === henry._id.toString()),
@@ -788,10 +796,11 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
 };
 
 export const triggerResetTestIdentities = (): void => {
-  MainBullClient?.createJob(
+  console.log('triggering reset test identities');
+  MainBullClient.createJob(
     JobNames.ResetTestIdentities,
-    {},
     { jobId: `${JobNames.ResetTestIdentities}` },
+    {},
     {
       onComplete: () => {
         console.log(`${JobNames.ResetTestIdentities} finished`);

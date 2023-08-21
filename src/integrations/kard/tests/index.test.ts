@@ -3,10 +3,10 @@ import { AxiosResponse } from 'axios';
 import { randomUUID } from 'crypto';
 import dayjs from 'dayjs';
 import { now } from 'lodash';
-import { createKardUserAndAddIntegrations, getCardInfo, deleteKardUser, queueSettledTransactions } from '..';
+import { createKardUserAndAddIntegrations, getCardInfo, deleteKardUsersForUser, queueSettledTransactions } from '..';
 import { MerchantSource, OfferType, CommissionType, KardClient, TransactionStatus } from '../../../clients/kard';
 import { MongoClient } from '../../../clients/mongo';
-import { CardNetwork, CardStatus } from '../../../lib/constants';
+import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { encrypt } from '../../../lib/encryption';
 import { getRandomInt } from '../../../lib/number';
@@ -25,7 +25,7 @@ import { ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument } from '../../../models/merchant';
 import { IMerchantRateDocument } from '../../../models/merchantRate';
 import { ITransactionDocument } from '../../../models/transaction';
-import { IUserDocument, UserEmailStatus, UserModel } from '../../../models/user';
+import { IUserDocument, UserEmailStatus } from '../../../models/user';
 
 describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
   let testUserWithLinkedAccountNoKardIntegration: IUserDocument;
@@ -37,7 +37,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
   let testMerchantRates: IMerchantRateDocument[];
   let testCompany: ICompanyDocument;
   const dateCardAdded: Date = getUtcDate().toDate();
-  const testsStartDate: Date = getUtcDate().toDate();
 
   const testUserWithKardIntegrationCardInfo = {
     last4: getRandomInt(1000, 9999).toString(),
@@ -95,12 +94,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
               status: UserEmailStatus.Verified,
             },
           ],
-          integrations: {
-            kard: {
-              userId: randomUUID(),
-              dateAccountCreated: testsStartDate,
-            },
-          },
         },
         {
           name: 'testUserWithLinkedAccountNoKardIntegration User',
@@ -123,7 +116,9 @@ describe('kard client interface can fetch session tokes, create, update, and del
           institution: testUserWithKardIntegrationCardInfo.issuer,
           lastFourDigitsToken: encrypt(testUserWithKardIntegrationCardInfo.last4),
           binToken: encrypt(testUserWithKardIntegrationCardInfo.bin),
-          integrations: { kard: { dateAdded: dateCardAdded } },
+          integrations: {
+            kard: { createdOn: dateCardAdded, userId: randomUUID(), enrollmentStatus: KardEnrollmentStatus.Enrolled },
+          },
         },
         {
           userId: testUserWithLinkedAccountNoKardIntegration._id,
@@ -278,19 +273,14 @@ describe('kard client interface can fetch session tokes, create, update, and del
 
   it('createKardUserAndAddIntegrations creates new kard user and adds new card', async () => {
     await createKardUserAndAddIntegrations(testUserWithLinkedAccountNoKardIntegration, testCards[1]);
-    // check that the user has a kard integration object
-    const updatedUser = await UserModel.find({ _id: testUserWithLinkedAccountNoKardIntegration._id });
-
-    expect(updatedUser?.[0]?.integrations.kard).toBeDefined();
-    expect(updatedUser?.[0]?.integrations.kard.dateAccountCreated).toBeDefined();
-    expect(dayjs(updatedUser?.[0]?.integrations.kard.dateAccountCreated).diff(testsStartDate)).toBeGreaterThan(0);
-    expect(dayjs(updatedUser?.[0]?.integrations.kard.dateAccountCreated).diff(now())).toBeLessThan(0);
-
+    // check that the card has a kard integration object
     const userCards = await CardModel.find({ userId: testUserWithLinkedAccountNoKardIntegration._id });
     expect(userCards.length).toBe(1);
-    expect(userCards[0].integrations.kard.dateAdded).toBeDefined();
-    expect(dayjs(userCards[0].integrations.kard.dateAdded).diff(dateCardAdded)).toBeGreaterThan(0);
-    expect(dayjs(userCards[0].integrations.kard.dateAdded).diff(now())).toBeLessThan(0);
+    expect(userCards[0].integrations.kard.createdOn).toBeDefined();
+    expect(dayjs(userCards[0].integrations.kard.createdOn).diff(dateCardAdded)).toBeGreaterThan(0);
+    expect(dayjs(userCards[0].integrations.kard.createdOn).diff(now())).toBeLessThan(0);
+    expect(userCards[0].integrations.kard.enrollmentStatus).toBe(KardEnrollmentStatus.Enrolled);
+    expect(userCards[0].integrations.kard.userId).toBe(testCards[1].integrations.kard.userId);
   });
 
   it('deleteKardUser looks up user by their id and removes user from kard', async () => {
@@ -299,15 +289,18 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const kardClient = new KardClient();
     const newKardUser = await kardClient.createUser({
       email: testUserWithKardIntegration.emails[0].email,
-      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      referringPartnerUserId: testCards[0].integrations.kard.userId,
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
     /* sleep(1000); */
     expect(newKardUser).toBeDefined();
-    const res = await deleteKardUser(testUserWithKardIntegration._id);
-    expect((res as AxiosResponse)?.status).toBe(200);
+    const updatedCards = await deleteKardUsersForUser(testUserWithKardIntegration._id);
+    expect(updatedCards.length).toBe(1);
+    expect(updatedCards[0].integrations.kard.enrollmentStatus).toBe(KardEnrollmentStatus.Unenrolled);
   });
+
+  /* TODO: test that one user with multiple enrolled card gets them all removed */
 
   it('deleteKardUser works when provided user document', async () => {
     // create kard user to be deleted
@@ -315,14 +308,15 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const kardClient = new KardClient();
     const newKardUser = await kardClient.createUser({
       email: testUserWithKardIntegration.emails[0].email,
-      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      referringPartnerUserId: testCards[0].integrations.kard.userId,
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
     /* sleep(1000); */
     expect(newKardUser).toBeDefined();
-    const res = await deleteKardUser(testUserWithKardIntegration);
-    expect((res as AxiosResponse)?.status).toBe(200);
+    const updatedCards = await deleteKardUsersForUser(testUserWithKardIntegration);
+    expect(updatedCards.length).toBe(1);
+    expect(updatedCards[0].integrations.kard.enrollmentStatus).toBe(KardEnrollmentStatus.Unenrolled);
   });
 
   it('queueSettledTransactions prepares and submits transactions to Kard', async () => {
@@ -331,17 +325,17 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const kardClient = new KardClient();
     const newKardUser = await kardClient.createUser({
       email: testUserWithKardIntegration.emails[0].email,
-      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      referringPartnerUserId: testCards[0].integrations.kard.userId,
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
     expect(newKardUser).toBeDefined();
-    const res = await queueSettledTransactions(testUserWithKardIntegration._id, transactionsToQueue);
+    const res = await queueSettledTransactions(testCards[0]._id, transactionsToQueue);
     expect(res).toBeDefined();
     expect((res as AxiosResponse)?.status).toBe(201);
 
     // clean up
-    await deleteKardUser(testUserWithKardIntegration);
+    await deleteKardUsersForUser(testUserWithKardIntegration);
   }, 15000);
 
   it('queueSettledTransactions works when provided the user document', async () => {
@@ -350,16 +344,16 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const kardClient = new KardClient();
     const newKardUser = await kardClient.createUser({
       email: testUserWithKardIntegration.emails[0].email,
-      referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+      referringPartnerUserId: testCards[0].integrations.kard.userId,
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
     expect(newKardUser).toBeDefined();
-    const res = await queueSettledTransactions(testUserWithKardIntegration, transactionsToQueue);
+    const res = await queueSettledTransactions(testCards[0], transactionsToQueue);
     expect(res).toBeDefined();
     expect((res as AxiosResponse)?.status).toBe(201);
 
     // clean up
-    await deleteKardUser(testUserWithKardIntegration);
+    await deleteKardUsersForUser(testUserWithKardIntegration);
   }, 15000);
 });

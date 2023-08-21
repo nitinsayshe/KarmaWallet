@@ -261,6 +261,7 @@ export const createNotification = async <DataType>(
 
 export const createEarnedCashbackNotificationFromCommission = async (
   commission: ICommissionDocument,
+  disableEmail = false,
 ): Promise<INotificationDocument | void> => {
   // get user and company data
   try {
@@ -300,7 +301,7 @@ export const createEarnedCashbackNotificationFromCommission = async (
       body: {
         type: NotificationType.EarnedCashback,
         status: NotificationStatus.Unread,
-        channel: NotificationChannel.Email,
+        channel: disableEmail ? undefined : NotificationChannel.Email,
         user: user?._id?.toString(),
         body: `You just earned $${roundToPercision(commission.amount, 2)} in cashback from ${company.companyName}`,
         data: {

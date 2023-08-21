@@ -10,7 +10,10 @@ router.route('/')
 router.route('/:card/remove')
   .put(authenticate, CardController.removeCard);
 
-router.route('/:card/rewards/register')
-  .put(authenticate, CardController.registerCardInKardRewards);
+router.route('/:card/rewards')
+  .post(authenticate, CardController.enrollCardInKardRewards);
+
+router.route('/:card/rewards')
+  .delete(authenticate, CardController.enrollCardInKardRewards);
 
 export default (app: Express) => app.use('/card', router);

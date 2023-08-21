@@ -60,6 +60,11 @@ export enum CardStatus {
   Removed = 'removed',
 }
 
+export enum KardEnrollmentStatus {
+  Enrolled = 'enrolled',
+  Unenrolled = 'unenrolled',
+}
+
 export enum CardNetwork {
   Visa = 'VISA',
   Mastercard = 'MASTERCARD',

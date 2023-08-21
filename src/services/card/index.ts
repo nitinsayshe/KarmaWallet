@@ -267,7 +267,7 @@ export const registerInKardRewards = async (
 };
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
-  const { user_token, token, expiration_time } = cardData;
+  const { user_token, token, expiration_time, last_four, pan } = cardData;
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
 
   let card = await CardModel.findOne({ userId: _userId });
@@ -280,10 +280,12 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
 
   // prepare the cardItem Details
   const cardItem = {
+    ...cardData,
     card_token: token,
     expr_month: month,
     expr_year: year,
-    ...cardData,
+    last_four: encrypt(last_four),
+    pan: encrypt(pan),
   };
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta.push(cardItem);

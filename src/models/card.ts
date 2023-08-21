@@ -32,6 +32,7 @@ export interface IMarqetaCardIntegration {
   user_token: string;
   card_token: string,
   card_product_token: string;
+  pan: string;
   last_four: string;
   expr_month: number;
   expr_year: number;
@@ -123,6 +124,7 @@ const cardSchema = new Schema({
         card_token: { type: String },
         card_product_token: { type: String },
         last_four: { type: String },
+        pan: { type: String },
         expr_month: { type: Number },
         expr_year: { type: Number },
         pin_is_set: { type: Boolean },

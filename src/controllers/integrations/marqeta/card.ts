@@ -7,7 +7,7 @@ import * as CardService from '../../../integrations/marqeta/card';
 import { ErrorTypes } from '../../../lib/constants';
 import { mapMarqetaCardtoCard } from '../../../services/card';
 
-export const createCard: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateCard> = async (req, res) => {
+export const createCard: IRequestHandler<{}, {}, IMarqetaCreateCard> = async (req, res) => {
   try {
     const { body } = req;
     const { _id: _userId } = req.requestor;

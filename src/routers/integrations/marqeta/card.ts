@@ -4,7 +4,7 @@ import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
-router.route('/create/:userToken')
+router.route('/create')
   .post(authenticate, CardController.createCard);
 
 router.route('/list/:userToken')

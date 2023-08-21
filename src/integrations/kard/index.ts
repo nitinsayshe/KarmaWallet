@@ -11,7 +11,8 @@ import {
   QueueTransactionsRequest,
   Transaction,
 } from '../../clients/kard';
-import { CentsInUSD } from '../../lib/constants';
+import { CentsInUSD, ErrorTypes } from '../../lib/constants';
+import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
 import { ICard, ICardDocument } from '../../models/card';
@@ -87,44 +88,75 @@ export const addKardIntegrationToCard = async (card: ICardDocument): Promise<ICa
   }
 };
 
+export const createKardUserFromUser = async (
+  user: IUserDocument,
+  card: ICardDocument,
+): Promise<{ error: CustomError | void; userIntegration: IKardIntegration | null }> => {
+  try {
+    const email = user?.emails?.find((e) => e.primary)?.email;
+
+    const dateKardAccountCreated = user?.integrations?.kard?.dateAccountCreated;
+    if (!!dateKardAccountCreated) {
+      return { error: new CustomError('User already has a kard account', ErrorTypes.CONFLICT), userIntegration: null };
+    }
+
+    const kard = new KardClient();
+    const userKardIntegration: IKardIntegration = {
+      userId: uuid(),
+      dateAccountCreated: getUtcDate().toDate(),
+    };
+
+    const req: CreateUserRequest = {
+      email,
+      userName: getFormattedUserName(user?.name),
+      cardInfo: getCardInfo(card),
+      referringPartnerUserId: userKardIntegration.userId,
+    };
+
+    console.log('creating new kard user for userId: ', user._id);
+    const res = await kard.createUser(req);
+    if (res.status !== 201) {
+      return {
+        error: new CustomError("Error: new Kard user couldn't be created", ErrorTypes.SERVER),
+        userIntegration: null,
+      };
+    }
+    return { error: null, userIntegration: userKardIntegration };
+  } catch (error) {
+    return { error: new CustomError('Error creating kard user', ErrorTypes.SERVER), userIntegration: null };
+  }
+};
+
+export const addKardIntegrationToUserAndCard = async (
+  user: IUserDocument,
+  card: ICardDocument,
+  userKardIntegration: IKardIntegration,
+): Promise<{ error: CustomError | null; updatedUser: IUserDocument | null; updatedCard: ICardDocument | null }> => {
+  // create a kard integration object with id and date created and save it to the user
+  const updatedUser = await addKardIntegrationToUser(user, userKardIntegration);
+  if (!updatedUser || !updatedUser.integrations?.kard) {
+    return { updatedUser: null, updatedCard: null, error: new CustomError('Error adding kard integration to user', ErrorTypes.SERVER) };
+  }
+
+  const updatedCard = await addKardIntegrationToCard(card);
+  if (!updatedCard || !updatedCard.integrations?.kard) {
+    return { updatedUser: null, updatedCard: null, error: new CustomError('Error adding kard integration to card', ErrorTypes.SERVER) };
+  }
+  return { updatedUser, updatedCard, error: null };
+};
+
 export const createKardUserAndAddIntegrations = async (
   user: IUserDocument,
   card: ICardDocument,
 ): Promise<{ updatedUser: IUserDocument; updatedCard: ICardDocument }> => {
-  const email = user?.emails?.find((e) => e.primary)?.email;
-
-  const dateKardAccountCreated = user?.integrations?.kard?.dateAccountCreated;
-  if (!!dateKardAccountCreated) {
-    throw new Error(
-      `Error creating new kard account for user: ${user._id.toString()}. User already has a kard account.`,
-    );
+  const kardUserIntegrationData = await createKardUserFromUser(user, card);
+  if (!!kardUserIntegrationData.error) {
+    throw kardUserIntegrationData.error;
   }
 
-  const kard = new KardClient();
-  const userKardIntegration: IKardIntegration = {
-    userId: uuid(),
-    dateAccountCreated: getUtcDate().toDate(),
-  };
-
-  const req: CreateUserRequest = {
-    email,
-    userName: getFormattedUserName(user?.name),
-    cardInfo: getCardInfo(card),
-    referringPartnerUserId: userKardIntegration.userId,
-  };
-
-  console.log('creating new kard user for userId: ', user._id);
-  await kard.createUser(req);
-
-  // create a kard integration object with id and date created and save it to the user
-  const updatedUser = await addKardIntegrationToUser(user, userKardIntegration);
-  if (!updatedUser) {
-    throw new Error('Error adding kard integration to user');
-  }
-
-  const updatedCard = await addKardIntegrationToCard(card);
-  if (!updatedCard) {
-    throw new Error('Error adding kard integration to card');
+  const { error: addIntegrationsError, updatedUser, updatedCard } = await addKardIntegrationToUserAndCard(user, card, kardUserIntegrationData.userIntegration);
+  if (addIntegrationsError) {
+    throw addIntegrationsError;
   }
   return { updatedUser, updatedCard };
 };

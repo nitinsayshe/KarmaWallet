@@ -1,26 +1,25 @@
 import { Router } from 'express';
 import * as UserController from '../../../controllers/integrations/marqeta/user';
-import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
 router.route('/create')
-  .post(authenticate, UserController.createUser);
+  .post(UserController.createUser);
 
 router.route('/list')
   .get(UserController.listUser);
 
-router.route('/profile')
-  .get(authenticate, UserController.getUser);
+router.route('/profile/:userToken')
+  .get(UserController.getUser);
 
-router.route('/update')
-  .put(authenticate, UserController.updateUser);
+router.route('/update/:userToken')
+  .put(UserController.updateUser);
 
-router.route('/transition')
-  .post(authenticate, UserController.userTransition);
+router.route('/transition/:userToken')
+  .post(UserController.userTransition);
 
-router.route('/transition')
-  .get(authenticate, UserController.listUserTransition);
+router.route('/transition/:userToken')
+  .get(UserController.listUserTransition);
 
 router.route('/accesstoken')
   .post(UserController.createClientAccessToken);

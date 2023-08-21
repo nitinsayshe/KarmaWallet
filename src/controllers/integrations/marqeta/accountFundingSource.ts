@@ -1,4 +1,4 @@
-import { IMarqetaACHPlaidFundingSource } from '../../../integrations/marqeta/types';
+import { IMarqetaACHBankTransfer, IMarqetaACHPlaidFundingSource } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
@@ -16,6 +16,22 @@ export const createAchFundingSource: IRequestHandler<{}, {}, IMarqetaACHPlaidFun
       return;
     }
     const { data } = await ACHFundingSourceService.createAchFundingSource(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTransfer> = async (req, res) => {
+  try {
+    const { body } = req;
+    const requiredFields = ['fundingSourceToken', 'type', 'amount'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    if (!isValid) {
+      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+    const { data } = await ACHFundingSourceService.createACHBankTransfer(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -6,7 +6,7 @@ import CustomError, { asCustomError } from '../../../lib/customError';
 import * as GPAService from '../../../integrations/marqeta/gpa';
 import { ErrorTypes } from '../../../lib/constants';
 
-export const fundUserGPA: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = async (req, res) => {
+export const fundUserGPA: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateGPAorder> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['amount', 'currencyCode', 'fundingSourceToken'];
@@ -22,10 +22,10 @@ export const fundUserGPA: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = asyn
   }
 };
 
-export const getGPAbalance: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = async (req, res) => {
+export const getGPAbalance: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateGPAorder> = async (req, res) => {
   try {
-    const { _id: userId } = req.requestor;
-    const { user: data } = await GPAService.getGPABalance(userId);
+    const { userToken } = req.params;
+    const { user: data } = await GPAService.getGPABalance(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

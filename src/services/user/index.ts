@@ -73,7 +73,6 @@ export interface IUserData extends ILoginData {
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
 }
-
 export interface IRegisterUserData {
   name: string;
   token?: string;
@@ -176,7 +175,7 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
 
   // Start building the user information, grabs the integrations information from the visitor object
   const integrations: IUserIntegrations = {};
-  const { urlParams, shareASale, groupCode } = visitor.integrations;
+  const { urlParams, shareASale, groupCode, marqeta } = visitor.integrations;
   const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
 
@@ -215,6 +214,9 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
     promoData = promoItem;
     integrations.promos = [...(integrations.promos || []), promoItem];
   }
+
+  // if marqeta is present in visitor
+  integrations.marqeta = marqeta;
 
   newUserData.integrations = integrations;
 
@@ -326,6 +328,7 @@ export const getShareableUser = ({
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
+  if (integrations?.marqeta) _integrations.marqeta = integrations.marqeta;
   return {
     _id,
     email,

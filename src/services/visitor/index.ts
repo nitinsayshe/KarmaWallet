@@ -9,7 +9,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
 import { IUserDocument, UserModel } from '../../models/user';
-import { IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
@@ -31,6 +31,7 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
   shareASale?: boolean;
+  marqeta? : IMarqetaVisitorData
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -42,7 +43,7 @@ const getUserByEmail = async (email: string): Promise<IUserDocument> => {
   }
 };
 
-const getVisitorByEmail = async (email: string): Promise<IVisitorDocument> => {
+export const getVisitorByEmail = async (email: string): Promise<IVisitorDocument> => {
   try {
     return await VisitorModel.findOne({ email });
   } catch (err) {
@@ -114,13 +115,14 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
   }
 };
 
-const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
-    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
+    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale || !!info.marqeta) {
       visitor.integrations = {};
       if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
       if (!!info.params) visitor.integrations.urlParams = info.params;
       if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+      if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     }
     visitor.save();
     return visitor;

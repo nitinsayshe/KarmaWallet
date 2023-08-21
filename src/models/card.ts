@@ -26,7 +26,7 @@ export interface IKardIntegration {
   dateAdded: Date;
 }
 
-export interface IMarqetaIntegration {
+export interface IMarqetaCardIntegration {
   token: string;
   expiration_time: Date;
   user_token: string;
@@ -35,16 +35,17 @@ export interface IMarqetaIntegration {
   last_four: string;
   expr_month: number;
   expr_year: number;
-  pan: number,
-  cvv_number: number,
+  created_time: Date;
   pin_is_set: boolean;
   state: string;
+  instrument_type: string;
+  barcode: string;
 }
 export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;
   kard?: IKardIntegration;
-  marqeta?: IMarqetaIntegration[];
+  marqeta?: IMarqetaCardIntegration[];
 }
 
 export interface IShareableCard {
@@ -70,7 +71,7 @@ export interface ICard extends IShareableCard {
   binToken?: string;
 }
 
-export interface ICardDocument extends ICard, Document {}
+export interface ICardDocument extends ICard, Document { }
 export type ICardModel = IModel<ICard>;
 
 const cardSchema = new Schema({
@@ -121,13 +122,14 @@ const cardSchema = new Schema({
         user_token: { type: String },
         card_token: { type: String },
         card_product_token: { type: String },
-        pan: { type: Number },
-        cvv_number: { type: Number },
         last_four: { type: String },
         expr_month: { type: Number },
         expr_year: { type: Number },
         pin_is_set: { type: Boolean },
         state: { type: String },
+        barcode: { type: String },
+        created_time: { type: Date },
+        instrument_type: { type: String },
       },
     }],
   },

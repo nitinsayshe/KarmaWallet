@@ -43,6 +43,17 @@ export class User {
     }
   }
 
+  // get user by Email
+  async getUserByEmail(params:any) {
+    try {
+      const { data } = await this._marqetaClient._client.post('/users/lookup', camelToSnakeCase(params));
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
   // update user
   async updateUser(userToken:string, params:IMarqetaCreateUser) {
     try {

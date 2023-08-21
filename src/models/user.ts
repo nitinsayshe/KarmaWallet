@@ -5,6 +5,7 @@ import { UserRoles } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IPromo, IPromoDocument } from './promo';
 import { IArticle } from './article';
+import { IMarqetaKycState } from '../integrations/marqeta/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -66,11 +67,19 @@ export interface IReferrals {
 }
 
 export interface IBiometrics {
-  _id?:string;
+  _id?: string;
   biometricKey: string,
   isBiometricEnabled: Boolean,
 }
-
+interface IMarqetaKycResult {
+  status: IMarqetaKycState,
+  codes: string[]
+}
+export interface IMarqetaUserIntegrations {
+  userToken: string;
+  email?: string;
+  kycResult: IMarqetaKycResult
+}
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
@@ -80,6 +89,7 @@ export interface IUserIntegrations {
   referrals?: IReferrals;
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
   biometrics?: IBiometrics[];
+  marqeta?: IMarqetaUserIntegrations;
 }
 
 export interface IShareableUser {
@@ -108,7 +118,7 @@ export interface IUser extends IShareableUser {
   };
 }
 
-export interface IUserDocument extends IUser, Document {}
+export interface IUserDocument extends IUser, Document { }
 export type IUserModel = IModel<IUser>;
 
 const userSchema = new Schema({
@@ -152,6 +162,16 @@ const userSchema = new Schema({
     },
   },
   integrations: {
+    marqeta: {
+      type: {
+        userToken: { type: String },
+        email: { type: String },
+        kycResult: {
+          status: { type: String },
+          codes: { type: Array },
+        },
+      },
+    },
     rare: {
       type: {
         userId: { type: String },

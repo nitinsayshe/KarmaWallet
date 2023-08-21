@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
-import { CardModel, ICard, ICardDocument, IMarqetaIntegration } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IMarqetaCardIntegration } from '../../models/card';
 import { IRequest } from '../../types/request';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
@@ -266,14 +266,14 @@ export const registerInKardRewards = async (
   return updatedCard;
 };
 
-export const addCards = async (cardData:IMarqetaIntegration) => {
+export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
   const { user_token, token, expiration_time } = cardData;
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
 
-  let card = await CardModel.findOne({ userId: user_token });
+  let card = await CardModel.findOne({ userId: _userId });
   if (!card) {
     // If the card document doesn't exist, you may choose to create a new one
-    card = new CardModel({ userId: user_token, status: CardStatus.Linked });
+    card = new CardModel({ userId: _userId, status: CardStatus.Linked });
   }
   // extract the expiration year & month of the card
   const { year, month } = extractYearAndMonth(expiration_time);
@@ -285,7 +285,6 @@ export const addCards = async (cardData:IMarqetaIntegration) => {
     expr_year: year,
     ...cardData,
   };
-
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta.push(cardItem);
   // Save the updated card document

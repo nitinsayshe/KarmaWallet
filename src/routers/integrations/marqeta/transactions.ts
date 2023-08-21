@@ -3,6 +3,15 @@ import * as TransactionController from '../../../controllers/integrations/marqet
 
 const router = Router();
 
+router.route('/')
+  .post(TransactionController.makeTransaction);
+
+router.route('/advice')
+  .post(TransactionController.makeTransactionAdvice);
+
+router.route('/clearing')
+  .post(TransactionController.makeTransactionClearing);
+
 router.route('/list')
   .get(TransactionController.listTransaction);
 

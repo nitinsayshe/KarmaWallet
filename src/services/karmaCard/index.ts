@@ -26,7 +26,7 @@ export interface IKarmaCardRequestBody {
   urlParams?: IUrlParam[];
 }
 
-export const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
+const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   const marqetaClient = new MarqetaClient(); // Instantiate the MarqetaClient
   const user = new User(marqetaClient); // Instantiate the marqeta User class
   const kyc = new Kyc(marqetaClient); // Instantiate the marqeta Kyc class

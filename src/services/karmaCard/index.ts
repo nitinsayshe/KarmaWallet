@@ -49,11 +49,13 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   }
   // perform the kyc through marqeta & create the card
   if (!!marqetaUserResponse && marqetaUserResponse?.status !== IMarqetaUserState.active) {
-    [kycResponse, virtualCardResponse, physicalCardResponse] = await Promise.all([
-      await kyc.processKyc({ userToken: marqetaUserResponse.token }),
-      await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.virtualCard }),
-      await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.physicalCard }),
-    ]);
+    kycResponse = await kyc.processKyc({ userToken: marqetaUserResponse.token });
+    if (kycResponse?.result?.status === IMarqetaKycState.success) {
+      [virtualCardResponse, physicalCardResponse] = await Promise.all([
+        await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.virtualCard }),
+        await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.physicalCard }),
+      ]);
+    }
   }
   return { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse };
 };

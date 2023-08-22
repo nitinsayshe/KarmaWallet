@@ -278,10 +278,7 @@ export const updateWildfireMerchantRates = async () => {
 
   for (const merchant of merchants) {
     const { merchantId } = merchant.integrations.wildfire;
-    if (!merchantId) {
-      continue;
-    }
-
+    if (!merchantId) continue;
     const newRatesForMerchant = newRates[merchantId?.toString()];
 
     if (newRatesForMerchant) {

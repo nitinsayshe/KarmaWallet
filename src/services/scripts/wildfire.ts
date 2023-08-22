@@ -263,6 +263,7 @@ export const updateWildfireMerchants = async () => {
     { lastModified: { $ne: lastModifiedDate }, 'integrations.wildfire': { $exists: true } },
     { 'integrations.wildfire.domains.0.Merchant.MaxRate': null },
   );
+
   console.log(`[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant max rates removed`);
 };
 
@@ -277,7 +278,8 @@ export const updateWildfireMerchantRates = async () => {
 
   for (const merchant of merchants) {
     const { merchantId } = merchant.integrations.wildfire;
-    const newRatesForMerchant = newRates[merchantId.toString()];
+    if (!merchantId) continue;
+    const newRatesForMerchant = newRates[merchantId?.toString()];
 
     if (newRatesForMerchant) {
       try {

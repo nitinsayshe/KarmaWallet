@@ -7,7 +7,7 @@ import { getShareableMarqetaUser } from '../services/karmaCard/utils';
 export const applyForKarmaCard: IRequestHandler<{}, {}, KarmaCardService.IKarmaCardRequestBody> = async (req, res) => {
   try {
     const applyResponse = await KarmaCardService.applyForKarmaCard(req);
-    api(req, res, getShareableMarqetaUser(applyResponse.integrations.marqeta));
+    api(req, res, getShareableMarqetaUser(applyResponse));
   } catch (err) {
     error(req, res, asCustomError(err));
   }

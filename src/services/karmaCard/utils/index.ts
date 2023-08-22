@@ -1,6 +1,14 @@
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 
-enum ReasonCode {
+export enum IMarqetaUserState {
+  active = 'ACTIVE',
+  inactive = 'UNACTIVE'
+}
+export enum IMarqetaCardProducts {
+  virtualCard = 'kw_virt_cp',
+  physicalCard = 'kw_phys_cp'
+}
+export enum ReasonCode {
   AddressIssue = 'AddressIssue',
   DateOfBirthIssue = 'DateOfBirthIssue',
   NameIssue = 'NameIssue',
@@ -9,7 +17,8 @@ enum ReasonCode {
   RiskIssue = 'RiskIssue',
   Denied_KYC = 'Denied KYC',
   OFACFailure = 'OFACFailure',
-  Approved = 'Approved'
+  Approved = 'Approved',
+  Already_Register = 'Already_Register'
 }
 
 interface TransformedResponse {
@@ -18,6 +27,7 @@ interface TransformedResponse {
   reason?: ReasonCode;
   acceptedDocuments?: string[];
   solutionText?: string;
+  authkey?: string;
 }
 
 interface SourceResponse {
@@ -41,6 +51,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     [ReasonCode.NoRecordFound]: 'Your application has been declined.',
     [ReasonCode.Denied_KYC]: 'Your application has been declined.',
     [ReasonCode.OFACFailure]: 'Your application has been declined.',
+    [ReasonCode.Already_Register]: 'Your application has been declined.',
   };
 
   const solutionText: Record<ReasonCode, string> = {
@@ -53,6 +64,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     [ReasonCode.NoRecordFound]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
     [ReasonCode.Denied_KYC]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
     [ReasonCode.OFACFailure]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
+    [ReasonCode.Already_Register]: 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
   };
 
   const acceptedDocuments: Record<ReasonCode, string[]> = {
@@ -78,6 +90,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     [ReasonCode.NoRecordFound]: null,
     [ReasonCode.Denied_KYC]: null,
     [ReasonCode.OFACFailure]: null,
+    [ReasonCode.Already_Register]: null,
   };
 
   const transformed: TransformedResponse = {
@@ -87,6 +100,5 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
   };
   if (solutionText[kycResult.codes[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes[0] as ReasonCode];
   if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode];
-
   return transformed;
 };

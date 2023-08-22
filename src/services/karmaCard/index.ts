@@ -37,7 +37,8 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
 
   let marqetaUserResponse;
   let kycResponse;
-  let cardResponse;
+  let virtualCardResponse;
+  let physicalCardResponse;
 
   if (data.length > 0) {
     // if email is register in marqeta then update the user in marqeta
@@ -48,12 +49,13 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   }
   // perform the kyc through marqeta & create the card
   if (!!marqetaUserResponse && marqetaUserResponse?.status !== IMarqetaUserState.active) {
-    [kycResponse, cardResponse] = await Promise.all([
+    [kycResponse, virtualCardResponse, physicalCardResponse] = await Promise.all([
       await kyc.processKyc({ userToken: marqetaUserResponse.token }),
       await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.virtualCard }),
+      await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.physicalCard }),
     ]);
   }
-  return { marqetaUserResponse, kycResponse, cardResponse };
+  return { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse };
 };
 
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
@@ -80,7 +82,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       const applyResponse = {
         kycResult: {
           status: IMarqetaKycState.failure,
-          codes: [ReasonCode.Already_Register],
+          codes: [ReasonCode.Already_Registered],
         },
       };
       return applyResponse;
@@ -112,7 +114,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (address2) marqetaKYCInfo.address2 = address2;
   // perform the KYC logic and Marqeta stuff here
-  const { marqetaUserResponse, kycResponse, cardResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
+  const { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
   // get the kyc result code
   const { status, codes } = kycResponse.result;
   const kycErrorCodes = codes.map((item: any) => item.code);
@@ -156,7 +158,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       userObject = user;
     }
     // store marqeta card in DB
-    await mapMarqetaCardtoCard(userObject._id, cardResponse);
+    await mapMarqetaCardtoCard(userObject._id, [virtualCardResponse, physicalCardResponse]);
     const applyResponse = userObject?.integrations?.marqeta;
     return applyResponse;
     // determine the appropriate next steps for getting the user to update their password and login to their profile, maybe an email so that we can also verify their email while we're at it?

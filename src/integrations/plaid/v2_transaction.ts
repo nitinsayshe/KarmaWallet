@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-syntax */
 import fs from 'fs';
 import dayjs from 'dayjs';
-import { FilterQuery, ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { v4 as uuid } from 'uuid';
 import { IUser, IUserDocument, UserModel } from '../../models/user';
 import { ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
@@ -168,7 +168,7 @@ export const saveTransactions = async (
     t.card = cards.find((c) => c._id?.toString() === t.card?.toString());
     const status = t?.integrations?.plaid?.pending ? TransactionStatus.APPROVED : TransactionStatus.SETTLED;
     const card = t.card as ICard;
-    if (!!card?.integrations?.kard?.dateAdded) {
+    if (!!card?.integrations?.kard?.createdOn) {
       if (!t.integrations) t.integrations = {};
       if (!t.integrations.kard) {
         t.integrations.kard = {
@@ -184,11 +184,17 @@ export const saveTransactions = async (
 
   // send positive amount, non-pending, reward-program-registered card-related transactions to kard
   const kardSyncTransactions = transactionsToSave.filter(
-    (t) => t.amount >= 0 && !t?.integrations?.plaid?.pending && !!(t?.card as ICard)?.integrations?.kard?.dateAdded,
-  );
+    (t) => t.amount >= 0 && !t?.integrations?.plaid?.pending && !!(t?.card as ICard)?.integrations?.kard?.createdOn,
+  ).reduce((acc, curr) => {
+    const cardId = curr.card?.toString();
+    if (!cardId) return acc;
+    if (!acc[cardId]) acc[cardId] = [];
+    acc[cardId].push(curr);
+    return acc;
+  }, {} as {[key:string]: ITransactionDocument[]});
 
-  if (kardSyncTransactions?.length > 0) {
-    await queueSettledTransactions(_user, kardSyncTransactions);
+  for (const cardId of Object.keys(kardSyncTransactions)) {
+    await queueSettledTransactions(new Types.ObjectId(cardId), kardSyncTransactions[cardId]);
   }
 
   log(`mapped transaction count: ${mappedTransactions.length}`);

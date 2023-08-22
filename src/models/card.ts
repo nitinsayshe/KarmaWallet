@@ -1,5 +1,5 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
-import { CardStatus } from '../lib/constants';
+import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
 
@@ -23,7 +23,9 @@ export interface IRareCardIntegration {
 }
 
 export interface IKardIntegration {
-  dateAdded: Date;
+  createdOn: Date;
+  userId: string;
+  enrollmentStatus: KardEnrollmentStatus;
 }
 
 export interface IMarqetaCardIntegration {
@@ -63,11 +65,13 @@ export interface IShareableCard {
   removedDate?: Date;
   initialTransactionsProcessing: boolean;
   lastTransactionSync: Date;
+  institutionId?: string;
+  isEnrolledInAutomaticRewards?: boolean;
+  integrations: ICardIntegrations;
 }
 
 export interface ICard extends IShareableCard {
   userId: IRef<ObjectId, IUserDocument>;
-  integrations: ICardIntegrations;
   lastFourDigitsToken?: string;
   binToken?: string;
 }
@@ -115,7 +119,12 @@ const cardSchema = new Schema({
     },
     kard: {
       type: {
-        dateAdded: { type: Date },
+        createdOn: { type: Date },
+        userId: { type: String },
+        enrollmentStatus: {
+          type: String,
+          enum: Object.values(KardEnrollmentStatus),
+        },
       },
     },
     marqeta: [{

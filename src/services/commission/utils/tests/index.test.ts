@@ -10,15 +10,18 @@ import {
   TransactionStatus,
 } from '../../../../clients/kard';
 import { MongoClient } from '../../../../clients/mongo';
+import { CardStatus, KardEnrollmentStatus } from '../../../../lib/constants';
 import { getUtcDate } from '../../../../lib/date';
 import { getRandomInt } from '../../../../lib/number';
 import {
   cleanUpDocuments,
+  createSomeCards,
   createSomeCommissions,
   createSomeCompanies,
   createSomeMerchants,
   createSomeUsers,
 } from '../../../../lib/testingUtils';
+import { ICardDocument } from '../../../../models/card';
 import { ICommissionDocument } from '../../../../models/commissions';
 import { ICompanyDocument } from '../../../../models/company';
 import { IMerchantDocument } from '../../../../models/merchant';
@@ -27,7 +30,8 @@ import { IUserDocument, UserEmailStatus } from '../../../../models/user';
 import { createEarnedCashbackNotificationFromCommission } from '../../../notification';
 
 describe('tests commission utils logic', () => {
-  let testUserWithKardIntegration: IUserDocument;
+  let testUserWithLinkedCard: IUserDocument;
+  let testCardWithKardIntegration: ICardDocument;
   let testMerchantWithKardIntegration: IMerchantDocument;
   let testMerchantCompany: ICompanyDocument;
   const testUserWithKardIntegrationCardInfo = {
@@ -44,7 +48,13 @@ describe('tests commission utils logic', () => {
 
   afterAll(async () => {
     // clean up db
-    await cleanUpDocuments([testUserWithKardIntegration, testMerchantWithKardIntegration, testMerchantCompany, testCommission]);
+    await cleanUpDocuments([
+      testUserWithLinkedCard,
+      testMerchantWithKardIntegration,
+      testMerchantCompany,
+      testCommission,
+      testCardWithKardIntegration,
+    ]);
 
     MongoClient.disconnect();
   });
@@ -79,7 +89,7 @@ describe('tests commission utils logic', () => {
 
     [testMerchantCompany] = await createSomeCompanies({ companies: [{ merchant: testMerchantWithKardIntegration }] });
 
-    [testUserWithKardIntegration] = await createSomeUsers({
+    [testUserWithLinkedCard] = await createSomeUsers({
       users: [
         {
           name: 'testUserWithKardIntegration User',
@@ -90,10 +100,19 @@ describe('tests commission utils logic', () => {
               status: UserEmailStatus.Verified,
             },
           ],
+        },
+      ],
+    });
+    [testCardWithKardIntegration] = await createSomeCards({
+      cards: [
+        {
+          userId: testUserWithLinkedCard._id,
+          status: CardStatus.Linked,
           integrations: {
             kard: {
               userId: randomUUID(),
-              dateAccountCreated: getUtcDate().toDate(),
+              createdOn: getUtcDate().toDate(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
         },
@@ -103,7 +122,7 @@ describe('tests commission utils logic', () => {
     [testCommission] = await createSomeCommissions({
       commissions: [
         {
-          user: testUserWithKardIntegration,
+          user: testUserWithLinkedCard,
           merchant: testMerchantWithKardIntegration,
           company: testMerchantCompany,
         },
@@ -112,7 +131,7 @@ describe('tests commission utils logic', () => {
     testEarnedWebhookBody = {
       issuer: process.env.KARD_ISSUER_NAME || 'test issuer',
       user: {
-        referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+        referringPartnerUserId: testCardWithKardIntegration.integrations.kard.userId,
       },
       reward: {
         merchantId: testMerchantWithKardIntegration.integrations.kard.id,
@@ -136,7 +155,7 @@ describe('tests commission utils logic', () => {
   });
 
   it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
-    const earnedRewardNotification = await createEarnedCashbackNotificationFromCommission(testCommission);
+    const earnedRewardNotification = await createEarnedCashbackNotificationFromCommission(testCommission, true);
     expect(earnedRewardNotification).toBeDefined();
     expect(earnedRewardNotification).not.toBeNull();
     const n = earnedRewardNotification as INotificationDocument;

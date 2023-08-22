@@ -1,19 +1,19 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { FilterQuery, ObjectId } from 'mongoose';
+import { isValidObjectId, FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
-import { CardModel, ICard, ICardDocument, IMarqetaCardIntegration } from '../../models/card';
-import { IRequest } from '../../types/request';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
-import { IRef } from '../../types/model';
-import { getShareableUser } from '../user';
 import { PlaidClient } from '../../clients/plaid';
-import { addKardIntegrationToCard, createKardUserAndAddIntegrations, registerCardInKardRewards } from '../../integrations/kard';
-import { CardStatus, ErrorTypes } from '../../lib/constants';
+import { createKardUserAndAddIntegrations, deleteKardUserForCard } from '../../integrations/kard';
+import { CardStatus, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
+import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
+import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { IRef } from '../../types/model';
+import { IRequest } from '../../types/request';
+import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
 
@@ -38,7 +38,7 @@ export interface IRemoveCardBody {
   removeData: boolean;
 }
 
-export type KardRewardsRegisterParams = {
+export type KardRewardsParams = {
   card: IRef<ObjectId, ICard>;
 };
 
@@ -63,8 +63,11 @@ export const getShareableCard = ({
   removedDate,
   initialTransactionsProcessing,
   lastTransactionSync,
-}: ICardDocument) => {
-  const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name ? getShareableUser(userId as IUserDocument) : userId;
+}: ICardDocument): IShareableCard & { _id: string } => {
+  console.log('incoming card', JSON.stringify({ _id, userId, name, mask, type, subtype, status, institution, integrations, createdOn, lastModified, unlinkedDate, removedDate, initialTransactionsProcessing, lastTransactionSync }, null, 2));
+  const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name
+    ? getShareableUser(userId as IUserDocument)
+    : userId;
 
   return {
     _id,
@@ -85,7 +88,7 @@ export const getShareableCard = ({
     lastModified,
     initialTransactionsProcessing,
     lastTransactionSync,
-    isEnrolledInAutomaticRewards: !!integrations?.kard?.dateAdded,
+    isEnrolledInAutomaticRewards: !!integrations?.kard?.userId,
   };
 };
 
@@ -111,12 +114,18 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
 
-  await CardModel.updateMany({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken }, {
-    'integrations.plaid.accessToken': null,
-    $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
-  });
+  await CardModel.updateMany(
+    { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
+    {
+      'integrations.plaid.accessToken': null,
+      $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
+    },
+  );
 };
 
+const _removeKardUser = async (card: ICardDocument): Promise<void> => {
+  await deleteKardUserForCard(card);
+};
 const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
@@ -148,6 +157,10 @@ export const removeCard = async (req: IRequest<IRemoveCardParams, {}, IRemoveCar
   if (_card?.integrations?.rare) {
     await _removeRareCard(requestor, _card, removeData);
   }
+  if (_card?.integrations?.kard) {
+    // removing the kard user here since we create a new user for each linked card
+    await _removeKardUser(_card);
+  }
   if (removeData) {
     // for all integrations, remove the card
     // await _card.delete();
@@ -169,14 +182,15 @@ export const getCards = async (req: IRequest) => {
   });
 };
 
-const removeBinAndLastFourFromCard = async (card: ICardDocument): Promise<ICard> => {
+const removeKardIntegrationDataFromCard = async (card: ICardDocument): Promise<ICard> => {
   card.binToken = undefined;
   card.lastFourDigitsToken = undefined;
+  card.integrations.kard = undefined;
   return card.save();
 };
 
-export const registerInKardRewards = async (
-  req: IRequest<KardRewardsRegisterParams, {}, KardRewardsRegisterRequest>,
+export const enrollInKardRewards = async (
+  req: IRequest<KardRewardsParams, {}, KardRewardsRegisterRequest>,
 ): Promise<ICardDocument> => {
   // validate data
   const kardRewardsRegisterRequestSchema = z.object({
@@ -191,14 +205,15 @@ export const registerInKardRewards = async (
       .refine((val) => !!getNetworkFromBin(val), {
         message: 'Must be with a participating network: Visa, MasterCard, Discover, or American Express',
       }),
+    card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object id' }),
   });
-  // validate request body
-  const parsed = kardRewardsRegisterRequestSchema.safeParse(req.body);
+
+  const parsed = kardRewardsRegisterRequestSchema.safeParse({ ...req.body, card: req.params.card });
   if (!parsed.success) {
     const formattedError = formatZodFieldErrors(
       ((parsed as SafeParseError<KardRewardsRegisterRequest>)?.error as ZodError)?.formErrors?.fieldErrors,
     );
-    throw new CustomError(`${formattedError || 'Error parsing request body'}`, ErrorTypes.INVALID_ARG);
+    throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
   }
   let user: IUserDocument;
 
@@ -213,7 +228,7 @@ export const registerInKardRewards = async (
 
   let card: ICardDocument;
   try {
-    card = await _getCard({ _id: req.params.card, user: req.requestor._id });
+    card = await _getCard({ _id: parsed.data.card, user: req.requestor._id });
   } catch (e) {
     throw new CustomError('Error looking up card', ErrorTypes.SERVER);
   }
@@ -222,7 +237,7 @@ export const registerInKardRewards = async (
   }
 
   // check if the card is already registered and error out if it is
-  if (!!card.integrations?.kard?.dateAdded && !!card.lastFourDigitsToken && !!card.binToken) {
+  if (!!card.integrations?.kard?.userId && !!card.lastFourDigitsToken && !!card.binToken) {
     throw new CustomError('Card already registered', ErrorTypes.CONFLICT);
   }
 
@@ -230,40 +245,62 @@ export const registerInKardRewards = async (
     // add the encrypted data to the card
     card.binToken = encrypt(parsed.data.bin);
     card.lastFourDigitsToken = encrypt(parsed.data.lastFour);
-    if (!card?.integrations) card.integrations = {};
-    card.integrations.kard = { dateAdded: dayjs().utc().toDate() };
     card.lastModified = dayjs().utc().toDate();
-    card = await card.save();
   } catch (e) {
     console.error(e);
     throw new CustomError('Error saving card data', ErrorTypes.SERVER);
   }
 
-  let updatedCard: ICardDocument;
-
-  if (!user.integrations?.kard?.userId) {
-    try {
-      ({ updatedCard } = await createKardUserAndAddIntegrations(user, card));
-    } catch (e) {
-      console.error(e);
-      await removeBinAndLastFourFromCard(card);
-      throw new CustomError('Error creating kard user and adding integrations', ErrorTypes.SERVER);
-    }
-  } else {
-    // has associated kard account
-    const kardRes = await registerCardInKardRewards(user.integrations.kard.userId, card);
-    if (!kardRes) {
-      await removeBinAndLastFourFromCard(card);
-      throw new CustomError('Error registering card in kard rewards', ErrorTypes.SERVER);
-    }
-
-    updatedCard = await addKardIntegrationToCard(card);
-    if (!updatedCard) {
-      await removeBinAndLastFourFromCard(card);
-      throw new CustomError('Error adding kard integration to card', ErrorTypes.SERVER);
-    }
+  try {
+    const updatedCard = await createKardUserAndAddIntegrations(user, card);
+    console.log('updated card', JSON.stringify(updatedCard, null, 2));
+    return updatedCard.save();
+  } catch (e) {
+    console.error(e);
+    await removeKardIntegrationDataFromCard(card);
+    throw new CustomError('Error creating kard user and adding integrations', ErrorTypes.SERVER);
   }
-  return updatedCard;
+};
+
+export const unenrollFromKardRewards = async (
+  req: IRequest<KardRewardsParams, {}, {}>,
+): Promise<ICardDocument> => {
+  // validate data
+  const kardRewardsRegisterRequestSchema = z.object({
+    card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object reference' }),
+  });
+  const parsed = kardRewardsRegisterRequestSchema.safeParse(req.params);
+  if (!parsed.success) {
+    const formattedError = formatZodFieldErrors(
+      ((parsed as SafeParseError<KardRewardsRegisterRequest>)?.error as ZodError)?.formErrors?.fieldErrors,
+    );
+    throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+  }
+
+  let card: ICardDocument;
+  try {
+    card = await _getCard({ _id: req.params.card });
+  } catch (e) {
+    throw new CustomError('Error looking up card', ErrorTypes.SERVER);
+  }
+  if (!card) {
+    throw new CustomError('Card not found', ErrorTypes.NOT_FOUND);
+  }
+
+  // check if the card is already unenrolled or desnot have an integration and error out if it is
+  if (!card?.integrations?.kard?.createdOn || card.integrations?.kard?.enrollmentStatus === KardEnrollmentStatus.Unenrolled) {
+    throw new CustomError('Card is not enrolled in rewards', ErrorTypes.CONFLICT);
+  }
+
+  try {
+    // delete kard user
+    await deleteKardUserForCard(card);
+    card.integrations.kard.enrollmentStatus = KardEnrollmentStatus.Unenrolled;
+    return card.save();
+  } catch (e) {
+    console.error(e);
+    throw new CustomError('Error saving card data', ErrorTypes.SERVER);
+  }
 };
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {

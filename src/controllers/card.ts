@@ -28,12 +28,24 @@ export const getCards: IRequestHandler = async (req, res) => {
   }
 };
 
-export const registerCardInKardRewards: IRequestHandler<CardService.KardRewardsRegisterParams, {}, CardService.KardRewardsRegisterRequest> = async (
+export const enrollCardInKardRewards: IRequestHandler<CardService.KardRewardsParams, {}, CardService.KardRewardsRegisterRequest> = async (
   req,
   res,
 ) => {
   try {
-    const card = await CardService.registerInKardRewards(req);
+    const card = await CardService.enrollInKardRewards(req);
+    output.api(req, res, CardService.getShareableCard(card));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const unenrollCardFromKardRewards: IRequestHandler<CardService.KardRewardsParams, {}, {}> = async (
+  req,
+  res,
+) => {
+  try {
+    const card = await CardService.unenrollFromKardRewards(req);
     output.api(req, res, CardService.getShareableCard(card));
   } catch (err) {
     output.error(req, res, asCustomError(err));

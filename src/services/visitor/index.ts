@@ -31,7 +31,7 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
   shareASale?: boolean;
-  marqeta? : IMarqetaVisitorData
+  marqeta?: IMarqetaVisitorData
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -164,16 +164,18 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
   const query: FilterQuery<ISubscription> = { $or: [] };
   codes.forEach((code) => {
     query.$or.push(
-      { $and: [
-        { visitor: visitorId },
-        { code },
-      ] },
+      {
+        $and: [
+          { visitor: visitorId },
+          { code },
+        ],
+      },
     );
   });
   return query;
 };
 
-export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest) => {
+export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest) => {
   const { groupCode, shareASale, params } = data;
   let { email } = data;
 
@@ -317,13 +319,17 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
     }
 
     const previousSubscription = await getSubscriptionByQuery(
-      { $and: [
-        { $or: [
-          { visitor: visitor?._id },
-          { user: user?._id },
-        ] },
-        { code },
-      ] },
+      {
+        $and: [
+          {
+            $or: [
+              { visitor: visitor?._id },
+              { user: user?._id },
+            ],
+          },
+          { code },
+        ],
+      },
     );
     if (!!previousSubscription) {
       throw new CustomError(shareableInterestFormSubmitError, ErrorTypes.GEN);

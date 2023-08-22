@@ -18,7 +18,7 @@ export enum ReasonCode {
   Denied_KYC = 'Denied KYC',
   OFACFailure = 'OFACFailure',
   Approved = 'Approved',
-  Already_Register = 'Already_Register'
+  Already_Registered = 'Already_Registered'
 }
 
 interface TransformedResponse {
@@ -51,7 +51,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     [ReasonCode.NoRecordFound]: 'Your application has been declined.',
     [ReasonCode.Denied_KYC]: 'Your application has been declined.',
     [ReasonCode.OFACFailure]: 'Your application has been declined.',
-    [ReasonCode.Already_Register]: 'Your application has been declined.',
+    [ReasonCode.Already_Registered]: 'Your application has been declined.',
   };
 
   const solutionText: Record<ReasonCode, string> = {
@@ -64,7 +64,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     [ReasonCode.NoRecordFound]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
     [ReasonCode.Denied_KYC]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
     [ReasonCode.OFACFailure]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-    [ReasonCode.Already_Register]: 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
+    [ReasonCode.Already_Registered]: 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
   };
 
   const acceptedDocuments: Record<ReasonCode, string[]> = {
@@ -90,7 +90,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     [ReasonCode.NoRecordFound]: null,
     [ReasonCode.Denied_KYC]: null,
     [ReasonCode.OFACFailure]: null,
-    [ReasonCode.Already_Register]: null,
+    [ReasonCode.Already_Registered]: null,
   };
 
   const transformed: TransformedResponse = {

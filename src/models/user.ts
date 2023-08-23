@@ -66,7 +66,7 @@ export interface IBiometrics {
   biometricKey: string,
   isBiometricEnabled: Boolean,
 }
-interface IMarqetaKycResult {
+export interface IMarqetaKycResult {
   status: IMarqetaKycState,
   codes: string[]
 }

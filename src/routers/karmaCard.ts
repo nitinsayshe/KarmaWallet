@@ -5,4 +5,6 @@ const router = Router();
 
 router.post('/apply', KarmaCardController.applyForKarmaCard);
 
+router.get('/applications', KarmaCardController.getKarmaCardApplications);
+
 export default (app: Express) => app.use('/karma-card', router);

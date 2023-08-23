@@ -12,3 +12,16 @@ export const applyForKarmaCard: IRequestHandler<{}, {}, KarmaCardService.IKarmaC
     error(req, res, asCustomError(err));
   }
 };
+
+export const getKarmaCardApplications: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const applications = await KarmaCardService.getKarmaCardApplications();
+    api(
+      req,
+      res,
+      applications.map((application) => KarmaCardService.getShareableKarmaCardApplication(application)),
+    );
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

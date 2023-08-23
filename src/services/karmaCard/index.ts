@@ -1,9 +1,13 @@
+import dayjs from 'dayjs';
+import { FilterQuery } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { Kyc } from '../../clients/marqeta/kyc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { User } from '../../clients/marqeta/user';
 import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
+import { encrypt } from '../../lib/encryption';
 import { generateRandomPasswordString } from '../../lib/misc';
+import { IKarmaCardApplication, IKarmaCardApplicationDocument, IShareableCardApplication, KarmaCardApplicationModel } from '../../models/karmaCardApplication';
 import { IUrlParam, UserModel } from '../../models/user';
 import { VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
@@ -25,6 +29,30 @@ export interface IKarmaCardRequestBody {
   state: string;
   urlParams?: IUrlParam[];
 }
+
+export const getShareableKarmaCardApplication = ({
+  _id,
+  userId,
+  visitorId,
+  userToken,
+  cards,
+  firstName,
+  LastName,
+  email,
+  kycResult,
+  lastModified,
+}: IKarmaCardApplicationDocument): IShareableCardApplication & { _id: string } => ({
+  _id,
+  userId,
+  visitorId,
+  userToken,
+  cards,
+  firstName,
+  LastName,
+  email,
+  kycResult,
+  lastModified,
+});
 
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   const marqetaClient = new MarqetaClient(); // Instantiate the MarqetaClient
@@ -60,10 +88,53 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   return { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse };
 };
 
+const storeKarmaCardApplication = async (cardApplicationData: any) => {
+  const { _visitor,
+    marqetaUserResponse,
+    kycResponse,
+    virtualCardResponse,
+    physicalCardResponse,
+    userObject } = cardApplicationData;
+
+  const applicationLog: IKarmaCardApplication = {
+    userId: userObject?._id,
+    visitorId: _visitor._id,
+    userToken: marqetaUserResponse?.token,
+    firstName: marqetaUserResponse?.first_name,
+    LastName: marqetaUserResponse?.last_name,
+    email: marqetaUserResponse?.email,
+    kycResult: kycResponse?.result,
+    lastModified: dayjs().utc().toDate(),
+  };
+
+  // if user succesfully get the cards
+  if (virtualCardResponse && physicalCardResponse) {
+    applicationLog.cards = [
+      {
+        ...virtualCardResponse,
+        card_token: virtualCardResponse?.token,
+        pan: encrypt(virtualCardResponse?.pan),
+        last_four: encrypt(virtualCardResponse?.last_four),
+      },
+      {
+        ...physicalCardResponse,
+        card_token: physicalCardResponse?.token,
+        pan: encrypt(physicalCardResponse?.pan),
+        last_four: encrypt(physicalCardResponse?.last_four),
+      },
+    ];
+  }
+  // find and update the user application for karma card ,aka Marqeta card
+  await KarmaCardApplicationModel.findOneAndUpdate({ visitorId: _visitor?._id }, applicationLog, { upsert: true, new: true });
+};
+
+export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApplication>) => KarmaCardApplicationModel.find(query).sort({ lastModified: -1 });
+
+export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
+
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
   let { requestor } = req;
   let _visitor;
-  let _user;
 
   const { firstName, lastName, address1, address2, birthDate, postalCode, state, ssn, email, city, urlParams } = req.body;
   if (!firstName || !lastName || !address1 || !birthDate || !postalCode || !state || !ssn || !city) throw new Error('Missing required fields');
@@ -116,7 +187,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (address2) marqetaKYCInfo.address2 = address2;
   // perform the KYC logic and Marqeta stuff here
-  const { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
+  const marqetaResponse = await performMarqetaCreateAndKYC(marqetaKYCInfo);
+  const { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse } = marqetaResponse;
   // get the kyc result code
   const { status, codes } = kycResponse.result;
   const kycErrorCodes = codes.map((item: any) => item.code);
@@ -131,9 +203,13 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email });
   }
   const kycStatus = status;
+  // prepare the data for karmaCardApplication
+  const karmaCardApplication = { ...marqetaResponse, _visitor };
 
   // if marqeta Kyc failed / pending
   if (kycStatus !== IMarqetaKycState.success) {
+    // store the karma card application log
+    await storeKarmaCardApplication(karmaCardApplication);
     const applyResponse = _visitor?.integrations?.marqeta;
     return applyResponse;
   }
@@ -161,6 +237,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     }
     // store marqeta card in DB
     await mapMarqetaCardtoCard(userObject._id, [virtualCardResponse, physicalCardResponse]);
+
+    // store the karma card application log
+    await storeKarmaCardApplication({ ...karmaCardApplication, userObject });
+
     const applyResponse = userObject?.integrations?.marqeta;
     return applyResponse;
     // determine the appropriate next steps for getting the user to update their password and login to their profile, maybe an email so that we can also verify their email while we're at it?

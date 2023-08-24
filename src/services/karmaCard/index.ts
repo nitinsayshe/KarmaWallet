@@ -51,6 +51,7 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   if (!!marqetaUserResponse && marqetaUserResponse?.status !== IMarqetaUserState.active) {
     kycResponse = await kyc.processKyc({ userToken: marqetaUserResponse.token });
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
+      marqetaUserResponse.status = IMarqetaUserState.active;
       [virtualCardResponse, physicalCardResponse] = await Promise.all([
         await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.virtualCard }),
         await card.createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.physicalCard }),
@@ -124,13 +125,14 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     userToken: marqetaUserResponse.token,
     kycResult: { status, codes: kycErrorCodes },
     email,
+    ...marqetaUserResponse,
   };
+  const kycStatus = status;
 
   if (!requestor || requestor?.emails[0].email === email) {
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email });
   }
-  const kycStatus = status;
 
   // if marqeta Kyc failed / pending
   if (kycStatus !== IMarqetaKycState.success) {

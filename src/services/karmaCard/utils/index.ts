@@ -2,7 +2,8 @@ import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 
 export enum IMarqetaUserState {
   active = 'ACTIVE',
-  inactive = 'UNACTIVE'
+  unverified = 'UNVERIFIED',
+  limited = 'LIMITED'
 }
 export enum IMarqetaCardProducts {
   virtualCard = 'kw_virt_cp',

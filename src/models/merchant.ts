@@ -26,6 +26,7 @@ export interface IKardOffer {
   minTransactionAmount?: number;
   maxTransactionAmount?: number;
 }
+
 export interface IWildfireDomain {
   Domain: string;
   ID: string;

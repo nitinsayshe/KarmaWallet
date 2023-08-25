@@ -6,12 +6,17 @@ import { getUtcDate } from '../lib/date';
 import { IPromo, IPromoDocument } from './promo';
 import { IArticle } from './article';
 import { IMarqetaKycState } from '../integrations/marqeta/types';
+import { IMarqetaUserState } from '../services/karmaCard/utils';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
   Verified = 'verified',
   Bounced = 'bounced',
   Complained = 'complained',
+}
+interface IMarqetaIdentification {
+  type: string,
+  value: string,
 }
 
 // TODO: remove alt emails after mapping
@@ -73,7 +78,19 @@ export interface IMarqetaKycResult {
 export interface IMarqetaUserIntegrations {
   userToken: string;
   email?: string;
-  kycResult: IMarqetaKycResult
+  kycResult: IMarqetaKycResult;
+  first_name?: string,
+  last_name?: string,
+  birth_date?: string,
+  address1?: string,
+  city?: string,
+  state?: string,
+  country?: string,
+  postal_code?: string,
+  account_holder_group_token?: string,
+  identifications?: IMarqetaIdentification[],
+  status?: IMarqetaUserState,
+  created_time?: string,
 }
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
@@ -164,6 +181,23 @@ const userSchema = new Schema({
           status: { type: String },
           codes: { type: Array },
         },
+        first_name: { type: String },
+        last_name: { type: String },
+        birth_date: { type: String },
+        address1: { type: String },
+        city: { type: String },
+        state: { type: String },
+        country: { type: String },
+        postal_code: { type: String },
+        account_holder_group_token: { type: String },
+        identifications: [
+          {
+            type: { type: String },
+            value: { type: String },
+          },
+        ],
+        status: { type: String },
+        created_time: { type: String },
       },
     },
     rare: {

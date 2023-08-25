@@ -4,6 +4,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IMarqetaKycState } from '../integrations/marqeta/types';
 import { getUtcDate } from '../lib/date';
+import { IMarqetaUserState } from '../services/karmaCard/utils';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
 
@@ -11,10 +12,26 @@ interface IMarqetaKycResult {
   status: IMarqetaKycState,
   codes: string[]
 }
+interface IMarqetaIdentification {
+  type: string,
+  value: string,
+}
 export interface IMarqetaVisitorData {
   userToken: string;
   email: string;
   kycResult: IMarqetaKycResult;
+  first_name?: string,
+  last_name?: string,
+  birth_date?: string,
+  address1?: string,
+  city?: string,
+  state?: string,
+  country?: string,
+  postal_code?: string,
+  account_holder_group_token?: string,
+  identifications?: IMarqetaIdentification[],
+  status?: IMarqetaUserState,
+  created_time?: string,
 }
 export interface IVisitorIntegrations {
   groupCode?: string;
@@ -70,6 +87,23 @@ const visitorSchema = new Schema({
           status: { type: String },
           codes: { type: Array },
         },
+        first_name: { type: String },
+        last_name: { type: String },
+        birth_date: { type: String },
+        address1: { type: String },
+        city: { type: String },
+        state: { type: String },
+        country: { type: String },
+        postal_code: { type: String },
+        account_holder_group_token: { type: String },
+        identifications: [
+          {
+            type: { type: String },
+            value: { type: String },
+          },
+        ],
+        status: { type: String },
+        created_time: { type: String },
       },
     },
   },

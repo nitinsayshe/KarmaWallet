@@ -57,7 +57,7 @@ jobs:
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
-    - run: echo 'BETSI_ENV=bigolbetsi' >> .env
+    - run: echo 'BETSI_ENV=lilbetsi' >> .env
     - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
     - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
     - run: echo 'WILDFIRE_ADMIN_APP_KEY=${{secrets.WILDFIRE_ADMIN_APP_KEY}}' >> .env

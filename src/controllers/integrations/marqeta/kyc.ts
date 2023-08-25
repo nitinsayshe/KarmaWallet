@@ -6,14 +6,15 @@ import * as KYCService from '../../../integrations/marqeta/kyc';
 
 export const processUserKyc: IRequestHandler<{ userToken: string }, {}, IMarqetaProcessKyc> = async (req, res) => {
   try {
-    const { user: data } = await KYCService.processUserKyc(req);
+    const { userToken } = req.params;
+    const { user: data } = await KYCService.processUserKyc(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const listUserKyc: IRequestHandler<{userToken: string}, {}, {}> = async (req, res) => {
+export const listUserKyc: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
     const { userToken } = req.params;
     const { user: data } = await KYCService.listUserKyc(userToken);

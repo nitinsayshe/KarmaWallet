@@ -68,7 +68,7 @@ export const userTransition: IRequestHandler<{ userToken: string }, {}, IMarqeta
   }
 };
 
-export const listUserTransition: IRequestHandler<{userToken:string}, {}, {}> = async (req, res) => {
+export const listUserTransition: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
     const { userToken } = req.params;
     const { data } = await UserService.listUserTransition(userToken);

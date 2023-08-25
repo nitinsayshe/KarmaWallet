@@ -34,7 +34,9 @@ export interface IMarqetaCreateUser {
   // do we need this??
   // metadata: Metadata;
 }
-
+export interface IMarqetaLookUp {
+  email: string
+}
 export interface IMarqetaUserTransition extends IMarqetaUserToken {
   channel: string;
   reason: string;

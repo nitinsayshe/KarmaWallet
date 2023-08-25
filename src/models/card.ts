@@ -44,6 +44,7 @@ export interface IMarqetaCardIntegration {
   instrument_type: string;
   barcode: string;
 }
+
 export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;

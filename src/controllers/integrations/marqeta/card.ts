@@ -17,7 +17,7 @@ export const createCard: IRequestHandler<{}, {}, IMarqetaCreateCard> = async (re
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const { user: data } = await CardService.createCard(req);
+    const { user: data } = await CardService.createCard(body);
     await mapMarqetaCardtoCard(_userId, data);
     output.api(req, res, data);
   } catch (err) {

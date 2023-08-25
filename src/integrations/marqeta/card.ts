@@ -9,11 +9,9 @@ const marqetaClient = new MarqetaClient();
 // Instantiate the CARD class
 const card = new Card(marqetaClient);
 
-export const createCard = async (req: IRequest<{}, {}, IMarqetaCreateCard>) => {
-  const { userToken } = req.requestor.integrations.marqeta;
-  const params = { userToken, ...req.body };
-  const userResponse = await card.createCard(params);
-  return { user: userResponse };
+export const createCard = async (params:IMarqetaCreateCard) => {
+  const cardResponse = await card.createCard(params);
+  return cardResponse;
 };
 
 export const listCards = async (userToken: string) => {

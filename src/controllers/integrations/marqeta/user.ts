@@ -15,7 +15,7 @@ export const createUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (re
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const { data } = await UserService.createUser(req);
+    const { data } = await UserService.createUser(body);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -43,7 +43,9 @@ export const getUser: IRequestHandler<{ userToken: string }, {}, {}> = async (re
 
 export const updateUser: IRequestHandler<{ userToken: string }, {}, IMarqetaCreateUser> = async (req, res) => {
   try {
-    const { data } = await UserService.updateUser(req);
+    const { userToken } = req.params;
+    const { body } = req;
+    const { data } = await UserService.updateUser(userToken, body);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

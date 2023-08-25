@@ -5,10 +5,48 @@ export enum IMarqetaUserState {
   unverified = 'UNVERIFIED',
   limited = 'LIMITED'
 }
+
 export enum IMarqetaCardProducts {
   virtualCard = 'kw_virt_cp',
   physicalCard = 'kw_phys_cp'
 }
+
+enum ResponseMessages {
+  APPROVED = 'Your Karma Wallet card should arrive in 3-5 business days.',
+  NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',
+  ADDRESS_ISSUE = 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
+  DATE_OF_BIRTH_ISSUE = 'Your application is pending due to an invalid or mismatched date of birth.',
+  SSN_ISSUE = 'Your application is pending due to a missing, invalid or mismatched Social Security Number (SSN).',
+  DECLINED = 'Your application has been declined.'
+}
+
+enum SolutionMessages {
+  NAME_OR_DOB_ISSUE = 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
+  SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
+  ADDRESS_ISSUE = 'Please submit one of the following documents that shows your full name and address to (insert email here?)',
+  CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
+  ALREADY_REGISTERED = 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
+}
+
+const AcceptedDocuments = {
+  NAME_OR_DOB_ISSUE: ['- Driver’s license or state-issued identification card',
+    '- Passport or US passport card'],
+  ADDRESS_ISSUE: [
+    '- Unexpired state-issued driver’s license or identification card',
+    '- US Military Identification Card',
+    '- Utility bill',
+    '- Bank statement',
+    '- Current rental or lease agreement',
+    '- Mortgage statement'],
+  DateOfBirthIssue: [
+    '- Driver’s license or state-issued identification card',
+    '- Passport or US passport card'],
+  SSN_ISSUE: [
+    '- Social Security card',
+    '- Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
+    '- ITIN card or document showing ITIN approval'],
+};
+
 export enum ReasonCode {
   AddressIssue = 'AddressIssue',
   DateOfBirthIssue = 'DateOfBirthIssue',
@@ -43,50 +81,37 @@ interface SourceResponse {
 export const getShareableMarqetaUser = (sourceResponse: SourceResponse): TransformedResponse => {
   const { kycResult } = sourceResponse;
   const messages: Record<ReasonCode, string> = {
-    [ReasonCode.Approved]: 'Your Karma Wallet card should arrive in 3-5 business days.',
-    [ReasonCode.NameIssue]: 'Your application is pending due to an invalid or mismatched name.',
-    [ReasonCode.AddressIssue]: 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
-    [ReasonCode.DateOfBirthIssue]: 'Your application is pending due to an invalid or mismatched date of birth.',
-    [ReasonCode.SSNIssue]: 'Your application is pending due to a missing, invalid or mismatched Social Security Number (SSN).',
-    [ReasonCode.RiskIssue]: 'Your application has been declined.',
-    [ReasonCode.NoRecordFound]: 'Your application has been declined.',
-    [ReasonCode.Denied_KYC]: 'Your application has been declined.',
-    [ReasonCode.OFACFailure]: 'Your application has been declined.',
-    [ReasonCode.Already_Registered]: 'Your application has been declined.',
+    [ReasonCode.Approved]: ResponseMessages.APPROVED,
+    [ReasonCode.NameIssue]: ResponseMessages.NAME_ISSUE,
+    [ReasonCode.AddressIssue]: ResponseMessages.ADDRESS_ISSUE,
+    [ReasonCode.DateOfBirthIssue]: ResponseMessages.DATE_OF_BIRTH_ISSUE,
+    [ReasonCode.SSNIssue]: ResponseMessages.SSN_ISSUE,
+    [ReasonCode.RiskIssue]: ResponseMessages.DECLINED,
+    [ReasonCode.NoRecordFound]: ResponseMessages.DECLINED,
+    [ReasonCode.Denied_KYC]: ResponseMessages.DECLINED,
+    [ReasonCode.OFACFailure]: ResponseMessages.DECLINED,
+    [ReasonCode.Already_Registered]: ResponseMessages.DECLINED,
   };
 
   const solutionText: Record<ReasonCode, string> = {
     [ReasonCode.Approved]: null,
-    [ReasonCode.NameIssue]: 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
-    [ReasonCode.AddressIssue]: 'Please submit one of the following documents that shows your full name and address to (insert email here?)',
-    [ReasonCode.DateOfBirthIssue]: 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
-    [ReasonCode.SSNIssue]: 'Please submit a photo of of of the following items to support@karmawallet.io',
-    [ReasonCode.RiskIssue]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-    [ReasonCode.NoRecordFound]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-    [ReasonCode.Denied_KYC]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-    [ReasonCode.OFACFailure]: 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-    [ReasonCode.Already_Registered]: 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
+    [ReasonCode.NameIssue]: SolutionMessages.NAME_OR_DOB_ISSUE,
+    [ReasonCode.AddressIssue]: SolutionMessages.ADDRESS_ISSUE,
+    [ReasonCode.DateOfBirthIssue]: SolutionMessages.NAME_OR_DOB_ISSUE,
+    [ReasonCode.SSNIssue]: SolutionMessages.SSN_ISSUE,
+    [ReasonCode.RiskIssue]: SolutionMessages.CONTACT_SUPPORT,
+    [ReasonCode.NoRecordFound]: SolutionMessages.CONTACT_SUPPORT,
+    [ReasonCode.Denied_KYC]: SolutionMessages.CONTACT_SUPPORT,
+    [ReasonCode.OFACFailure]: SolutionMessages.CONTACT_SUPPORT,
+    [ReasonCode.Already_Registered]: SolutionMessages.ALREADY_REGISTERED,
   };
 
   const acceptedDocuments: Record<ReasonCode, string[]> = {
     [ReasonCode.Approved]: null,
-    [ReasonCode.NameIssue]: [
-      '- Driver’s license or state-issued identification card',
-      '- Passport or US passport card'],
-    [ReasonCode.AddressIssue]: [
-      '- Unexpired state-issued driver’s license or identification card',
-      '- US Military Identification Card',
-      '- Utility bill',
-      '- Bank statement',
-      '- Current rental or lease agreement',
-      '- Mortgage statement'],
-    [ReasonCode.DateOfBirthIssue]: [
-      '- Driver’s license or state-issued identification card',
-      '- Passport or US passport card'],
-    [ReasonCode.SSNIssue]: [
-      '- Social Security card',
-      '- Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
-      '- ITIN card or document showing ITIN approval'],
+    [ReasonCode.NameIssue]: AcceptedDocuments.NAME_OR_DOB_ISSUE,
+    [ReasonCode.AddressIssue]: AcceptedDocuments.ADDRESS_ISSUE,
+    [ReasonCode.DateOfBirthIssue]: AcceptedDocuments.NAME_OR_DOB_ISSUE,
+    [ReasonCode.SSNIssue]: AcceptedDocuments.SSN_ISSUE,
     [ReasonCode.RiskIssue]: null,
     [ReasonCode.NoRecordFound]: null,
     [ReasonCode.Denied_KYC]: null,

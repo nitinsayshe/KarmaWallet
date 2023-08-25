@@ -229,10 +229,10 @@ export const getCurrentWildfireData = async () => {
 // Updates existing merchants in database to ensure there are currently active domains
 export const updateWildfireMerchants = async () => {
   const wildfireClient = new WildfireClient();
-  // const merchants: IMerchantDocument[] = await MerchantModel.find({});
   const res = await wildfireClient.getActiveDomains();
   const newActiveDomains: any[] = res.data;
   const lastModifiedDate = new Date();
+
   let count = 0;
   // caching date for cleanup purposes
   if (!newActiveDomains) {
@@ -256,17 +256,20 @@ export const updateWildfireMerchants = async () => {
       count += 1;
     }
   }
+
   console.log(`[+] updated ${count} merchants`);
+  // after the newDomains loop, delete all the wildfire merchantRates last modified before the current date (since once we just updated should have been updated on current date)
   const merchantsWithoutActiveDomains = await MerchantModel.updateMany(
-    { lastModified: { $ne: lastModifiedDate } },
+    { lastModified: { $ne: lastModifiedDate }, 'integrations.wildfire': { $exists: true } },
     { 'integrations.wildfire.domains.0.Merchant.MaxRate': null },
   );
+
   console.log(`[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant max rates removed`);
 };
 
 export const updateWildfireMerchantRates = async () => {
   const wildfireClient = new WildfireClient();
-  const merchants: IMerchantDocument[] = await MerchantModel.find({});
+  const merchants: IMerchantDocument[] = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
   const res = await wildfireClient.getMerchantRates();
   const newRates: { [key: string]: { ID: number; Name: string; Kind: string; Amount: string; Currency?: string }[] } = res.data;
   // caching date for cleanup purposes
@@ -275,7 +278,8 @@ export const updateWildfireMerchantRates = async () => {
 
   for (const merchant of merchants) {
     const { merchantId } = merchant.integrations.wildfire;
-    const newRatesForMerchant = newRates[merchantId.toString()];
+    if (!merchantId) continue;
+    const newRatesForMerchant = newRates[merchantId?.toString()];
 
     if (newRatesForMerchant) {
       try {
@@ -328,7 +332,7 @@ const options = {
 // FUSE.js is a JavaScript library for fuzzy searching
 // https://fusejs.io/examples.html
 
-// Match Wildfire companies to companies in the Karma Wallet database, creates a json with the matches, be sure to run pullRecentFromDatabaseAndSave first so we have the most up to date domain info
+// Match Wildfire companies to companies in the Karma Wallet database, creates a json with the matches, be sure to run getCurrentWildfireData first so we have the most up to date domain info
 export const matchWildfireCompanies = async () => {
   const domainsRaw = fs.readFileSync(path.resolve(__dirname, './.tmp/wfdomains.json'), 'utf8');
   const domains = JSON.parse(domainsRaw);

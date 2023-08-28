@@ -193,7 +193,7 @@ export const saveTransactions = async (
 
   log(`mapped transaction count: ${mappedTransactions.length}`);
   log(`transactions to save count: ${transactionsToSave.length}`);
-  await TransactionModel.insertMany(mappedTransactions);
+  await TransactionModel.insertMany(transactionsToSave);
 };
 
 export interface IPlaidIdTransactionDictionary {
@@ -274,9 +274,9 @@ export const identifyAndRemoveDuplicateTransactions = async ({
     const _duplicates: ITransactionDocument[] = [];
     const transactions = await TransactionModel.find({ user: user._id, 'integrations.plaid': { $ne: null } });
 
-    let i = 0;
+    // let i = 0;
     for (const transaction of transactions) {
-      i += 1;
+      // i += 1;
       const transactionsWithSameAmount = await TransactionModel.find({
         user: user._id,
         amount: transaction.amount,

@@ -19,6 +19,7 @@ import {
   createSomeCommissions,
   createSomeCompanies,
   createSomeMerchants,
+  createSomeTransactions,
   createSomeUsers,
 } from '../../../../lib/testingUtils';
 import { ICardDocument } from '../../../../models/card';
@@ -26,6 +27,7 @@ import { ICommissionDocument } from '../../../../models/commissions';
 import { ICompanyDocument } from '../../../../models/company';
 import { IMerchantDocument } from '../../../../models/merchant';
 import { INotificationDocument, NotificationStatus, NotificationType } from '../../../../models/notification';
+import { ITransactionDocument } from '../../../../models/transaction';
 import { IUserDocument, UserEmailStatus } from '../../../../models/user';
 import { createEarnedCashbackNotificationFromCommission } from '../../../notification';
 
@@ -41,6 +43,7 @@ describe('tests commission utils logic', () => {
   };
   let testEarnedWebhookBody: EarnedRewardWebhookBody | null = null;
   let testCommission: ICommissionDocument;
+  let testTransactions: ITransactionDocument[] = [];
 
   afterEach(() => {
     /* clean up between tests */
@@ -54,6 +57,7 @@ describe('tests commission utils logic', () => {
       testMerchantCompany,
       testCommission,
       testCardWithKardIntegration,
+      ...testTransactions,
     ]);
 
     MongoClient.disconnect();
@@ -152,6 +156,24 @@ describe('tests commission utils logic', () => {
       postDineInLinkURL: 'https://www.test.com',
       error: null,
     } as EarnedRewardWebhookBody;
+
+    testTransactions = await createSomeTransactions({
+      transactions: [
+        {
+          user: testUserWithLinkedCard,
+          card: testCardWithKardIntegration,
+          integrations: {
+            kard: {
+              id: testEarnedWebhookBody.transaction.issuerTransactionId,
+              status: TransactionStatus.SETTLED,
+            },
+          },
+          company: testMerchantCompany,
+          amount: 10000,
+          createdOn: getUtcDate().toDate(),
+        },
+      ],
+    });
   });
 
   it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {

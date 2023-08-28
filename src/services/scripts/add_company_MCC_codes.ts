@@ -14,7 +14,7 @@ export const addCompanyMCCCodes = async (inputFilePath?: string): Promise<ICompa
     let mappingsRaw: string;
     if (!inputFilePath) {
       mappingsRaw = fs.readFileSync(
-        path.resolve(__dirname, './.tmp/MCC_Company_Mappings.csv'),
+        path.resolve(__dirname, './.tmp', 'MCC_Company_Mappings.csv'),
         'utf8',
       );
     } else {

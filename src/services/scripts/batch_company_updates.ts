@@ -470,7 +470,7 @@ export const updateCompanyDataSources = async () => {
 };
 
 // Company Updates
-enum UpdateAction {
+export enum UpdateAction {
   Delete = 'DELETE',
   Update = 'UPDATE',
   Hide = 'HIDE',
@@ -630,8 +630,9 @@ export const handleRemoveParent = async (companyId: string): Promise<void> => {
 };
 
 export const handleAddParent = async (companyId: string, update: any): Promise<void> => {
-  const { parentCompany } = update;
-  let company = await CompanyModel.findOne({ _id: companyId });
+  const { parentCompany, companyName } = update;
+  const query = companyId ? { _id: companyId } : { companyName };
+  let company = await CompanyModel.findOne(query);
   if (!company) company = await CompanyModel.findOne({ companyName: update.companyName });
   if (!company) throw new Error(`Company ${companyId} not found.`);
   let parent = await CompanyModel.findOne({ companyName: parentCompany });
@@ -645,7 +646,7 @@ export const handleAddParent = async (companyId: string, update: any): Promise<v
 
 // main function to update companies from the monthly batch updates CSV
 // sector parent inheritance is handled separately in effects
-export const updateCompanies = async (companyNames?: string[]): Promise<void> => {
+export const updateCompanies = async (companyNames?: string[], updateActions?: UpdateAction[]): Promise<void> => {
   const errors: any[] = [];
   const updatePath = path.resolve(__dirname, '.tmp', 'batchCompanyUpdates.csv');
   let updates = await csvtojson().fromFile(updatePath);
@@ -655,6 +656,10 @@ export const updateCompanies = async (companyNames?: string[]): Promise<void> =>
   if (companyNames) {
     updates = updates.filter((update) => companyNames.includes(update.companyName));
     console.log(updates.map(c => c.companyName));
+    console.log(`[+] updating ${updates.length} companies after filtering`);
+  }
+  if (updateActions) {
+    updates = updates.filter((update) => updateActions.includes(update.action));
     console.log(`[+] updating ${updates.length} companies after filtering`);
   }
   for (const update of updates) {

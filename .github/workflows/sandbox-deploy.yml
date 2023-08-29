@@ -57,7 +57,7 @@ jobs:
     - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.STAGING_KW_API_PUBLIC_TOKEN}}' >> .env
     - run: echo 'KW_API_URL=${{secrets.STAGING_KW_API_URL}}' >> .env
     - run: echo 'KW_ENV=staging' >> .env
-    - run: echo 'BETSI_ENV=lilbetsi' >> .env
+    - run: echo 'BETSI_ENV=bigolbetsi' >> .env
     - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
     - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
     - run: echo 'WILDFIRE_ADMIN_APP_KEY=${{secrets.WILDFIRE_ADMIN_APP_KEY}}' >> .env
@@ -82,7 +82,7 @@ jobs:
     - run: echo 'ENCRYPTION_SECRET_KEY=${{secrets.STAGING_ENCRYPTION_SECRET_KEY}}' >> .env
     - run: echo 'ENCRYPTION_SECRET_INITIALIZATION_VECTOR=${{secrets.STAGING_ENCRYPTION_INITIALIZATION_VECTOR}}' >> .env
     - run: echo 'ENCRYPTION_METHOD=${{secrets.STAGING_ENCRYPTION_METHOD}}' >> .env
-    - run: echo 'KARD_KARD_COGNITO_URL=${{secrets.STAGING_KARD_COGNITO_URL}}' >> .env
+    - run: echo 'KARD_COGNITO_URL=${{secrets.STAGING_KARD_COGNITO_URL}}' >> .env
     - run: echo 'KARD_CLIENT_HASH=${{secrets.STAGING_KARD_CLIENT_HASH}}' >> .env
     - run: echo 'KARD_API_URL=${{secrets.STAGING_KARD_API_URL}}' >> .env
     - run: echo 'KARD_WEBHOOK_KEY=${{secrets.STAGING_KARD_WEBHOOK_KEY}}' >> .env
@@ -92,7 +92,7 @@ jobs:
     - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.SANDBOX_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
-    - run: echo 'MARQETA_BASE_URL=https://sandbox-api.marqeta.com/v3/' >> .env
+    - run: echo 'MARQETA_BASE_URL=${{secrets.SANDBOX_MARQETA_BASE_URL}}' >> .env
     - run: npm i
-    - run: pm2 restart all
+    - run: pm2 restart all --update-env
 

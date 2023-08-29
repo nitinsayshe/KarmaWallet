@@ -332,7 +332,7 @@ const options = {
 // FUSE.js is a JavaScript library for fuzzy searching
 // https://fusejs.io/examples.html
 
-// Match Wildfire companies to companies in the Karma Wallet database, creates a json with the matches, be sure to run pullRecentFromDatabaseAndSave first so we have the most up to date domain info
+// Match Wildfire companies to companies in the Karma Wallet database, creates a json with the matches, be sure to run getCurrentWildfireData first so we have the most up to date domain info
 export const matchWildfireCompanies = async () => {
   const domainsRaw = fs.readFileSync(path.resolve(__dirname, './.tmp/wfdomains.json'), 'utf8');
   const domains = JSON.parse(domainsRaw);

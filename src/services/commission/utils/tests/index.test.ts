@@ -195,10 +195,11 @@ describe('tests commission utils logic', () => {
 
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
     const karmaCommission = (await mapKardCommissionToKarmaCommisison(testEarnedWebhookBody)) as ICommissionDocument;
-
     expect(karmaCommission).toBeDefined();
     expect(karmaCommission).not.toBeNull();
     expect(karmaCommission).toHaveProperty('allocation');
+    expect(karmaCommission.user.toString()).toBe(testUserWithLinkedCard._id.toString());
+    expect(karmaCommission.transaction.toString()).toBe(testTransactions?.[0]._id.toString());
     expect(karmaCommission.allocation.user).toBe(7.5);
     expect(karmaCommission.allocation.karma).toBe(2.5);
     await karmaCommission.remove();

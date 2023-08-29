@@ -7,7 +7,16 @@ export enum ApiKeyStatus {
   Active = 'active',
   Inactive = 'inactive',
 }
-
+export const IMapMarqetaCard = {
+  name: 'Karma Wallet Prepaid Reloadable Card',
+  mask: 'last four digits from Marqeta for the card',
+  type: 'depository',
+  subtype: 'reloadable',
+  status: 'linked',
+  institution: 'Karma Wallet',
+  initialTransactionsProcessing: false,
+  isEnrolledInAutomaticRewards: true,
+};
 export interface IErrorType {
   AUTHENTICATION: ICustomErrorBody;
   CONFLICT: ICustomErrorBody;

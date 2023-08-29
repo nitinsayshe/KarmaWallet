@@ -49,7 +49,7 @@ export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;
   kard?: IKardIntegration;
-  marqeta?: IMarqetaCardIntegration[];
+  marqeta?: IMarqetaCardIntegration;
 }
 
 export interface IShareableCard {
@@ -128,7 +128,7 @@ const cardSchema = new Schema({
         },
       },
     },
-    marqeta: [{
+    marqeta: {
       type: {
         user_token: { type: String },
         card_token: { type: String },
@@ -143,7 +143,7 @@ const cardSchema = new Schema({
         created_time: { type: Date },
         instrument_type: { type: String },
       },
-    }],
+    },
   },
   initialTransactionsProcessing: { type: Boolean },
   createdOn: { type: Date },

@@ -225,7 +225,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       userObject = user;
     }
     // store marqeta card in DB
-    await mapMarqetaCardtoCard(userObject._id, [virtualCardResponse, physicalCardResponse]);
+    await mapMarqetaCardtoCard(userObject._id, virtualCardResponse); // map virtual card
+    await mapMarqetaCardtoCard(userObject._id, physicalCardResponse); // map physical card
 
     // store the karma card application log
     await storeKarmaCardApplication({ ...karmaCardApplication, userId: userObject._id, status: ApplicationStatus.SUCCESS });

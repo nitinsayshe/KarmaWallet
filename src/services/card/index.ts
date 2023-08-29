@@ -5,7 +5,7 @@ import { isValidObjectId, FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import { PlaidClient } from '../../clients/plaid';
 import { createKardUserAndAddIntegrations, deleteKardUserForCard } from '../../integrations/kard';
-import { CardStatus, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
+import { CardStatus, ErrorTypes, IMapMarqetaCard, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
@@ -303,30 +303,37 @@ export const unenrollFromKardRewards = async (
   }
 };
 
-export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration[]) => {
-  let cards = await CardModel.findOne({ userId: _userId });
-  if (!cards) {
-    // If the card document doesn't exist, you may choose to create a new one
-    cards = new CardModel({ userId: _userId, status: CardStatus.Linked });
-  }
-  for (const card of cardData) {
-    const { user_token, token, expiration_time, last_four, pan } = card;
-    if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
-    // extract the expiration year & month of the card
-    const { year, month } = extractYearAndMonth(expiration_time);
+export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
+  // Find the existing card document with Marqeta integration
+  let cards = await CardModel.findOne({
+    $and: [
+      { userId: _userId },
+      { 'integrations.marqeta': { $exists: true } },
+      { 'integrations.marqeta.card_token': cardData.token },
+    ],
+  });
 
-    // prepare the cardItem Details
-    const cardItem = {
-      ...card,
-      card_token: token,
-      expr_month: month,
-      expr_year: year,
-      last_four: encrypt(last_four),
-      pan: encrypt(pan),
-    };
-    // Update the Marqeta details in the integrations.marqeta field
-    cards.integrations.marqeta.push(cardItem);
+  // If the card document doesn't exist, you may choose to create a new one
+  if (!cards) {
+    cards = new CardModel({ userId: _userId, ...IMapMarqetaCard });
   }
+  const { user_token, token, expiration_time, last_four, pan } = cardData;
+
+  if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
+  // extract the expiration year & month of the card
+  const { year, month } = extractYearAndMonth(expiration_time);
+
+  // prepare the cardItem Details
+  const cardItem = {
+    ...cardData,
+    card_token: token,
+    expr_month: month,
+    expr_year: year,
+    last_four: encrypt(last_four),
+    pan: encrypt(pan),
+  };
+    // Update the Marqeta details in the integrations.marqeta field
+  cards.integrations.marqeta = cardItem;
 
   // Save the updated card document
   await cards.save();

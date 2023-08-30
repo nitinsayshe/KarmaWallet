@@ -59,9 +59,9 @@ export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocume
 
 // assumes that the user and card are already registered in the Kard rewards program
 export const addTestTransactionsToUserWithCard = async (userId: Types.ObjectId, card: ICardDocument): Promise<void> => {
-  const companies = await getCompaniesByName(['Noble Treat', 'Focal Point']);
+  const companies = await getCompaniesByName(['Noble Treat', 'Hilltop BBQ']);
   if (!companies[0] || !companies[1]) {
-    throw new Error('Could not find Noble Treat or Focal Point');
+    throw new Error('Could not find Noble Treat or Hilltop BBQ');
   }
   await createTestTransactions(userId, card, companies);
 };

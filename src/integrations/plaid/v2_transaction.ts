@@ -9,6 +9,7 @@ import { IMatchedTransaction } from './types';
 import { CardModel, ICard, ICardDocument } from '../../models/card';
 import { TransactionStatus } from '../../clients/kard';
 import { queueSettledTransactions } from '../kard';
+import { KardEnrollmentStatus } from '../../lib/constants';
 
 export interface ICardsDictionary {
   [key: string]: ObjectId;
@@ -168,7 +169,10 @@ export const saveTransactions = async (
     t.card = cards.find((c) => c._id?.toString() === t.card?.toString());
     const status = t?.integrations?.plaid?.pending ? TransactionStatus.APPROVED : TransactionStatus.SETTLED;
     const card = t.card as ICard;
-    if (!!card?.integrations?.kard?.createdOn) {
+    if (
+      !!card?.integrations?.kard?.enrollmentStatus
+      && card.integrations.kard.enrollmentStatus === KardEnrollmentStatus.Enrolled
+    ) {
       if (!t.integrations) t.integrations = {};
       if (!t.integrations.kard) {
         t.integrations.kard = {
@@ -183,15 +187,17 @@ export const saveTransactions = async (
   });
 
   // send positive amount, non-pending, reward-program-registered card-related transactions to kard
-  const kardSyncTransactions = transactionsToSave.filter(
-    (t) => t.amount >= 0 && !t?.integrations?.plaid?.pending && !!(t?.card as ICard)?.integrations?.kard?.createdOn,
-  ).reduce((acc, curr) => {
-    const cardId = curr.card?.toString();
-    if (!cardId) return acc;
-    if (!acc[cardId]) acc[cardId] = [];
-    acc[cardId].push(curr);
-    return acc;
-  }, {} as {[key:string]: ITransactionDocument[]});
+  const kardSyncTransactions = transactionsToSave
+    .filter(
+      (t) => t.amount >= 0 && !t?.integrations?.plaid?.pending && !!(t?.card as ICard)?.integrations?.kard?.createdOn,
+    )
+    .reduce((acc, curr) => {
+      const cardId = (curr.card as ICardDocument)?._id.toString();
+      if (!cardId) return acc;
+      if (!acc[cardId]) acc[cardId] = [];
+      acc[cardId].push(curr);
+      return acc;
+    }, {} as { [key: string]: ITransactionDocument[] });
 
   for (const cardId of Object.keys(kardSyncTransactions)) {
     await queueSettledTransactions(new Types.ObjectId(cardId), kardSyncTransactions[cardId]);
@@ -199,7 +205,7 @@ export const saveTransactions = async (
 
   log(`mapped transaction count: ${mappedTransactions.length}`);
   log(`transactions to save count: ${transactionsToSave.length}`);
-  await TransactionModel.insertMany(mappedTransactions);
+  await TransactionModel.insertMany(transactionsToSave);
 };
 
 export interface IPlaidIdTransactionDictionary {
@@ -280,9 +286,9 @@ export const identifyAndRemoveDuplicateTransactions = async ({
     const _duplicates: ITransactionDocument[] = [];
     const transactions = await TransactionModel.find({ user: user._id, 'integrations.plaid': { $ne: null } });
 
-    let i = 0;
+    // let i = 0;
     for (const transaction of transactions) {
-      i += 1;
+      // i += 1;
       const transactionsWithSameAmount = await TransactionModel.find({
         user: user._id,
         amount: transaction.amount,

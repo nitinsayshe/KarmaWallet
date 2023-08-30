@@ -338,21 +338,15 @@ export const createSomeCompanies = async (req: CreateTestCompaniesRequest): Prom
 )) || [];
 
 export const createSomeTransactions = async (req: CreateTestTransactionsRequest): Promise<ITransactionDocument[]> => (await Promise.all(
-  req.transactions.map(async (t) => {
+  req?.transactions?.map(async (t) => {
     const newTransaction = new TransactionModel();
-    newTransaction.date = t.date || dayjs().subtract(1, 'week').toDate();
-    newTransaction.user = t.userId;
-    newTransaction.company = t.company;
-    newTransaction.amount = t.amount || getRandomInt(1, 100);
-    newTransaction.card = t.card;
-    newTransaction.sector = t.sector;
-    newTransaction.integrations = t.integrations;
-    if (!!t.integrations) {
-      newTransaction.integrations = {};
-    }
-    newTransaction.integrations.plaid = t.integrations?.plaid;
-    newTransaction.integrations.kard = t.integrations?.kard;
-
+    newTransaction.date = t?.date || dayjs().subtract(1, 'week').toDate();
+    newTransaction.user = t?.userId || t?.user;
+    newTransaction.company = t?.company;
+    newTransaction.amount = t?.amount || getRandomInt(1, 100);
+    newTransaction.card = t?.card;
+    newTransaction.sector = t?.sector;
+    newTransaction.integrations = t?.integrations;
     return newTransaction.save();
   }),
 )) || [];

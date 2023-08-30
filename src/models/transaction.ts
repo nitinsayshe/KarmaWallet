@@ -258,29 +258,29 @@ export const transactionSchemaDefinition = {
         subtotal_amt: { type: Number },
         tonnes_amt: { type: Number },
       },
-      kard: {
-        type: {
-          id: { type: String },
-          status: { type: String, enum: Object.values(TransactionStatus) },
-          rewardData: {
-            type: {
-              issuerTransactionId: { type: String },
-              transactionId: { type: String },
-              transactionAmountInCents: { type: Number },
-              status: { type: String, enum: Object.values(TransactionStatus) },
-              itemsOrdered: {
-                type: [
-                  {
-                    offerId: { type: String },
-                    total: { type: Number },
-                    quantity: { type: Number },
-                    amount: { type: Number },
-                    description: { type: String },
-                    category: { type: String },
-                    commissionToIssuer: { type: Number },
-                  },
-                ],
-              },
+    },
+    kard: {
+      type: {
+        id: { type: String },
+        status: { type: String, enum: Object.values(TransactionStatus) },
+        rewardData: {
+          type: {
+            issuerTransactionId: { type: String },
+            transactionId: { type: String },
+            transactionAmountInCents: { type: Number },
+            status: { type: String, enum: Object.values(TransactionStatus) },
+            itemsOrdered: {
+              type: [
+                {
+                  offerId: { type: String },
+                  total: { type: Number },
+                  quantity: { type: Number },
+                  amount: { type: Number },
+                  description: { type: String },
+                  category: { type: String },
+                  commissionToIssuer: { type: Number },
+                },
+              ],
             },
           },
         },

@@ -64,7 +64,6 @@ export const getShareableCard = ({
   initialTransactionsProcessing,
   lastTransactionSync,
 }: ICardDocument): IShareableCard & { _id: string } => {
-  console.log('incoming card', JSON.stringify({ _id, userId, name, mask, type, subtype, status, institution, integrations, createdOn, lastModified, unlinkedDate, removedDate, initialTransactionsProcessing, lastTransactionSync }, null, 2));
   const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name
     ? getShareableUser(userId as IUserDocument)
     : userId;

@@ -13,6 +13,18 @@ import { IUnsdg, IUnsdgDocument } from './unsdg';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
+export enum CashbackCompanyDisplayLocation {
+  'homeMobile' = 'homeMobile',
+  'homeWeb' = 'homeWeb',
+  'browseCompanies' = 'browseCompanies',
+  'cashbackScreenMobile' = 'cashbackScreenMobile',
+}
+
+export interface IFeaturedCashbackCompany {
+  status: boolean;
+  location: CashbackCompanyDisplayLocation[];
+}
+
 export enum CompanyCreationStatus {
   Completed = 'completed',
   PendingDataSources = 'pending-data-sources',
@@ -97,6 +109,7 @@ export interface IShareableCompany {
   lastModified: Date;
   evaluatedUnsdgs: IEvaluatedCompanyUnsdg[];
   partnerStatus: ICompanyPartnerStatus;
+  featuredCashback?: IFeaturedCashbackCompany;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -211,6 +224,10 @@ const companySchema = new Schema(
       description: {
         type: String,
       },
+    },
+    featuredCashback: {
+      status: { type: Boolean },
+      location: { type: [String], enum: CashbackCompanyDisplayLocation },
     },
   },
   {

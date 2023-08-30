@@ -8,6 +8,7 @@ router.get('/sample', CompanyController.getSample);
 router.get('/partners', CompanyController.getAllPartners);
 router.get('/partner', CompanyController.getPartner);
 router.get('/score-range', CompanyController.getCompanyScoreRange);
+router.get('/featured-cashback', CompanyController.getFeaturedCashbackCompanies);
 router.get('/:companyId/merchant-rates', CompanyController.getMerchantRatesForCompany);
 router.get('/:companyId', CompanyController.getCompanyById);
 router.get('/partners/count', CompanyController.getPartnersCount);

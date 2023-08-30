@@ -305,7 +305,7 @@ export const unenrollFromKardRewards = async (
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
   // Find the existing card document with Marqeta integration
-  let cards = await CardModel.findOne({
+  let card = await CardModel.findOne({
     $and: [
       { userId: _userId },
       { 'integrations.marqeta': { $exists: true } },
@@ -313,9 +313,9 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     ],
   });
 
-  // If the card document doesn't exist, you may choose to create a new one
-  if (!cards) {
-    cards = new CardModel({ userId: _userId, ...IMapMarqetaCard });
+  // If the card document doesn't exist, you may choose to create a new one , with default values for karma Card
+  if (!card) {
+    card = new CardModel({ userId: _userId, ...IMapMarqetaCard });
   }
   const { user_token, token, expiration_time, last_four, pan } = cardData;
 
@@ -332,9 +332,9 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     last_four: encrypt(last_four),
     pan: encrypt(pan),
   };
-    // Update the Marqeta details in the integrations.marqeta field
-  cards.integrations.marqeta = cardItem;
+  // Update the Marqeta details in the integrations.marqeta field
+  card.integrations.marqeta = cardItem;
 
   // Save the updated card document
-  await cards.save();
+  await card.save();
 };

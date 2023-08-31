@@ -326,15 +326,17 @@ export const mapKardCommissionToKarmaCommisison = async (
   const existingCommission = await CommissionModel.findOne({
     transaction: associatedTransaction._id,
   });
+
   if (!existingCommission) {
     const merchant = await MerchantModel.findOne({
       'integrations.kard.id': reward.merchantId,
     });
-    if (!merchant) throw new Error('Merchant not found');
-    const company = await CompanyModel.findOne({ merchant: merchant?._id });
-    if (!company) throw new Error('Company not found');
+    if (!merchant?._id) throw new Error('Merchant not found');
 
-    const card = await CardModel.findOne({ 'itegrations.kard.userId': kardUser?.referringPartnerUserId });
+    const company = await CompanyModel.findOne({ merchant: merchant?._id });
+    if (!company?._id) throw new Error('Company not found');
+
+    const card = await CardModel.findOne({ 'integrations.kard.userId': kardUser?.referringPartnerUserId });
     if (!card?._id) throw new Error(`Card not found for refferringPartnerUserId: ${kardUser?.referringPartnerUserId}`);
 
     const user = await UserModel.findOne({ _id: card.userId });

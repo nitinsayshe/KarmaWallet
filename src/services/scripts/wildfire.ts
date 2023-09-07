@@ -205,13 +205,37 @@ export const removeDuplicateWildfireMerchants = async () => {
 };
 
 // Removes a single merchant from the database
-export const removeMerchant = async (merchantId: string) => {
+export const removeWildfireMerchant = async (merchantId: string) => {
   const merchant = await MerchantModel.findOne({ _id: merchantId });
 
   if (!merchant) throw new Error('Merchant not found');
+  if (merchant.integrations.kard || merchant.integrations.karma) throw new Error(`[+] err: merchant has other integrations ${merchantId}`);
   await MerchantRateModel.deleteMany({ merchant: merchantId });
   await MerchantModel.deleteOne({ _id: merchant._id });
   await CompanyModel.findOneAndUpdate({ merchant: merchant._id }, { $unset: { merchant: '' } });
+};
+
+export const removeMultipleWildfireMerchants = async () => {
+  const merchantsToRemove = fs.readFileSync(path.resolve(__dirname, './.tmp/merchants_to_remove.json'), 'utf8');
+  const parsedMerchantsToRemove = JSON.parse(merchantsToRemove);
+
+  for (const parsedMerchant of parsedMerchantsToRemove) {
+    const merchantData = await MerchantModel.findOne({ _id: parsedMerchant._id });
+    if (!merchantData) {
+      console.log('[+] merchant not found', parsedMerchant._id);
+      continue;
+    }
+
+    if (merchantData.integrations.kard || merchantData.integrations.karma) {
+      console.log('[+] merchant has other integrations', parsedMerchant._id);
+      continue;
+    }
+
+    await MerchantRateModel.deleteMany({ merchant: parsedMerchant._id });
+    await MerchantModel.deleteOne({ _id: parsedMerchant._id });
+    await CompanyModel.findOneAndUpdate({ merchant: parsedMerchant._id }, { $unset: { merchant: '' } });
+    console.log('[+] removed merchant', parsedMerchant._id);
+  }
 };
 
 // Gets the current Wildfire data and saves locally, run before executing other functions
@@ -463,4 +487,73 @@ export const searchResultsProcessing = async () => {
   fs.writeFileSync(path.resolve(__dirname, './.tmp/wildfire_matches_confirmed.json'), JSON.stringify(matches));
 
   console.log(`[#] ${totalDomainMatches} matches`);
+};
+
+// if for any reason we lose the merchantId or domainId data, we can use this scripts to query off of the merchantName. Still need to manually review the domains to choose the valid one since it will create an array of domains.
+export const addDomainsToMerchantsFromMerchantName = async (useJsonData?: boolean) => {
+  const merchantsMissingData = await MerchantModel.find({
+    'integrations.wildfire.merchantId': null,
+    'integrations.wildfire': { $exists: true },
+  });
+
+  let activeDomains;
+  let activeMerchants;
+  const noLongerMerchants = [];
+
+  if (useJsonData) {
+    const domainsRaw = fs.readFileSync(path.resolve(__dirname, './.tmp/wfdomains.json'), 'utf8');
+    activeDomains = JSON.parse(domainsRaw);
+  } else {
+    const wildfireClient = new WildfireClient();
+    const activeData = await wildfireClient.getActiveDomains();
+    const merchantData = await wildfireClient.getMerchants();
+    activeMerchants = merchantData.data;
+    activeDomains = activeData.data;
+  }
+
+  console.log(`$[+] ${merchantsMissingData.length} merchants missing data`);
+
+  for (const merchant of merchantsMissingData) {
+    const { name } = merchant;
+    console.log(`[+] Searching for matching domains for ${name}`);
+    const domains = activeDomains.filter((d: any) => d.Merchant.Name === name);
+    if (!!domains.length) {
+      merchant.integrations.wildfire.merchantId = domains[0].Merchant.ID;
+      merchant.integrations.wildfire.domains = domains;
+      console.log(`[+] Adding domains for ${name}`);
+      await merchant.save();
+    } else {
+      const matchingMerchant = activeMerchants.find((m: any) => m.Name === name);
+      if (!!matchingMerchant) {
+        console.log('////// found a matching merchant!!!');
+      } else {
+        noLongerMerchants.push({
+          name: merchant.name,
+          _id: merchant._id,
+        });
+      }
+    }
+  }
+
+  fs.writeFileSync(path.resolve(__dirname, './.tmp/no-longer-a-merchant.json'), JSON.stringify(noLongerMerchants));
+};
+
+export const identifyMerchantsNoLongerOnWildfire = async () => {
+  const noActiveMerchant = [];
+  const wildfireClient = new WildfireClient();
+  const wildfireMerchants = await wildfireClient.getMerchants();
+  const merchants = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
+
+  for (const merchant of merchants) {
+    const existingMerchant = wildfireMerchants.data.find((m: any) => m.ID === merchant.integrations.wildfire.merchantId);
+    if (!existingMerchant) {
+      console.log(`[+] ${merchant.name}`);
+      noActiveMerchant.push({
+        _id: merchant._id,
+        name: merchant.name,
+      });
+    }
+  }
+
+  fs.writeFileSync(path.resolve(__dirname, './.tmp/no-longer-a-merchant-prod.json'), JSON.stringify(noActiveMerchant));
 };

@@ -343,7 +343,7 @@ export const associateKardMatches = async () => {
             merchant,
             merchantOffers,
           );
-          if (!newMerchant) {
+          if (!newMerchant?._id) {
             throw new Error(`Error creating Merchant: ${merchant._id}`);
           }
           console.log(`created new merchant: ${newMerchant._id}`);

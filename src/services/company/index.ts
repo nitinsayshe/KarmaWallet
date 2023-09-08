@@ -448,8 +448,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     ];
   }
 
-  console.log('//////Aggregate Steps', aggregateSteps);
-
   if (cleanedFilter?.['values.value']) {
     const valuesQuery = cleanedFilter?.['values.value'];
     delete cleanedFilter['values.value'];

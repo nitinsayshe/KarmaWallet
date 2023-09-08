@@ -1059,12 +1059,50 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
     };
   }
 
+  const merchantQuery: any = {
+    merchant: { $ne: null },
+  };
+
+  const merchantFilter: any = {
+    $or: [
+      { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+      { $and:
+          [
+            { 'merchant.integrations.kard': { $exists: true } },
+            { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+          ],
+      },
+    ],
+  };
+
+  const merchantLookup = {
+    $lookup: {
+      from: 'merchants',
+      localField: 'merchant',
+      foreignField: '_id',
+      as: 'merchant',
+    },
+  };
+
+  const merchantUnwind = {
+    $unwind: {
+      path: '$merchant',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
   const aggregateSteps: any = [
     {
       $match: {
         ...companiesQuery,
         ...sectorQuery,
+        ...merchantQuery,
       },
+    },
+    merchantLookup,
+    merchantUnwind,
+    {
+      $match: merchantFilter,
     },
   ];
 
@@ -1074,6 +1112,8 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
     limit: query?.limit || 10,
     sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
   };
+
+  console.log('///', aggregateSteps, options);
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
   const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);

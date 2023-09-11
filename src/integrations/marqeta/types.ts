@@ -58,10 +58,17 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
 export interface IMarqetaProcessKyc extends IMarqetaUserToken {
 }
 
+enum IMarqetaCardState{
+  ACTIVE = 'ACTIVE',
+  LIMITED = 'LIMITED',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED'
+}
 export interface IMarqetaCardTransition {
   cardToken: string;
   channel: string;
-  state: string;
+  state: IMarqetaCardState;
+  reasonCode: string;
 }
 
 enum kyc_required {

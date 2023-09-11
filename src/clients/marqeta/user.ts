@@ -1,4 +1,4 @@
-import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaLookUp, IMarqetaUserTransition } from '../../integrations/marqeta/types';
+import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaLookUp, IMarqetaUserTransition, IMarqetaUserToken } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
@@ -102,6 +102,17 @@ export class User {
   async getClientAccessToken(accessToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/users/auth/clientaccesstoken/${accessToken}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  // Generate a one-time user authentication token
+  async createUserAuthToken(params: IMarqetaUserToken) {
+    try {
+      const { data } = await this._marqetaClient._client.post('/users/auth/onetime', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

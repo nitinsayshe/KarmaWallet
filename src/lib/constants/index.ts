@@ -9,7 +9,6 @@ export enum ApiKeyStatus {
 }
 export const IMapMarqetaCard = {
   name: 'Karma Wallet Prepaid Reloadable Card',
-  mask: 'last four digits from Marqeta for the card',
   type: 'depository',
   subtype: 'reloadable',
   status: 'linked',

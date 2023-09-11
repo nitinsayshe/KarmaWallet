@@ -304,6 +304,8 @@ export const unenrollFromKardRewards = async (
 };
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
+  const { user_token, token, expiration_time, last_four, pan } = cardData;
+
   // Find the existing card document with Marqeta integration
   let card = await CardModel.findOne({
     $and: [
@@ -315,9 +317,8 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
 
   // If the card document doesn't exist, you may choose to create a new one , with default values for karma Card
   if (!card) {
-    card = new CardModel({ userId: _userId, ...IMapMarqetaCard });
+    card = new CardModel({ userId: _userId, mask: last_four, createdOn: dayjs().utc().toDate(), ...IMapMarqetaCard });
   }
-  const { user_token, token, expiration_time, last_four, pan } = cardData;
 
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
   // extract the expiration year & month of the card
@@ -332,6 +333,8 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     last_four: encrypt(last_four),
     pan: encrypt(pan),
   };
+  // Set lastModified date
+  card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
 

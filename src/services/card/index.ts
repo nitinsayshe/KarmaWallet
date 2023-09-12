@@ -316,7 +316,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
 
   // If the card document doesn't exist, you may choose to create a new one , with default values for karma Card
   if (!card) {
-    card = new CardModel({ userId: _userId, mask: last_four, createdOn: dayjs().utc().toDate(), ...IMapMarqetaCard });
+    card = new CardModel({ userId: _userId, mask: last_four, ...IMapMarqetaCard });
   }
 
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);

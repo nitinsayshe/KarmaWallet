@@ -1,5 +1,6 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
+import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
 
@@ -146,8 +147,8 @@ const cardSchema = new Schema({
     },
   },
   initialTransactionsProcessing: { type: Boolean },
-  createdOn: { type: Date },
-  lastModified: { type: Date },
+  createdOn: { type: Date, default: () => getUtcDate().toDate() },
+  lastModified: { type: Date, default: () => getUtcDate().toDate() },
   lastTransactionSync: { type: Date },
   lastFourDigitsToken: { type: String },
   binToken: { type: String },

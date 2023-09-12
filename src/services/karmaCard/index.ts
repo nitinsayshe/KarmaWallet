@@ -39,7 +39,6 @@ export const getShareableKarmaCardApplication = ({
   address1,
   birthDate,
   city,
-  ssn,
   postalCode,
   state,
   kycResult,
@@ -56,7 +55,6 @@ export const getShareableKarmaCardApplication = ({
   address1,
   birthDate,
   city,
-  ssn,
   postalCode,
   state,
   kycResult,
@@ -186,7 +184,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     birthDate,
     city,
     postalCode,
-    ssn,
     state,
     status: ApplicationStatus.FAILED,
     kycResult: {

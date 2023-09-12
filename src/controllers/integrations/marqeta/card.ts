@@ -38,7 +38,7 @@ export const listCards: IRequestHandler<{ userToken: string }, {}, {}> = async (
 export const cardTransition: IRequestHandler<{}, {}, IMarqetaCardTransition> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['cardToken', 'channel', 'state'];
+    const requiredFields = ['cardToken', 'channel', 'state', 'reasonCode'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));

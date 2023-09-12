@@ -15,8 +15,8 @@ export const createCard = async (params:IMarqetaCreateCard) => {
 };
 
 export const listCards = async (userToken: string) => {
-  const userResponse = await card.listCards(userToken);
-  return { user: userResponse };
+  const cardResponse = await card.listCards(userToken);
+  return { cards: cardResponse };
 };
 
 export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransition>) => {

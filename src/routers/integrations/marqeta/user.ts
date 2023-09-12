@@ -27,4 +27,7 @@ router.route('/accesstoken')
 router.route('/accesstoken/:accessToken')
   .get(UserController.listUserTransition);
 
+router.route('/onetime-auth')
+  .post(UserController.createUserAuthToken);
+
 export default router;

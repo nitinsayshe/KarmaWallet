@@ -9,8 +9,7 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes, UserRoles } from '../../lib/constants';
 import { getTopCompaniesOfAllSectorsFromTransactionTotals, getTopSectorsFromTransactionTotals } from './utils/userTransactionTotals';
 import { SectorModel } from '../../models/sector';
-import { ICompanyDocument, CompanyModel } from '../../models/company';
-import { MerchantModel } from '../../models/merchant';
+import { ICompanyDocument } from '../../models/company';
 import { _getCompanies } from '../company';
 import { getSample } from '../../lib/misc';
 import { getUserImpactRatings } from './utils';
@@ -111,43 +110,6 @@ export const getImpactRatings = async (_req: IRequest) => {
         max: pos[1],
       },
     };
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-export const getFeaturedCashback = async () => {
-  try {
-    const companies = await CompanyModel
-      .find(
-        { _id: { $in: [
-          '621b993c5f87e75f5365a9a5', // Walmart
-          '621b99cb5f87e75f5365fc79', // Wolf & Badger
-          '621b99545f87e75f5365b715', // Cotopaxi
-          '621b99be5f87e75f5365f54d', // Sams Club
-          '621b994a5f87e75f5365b139', // Athleta
-          '621b99605f87e75f5365be85', // Happy Earth Apparel
-          '621b99435f87e75f5365ad95', // Prose
-          '621b99435f87e75f5365ad35', // Burton
-          '621b993e5f87e75f5365aa45', // Plant People
-          '621b995a5f87e75f5365bb05', // Beauty Counter
-          '621b99b35f87e75f5365eecd', // Banana Republic
-          '621b995a5f87e75f5365ba91', // West Paw
-        ] } },
-      )
-      .populate([
-        {
-          path: 'merchant',
-          model: MerchantModel,
-        },
-      ]);
-
-    const alphabeticallySorted = companies.sort((a, b) => {
-      const companyA = a.companyName.toUpperCase();
-      const companyB = b.companyName.toUpperCase();
-      return (companyA < companyB) ? -1 : (companyA > companyB) ? 1 : 0;
-    });
-    return alphabeticallySorted;
   } catch (err) {
     throw asCustomError(err);
   }

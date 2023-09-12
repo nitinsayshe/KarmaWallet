@@ -5,7 +5,6 @@ import { Types } from 'mongoose';
 import { TransactionPaymentChannelEnum, TransactionTransactionTypeEnum } from 'plaid';
 import { deleteUser } from '.';
 import { MainBullClient } from '../../clients/bull/main';
-import { createKardUserAndAddIntegrations } from '../../integrations/kard';
 import { IMatchedTransaction } from '../../integrations/plaid/types';
 import {
   getCompanyPrimarySectorDictionary,
@@ -279,32 +278,6 @@ type TestUserDocuments = {
   chico: IUserDocument;
 };
 
-const registerUserWithKardAndAddCard = async (
-  user: IUserDocument,
-  card: ICardDocument,
-): Promise<ICardDocument | null> => {
-  try {
-    const updatedCard = await createKardUserAndAddIntegrations(user, card);
-    return updatedCard || null;
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-};
-
-const addUsersToKard = async (
-  usersWithCards: { user: IUserDocument; card: ICardDocument }[],
-): Promise<ICardDocument[] | null> => Promise.all(
-  usersWithCards.map(async ({ user, card }) => {
-    try {
-      return registerUserWithKardAndAddCard(user, card);
-    } catch (err) {
-      console.error(err);
-      return null;
-    }
-  }),
-);
-
 const createTestCards = async (
   users: Partial<TestUserDocuments>,
 ): Promise<{
@@ -513,7 +486,7 @@ export const createTestTransactions = async (
       transactions.push(...addTransactionsWithCompanyForUserFromEndDate(company, userId.toString(), card, endDate, 2));
     });
 
-    await mockIncomingPlaidTransactions(transactions);
+    /* await mockIncomingPlaidTransactions(transactions); */
     console.log('successfully created transactions...');
   } catch (err) {
     console.error(err);
@@ -556,59 +529,26 @@ export const createHenrysTransactions = async (userId: Types.ObjectId, card: ICa
       throw new Error('Error retrieving companies');
     }
 
-    const transactions: Partial<
-    IMatchedTransaction & {
-      companyDocument: ICompanyDocument;
-      userId: string;
-      card: ICardDocument;
-    }
-    >[] = [
-      ...addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        lastMonthStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        betterWorldBooks,
-        userId.toString(),
-        card,
-        twoMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        betterWorldBooks,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        twoMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-    ];
+    addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(bluebirdBotanicals, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(bluebirdBotanicals, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(bluebirdBotanicals, userId.toString(), card, threeMonthsAgoStartDate);
 
-    await mockIncomingPlaidTransactions(transactions);
+    /* await mockIncomingPlaidTransactions(transactions); */
     console.log("successfully created henry's transactions...");
   } catch (err) {
     console.error(err);
@@ -636,59 +576,31 @@ export const createGeorgesTransactions = async (userId: Types.ObjectId, card: IC
       throw new Error('Error retrieving companies');
     }
 
-    const transactions: Partial<
-    IMatchedTransaction & {
-      companyDocument: ICompanyDocument;
-      userId: string;
-      card: ICardDocument;
-    }
-    >[] = [
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        lastMonthStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        twoMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        dollarGeneral,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(
-        betterWorldBooks,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, threeMonthsAgoStartDate),
-    ];
+    addTransactionsWithCompanyForUserFromStartDate(bluebirdBotanicals, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(bluebirdBotanicals, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(
+      bluebirdBotanicals,
+      userId.toString(),
+      card,
+      threeMonthsAgoStartDate,
+    );
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, threeMonthsAgoStartDate);
 
-    await mockIncomingPlaidTransactions(transactions);
+    /* await mockIncomingPlaidTransactions(transactions); */
     console.log("successfully created george's transactions...");
   } catch (err) {
     console.error(err);
@@ -713,18 +625,9 @@ export const createChicosTransactions = async (userId: Types.ObjectId, card: ICa
 
     // add 10 transactions with walmart at the beginning of last month
     // and 10 transactions with amazon at the end of last month
-    const transactions: Partial<
-    IMatchedTransaction & {
-      companyDocument: ICompanyDocument;
-      userId: string;
-      card: ICardDocument;
-    }
-    >[] = [
-      ...addTransactionsWithCompanyForUserFromStartDate(walmart, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate),
-    ];
+    addTransactionsWithCompanyForUserFromStartDate(walmart, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate);
 
-    await mockIncomingPlaidTransactions(transactions);
     console.log("successfully created chico's transactions...");
   } catch (err) {
     console.error(err);
@@ -759,10 +662,6 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     console.log('successfully created cards...');
 
     console.log('adding users to kard...');
-    await addUsersToKard([
-      { user: henry, card: henrysCard },
-      { user: chico, card: chicosCard },
-    ]);
 
     // create transactions for each user with a card
     await createHenrysTransactions(henry._id, henrysCard);
@@ -805,7 +704,11 @@ export const triggerResetTestIdentities = (): void => {
       onComplete: () => {
         console.log(`${JobNames.ResetTestIdentities} finished`);
         console.log(`Triggering ${JobNames.GenerateUserImpactTotals}`);
-        MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {}, { jobId: `${JobNames.GenerateUserImpactTotals}` });
+        MainBullClient.createJob(
+          JobNames.GenerateUserImpactTotals,
+          {},
+          { jobId: `${JobNames.GenerateUserImpactTotals}` },
+        );
       },
     },
   );

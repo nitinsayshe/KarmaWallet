@@ -789,17 +789,6 @@ export const initCompanyBatchJob = async (req: IRequest<{}, {}, IBatchedCompanyP
   }
 };
 
-const addMerchantInfoToCompanies = async (companies: ICompanyDocument[]) => {
-  const merchantIds = companies.map(c => c.merchant);
-  const merchants = await MerchantModel.find({ _id: { $in: merchantIds } });
-  companies.forEach(company => {
-    const merchant = merchants.find(c => c._id?.toString() === company.merchant?.toString());
-    company.merchant = merchant;
-  });
-
-  return companies;
-};
-
 export const updateCompany = async (req: IRequest<ICompanyRequestParams, {}, IUpdateCompanyRequestBody>) => {
   try {
     const { companyId } = req.params;
@@ -1039,7 +1028,7 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
   let sectorQuery = {};
   let companiesQuery = {};
 
-  if (!!location.length) {
+  if (!!location?.length) {
     const locationArray = location.split(',');
     companiesQuery = {
       'featuredCashback.location': {
@@ -1059,12 +1048,57 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
     };
   }
 
+  const excludeNegativeCompanies = {
+    rating: {
+      $ne: CompanyRating.Negative,
+    },
+  };
+
+  const merchantQuery: any = {
+    merchant: { $ne: null },
+  };
+
+  const merchantFilter: any = {
+    $or: [
+      { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+      { $and:
+          [
+            { 'merchant.integrations.kard': { $exists: true } },
+            { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+          ],
+      },
+    ],
+  };
+
+  const merchantLookup = {
+    $lookup: {
+      from: 'merchants',
+      localField: 'merchant',
+      foreignField: '_id',
+      as: 'merchant',
+    },
+  };
+
+  const merchantUnwind = {
+    $unwind: {
+      path: '$merchant',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
   const aggregateSteps: any = [
     {
       $match: {
         ...companiesQuery,
         ...sectorQuery,
+        ...merchantQuery,
+        ...excludeNegativeCompanies,
       },
+    },
+    merchantLookup,
+    merchantUnwind,
+    {
+      $match: merchantFilter,
     },
   ];
 
@@ -1077,8 +1111,8 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
   const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
-  const companiesWithMerchantData = await addMerchantInfoToCompanies(companies.docs);
-  companies.docs = companiesWithMerchantData;
+  // const companiesWithMerchantData = await addMerchantInfoToCompanies(companies.docs);
+  // companies.docs = companiesWithMerchantData;
 
   return companies;
 };

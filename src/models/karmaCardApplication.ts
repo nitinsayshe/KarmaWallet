@@ -20,7 +20,6 @@ export interface IShareableCardApplication {
   birthDate: string;
   city: string;
   postalCode: string;
-  ssn: string;
   state: string;
   kycResult: IMarqetaKycResult;
   status: ApplicationStatus;
@@ -51,7 +50,6 @@ const karmaCardApplication = new Schema({
   city: { type: String },
   postalCode: { type: String },
   state: { type: String },
-  ssn: { type: String },
   userToken: { type: String },
   kycResult: {
     status: { type: String },

@@ -27,12 +27,18 @@ import { CardStatus } from './constants';
 import { CompanyRating } from './constants/company';
 import { getUtcDate } from './date';
 import { getRandomInt } from './number';
+import { CommissionPayoutModel, ICommissionPayoutDocument, KarmaCommissionPayoutStatus } from '../models/commissionPayout';
 
 export type CreateTestUsersRequest = {
   users?: Partial<IUserDocument>[];
 };
+
 export type CreateTestCommissionsRequest = {
   commissions?: Partial<ICommissionDocument>[];
+};
+
+export type CreateTestCommissionPayoutsRequest = {
+  commissionPayouts?: Partial<ICommissionPayoutDocument>[];
 };
 
 export type CreateTestPromosRequest = {
@@ -116,6 +122,19 @@ export const createSomeCommissions = async (req: CreateTestCommissionsRequest): 
     newCommission.allocation = commission.allocation || { karma: newCommission.amount * 0.25, user: newCommission.amount * 0.75 };
     newCommission.integrations = commission.integrations || undefined;
     newCommission.lastStatusUpdate = commission.lastStatusUpdate || getUtcDate().toDate();
+    return newCommission.save();
+  }),
+)) || [];
+
+export const createSomeCommissionPayouts = async (req: CreateTestCommissionPayoutsRequest): Promise<ICommissionPayoutDocument[]> => (await Promise.all(
+  req.commissionPayouts?.map(async (commissionPayout) => {
+    const newCommission = new CommissionPayoutModel();
+    newCommission.amount = commissionPayout.amount || getRandomInt(1, 20);
+    newCommission.commissions = commissionPayout?.commissions || undefined;
+    newCommission.user = commissionPayout?.user || undefined;
+    newCommission.date = commissionPayout.date || getUtcDate().toDate();
+    newCommission.status = commissionPayout.status || KarmaCommissionPayoutStatus.Pending;
+    newCommission.integrations = commissionPayout.integrations || undefined;
     return newCommission.save();
   }),
 )) || [];

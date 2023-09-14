@@ -76,6 +76,14 @@ export interface IAdminSummary {
     totalKard: number;
     totalKardDollars: number;
   };
+  payouts: {
+    pending: {
+      total: number;
+      marqeta: number;
+      paypal: number;
+      unknown: number;
+    };
+  };
 }
 
 export interface IReport {
@@ -206,6 +214,18 @@ const adminSummary = {
       totalKarmaWalletDollars: Number,
       totalKard: Number,
       totalKardDollars: Number,
+    },
+  },
+  payouts: {
+    type: {
+      pending: {
+        type: {
+          total: Number,
+          pending: Number,
+          marqeta: Number,
+          paypal: Number,
+        },
+      },
     },
   },
 };

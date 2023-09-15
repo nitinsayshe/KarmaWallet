@@ -9,4 +9,10 @@ router.route('/fundingSource')
 router.route('/banktransfer')
   .post(ACHFundingSourceController.createACHBankTransfer);
 
+router.route('/banktransfer/:achToken')
+  .get(ACHFundingSourceController.getACHBankTransfer);
+
+router.route('/banktransfer')
+  .get(ACHFundingSourceController.listACHBankTransfer);
+
 export default router;

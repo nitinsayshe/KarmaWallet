@@ -105,10 +105,20 @@ export interface IMarqetaACHPlaidFundingSource {
   partner: string;
 }
 
+export enum IMarqetaACHTransferType {
+  PUSH = 'PUSH',
+  PULL = 'PULL',
+}
 export interface IMarqetaACHBankTransfer {
-  amount: number;
+  amount: string;
   fundingSourceToken: string;
-  type: string;
+  type: IMarqetaACHTransferType;
+}
+
+export interface IMarqetaACHBankTransferTransition {
+  bankTransferToken: string;
+  status: string;
+  channel: string;
 }
 
 export enum ControlTokenType {

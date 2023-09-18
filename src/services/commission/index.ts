@@ -300,7 +300,7 @@ export const generateCommissionPayoutOverview = async (
         wildfire: wildfireAmount,
         kard: kardAmount,
       },
-      destination: {
+      disbursementBreakdown: {
         paypal: paypalPayoutAmount,
         marqeta: marqetaPayoutAmount,
         unknown: unknownDestinationAmount,
@@ -329,7 +329,7 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
     const paypalClient = new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
-    const paypalCommissionPayoutOverviewAmount = commissionPayoutOverview.destination.paypal;
+    const paypalCommissionPayoutOverviewAmount = commissionPayoutOverview.disbursementBreakdown.paypal;
 
     const { commissionPayouts } = commissionPayoutOverview;
 

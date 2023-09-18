@@ -30,7 +30,7 @@ export interface IShareableCommissionPayoutOverview {
   status: KarmaCommissionPayoutOverviewStatus;
   commissionPayouts: ObjectId[];
   breakdown: ICommissionsBreakdown;
-  destination: IPayoutDestination;
+  disbursementBreakdown: IPayoutDestination;
 }
 
 export interface ICommissionPayoutOverview extends IShareableCommissionPayoutOverview {
@@ -48,7 +48,7 @@ const commissionPayoutOverview = new Schema({
   // amountPaid: { type: Number },
   status: { type: String, enum: Object.values(KarmaCommissionPayoutOverviewStatus) },
   breakdown: { type: Object },
-  destination: {
+  disbursementBreakdown: {
     type: {
       paypal: { type: Number },
       marqeta: { type: Number },

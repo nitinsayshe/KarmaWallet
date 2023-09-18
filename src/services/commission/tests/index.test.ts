@@ -347,23 +347,23 @@ describe('tests commission service logic', () => {
     const minKarmaCommissionAmount = commissionsTotalForUserWithMarqetaIntegration; // user with linked card also has to have karma commissions
     expect(commissionPayoutOverview.breakdown.karma).toBeGreaterThanOrEqual(minKarmaCommissionAmount);
     // expect that the destination breakdown is correctish
-    expect(commissionPayoutOverview.destination).toBeDefined();
-    expect(commissionPayoutOverview.destination).not.toBeNull();
+    expect(commissionPayoutOverview.disbursementBreakdown).toBeDefined();
+    expect(commissionPayoutOverview.disbursementBreakdown).not.toBeNull();
 
-    expect(commissionPayoutOverview.destination.paypal).toBeDefined();
-    expect(commissionPayoutOverview.destination.paypal).not.toBeNull();
-    expect(commissionPayoutOverview.destination.paypal).toBeGreaterThanOrEqual(
+    expect(commissionPayoutOverview.disbursementBreakdown.paypal).toBeDefined();
+    expect(commissionPayoutOverview.disbursementBreakdown.paypal).not.toBeNull();
+    expect(commissionPayoutOverview.disbursementBreakdown.paypal).toBeGreaterThanOrEqual(
       commissionsTotalForUserWithPaypalIntegration,
     );
 
-    expect(commissionPayoutOverview.destination.marqeta).toBeDefined();
-    expect(commissionPayoutOverview.destination.marqeta).not.toBeNull();
-    expect(commissionPayoutOverview.destination.marqeta).toBeGreaterThanOrEqual(
+    expect(commissionPayoutOverview.disbursementBreakdown.marqeta).toBeDefined();
+    expect(commissionPayoutOverview.disbursementBreakdown.marqeta).not.toBeNull();
+    expect(commissionPayoutOverview.disbursementBreakdown.marqeta).toBeGreaterThanOrEqual(
       commissionsTotalForUserWithMarqetaIntegration,
     );
 
-    expect(commissionPayoutOverview.destination.unknown).toBeDefined();
-    expect(commissionPayoutOverview.destination.unknown).not.toBeNull();
-    expect(commissionPayoutOverview.destination.unknown).toBeGreaterThanOrEqual(commissionsTotalForUserWithLinkedCard);
+    expect(commissionPayoutOverview.disbursementBreakdown.unknown).toBeDefined();
+    expect(commissionPayoutOverview.disbursementBreakdown.unknown).not.toBeNull();
+    expect(commissionPayoutOverview.disbursementBreakdown.unknown).toBeGreaterThanOrEqual(commissionsTotalForUserWithLinkedCard);
   });
 });

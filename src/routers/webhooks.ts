@@ -18,6 +18,9 @@ router.route('/paypal')
 router.route('/kard')
   .post(WebhooksController.handleKardWebhook);
 
+router.route('/marqeta')
+  .post(WebhooksController.handleMarqetaWebhook);
+
 // legacy api passthrough route
 router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);

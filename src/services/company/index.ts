@@ -361,8 +361,13 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const { filter } = query;
   let unsdgQuery = {};
   let searchQuery = {};
+  let merchantQuery = {};
+  let merchantLookup = {};
+  let merchantUnwind = {};
+  let merchantFilter = {};
   const unsdgs = filter?.evaluatedUnsdgs;
   const search = filter?.companyName;
+  const cashbackOnly = !!filter?.merchant;
 
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
@@ -376,6 +381,42 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
             { score: { $gte: 0.5 } },
           ],
         },
+      },
+    };
+  }
+
+  if (cashbackOnly) {
+    delete filter.merchant;
+
+    merchantQuery = {
+      merchant: { $ne: null },
+    };
+
+    merchantFilter = {
+      $or: [
+        { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+        { $and:
+            [
+              { 'merchant.integrations.kard': { $exists: true } },
+              { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+            ],
+        },
+      ],
+    };
+
+    merchantLookup = {
+      $lookup: {
+        from: 'merchants',
+        localField: 'merchant',
+        foreignField: '_id',
+        as: 'merchant',
+      },
+    };
+
+    merchantUnwind = {
+      $unwind: {
+        path: '$merchant',
+        preserveNullAndEmptyArrays: true,
       },
     };
   }
@@ -399,15 +440,29 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     ...hiddenQuery,
     ...unsdgQuery,
     ...searchQuery,
+    ...merchantQuery,
   };
 
   if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
+  let aggregateSteps: any;
 
-  const aggregateSteps: any = [
-    {
-      $match: matchQuery,
-    },
-  ];
+  if (cashbackOnly) {
+    aggregateSteps = [
+      {
+        $match: matchQuery,
+      },
+      merchantLookup,
+      merchantUnwind,
+    ];
+
+    aggregateSteps.push({ $match: merchantFilter });
+  } else {
+    aggregateSteps = [
+      {
+        $match: matchQuery,
+      },
+    ];
+  }
 
   if (cleanedFilter?.['values.value']) {
     const valuesQuery = cleanedFilter?.['values.value'];
@@ -505,7 +560,15 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const merchants = await MerchantModel.find({ _id: { $in: merchantIds } });
   companies.docs.forEach(company => {
     const merchant = merchants.find(c => c._id?.toString() === company.merchant?.toString());
-    company.merchant = merchant;
+    if (!merchant) return;
+
+    if (!!merchant?.integrations?.wildfire && !merchant?.integrations?.wildfire?.domains[0]?.Merchant?.MaxRate.Amount) {
+      company.merchant = null;
+    } else if (!!merchant?.integrations?.kard && !merchant?.integrations?.kard?.maxOffer?.totalCommission) {
+      company.merchant = null;
+    } else {
+      company.merchant = merchant;
+    }
   });
 
   return companies;

@@ -352,6 +352,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const unsdgs = filter?.evaluatedUnsdgs;
   const search = filter?.companyName;
   const cashbackOnly = !!filter?.merchant;
+  const karmaCollectiveMember = !!filter?.karmaCollectiveMember;
 
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
@@ -440,6 +441,15 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     ];
 
     aggregateSteps.push({ $match: merchantFilter });
+
+    if (!!karmaCollectiveMember) {
+      delete filter.karmaCollectiveMember;
+      aggregateSteps.push({
+        $match: {
+          'merchant.karmaCollectiveMember': true,
+        },
+      });
+    }
   } else {
     aggregateSteps = [
       {

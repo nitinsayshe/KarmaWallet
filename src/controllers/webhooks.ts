@@ -22,8 +22,6 @@ import { Logger } from '../services/logger';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { IRequestHandler } from '../types/request';
-import { CardModel } from '../models/card';
-import * as output from '../services/output';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
 
@@ -295,25 +293,5 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
     api(req, res, { message: 'Kard webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
-  }
-};
-
-export const handleMarqetaWebhook: IRequestHandler<{}, {}, { cards: any[] }> = async (req, res) => {
-  try {
-    const { cards } = req.body;
-    console.log('req.body', cards);
-    if (!!cards) {
-      for (const card of cards) {
-        const doc = await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card.card_token }, { 'integrations.marqeta.state': card.state }, { new: true });
-        console.log('>>>>>>>>>>>>>>>>>>>>', doc);
-      }
-    }
-    output.api(
-      req,
-      res,
-      {},
-    );
-  } catch (err) {
-    error(req, res, asCustomError(err));
   }
 };

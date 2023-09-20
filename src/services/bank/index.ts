@@ -43,7 +43,6 @@ export const getShareableBank = ({
     type,
     subtype,
     institution,
-    institutionId: integrations?.plaid?.institutionId,
     integrations,
     createdOn,
     unlinkedDate,

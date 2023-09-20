@@ -102,6 +102,16 @@ interface IPaypalWebhookBody {
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
 
+interface IMarqetaWebhookBody {
+  cards : any[];
+  cardactions : any[];
+  usertransitions : any[];
+}
+
+interface IMarqetaWebhookHeader {
+  authorization : string;
+}
+
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
   if (
     process.env.KW_ENV !== 'staging'
@@ -298,16 +308,44 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
   }
 };
 
-export const handleMarqetaWebhook: IRequestHandler<{}, {}, { cards: any[] }> = async (req, res) => {
+export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
   try {
-    const { cards } = req.body;
-    console.log('req.body', cards);
+    const MARQETA_WEBHOOK_ID = 'webhook1';
+    const MARQETA_WEBHOOK_PASSWORD = 'P@ssw0rd123!Secure#2023';
+
+    const marqetAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
+
+    const { headers } = <{headers : IMarqetaWebhookHeader}>req;
+
+    if (headers?.authorization !== `Basic ${marqetAuthBuffer}`) {
+      return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+    }
+
+    const { cards, cardactions, usertransitions } = req.body;
+
     if (!!cards) {
       for (const card of cards) {
-        const doc = await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card.card_token }, { 'integrations.marqeta.state': card.state }, { new: true });
+        const doc = await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
         console.log('>>>>>>>>>>>>>>>>>>>>', doc);
       }
     }
+
+    if (!!cardactions) {
+      for (const cardaction of cardactions) {
+        if (cardaction.type === 'pin.set') {
+          const doc = await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': cardaction.card_token }, { 'integrations.marqeta.pin_is_set': true }, { new: true });
+          console.log('>>>>>>>>>>>>>>>>>>>>', doc);
+        }
+      }
+    }
+
+    if (!!usertransitions) {
+      for (const usertransition of usertransitions) {
+        const doc = await UserModel.findOneAndUpdate({ 'integrations.marqeta.userToken': usertransition.user_token }, { 'integrations.marqeta.kycResult.status': usertransition.status }, { new: true });
+        console.log('>>>>>>>>>>>>>>>>>>>>', doc);
+      }
+    }
+
     output.api(
       req,
       res,

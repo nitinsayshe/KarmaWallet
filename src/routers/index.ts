@@ -16,6 +16,7 @@ import commission from './commission';
 import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
 import card from './card';
+import bank from './bank';
 import notFound from './404';
 import subscription from './subscription';
 import upload from './upload';
@@ -30,6 +31,7 @@ import karmaCard from './karmaCard';
 const routers = (app: Express) => {
   admin(app);
   card(app);
+  bank(app);
   article(app);
   company(app);
   comparisonGame(app);

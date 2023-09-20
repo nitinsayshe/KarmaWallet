@@ -36,7 +36,7 @@ export interface IPlaidItem {
   public_token?: string;
 }
 
-export interface IPlaidItem1 {
+export interface IPlaidBankItem {
   accounts: AccountIdentity[];
   userId: string;
   link_session_id?: string;

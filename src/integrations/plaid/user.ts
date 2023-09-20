@@ -3,7 +3,7 @@ import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid'
 import { UserModel, IUserDocument, IUser } from '../../models/user';
 import Bank from './bank';
 import Card from './card';
-import { IPlaidItem, IPlaidItem1 } from './types';
+import { IPlaidItem, IPlaidBankItem } from './types';
 
 class User {
   // the user object from the database
@@ -14,7 +14,7 @@ class User {
   _cards: { [key: string]: Card } = {};
   // all banks the user has linked
   _banks: { [key: string]: Bank } = {};
-  constructor(plaidItem: IPlaidItem | TransactionsGetResponse | IPlaidItem1) {
+  constructor(plaidItem: IPlaidItem | TransactionsGetResponse | IPlaidBankItem) {
     this._userId = `${plaidItem.userId}`;
   }
 
@@ -51,7 +51,7 @@ class User {
     return { unmappedTransactions, duplicateTransactions: duplicates };
   };
 
-  addBanks = async (plaidItem: IPlaidItem1) => {
+  addBanks = async (plaidItem: IPlaidBankItem) => {
     for (const account of plaidItem.accounts) {
       if (!!this._banks[`${account.account_id}`]) {
         // updating an existing bank

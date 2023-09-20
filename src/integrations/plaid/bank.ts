@@ -4,7 +4,7 @@ import {
   AccountIdentity, Item,
 } from 'plaid';
 import { Schema } from 'mongoose';
-import { IPlaidItem1 } from './types';
+import { IPlaidBankItem } from './types';
 import { BankModel, IBankDocument } from '../../models/bankConnection';
 
 dayjs.extend(utc);
@@ -27,7 +27,7 @@ class Bank {
   // _transactions: Transaction[] = [];
   // _duplicateTransactions: Transaction[] = [];
   _isNew = false;
-  constructor(userId: Schema.Types.ObjectId, account: AccountIdentity, plaidItem: IPlaidItem1) {
+  constructor(userId: Schema.Types.ObjectId, account: AccountIdentity, plaidItem: IPlaidBankItem) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
@@ -105,7 +105,7 @@ class Bank {
    *
    * @param {Object} account - the plaid account object to update this instance with
    */
-  update = (account: AccountIdentity, plaidItem: IPlaidItem1) => {
+  update = (account: AccountIdentity, plaidItem: IPlaidBankItem) => {
     this._plaid_items.add(`${plaidItem.item_id}`);
     this._account = account;
     this._accessToken = `${plaidItem.access_token}`;

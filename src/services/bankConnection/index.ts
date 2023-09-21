@@ -4,16 +4,16 @@ import { IRequest } from '../../types/request';
 import { IUserDocument } from '../../models/user';
 import { getShareableUser } from '../user';
 
-export const _getBanks = async (query: FilterQuery<IBankConnection>) => BankConnectionModel.find(query);
+export const _getBankConnections = async (query: FilterQuery<IBankConnection>) => BankConnectionModel.find(query);
 
-export const getBanks = async (req: IRequest) => {
+export const getBankConnections = async (req: IRequest) => {
   const { requestor } = req;
-  return _getBanks({
+  return _getBankConnections({
     $and: [{ userId: requestor._id }, { 'integrations.rare': null }],
   });
 };
 
-export const getShareableBank = ({
+export const getShareableBankConnections = ({
   _id,
   userId,
   name,

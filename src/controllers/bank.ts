@@ -1,15 +1,15 @@
 import { IRequestHandler } from '../types/request';
-import * as BankService from '../services/bank';
+import * as BankConnectionService from '../services/bankConnection';
 import * as output from '../services/output';
 import { asCustomError } from '../lib/customError';
 
 export const getBanks: IRequestHandler = async (req, res) => {
   try {
-    const banks = await BankService.getBanks(req);
+    const banks = await BankConnectionService.getBankConnections(req);
     output.api(
       req,
       res,
-      banks.map((c) => BankService.getShareableBank(c)),
+      banks.map((c) => BankConnectionService.getShareableBankConnections(c)),
     );
   } catch (err) {
     output.error(req, res, asCustomError(err));

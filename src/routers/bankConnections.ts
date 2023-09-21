@@ -1,10 +1,10 @@
 import { Express, Router } from 'express';
-import * as BankController from '../controllers/bank';
+import * as BankConnectionsController from '../controllers/bankConnections';
 import authenticate from '../middleware/authenticate';
 
 const router = Router();
 
 router.route('/')
-  .get(authenticate, BankController.getBanks);
+  .get(authenticate, BankConnectionsController.getBankConnections);
 
 export default (app: Express) => app.use('/bank', router);

@@ -9,7 +9,7 @@ export const _getBankConnections = async (query: FilterQuery<IBankConnection>) =
 export const getBankConnections = async (req: IRequest) => {
   const { requestor } = req;
   return _getBankConnections({
-    $and: [{ userId: requestor._id }, { 'integrations.rare': null }],
+    $and: [{ userId: requestor._id }],
   });
 };
 

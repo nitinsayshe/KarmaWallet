@@ -3,7 +3,7 @@ import * as BankConnectionService from '../services/bankConnection';
 import * as output from '../services/output';
 import { asCustomError } from '../lib/customError';
 
-export const getBanks: IRequestHandler = async (req, res) => {
+export const getBankConnections: IRequestHandler = async (req, res) => {
   try {
     const banks = await BankConnectionService.getBankConnections(req);
     output.api(

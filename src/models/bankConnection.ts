@@ -1,5 +1,4 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
-import { KardEnrollmentStatus } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
@@ -14,43 +13,11 @@ export interface IPlaidCardIntegration {
   unlinkedAccessTokens: string[];
 }
 
-export interface IRareCardIntegration {
-  userId: string;
-  card_id: string;
-  card_type: string;
-  last_four: string;
-  expr_month: number;
-  expr_year: number;
-}
-
-export interface IKardIntegration {
-  createdOn: Date;
-  userId: string;
-  enrollmentStatus: KardEnrollmentStatus;
-}
-
-export interface IMarqetaCardIntegration {
-  token: string;
-  expiration_time: Date;
-  user_token: string;
-  card_token: string,
-  card_product_token: string;
-  pan: string;
-  last_four: string;
-  expr_month: number;
-  expr_year: number;
-  created_time: Date;
-  pin_is_set: boolean;
-  state: string;
-  instrument_type: string;
-  barcode: string;
-}
-
 export interface IBankIntegrations {
   plaid?: IPlaidCardIntegration;
 }
 
-export interface IShareableBank {
+export interface IShareableBankConnection {
   userId: IRef<ObjectId, IShareableUser>;
   name: string;
   mask: string;
@@ -68,16 +35,16 @@ export interface IShareableBank {
   integrations: IBankIntegrations;
 }
 
-export interface IBank extends IShareableBank {
+export interface IBankConnection extends IShareableBankConnection {
   userId: IRef<ObjectId, IUserDocument>;
   lastFourDigitsToken?: string;
   binToken?: string;
 }
 
-export interface IBankDocument extends IBank, Document { }
-export type IBankModel = IModel<IBank>;
+export interface IBankConnectionDocument extends IBankConnection, Document { }
+export type IBankConnectionModel = IModel<IBankConnection>;
 
-const bankSchema = new Schema({
+const bankConnectionSchema = new Schema({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'user',
@@ -106,4 +73,4 @@ const bankSchema = new Schema({
   lastModified: { type: Date, default: () => getUtcDate().toDate() },
 });
 
-export const BankModel = model<IBankDocument, Model<IBank>>('bank', bankSchema);
+export const BankConnectionModel = model<IBankConnectionDocument, Model<IBankConnection>>('bankConnection', bankConnectionSchema);

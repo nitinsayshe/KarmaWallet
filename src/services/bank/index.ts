@@ -1,12 +1,10 @@
 import { FilterQuery } from 'mongoose';
-// import { ObjectId } from 'mongodb';
-import { BankModel, IBank, IBankDocument, IShareableBank } from '../../models/bankConnection';
+import { BankConnectionModel, IBankConnection, IBankConnectionDocument, IShareableBankConnection } from '../../models/bankConnection';
 import { IRequest } from '../../types/request';
-// import { IRef } from '../../types/model';
 import { IUserDocument } from '../../models/user';
 import { getShareableUser } from '../user';
 
-export const _getBanks = async (query: FilterQuery<IBank>) => BankModel.find(query);
+export const _getBanks = async (query: FilterQuery<IBankConnection>) => BankConnectionModel.find(query);
 
 export const getBanks = async (req: IRequest) => {
   const { requestor } = req;
@@ -30,7 +28,7 @@ export const getShareableBank = ({
   removedDate,
   initialTransactionsProcessing,
   lastTransactionSync,
-}: IBankDocument): IShareableBank & { _id: string } => {
+}: IBankConnectionDocument): IShareableBankConnection & { _id: string } => {
   const _user = !!(userId as IUserDocument)?.name
     ? getShareableUser(userId as IUserDocument)
     : userId;

@@ -5,7 +5,7 @@ import {
 } from 'plaid';
 import { Schema } from 'mongoose';
 import { IPlaidBankItem } from './types';
-import { BankModel, IBankDocument } from '../../models/bankConnection';
+import { BankConnectionModel, IBankConnectionDocument } from '../../models/bankConnection';
 
 dayjs.extend(utc);
 
@@ -13,7 +13,7 @@ class Bank {
   // owner of the card
   _userId: Schema.Types.ObjectId = null;
   // the card object stored in the db. not available until after save
-  _bank: IBankDocument = null;
+  _bank: IBankConnectionDocument = null;
   // all plaid items this plaid account was found in (in case we ever need to reference them later)
   _plaid_items: Set<string> = null;
   // the plaid account object
@@ -72,7 +72,7 @@ class Bank {
   save = async () => {
     // fingerprinting accounts=>cards since account ids
     // returned from Plaid could change.
-    let bank = await BankModel.findOne({
+    let bank = await BankConnectionModel.findOne({
       userId: this._userId,
       name: this._account?.name,
       mask: this._account.mask,
@@ -88,7 +88,7 @@ class Bank {
       });
       bank.lastModified = dayjs().utc().toDate();
     } else {
-      bank = new BankModel({
+      bank = new BankConnectionModel({
         ...this.toKarmaFormat(),
         createdOn: dayjs().utc().format(),
       });

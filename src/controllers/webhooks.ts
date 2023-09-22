@@ -325,24 +325,21 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     if (!!cards) {
       for (const card of cards) {
-        const doc = await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
-        console.log('>>>>>>>>>>>>>>>>>>>>', doc);
+        await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
       }
     }
 
     if (!!cardactions) {
       for (const cardaction of cardactions) {
         if (cardaction.type === 'pin.set') {
-          const doc = await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': cardaction.card_token }, { 'integrations.marqeta.pin_is_set': true }, { new: true });
-          console.log('>>>>>>>>>>>>>>>>>>>>', doc);
+          await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': cardaction?.card_token }, { 'integrations.marqeta.pin_is_set': true }, { new: true });
         }
       }
     }
 
     if (!!usertransitions) {
       for (const usertransition of usertransitions) {
-        const doc = await UserModel.findOneAndUpdate({ 'integrations.marqeta.userToken': usertransition.user_token }, { 'integrations.marqeta.kycResult.status': usertransition.status }, { new: true });
-        console.log('>>>>>>>>>>>>>>>>>>>>', doc);
+        await UserModel.findOneAndUpdate({ 'integrations.marqeta.userToken': usertransition?.user_token }, { 'integrations.marqeta.kycResult.status': usertransition.status }, { new: true });
       }
     }
 

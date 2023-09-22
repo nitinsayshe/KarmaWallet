@@ -389,3 +389,17 @@ export const processKardWebhook = async (body: EarnedRewardWebhookBody): Promise
     return new CustomError('Error mapping kard commission to karma commission', ErrorTypes.SERVICE);
   }
 };
+
+export const aggregateCommissionTotalAndIds = (
+  commissions: ICommissionDocument[],
+): { commissionsTotal: number; commissionIds: ObjectId[] } => {
+  const [commissionsTotal, commissionIds] = commissions.reduce(
+    (acc, c) => {
+      acc[0] += c.allocation.user;
+      acc[1].push(c._id);
+      return acc;
+    },
+    [0, []],
+  );
+  return { commissionsTotal, commissionIds };
+};

@@ -72,6 +72,7 @@ export const getShareableCompanyValue = ({
   category,
   name,
   weight,
+  icon,
 }: IValueDocument) => {
   const _category = (!!category && Object.values(category).length)
     ? getShareableCategory(category as IUnsdgCategoryDocument)
@@ -81,6 +82,7 @@ export const getShareableCompanyValue = ({
     category: _category,
     name,
     weight,
+    icon,
   };
 };
 

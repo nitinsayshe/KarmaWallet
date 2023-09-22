@@ -168,14 +168,23 @@ export class PlaidClient extends SdkClient {
       const itemId = response.data.item_id;
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
-      await plaidUserInstance.load();
+      let processorToken = '';
+      let accounts;
+      let item;
 
+      await plaidUserInstance.load();
       // if accounts is empty generete a preocessor token
       if (!plaidItem.accounts) {
-        const processorToken = await this.getProcessorToken(accessToken);
+        [processorToken, { accounts, item }] = await Promise.all([
+          await this.getProcessorToken(accessToken), // get the processor token from plaid
+          await this.getIdentity(accessToken), // get user identity through plaid
+        ]);
+        const data = { ...plaidItem, accounts, item };
+        await plaidUserInstance.addBanks(data);
         return {
           message: 'Processor token successfully generated',
           itemId,
+          accessToken,
           processorToken,
         };
       }
@@ -203,6 +212,15 @@ export class PlaidClient extends SdkClient {
   getItem = async (accessToken: string) => {
     const response = await this._client.itemGet({ access_token: accessToken });
     return response.data.item;
+  };
+
+  getIdentity = async (accessToken: string) => {
+    try {
+      const response = await this._client.identityGet({ access_token: accessToken });
+      return response.data;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
   };
 
   removeItem = async ({ access_token }: { access_token: string }) => {

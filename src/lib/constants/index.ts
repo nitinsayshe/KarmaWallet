@@ -85,6 +85,13 @@ export enum UnsdgNames {
   Planet = 'Planet',
 }
 
+export enum BankStatus{
+  Linked = 'linked',
+  Unlinked = 'unlinked',
+  Error = 'error',
+  Removed = 'removed',
+}
+
 export const ErrorTypes = {
   AUTHENTICATION: { name: 'Authentication', code: 401 },
   CONFLICT: { name: 'Conflict', code: 409 },

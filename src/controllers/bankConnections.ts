@@ -15,3 +15,14 @@ export const getBankConnections: IRequestHandler = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
+export const removeBankConnection:IRequestHandler<BankConnectionService.IRemoveBankParams, {}, {}> = async (
+  req,
+  res,
+) => {
+  try {
+    const linkToken = await BankConnectionService.removeBankConnection(req);
+    output.api(req, res, linkToken);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

@@ -22,6 +22,7 @@ class Bank {
   _publicToken: string = null;
   _linkSessionId: string = null;
   _institution: Item = null;
+  _status: string = null;
   // _transactionsIndex = new Set();
   // // all transactions for this card
   // _transactions: Transaction[] = [];
@@ -35,6 +36,7 @@ class Bank {
     this._publicToken = plaidItem.public_token as string;
     this._linkSessionId = plaidItem.link_session_id as string;
     this._institution = plaidItem.item as Item;
+    this._status = plaidItem.status as string;
   }
 
   get _id() { return this._bank?._id || null; }

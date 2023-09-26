@@ -1,7 +1,7 @@
 import { FilterQuery } from 'mongoose';
 import { ObjectId } from 'mongodb';
 import dayjs from 'dayjs';
-import { BankConnectionModel, IBankConnection, IBankConnectionDocument, IShareableBankConnection } from '../../models/bankConnection';
+import { BankConnectionModel, IBankConnection, IBankConnectionDocument, IBankRequestBody, IShareableBankConnection } from '../../models/bankConnection';
 import { IRequest } from '../../types/request';
 import { IUserDocument } from '../../models/user';
 import { getShareableUser } from '../user';
@@ -17,7 +17,7 @@ export const getBankConnections = async (req: IRequest) => {
   const banks = await _getBankConnections({
     $and: [{ userId: requestor._id, status: BankStatus.Linked }],
   });
-  console.log(banks, !!banks);
+
   if (!banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
   return banks;
 };
@@ -64,31 +64,34 @@ export const getShareableBankConnections = ({
   };
 };
 
-const _removePlaidBank = async (requestor: IUserDocument, bank: IBankConnectionDocument) => {
+const _removePlaidBank = async (requestor: IUserDocument, accessToken: string) => {
   const client = new PlaidClient();
-  if (bank?.integrations?.plaid?.accessToken) {
-    await client.removeItem({ access_token: bank.integrations.plaid.accessToken });
-  } else throw new CustomError('No access token found, banks might have already been removed.', ErrorTypes.NOT_FOUND);
-
+  if (accessToken) {
+    try {
+      await client.removeItem({ access_token: accessToken });
+    } catch (error) {
+      throw new CustomError('Invalid access token, banks have already been removed.', ErrorTypes.FORBIDDEN);
+    }
+  }
   await BankConnectionModel.updateMany(
-    { 'integrations.plaid.accessToken': bank.integrations.plaid.accessToken },
+    { 'integrations.plaid.accessToken': accessToken },
     {
       'integrations.plaid.accessToken': null,
-      $push: { 'integrations.plaid.unlinkedAccessTokens': bank.integrations.plaid.accessToken },
+      $push: { 'integrations.plaid.unlinkedAccessTokens': accessToken },
     },
   );
 };
 
-export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, {}>) => {
+export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, IBankRequestBody>) => {
   const { requestor } = req;
+  const { accessToken } = req.body;
+  if (!accessToken) throw new CustomError('Access token is missing.', ErrorTypes.NOT_FOUND);
+  const _banks = await _getBankConnections({ userId: requestor._id, 'integrations.plaid.accessToken': accessToken });
 
-  const _banks = await _getBankConnections({ userId: requestor._id });
+  if (!_banks) throw new CustomError('Banks belongs to this access token does not exist', ErrorTypes.NOT_FOUND);
+  console.log(_banks);
+  await _removePlaidBank(requestor, accessToken);
 
-  if (!_banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
-
-  if (_banks[0]?.integrations?.plaid) {
-    await _removePlaidBank(requestor, _banks[0]);
-  }
   _banks.forEach(async (data) => {
     data.status = BankStatus.Unlinked;
     data.unlinkedDate = dayjs().utc().toDate();

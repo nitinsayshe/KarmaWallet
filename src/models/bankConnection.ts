@@ -27,7 +27,7 @@ export interface IShareableBankConnection {
   createdOn: Date;
   lastModified: Date;
   unlinkedDate?: Date;
-  status:string,
+  status: string,
   removedDate?: Date;
   initialTransactionsProcessing: boolean;
   lastTransactionSync: Date;
@@ -40,6 +40,9 @@ export interface IBankConnection extends IShareableBankConnection {
   userId: IRef<ObjectId, IUserDocument>;
   lastFourDigitsToken?: string;
   binToken?: string;
+}
+export interface IBankRequestBody {
+  accessToken: string;
 }
 
 export interface IBankConnectionDocument extends IBankConnection, Document { }

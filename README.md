@@ -38,3 +38,7 @@ npm run dockerTest
 ```
 
 Note: Many tests are currently skipped. Usually, this is to avoid hitting external APIs. We can enable these tests as we move to mocking these services.
+
+## Building New Email
+
+Follow the patterns seen in the other emails, be sure to delete the `dist` folder and run `npm run build` to generate the new email templates.

@@ -27,6 +27,7 @@ import visitor from './visitor';
 import promo from './promo';
 import banner from './banner';
 import karmaCard from './karmaCard';
+import supportTicket from './supportTicket';
 
 const routers = (app: Express) => {
   admin(app);
@@ -57,6 +58,7 @@ const routers = (app: Express) => {
   promo(app);
   banner(app);
   karmaCard(app);
+  supportTicket(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

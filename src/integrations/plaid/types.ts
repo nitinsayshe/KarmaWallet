@@ -48,6 +48,7 @@ export interface IPlaidBankItem {
   access_token: string;
   item_id?: string;
   public_token?: string;
+  status: string;
 }
 
 export interface ICompanyMatchingResult {

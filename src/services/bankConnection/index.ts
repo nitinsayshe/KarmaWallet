@@ -14,9 +14,12 @@ export const _getBankConnections = async (query: FilterQuery<IBankConnection>) =
 
 export const getBankConnections = async (req: IRequest) => {
   const { requestor } = req;
-  return _getBankConnections({
+  const banks = await _getBankConnections({
     $and: [{ userId: requestor._id, status: BankStatus.Linked }],
   });
+  console.log(banks, !!banks);
+  if (!banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
+  return banks;
 };
 export interface IRemoveBankParams {
   bank: IRef<ObjectId, IBankConnection>;
@@ -65,9 +68,9 @@ const _removePlaidBank = async (requestor: IUserDocument, bank: IBankConnectionD
   const client = new PlaidClient();
   if (bank?.integrations?.plaid?.accessToken) {
     await client.removeItem({ access_token: bank.integrations.plaid.accessToken });
-  }
+  } else throw new CustomError('No access token found, banks might have already been removed.', ErrorTypes.NOT_FOUND);
 
-  await BankConnectionModel.updateOne(
+  await BankConnectionModel.updateMany(
     { 'integrations.plaid.accessToken': bank.integrations.plaid.accessToken },
     {
       'integrations.plaid.accessToken': null,
@@ -77,22 +80,21 @@ const _removePlaidBank = async (requestor: IUserDocument, bank: IBankConnectionD
 };
 
 export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, {}>) => {
-  const { bank } = req.params;
   const { requestor } = req;
 
-  if (!bank) throw new CustomError('A bank id is required', ErrorTypes.INVALID_ARG);
+  const _banks = await _getBankConnections({ userId: requestor._id });
 
-  const _bank = await _getBankConnections({ _id: bank, user: requestor._id });
+  if (!_banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
 
-  if (!_bank) throw new CustomError('A bank with that id does not exist', ErrorTypes.NOT_FOUND);
-
-  if (_bank[0]?.integrations?.plaid) {
-    await _removePlaidBank(requestor, _bank[0]);
+  if (_banks[0]?.integrations?.plaid) {
+    await _removePlaidBank(requestor, _banks[0]);
   }
-  _bank[0].status = BankStatus.Unlinked;
-  _bank[0].unlinkedDate = dayjs().utc().toDate();
-  _bank[0].lastModified = dayjs().utc().toDate();
-  await _bank[0].save();
+  _banks.forEach(async (data) => {
+    data.status = BankStatus.Unlinked;
+    data.unlinkedDate = dayjs().utc().toDate();
+    data.lastModified = dayjs().utc().toDate();
+    await data.save();
+  });
 
-  return { message: `Bank ${bank} has been removed.` };
+  return { message: 'Banks have been removed.' };
 };

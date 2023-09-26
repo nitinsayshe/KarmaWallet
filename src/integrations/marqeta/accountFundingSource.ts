@@ -2,6 +2,7 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
 import { IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
+import { ACHTransferModel } from '../../models/ACHTransfer';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -19,6 +20,7 @@ export const createAchFundingSource = async (req: IRequest<{}, {}, IMarqetaACHPl
 export const createACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
   const params = req.body;
   const userResponse = await achFundingSource.createACHBankTransfer(params);
+  await ACHTransferModel.create(userResponse);
   return { data: userResponse };
 };
 

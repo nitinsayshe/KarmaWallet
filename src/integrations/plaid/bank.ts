@@ -79,6 +79,7 @@ class Bank {
       institution: this._institution?.institution_id,
       'integrations.plaid.accountId': this._account.account_id,
     });
+
     if (!!bank) {
       Object.entries(this.toKarmaFormat()).forEach(([key, value]) => {
         // force casting here to avoid no string as index error

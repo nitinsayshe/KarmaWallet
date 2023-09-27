@@ -10,7 +10,7 @@ import { IShareableUser } from './user';
 
 export interface IShareableACHFundingSource {
   _id: ObjectId;
-  user:IRef<ObjectId, IShareableUser>;
+  userId: IRef<ObjectId, IShareableUser>;
   token: String;
   account_suffix: String;
   verification_status: String;
@@ -39,7 +39,7 @@ export interface IACHFundingSourceDocument extends IACHFundingSource, Document {
 export type IACHFundingSourceModel = IModel<IACHFundingSource>;
 
 const ACHFundingSourceSchema = new Schema({
-  user: {
+  userId: {
     type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,

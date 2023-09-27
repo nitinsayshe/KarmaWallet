@@ -1,6 +1,7 @@
 import { FilterQuery, isValidObjectId } from 'mongoose';
 import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
 import { UserModel, IUserDocument, IUser } from '../../models/user';
+import { createAchFundingSource1 } from '../marqeta/accountFundingSource';
 import Bank from './bank';
 import Card from './card';
 import { IPlaidItem, IPlaidBankItem } from './types';
@@ -51,7 +52,15 @@ class User {
     return { unmappedTransactions, duplicateTransactions: duplicates };
   };
 
-  addBanks = async (plaidItem: IPlaidBankItem) => {
+  addBanks = async (plaidItem: IPlaidBankItem, preocessorToken: string) => {
+    const user = await UserModel.findById(this.userId);
+    const { data } = await createAchFundingSource1({
+      userToken: user.integrations.marqeta.userToken,
+      partnerAccountLinkReferenceToken: preocessorToken,
+      partner: 'PLAID',
+    });
+
+    plaidItem.fundingSourceToken = data.token;
     for (const account of plaidItem.accounts) {
       if (!!this._banks[`${account.account_id}`]) {
         // updating an existing bank

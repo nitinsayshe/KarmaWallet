@@ -23,7 +23,9 @@ class Bank {
   _linkSessionId: string = null;
   _institution: Item = null;
   _status: string = null;
+  _fundingSourceToken: string = null;
   _isNew = false;
+
   constructor(userId: Schema.Types.ObjectId, account: AccountIdentity, plaidItem: IPlaidBankItem) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
@@ -33,6 +35,7 @@ class Bank {
     this._linkSessionId = plaidItem.link_session_id as string;
     this._institution = plaidItem.item as Item;
     this._status = plaidItem.status as string;
+    this._fundingSourceToken = plaidItem.fundingSourceToken as string;
   }
 
   get _id() { return this._bank?._id || null; }
@@ -55,6 +58,7 @@ class Bank {
     type: this._account.type,
     subtype: this._account.subtype,
     institution: this._institution.institution_id,
+    fundingSourceToken: this._fundingSourceToken,
     integrations: {
       plaid: {
         accessToken: this._accessToken,

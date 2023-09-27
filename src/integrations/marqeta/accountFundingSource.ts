@@ -13,9 +13,14 @@ const achFundingSource = new ACHSource(marqetaClient);
 
 export const createAchFundingSource = async (req: IRequest<{}, {}, IMarqetaACHPlaidFundingSource>) => {
   const { _id: userId } = req.requestor;
-  const params = { userToken: userId.toString(), ...req.body };
+  const params = { ...req.body };
   const userResponse = await achFundingSource.createAchFundingSource(params);
   await ACHFundingSourceModel.create({ user: userId, ...userResponse });
+  return { data: userResponse };
+};
+
+export const createAchFundingSource1 = async (data: IMarqetaACHPlaidFundingSource) => {
+  const userResponse = await achFundingSource.createAchFundingSource(data);
   return { data: userResponse };
 };
 

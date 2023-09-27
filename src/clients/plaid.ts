@@ -180,7 +180,7 @@ export class PlaidClient extends SdkClient {
           await this.getIdentity(accessToken), // get user identity through plaid
         ]);
         const data = { ...plaidItem, accounts, item, status: BankStatus.Linked };
-        await plaidUserInstance.addBanks(data);
+        await plaidUserInstance.addBanks(data, processorToken);
         return {
           message: 'Processor token successfully generated',
           itemId,

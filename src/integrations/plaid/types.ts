@@ -42,6 +42,7 @@ export interface IPlaidBankItem {
   link_session_id?: string;
   institution?: IPlaidInstitution;
   transactions?: Transaction[];
+  fundingSourceToken?: string;
   total_transactions?: number;
   request_id?: string;
   item?: Item;

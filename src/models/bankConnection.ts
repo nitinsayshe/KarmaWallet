@@ -34,6 +34,7 @@ export interface IShareableBankConnection {
   institutionId?: string;
   isEnrolledInAutomaticRewards?: boolean;
   integrations: IBankIntegrations;
+  fundingSourceToken: string;
 }
 
 export interface IBankConnection extends IShareableBankConnection {
@@ -59,6 +60,7 @@ const bankConnectionSchema = new Schema({
   type: { type: String },
   subtype: { type: String },
   logo: { type: String },
+  fundingSourceToken: { type: String },
   integrations: {
     plaid: {
       type: {

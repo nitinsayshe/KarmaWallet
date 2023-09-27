@@ -25,7 +25,7 @@ import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
 import * as output from '../services/output';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -310,9 +310,6 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
 
 export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
   try {
-    const MARQETA_WEBHOOK_ID = 'webhook1';
-    const MARQETA_WEBHOOK_PASSWORD = 'P@ssw0rd123!Secure#2023';
-
     const marqetAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
 
     const { headers } = <{headers : IMarqetaWebhookHeader}>req;

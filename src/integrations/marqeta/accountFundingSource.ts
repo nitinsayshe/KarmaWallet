@@ -2,7 +2,8 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
 import { IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
-import { ACHTransferModel } from '../../models/ACHTransfer';
+import { ACHTransferModel } from '../../models/achTransfer';
+import { ACHFundingSourceModel } from '../../models/achFundingSource';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -14,13 +15,15 @@ export const createAchFundingSource = async (req: IRequest<{}, {}, IMarqetaACHPl
   const { _id: userId } = req.requestor;
   const params = { userToken: userId.toString(), ...req.body };
   const userResponse = await achFundingSource.createAchFundingSource(params);
+  await ACHFundingSourceModel.create({ user: userId, ...userResponse });
   return { data: userResponse };
 };
 
 export const createACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
   const params = req.body;
+  const { _id: user } = req.requestor;
   const userResponse = await achFundingSource.createACHBankTransfer(params);
-  await ACHTransferModel.create(userResponse);
+  await ACHTransferModel.create({ user, ...userResponse });
   return { data: userResponse };
 };
 

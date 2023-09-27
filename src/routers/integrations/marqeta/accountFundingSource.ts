@@ -1,13 +1,14 @@
 import { Router } from 'express';
 import * as ACHFundingSourceController from '../../../controllers/integrations/marqeta/accountFundingSource';
+import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
 router.route('/fundingSource')
-  .post(ACHFundingSourceController.createAchFundingSource);
+  .post(authenticate, ACHFundingSourceController.createAchFundingSource);
 
 router.route('/banktransfer')
-  .post(ACHFundingSourceController.createACHBankTransfer);
+  .post(authenticate, ACHFundingSourceController.createACHBankTransfer);
 
 router.route('/banktransfer/:achToken')
   .get(ACHFundingSourceController.getACHBankTransfer);

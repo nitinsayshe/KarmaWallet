@@ -5,7 +5,8 @@ import {
   Model,
   ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
+import { IShareableUser } from './user';
 
 export enum IACHTransferStatuses {
   INITIATED = 'INITIATED',
@@ -32,8 +33,9 @@ export interface IACHTransition {
   last_modified_time: Date;
 }
 
-export interface IACHTransfer {
+export interface IShareableACHTransfer {
   _id: ObjectId;
+  user:IRef<ObjectId, IShareableUser>;
   token: String;
   amount: Number;
   channel: String;
@@ -47,6 +49,10 @@ export interface IACHTransfer {
   last_modified_time: Date;
 }
 
+export interface IACHTransfer extends IShareableACHTransfer {
+  _id: ObjectId;
+}
+
 export interface IACHTransferDocument extends IACHTransfer, Document {
   _id: ObjectId;
 }
@@ -54,6 +60,11 @@ export interface IACHTransferDocument extends IACHTransfer, Document {
 export type IACHTransferModel = IModel<IACHTransfer>;
 
 const ACHTransferSchema = new Schema({
+  user: {
+    type: Schema.Types.ObjectId,
+    ref: 'user',
+    required: true,
+  },
   token: { type: String },
   amount: { type: Number },
   channel: { type: String },

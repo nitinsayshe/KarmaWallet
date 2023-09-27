@@ -22,10 +22,7 @@ class Bank {
   _publicToken: string = null;
   _linkSessionId: string = null;
   _institution: Item = null;
-  // _transactionsIndex = new Set();
-  // // all transactions for this card
-  // _transactions: Transaction[] = [];
-  // _duplicateTransactions: Transaction[] = [];
+  _status: string = null;
   _isNew = false;
   constructor(userId: Schema.Types.ObjectId, account: AccountIdentity, plaidItem: IPlaidBankItem) {
     this._userId = userId;
@@ -35,6 +32,7 @@ class Bank {
     this._publicToken = plaidItem.public_token as string;
     this._linkSessionId = plaidItem.link_session_id as string;
     this._institution = plaidItem.item as Item;
+    this._status = plaidItem.status as string;
   }
 
   get _id() { return this._bank?._id || null; }
@@ -79,6 +77,7 @@ class Bank {
       type: this._account.type,
       subtype: this._account.subtype,
       institution: this._institution?.institution_id,
+      'integrations.plaid.accountId': this._account.account_id,
     });
 
     if (!!bank) {

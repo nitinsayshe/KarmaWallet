@@ -9,6 +9,7 @@ import { ErrorTypes } from '../../../lib/constants';
 export const createAchFundingSource: IRequestHandler<{}, {}, IMarqetaACHPlaidFundingSource> = async (req, res) => {
   try {
     const { body } = req;
+    const { _id: userId } = req.requestor;
     const requiredFields = ['partner_account_link_reference_token', 'partner', 'is_default_account'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
@@ -16,6 +17,7 @@ export const createAchFundingSource: IRequestHandler<{}, {}, IMarqetaACHPlaidFun
       return;
     }
     const { data } = await ACHFundingSourceService.createAchFundingSource(req);
+    await ACHFundingSourceService.mapACHFundingSource(userId, data);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -25,6 +27,7 @@ export const createAchFundingSource: IRequestHandler<{}, {}, IMarqetaACHPlaidFun
 export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTransfer> = async (req, res) => {
   try {
     const { body } = req;
+    const { _id: userId } = req.requestor;
     const requiredFields = ['fundingSourceToken', 'type', 'amount'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
@@ -32,6 +35,7 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
       return;
     }
     const { data } = await ACHFundingSourceService.createACHBankTransfer(req);
+    await ACHFundingSourceService.mapACHBankTransfer(userId, data);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

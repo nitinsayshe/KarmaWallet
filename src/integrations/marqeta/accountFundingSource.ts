@@ -11,15 +11,27 @@ const marqetaClient = new MarqetaClient();
 // Instantiate the ACH FUNDING source class
 const achFundingSource = new ACHSource(marqetaClient);
 
-export const createAchFundingSource = async (req: IRequest<{}, {}, IMarqetaACHPlaidFundingSource>) => {
-  const { _id: userId } = req.requestor;
-  const params = { ...req.body };
-  const userResponse = await achFundingSource.createAchFundingSource(params);
-  return { data: userResponse };
+// store funding source of user to karma DB
+export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: IACHFundingSource) => {
+  const { token } = ACHFundingSourceData;
+  const ACHFundingSource = await ACHFundingSourceModel.findOne({ userId, token });
+  if (!ACHFundingSource) {
+    await ACHFundingSourceModel.create({ userId, ...ACHFundingSourceData });
+  }
 };
 
-export const createAchFundingSource1 = async (data: IMarqetaACHPlaidFundingSource) => {
+// store ACH bank transfer  to karma DB
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
+  const { token } = ACHBankTransferData;
+  const ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
+  if (!ACHBankTranfer) {
+    await ACHTransferModel.create({ userId, ...ACHBankTransferData });
+  }
+};
+
+export const createAchFundingSource = async (userId:string, data: IMarqetaACHPlaidFundingSource) => {
   const userResponse = await achFundingSource.createAchFundingSource(data);
+  await mapACHFundingSource(userId, userResponse);
   return { data: userResponse };
 };
 
@@ -44,22 +56,4 @@ export const createACHBankTransferTransition = async (req: IRequest<{}, {}, IMar
   const params = req.body;
   const userResponse = await achFundingSource.createACHBankTransferTransition(params);
   return { data: userResponse };
-};
-
-export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: IACHFundingSource) => {
-  const { token } = ACHFundingSourceData;
-  const ACHFundingSource = await ACHFundingSourceModel.findOne({ userId, token });
-
-  if (!ACHFundingSource) {
-    await ACHFundingSourceModel.create({ userId, ...ACHFundingSourceData });
-  }
-};
-
-export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
-  const { token } = ACHBankTransferData;
-  const ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
-
-  if (!ACHBankTranfer) {
-    await ACHTransferModel.create({ userId, ...ACHBankTransferData });
-  }
 };

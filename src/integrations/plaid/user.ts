@@ -1,7 +1,7 @@
 import { FilterQuery, isValidObjectId } from 'mongoose';
 import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
 import { UserModel, IUserDocument, IUser } from '../../models/user';
-import { createAchFundingSource1 } from '../marqeta/accountFundingSource';
+import { createAchFundingSource } from '../marqeta/accountFundingSource';
 import Bank from './bank';
 import Card from './card';
 import { IPlaidItem, IPlaidBankItem } from './types';
@@ -53,14 +53,18 @@ class User {
   };
 
   addBanks = async (plaidItem: IPlaidBankItem, preocessorToken: string) => {
+    // get the user , to extract the marqeta userToken
     const user = await UserModel.findById(this.userId);
-    const { data } = await createAchFundingSource1({
+    // create funding source and map that to Karma DB
+
+    const { data } = await createAchFundingSource(this.userId, {
       userToken: user.integrations.marqeta.userToken,
       partnerAccountLinkReferenceToken: preocessorToken,
       partner: 'PLAID',
     });
 
     plaidItem.fundingSourceToken = data.token;
+
     for (const account of plaidItem.accounts) {
       if (!!this._banks[`${account.account_id}`]) {
         // updating an existing bank

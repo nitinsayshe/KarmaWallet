@@ -89,7 +89,6 @@ export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, 
   const _banks = await _getBankConnections({ userId: requestor._id, 'integrations.plaid.accessToken': accessToken });
 
   if (!_banks) throw new CustomError('Banks belongs to this access token does not exist', ErrorTypes.NOT_FOUND);
-  console.log(_banks);
   await _removePlaidBank(requestor, accessToken);
 
   _banks.forEach(async (data) => {

@@ -23,10 +23,6 @@ class Bank {
   _linkSessionId: string = null;
   _institution: Item = null;
   _status: string = null;
-  // _transactionsIndex = new Set();
-  // // all transactions for this card
-  // _transactions: Transaction[] = [];
-  // _duplicateTransactions: Transaction[] = [];
   _isNew = false;
   constructor(userId: Schema.Types.ObjectId, account: AccountIdentity, plaidItem: IPlaidBankItem) {
     this._userId = userId;
@@ -81,8 +77,8 @@ class Bank {
       type: this._account.type,
       subtype: this._account.subtype,
       institution: this._institution?.institution_id,
+      'integrations.plaid.accountId': this._account.account_id,
     });
-
     if (!!bank) {
       Object.entries(this.toKarmaFormat()).forEach(([key, value]) => {
         // force casting here to avoid no string as index error

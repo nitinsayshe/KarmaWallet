@@ -35,7 +35,7 @@ export interface IACHTransition {
 
 export interface IShareableACHTransfer {
   _id: ObjectId;
-  user:IRef<ObjectId, IShareableUser>;
+  userId:IRef<ObjectId, IShareableUser>;
   token: String;
   amount: Number;
   channel: String;
@@ -60,7 +60,7 @@ export interface IACHTransferDocument extends IACHTransfer, Document {
 export type IACHTransferModel = IModel<IACHTransfer>;
 
 const ACHTransferSchema = new Schema({
-  user: {
+  userId: {
     type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,

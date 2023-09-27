@@ -168,3 +168,44 @@ export interface IMarqetaMakeTransactionClearing {
   amount: number;
   isRefund: boolean;
 }
+
+export interface IACHTransition {
+  token: String;
+  bank_transfer_token: String;
+  status: String;
+  transaction_token: String;
+  created_time: Date;
+  last_modified_time: Date;
+}
+
+export interface IACHBankTransfer {
+  token: String;
+  amount: Number;
+  channel: String;
+  funding_source_token: String;
+  type: String;
+  currency_code: String;
+  transfer_speed:String;
+  status: String;
+  transitions: IACHTransition;
+  created_time: Date;
+  last_modified_time: Date;
+}
+
+export interface IACHFundingSource {
+  token: String;
+  account_suffix: String;
+  verification_status: String;
+  account_type: String;
+  name_on_account: String;
+  active: Boolean;
+  date_sent_for_verification: Date;
+  partner: String;
+  partner_account_link_reference_token: String;
+  is_default_account: Boolean;
+  verification_override: Boolean;
+  verification_notes: String;
+  user_token: String;
+  created_time: Date;
+  last_modified_time: Date;
+}

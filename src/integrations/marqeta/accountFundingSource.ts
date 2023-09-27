@@ -1,7 +1,7 @@
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
+import { IACHBankTransfer, IACHFundingSource, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 
@@ -15,7 +15,6 @@ export const createAchFundingSource = async (req: IRequest<{}, {}, IMarqetaACHPl
   const { _id: userId } = req.requestor;
   const params = { ...req.body };
   const userResponse = await achFundingSource.createAchFundingSource(params);
-  await ACHFundingSourceModel.create({ user: userId, ...userResponse });
   return { data: userResponse };
 };
 
@@ -26,9 +25,7 @@ export const createAchFundingSource1 = async (data: IMarqetaACHPlaidFundingSourc
 
 export const createACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
   const params = req.body;
-  const { _id: user } = req.requestor;
   const userResponse = await achFundingSource.createACHBankTransfer(params);
-  await ACHTransferModel.create({ user, ...userResponse });
   return { data: userResponse };
 };
 
@@ -47,4 +44,22 @@ export const createACHBankTransferTransition = async (req: IRequest<{}, {}, IMar
   const params = req.body;
   const userResponse = await achFundingSource.createACHBankTransferTransition(params);
   return { data: userResponse };
+};
+
+export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: IACHFundingSource) => {
+  const { token } = ACHFundingSourceData;
+  const ACHFundingSource = await ACHFundingSourceModel.findOne({ userId, token });
+
+  if (!ACHFundingSource) {
+    await ACHFundingSourceModel.create({ userId, ...ACHFundingSourceData });
+  }
+};
+
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
+  const { token } = ACHBankTransferData;
+  const ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
+
+  if (!ACHBankTranfer) {
+    await ACHTransferModel.create({ userId, ...ACHBankTransferData });
+  }
 };

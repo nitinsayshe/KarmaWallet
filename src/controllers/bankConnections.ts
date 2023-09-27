@@ -16,7 +16,7 @@ export const getBankConnections: IRequestHandler = async (req, res) => {
     output.error(req, res, asCustomError(err));
   }
 };
-export const removeBankConnection:IRequestHandler<BankConnectionService.IRemoveBankParams, {}, IBankRequestBody> = async (
+export const removeBankConnection: IRequestHandler<BankConnectionService.IRemoveBankParams, {}, IBankRequestBody> = async (
   req,
   res,
 ) => {

@@ -194,6 +194,7 @@ export interface IACHBankTransfer {
 
 export interface IACHFundingSource {
   token: String;
+  accessToken?: String;
   account_suffix: String;
   verification_status: String;
   account_type: String;
@@ -201,11 +202,11 @@ export interface IACHFundingSource {
   active: Boolean;
   date_sent_for_verification: Date;
   partner: String;
-  partner_account_link_reference_token: String;
+  partner_account_link_reference_token?: String;
   is_default_account: Boolean;
   verification_override: Boolean;
   verification_notes: String;
   user_token: String;
-  created_time: Date;
-  last_modified_time: Date;
+  created_time?: Date;
+  last_modified_time?: Date;
 }

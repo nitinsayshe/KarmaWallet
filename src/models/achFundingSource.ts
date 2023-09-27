@@ -20,6 +20,7 @@ export interface IShareableACHFundingSource {
   date_sent_for_verification: Date;
   partner: String;
   partner_account_link_reference_token: String;
+  accessToken: String;
   is_default_account: Boolean;
   verification_override: Boolean;
   verification_notes: String;
@@ -53,6 +54,7 @@ const ACHFundingSourceSchema = new Schema({
   date_sent_for_verification: { type: Date },
   partner: { type: String },
   partner_account_link_reference_token: { type: String },
+  accessToken: { type: String },
   is_default_account: { type: Boolean },
   verification_override: { type: Boolean },
   verification_notes: { type: String },

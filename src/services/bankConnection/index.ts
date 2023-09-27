@@ -9,6 +9,7 @@ import { IRef } from '../../types/model';
 import { BankStatus, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { PlaidClient } from '../../clients/plaid';
+import { updateACHFundingSource } from '../../integrations/marqeta/accountFundingSource';
 
 export const _getBankConnections = async (query: FilterQuery<IBankConnection>) => BankConnectionModel.find(query);
 
@@ -76,6 +77,7 @@ const _removePlaidBank = async (requestor: IUserDocument, accessToken: string) =
     }
   }
   await BankConnectionModel.updateMany(
+    { status: BankStatus.Unlinked },
     { 'integrations.plaid.accessToken': accessToken },
     {
       'integrations.plaid.accessToken': null,
@@ -91,6 +93,9 @@ export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, 
   const _banks = await _getBankConnections({ userId: requestor._id, 'integrations.plaid.accessToken': accessToken });
 
   if (!_banks) throw new CustomError('Banks belongs to this access token does not exist', ErrorTypes.NOT_FOUND);
+  // remove/ deactive the funding source from marqeta
+  await updateACHFundingSource(requestor._id, accessToken, { active: 'false' });
+  // remove the access token from plaid
   await _removePlaidBank(requestor, accessToken);
 
   _banks.forEach(async (data) => {

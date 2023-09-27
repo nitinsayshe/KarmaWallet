@@ -17,6 +17,8 @@ export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: 
   const ACHFundingSource = await ACHFundingSourceModel.findOne({ userId, token });
   if (!ACHFundingSource) {
     await ACHFundingSourceModel.create({ userId, ...ACHFundingSourceData });
+  } else {
+    await ACHFundingSourceModel.updateOne({ userId, token }, ACHFundingSourceData);
   }
 };
 
@@ -29,8 +31,18 @@ export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IA
   }
 };
 
-export const createAchFundingSource = async (userId:string, data: IMarqetaACHPlaidFundingSource) => {
+export const createAchFundingSource = async (userId: string, data: IMarqetaACHPlaidFundingSource, accessToken: string) => {
   const userResponse = await achFundingSource.createAchFundingSource(data);
+  // map the created Ach Funding Source to DB
+  await mapACHFundingSource(userId, { accessToken, ...userResponse });
+  return { data: userResponse };
+};
+
+export const updateACHFundingSource = async (userId: string, accessToken: string, data: any) => {
+  // get the user , to extract the marqeta userToken
+  const { token } = await ACHFundingSourceModel.findOne({ accessToken });
+  const userResponse = await achFundingSource.updateACHFundingSource(token, data);
+  // map the created Ach Funding Source to DB
   await mapACHFundingSource(userId, userResponse);
   return { data: userResponse };
 };

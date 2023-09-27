@@ -55,14 +55,15 @@ class User {
   addBanks = async (plaidItem: IPlaidBankItem, preocessorToken: string) => {
     // get the user , to extract the marqeta userToken
     const user = await UserModel.findById(this.userId);
-    // create funding source and map that to Karma DB
 
+    // create marqeta funding source and map data to Karma DB
     const { data } = await createAchFundingSource(this.userId, {
       userToken: user.integrations.marqeta.userToken,
       partnerAccountLinkReferenceToken: preocessorToken,
       partner: 'PLAID',
-    });
+    }, plaidItem.access_token);
 
+    // add fundingSourceToken to plaidItem
     plaidItem.fundingSourceToken = data.token;
 
     for (const account of plaidItem.accounts) {

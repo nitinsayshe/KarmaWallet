@@ -21,6 +21,17 @@ export class ACHSource {
     }
   }
 
+  // update ACH funding Source
+  async updateACHFundingSource(fundingSourceToken: String, params: any) {
+    try {
+      const { data } = await this._marqetaClient._client.put(`/fundingsources/ach/${fundingSourceToken}`, camelToSnakeCase(params));
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
   // Create ACH Bank transfer
   async createACHBankTransfer(params: IMarqetaACHBankTransfer) {
     try {
@@ -45,7 +56,7 @@ export class ACHSource {
   }
 
   // get ACH Bank Transfer
-  async getACHBankTransfer(achToken:string) {
+  async getACHBankTransfer(achToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/banktransfers/ach/${achToken}`);
       return data;

@@ -1,4 +1,3 @@
-import { FilterQuery } from 'mongoose';
 import { ObjectId } from 'mongodb';
 import dayjs from 'dayjs';
 import { BankConnectionModel, IBankConnection, IBankConnectionDocument, IBankRequestBody, IShareableBankConnection } from '../../models/bankConnection';
@@ -11,13 +10,24 @@ import CustomError from '../../lib/customError';
 import { PlaidClient } from '../../clients/plaid';
 import { updateACHFundingSource } from '../../integrations/marqeta/accountFundingSource';
 
-export const _getBankConnections = async (query: FilterQuery<IBankConnection>) => BankConnectionModel.find(query);
+export const _getBankConnections = async (query: any) => BankConnectionModel.aggregate(query);
 
 export const getBankConnections = async (req: IRequest) => {
   const { requestor } = req;
-  const banks = await _getBankConnections({
-    $and: [{ userId: requestor._id, status: BankStatus.Linked }],
-  });
+  const banks = await _getBankConnections([
+    {
+      $match: {
+        userId: requestor._id,
+        status: BankStatus.Linked,
+      },
+    },
+    {
+      $group: {
+        _id: '$fundingSourceToken',
+        accounts: { $push: '$$ROOT' },
+      },
+    },
+  ]);
 
   if (!banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
   return banks;
@@ -33,6 +43,7 @@ export const getShareableBankConnections = ({
   type,
   fundingSourceToken,
   subtype,
+  institution,
   institutionId,
   integrations,
   createdOn,
@@ -54,6 +65,7 @@ export const getShareableBankConnections = ({
     mask,
     type,
     subtype,
+    institution,
     institutionId,
     fundingSourceToken,
     integrations,

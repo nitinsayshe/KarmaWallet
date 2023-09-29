@@ -31,6 +31,7 @@ export interface IShareableBankConnection {
   removedDate?: Date;
   initialTransactionsProcessing: boolean;
   lastTransactionSync: Date;
+  institution: string;
   institutionId?: string;
   isEnrolledInAutomaticRewards?: boolean;
   integrations: IBankIntegrations;
@@ -60,6 +61,7 @@ const bankConnectionSchema = new Schema({
   type: { type: String },
   subtype: { type: String },
   logo: { type: String },
+  institution: { type: String },
   fundingSourceToken: { type: String },
   integrations: {
     plaid: {

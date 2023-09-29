@@ -10,7 +10,8 @@ export const getBankConnections: IRequestHandler = async (req, res) => {
     output.api(
       req,
       res,
-      banks.map((c) => BankConnectionService.getShareableBankConnections(c)),
+      banks,
+      // banks.map((c) => BankConnectionService.getShareableBankConnections(c)),
     );
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -1,18 +1,18 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  AccountIdentity, Item,
+  AccountIdentity,
 } from 'plaid';
 import { Schema } from 'mongoose';
-import { IPlaidBankItem } from './types';
+import { IPlaidBankItem, IPlaidInstitution } from './types';
 import { BankConnectionModel, IBankConnectionDocument } from '../../models/bankConnection';
 
 dayjs.extend(utc);
 
 class Bank {
-  // owner of the card
+  // owner of the bank
   _userId: Schema.Types.ObjectId = null;
-  // the card object stored in the db. not available until after save
+  // the bank object stored in the db. not available until after save
   _bank: IBankConnectionDocument = null;
   // all plaid items this plaid account was found in (in case we ever need to reference them later)
   _plaid_items: Set<string> = null;
@@ -21,7 +21,7 @@ class Bank {
   _accessToken: string = null;
   _publicToken: string = null;
   _linkSessionId: string = null;
-  _institution: Item = null;
+  _institution: IPlaidInstitution = null;
   _status: string = null;
   _fundingSourceToken: string = null;
   _isNew = false;
@@ -33,7 +33,7 @@ class Bank {
     this._accessToken = plaidItem.access_token as string;
     this._publicToken = plaidItem.public_token as string;
     this._linkSessionId = plaidItem.link_session_id as string;
-    this._institution = plaidItem.item as Item;
+    this._institution = plaidItem.institution as IPlaidInstitution;
     this._status = plaidItem.status as string;
     this._fundingSourceToken = plaidItem.fundingSourceToken as string;
   }
@@ -57,7 +57,7 @@ class Bank {
     mask: this._account.mask,
     type: this._account.type,
     subtype: this._account.subtype,
-    institution: this._institution.institution_id,
+    institution: this._institution.name,
     fundingSourceToken: this._fundingSourceToken,
     integrations: {
       plaid: {
@@ -72,7 +72,6 @@ class Bank {
   });
 
   save = async () => {
-    // fingerprinting accounts=>cards since account ids
     // returned from Plaid could change.
     let bank = await BankConnectionModel.findOne({
       userId: this._userId,

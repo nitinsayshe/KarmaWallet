@@ -179,7 +179,8 @@ export class PlaidClient extends SdkClient {
           await this.getProcessorToken(accessToken), // get the processor token from plaid
           await this.getIdentity(accessToken), // get user identity through plaid
         ]);
-        const data = { ...plaidItem, accounts, item, status: BankStatus.Linked };
+        const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
+        const data = { ...plaidItem, accounts, item, status: BankStatus.Linked, institution: { name, institution_id } };
         await plaidUserInstance.addBanks(data, processorToken);
         return {
           message: 'Processor token successfully generated',
@@ -218,6 +219,18 @@ export class PlaidClient extends SdkClient {
     try {
       const response = await this._client.identityGet({ access_token: accessToken });
       return response.data;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
+  };
+
+  getInstitutionsById = async (institutionId: string) => {
+    try {
+      const response = await this._client.institutionsGetById({
+        institution_id: institutionId,
+        country_codes: [CountryCode.Us],
+      });
+      return response.data.institution;
     } catch (e) {
       this.handlePlaidError(e as IPlaidErrorResponse);
     }

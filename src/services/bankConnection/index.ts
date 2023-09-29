@@ -10,24 +10,11 @@ import CustomError from '../../lib/customError';
 import { PlaidClient } from '../../clients/plaid';
 import { updateACHFundingSource } from '../../integrations/marqeta/accountFundingSource';
 
-export const _getBankConnections = async (query: any) => BankConnectionModel.aggregate(query);
+export const _getBankConnections = async (query: any) => BankConnectionModel.find(query);
 
 export const getBankConnections = async (req: IRequest) => {
   const { requestor } = req;
-  const banks = await _getBankConnections([
-    {
-      $match: {
-        userId: requestor._id,
-        status: BankStatus.Linked,
-      },
-    },
-    {
-      $group: {
-        _id: '$fundingSourceToken',
-        accounts: { $push: '$$ROOT' },
-      },
-    },
-  ]);
+  const banks = await _getBankConnections({ $and: [{ userId: requestor._id, status: BankStatus.Linked }] });
 
   if (!banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
   return banks;

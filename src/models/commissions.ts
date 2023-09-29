@@ -143,7 +143,6 @@ const commission = new Schema({
     },
     karma: {
       amount: { type: Number },
-      createdOn: { type: Date, default: () => getUtcDate() },
       promo: { type: Schema.Types.ObjectId, ref: 'promo' },
     },
     kard: {

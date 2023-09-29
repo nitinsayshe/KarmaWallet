@@ -1,6 +1,5 @@
 import { GPA } from '../../clients/marqeta/gpa';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { IRequest } from '../../types/request';
 import { IMarqetaCreateGPAorder } from './types';
 
 // Instantiate the MarqetaClient
@@ -9,9 +8,7 @@ const marqetaClient = new MarqetaClient();
 // Instantiate the GPA class
 const gpa = new GPA(marqetaClient);
 
-export const createGPAorder = async (req: IRequest<{ userToken: string }, {}, IMarqetaCreateGPAorder>) => {
-  const { userToken } = req.params;
-  const params = { userToken, ...req.body };
+export const createGPAorder = async (params: IMarqetaCreateGPAorder) => {
   const userResponse = await gpa.gpaOrder(params);
   return { user: userResponse };
 };

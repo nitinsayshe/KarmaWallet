@@ -210,3 +210,55 @@ export interface IACHFundingSource {
   created_time?: Date;
   last_modified_time?: Date;
 }
+
+export interface IACHFundingSourceQuery {
+  userId : String;
+  fundingSourceToken? : String;
+  userToken? : String;
+  fromDate? : String;
+  toDate? : String;
+}
+
+export interface IACHFundingSourceModelQuery {
+  userId : String;
+  token? : String;
+  user_token? : String;
+  active : Boolean;
+  last_modified_time? : Object;
+}
+
+export enum IACHTransferStatuses {
+  INITIATED = 'INITIATED',
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  SUBMITTED = 'SUBMITTED',
+  RETURNED = 'RETURNED',
+  COMPLETED = 'COMPLETED',
+  ERROR = 'ERROR',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum IACHTransferTypes {
+  PUSH = 'PUSH',
+  PULL = 'PULL'
+}
+
+export interface IACHBankTransferQuery {
+  userId : String;
+  bankTransferToken? : String;
+  fundingSourceToken? : String;
+  type: IACHTransferTypes;
+  status : IACHTransferStatuses;
+  fromDate? : String;
+  toDate? : String;
+}
+
+export interface IACHBankTransferModelQuery {
+  userId : String;
+  token? : String;
+  bankTransferToken? : String;
+  fundingSourceToken? : String;
+  type? : IACHTransferTypes;
+  status? : IACHTransferStatuses;
+  last_modified_time? : Object;
+}

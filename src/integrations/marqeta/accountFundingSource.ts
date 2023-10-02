@@ -1,7 +1,7 @@
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
+import { IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 
@@ -106,4 +106,33 @@ export const getLocalACHBankTransfer = async (req : IRequest<{}, IACHBankTransfe
 
   const ACHBankTransfers = await ACHTransferModel.find(query);
   return { data: ACHBankTransfers };
+};
+
+export const validateACHTransferLimit = async (query : IACHTransferValidationQuery) => {
+  const { userId, fundingSourceToken, type, statusArray, fromDate, toDate, limit, amount } = query;
+  const result = await ACHTransferModel.aggregate([
+    {
+      $match: {
+        userId,
+        funding_source_token: fundingSourceToken,
+        type,
+        status: { $in: statusArray },
+        last_modified_time: {
+          $gte: new Date(fromDate.toString()),
+          $lte: new Date(toDate.toString()),
+        },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        totalAmount: { $sum: '$amount' },
+      },
+    },
+  ]);
+
+  const totalAmount = result[0]?.totalAmount ? result[0].totalAmount : 0;
+
+  if ((totalAmount + amount) <= limit) return true;
+  return false;
 };

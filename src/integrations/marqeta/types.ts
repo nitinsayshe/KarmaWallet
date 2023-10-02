@@ -262,3 +262,14 @@ export interface IACHBankTransferModelQuery {
   status? : IACHTransferStatuses;
   last_modified_time? : Object;
 }
+
+export interface IACHTransferValidationQuery {
+  userId : String;
+  fundingSourceToken : String;
+  type : String;
+  statusArray : String[];
+  fromDate : String;
+  toDate : String;
+  limit? : Number;
+  amount : Number
+}

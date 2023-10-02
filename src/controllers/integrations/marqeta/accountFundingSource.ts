@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { IACHBankTransferQuery, IACHFundingSourceQuery, IACHTransferTypes, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IACHTransferStatuses } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
@@ -6,6 +8,9 @@ import CustomError, { asCustomError } from '../../../lib/customError';
 import * as ACHFundingSourceService from '../../../integrations/marqeta/accountFundingSource';
 import { ErrorTypes } from '../../../lib/constants';
 import { DATE_REGEX } from '../../../lib/constants/regex';
+import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../../lib/constants/plaid';
+
+dayjs.extend(utc);
 
 export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTransfer> = async (req, res) => {
   try {
@@ -13,10 +18,56 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
     const { _id: userId } = req.requestor;
     const requiredFields = ['fundingSourceToken', 'type', 'amount'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    const { fundingSourceToken, amount } = body;
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
+
+    if (+amount > perTransferLimit) {
+      output.error(req, res, new CustomError(`Invalid Amount. Amount must be less than or equal to ${perTransferLimit} per transfer`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+
+    const beforeOneMonth = dayjs().subtract(1, 'month').format('YYYY-MM-DD');
+    const today = dayjs().format('YYYY-MM-DD');
+
+    const dailyLimitBody = {
+      userId,
+      fundingSourceToken,
+      fromDate: today,
+      toDate: `${today}T23:59:59`,
+      limit: dailyACHTransferLimit,
+      type: IACHTransferTypes.PULL,
+      amount: +amount,
+      statusArray: [IACHTransferStatuses.PENDING],
+    };
+
+    const isValidDailyLimit = await ACHFundingSourceService.validateACHTransferLimit(dailyLimitBody);
+
+    if (!isValidDailyLimit) {
+      output.error(req, res, new CustomError(`Invalid Amount. Daily amount transfer limit exceeded. Total transfer amount must be less than or equal to ${dailyACHTransferLimit} per day.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+
+    const monthlyLimitBody = {
+      userId,
+      fundingSourceToken,
+      fromDate: beforeOneMonth,
+      toDate: `${today}T23:59:59`,
+      limit: monthlyACHTransferLimit,
+      type: IACHTransferTypes.PULL,
+      amount: +amount,
+      statusArray: [IACHTransferStatuses.PENDING, IACHTransferStatuses.COMPLETED],
+    };
+
+    const isValidMonthlyLimit = await ACHFundingSourceService.validateACHTransferLimit(monthlyLimitBody);
+
+    if (!isValidMonthlyLimit) {
+      output.error(req, res, new CustomError(`Invalid Amount. Monthly amount transfer limit exceeded. Total transfer amount must be less than or equal to ${monthlyACHTransferLimit} per month.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+
     const { data } = await ACHFundingSourceService.createACHBankTransfer(req);
     await ACHFundingSourceService.mapACHBankTransfer(userId, data);
     output.api(req, res, data);

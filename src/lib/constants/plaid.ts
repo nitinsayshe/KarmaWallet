@@ -30,3 +30,7 @@ export enum PlaidCompanyMatchType {
   MerchantName = 'merchant_name',
   Name = 'name',
 }
+
+export const perTransferLimit = 2500;
+export const dailyACHTransferLimit = 5000;
+export const monthlyACHTransferLimit = 50000;

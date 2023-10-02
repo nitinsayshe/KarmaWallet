@@ -76,7 +76,6 @@ const _removePlaidBank = async (requestor: IUserDocument, accessToken: string) =
     }
   }
   await BankConnectionModel.updateMany(
-    { status: BankStatus.Unlinked },
     { 'integrations.plaid.accessToken': accessToken },
     {
       'integrations.plaid.accessToken': null,

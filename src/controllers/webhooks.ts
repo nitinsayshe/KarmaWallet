@@ -102,10 +102,50 @@ interface IPaypalWebhookBody {
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
 
+interface IMarqetaWebhookCardsEvent {
+  token: String;
+  state: String;
+  reason: String;
+  channel: String;
+  validations: Object;
+  type: String;
+  pan: String;
+  expiration: String;
+  card_token: String;
+  user_token: String,
+  fulfillment_status: String,
+  created_time: String,
+  card_product_token: String,
+  last_four: String;
+  expiration_time: Date;
+  pin_is_set: Boolean;
+  card: Object
+}
+
+interface IMarqetaCardActionEvent {
+  card_token: String;
+  created_time: Date;
+  state: String;
+  token: String;
+  type: String;
+  user_token: String;
+}
+
+interface IMarqetaUserTranactionEvent {
+  token: String,
+  status: String,
+  reason_code: String,
+  channel: String,
+  created_time: Date,
+  last_modified_time:Date,
+  user_token: String,
+  metadata: Object
+}
+
 interface IMarqetaWebhookBody {
-  cards : any[];
-  cardactions : any[];
-  usertransitions : any[];
+  cards : IMarqetaWebhookCardsEvent[];
+  cardactions : IMarqetaCardActionEvent[];
+  usertransitions : IMarqetaUserTranactionEvent[];
 }
 
 interface IMarqetaWebhookHeader {
@@ -343,7 +383,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     output.api(
       req,
       res,
-      {},
+      { message: 'Marqeta webhook processed successfully.' },
     );
   } catch (err) {
     error(req, res, asCustomError(err));

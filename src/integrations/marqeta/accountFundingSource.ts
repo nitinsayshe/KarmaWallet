@@ -1,7 +1,7 @@
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransfer, IACHFundingSource, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
+import { IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 
@@ -68,4 +68,42 @@ export const createACHBankTransferTransition = async (req: IRequest<{}, {}, IMar
   const params = req.body;
   const userResponse = await achFundingSource.createACHBankTransferTransition(params);
   return { data: userResponse };
+};
+
+export const getLocalACHFundingSource = async (req : IRequest<{}, IACHFundingSourceQuery, {}>) => {
+  const { userId, fundingSourceToken, userToken, fromDate, toDate } = req.query;
+
+  const query : IACHFundingSourceModelQuery = { userId, active: true };
+
+  if (fundingSourceToken) query.token = fundingSourceToken;
+  if (userToken) query.user_token = userToken;
+  if (fromDate && toDate) {
+    query.last_modified_time = {
+      $gte: fromDate,
+      $lte: `${toDate}T23:59:59`,
+    };
+  }
+
+  const ACHFundingSources = await ACHFundingSourceModel.find(query);
+  return { data: ACHFundingSources };
+};
+
+export const getLocalACHBankTransfer = async (req : IRequest<{}, IACHBankTransferQuery, {}>) => {
+  const { userId, bankTransferToken, fundingSourceToken, type, status, fromDate, toDate } = req.query;
+
+  const query : IACHBankTransferModelQuery = { userId };
+
+  if (bankTransferToken) query.token = bankTransferToken;
+  if (fundingSourceToken) query.fundingSourceToken = fundingSourceToken;
+  if (type) query.type = type;
+  if (status) query.status = status;
+  if (fromDate && toDate) {
+    query.last_modified_time = {
+      $gte: fromDate,
+      $lte: `${toDate}T23:59:59`,
+    };
+  }
+
+  const ACHBankTransfers = await ACHTransferModel.find(query);
+  return { data: ACHBankTransfers };
 };

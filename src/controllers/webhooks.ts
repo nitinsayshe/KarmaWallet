@@ -22,8 +22,10 @@ import { Logger } from '../services/logger';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { IRequestHandler } from '../types/request';
+import { CardModel } from '../models/card';
+import * as output from '../services/output';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -99,6 +101,56 @@ interface IPaypalWebhookBody {
 }
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
+
+interface IMarqetaWebhookCardsEvent {
+  token: String;
+  state: String;
+  reason: String;
+  channel: String;
+  validations: Object;
+  type: String;
+  pan: String;
+  expiration: String;
+  card_token: String;
+  user_token: String,
+  fulfillment_status: String,
+  created_time: String,
+  card_product_token: String,
+  last_four: String;
+  expiration_time: Date;
+  pin_is_set: Boolean;
+  card: Object
+}
+
+interface IMarqetaCardActionEvent {
+  card_token: String;
+  created_time: Date;
+  state: String;
+  token: String;
+  type: String;
+  user_token: String;
+}
+
+interface IMarqetaUserTranactionEvent {
+  token: String,
+  status: String,
+  reason_code: String,
+  channel: String,
+  created_time: Date,
+  last_modified_time:Date,
+  user_token: String,
+  metadata: Object
+}
+
+interface IMarqetaWebhookBody {
+  cards : IMarqetaWebhookCardsEvent[];
+  cardactions : IMarqetaCardActionEvent[];
+  usertransitions : IMarqetaUserTranactionEvent[];
+}
+
+interface IMarqetaWebhookHeader {
+  authorization : string;
+}
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
   if (
@@ -293,5 +345,47 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
     api(req, res, { message: 'Kard webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
+  }
+};
+
+export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
+  try {
+    const marqetAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
+
+    const { headers } = <{headers : IMarqetaWebhookHeader}>req;
+
+    if (headers?.authorization !== `Basic ${marqetAuthBuffer}`) {
+      return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+    }
+
+    const { cards, cardactions, usertransitions } = req.body;
+
+    if (!!cards) {
+      for (const card of cards) {
+        await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
+      }
+    }
+
+    if (!!cardactions) {
+      for (const cardaction of cardactions) {
+        if (cardaction.type === 'pin.set') {
+          await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': cardaction?.card_token }, { 'integrations.marqeta.pin_is_set': true }, { new: true });
+        }
+      }
+    }
+
+    if (!!usertransitions) {
+      for (const usertransition of usertransitions) {
+        await UserModel.findOneAndUpdate({ 'integrations.marqeta.userToken': usertransition?.user_token }, { 'integrations.marqeta.kycResult.status': usertransition.status }, { new: true });
+      }
+    }
+
+    output.api(
+      req,
+      res,
+      { message: 'Marqeta webhook processed successfully.' },
+    );
+  } catch (err) {
+    error(req, res, asCustomError(err));
   }
 };

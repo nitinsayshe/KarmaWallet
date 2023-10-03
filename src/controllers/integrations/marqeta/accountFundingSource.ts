@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { IACHBankTransferQuery, IACHFundingSourceQuery, IACHTransferTypes, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IACHTransferStatuses } from '../../../integrations/marqeta/types';
+import { IACHBankTransferQuery, IACHFundingSourceQuery, IACHTransferTypes, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IACHTransferStatuses, IMarqetaACHTransferType } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
@@ -18,9 +18,16 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
     const { _id: userId } = req.requestor;
     const requiredFields = ['fundingSourceToken', 'type', 'amount'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
-    const { fundingSourceToken, amount } = body;
+    const { fundingSourceToken, type, amount } = body;
+
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      return;
+    }
+
+    const isTypeValid = Object.values(IMarqetaACHTransferType).includes(type.toUpperCase() as IMarqetaACHTransferType);
+    if (!isTypeValid) {
+      output.error(req, res, new CustomError('please provide correct type value', ErrorTypes.INVALID_ARG));
       return;
     }
 
@@ -38,7 +45,7 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
       fromDate: today,
       toDate: `${today}T23:59:59`,
       limit: dailyACHTransferLimit,
-      type: IACHTransferTypes.PULL,
+      type,
       amount: +amount,
       statusArray: [IACHTransferStatuses.PENDING],
     };
@@ -56,9 +63,9 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
       fromDate: beforeOneMonth,
       toDate: `${today}T23:59:59`,
       limit: monthlyACHTransferLimit,
-      type: IACHTransferTypes.PULL,
+      type,
       amount: +amount,
-      statusArray: [IACHTransferStatuses.PENDING, IACHTransferStatuses.COMPLETED],
+      statusArray: [IACHTransferStatuses.PENDING, IACHTransferStatuses.PROCESSING, IACHTransferStatuses.SUBMITTED, IACHTransferStatuses.COMPLETED],
     };
 
     const isValidMonthlyLimit = await ACHFundingSourceService.validateACHTransferLimit(monthlyLimitBody);

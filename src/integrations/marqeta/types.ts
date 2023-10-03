@@ -266,7 +266,7 @@ export interface IACHBankTransferModelQuery {
 export interface IACHTransferValidationQuery {
   userId : String;
   fundingSourceToken : String;
-  type : String;
+  type : IMarqetaACHTransferType;
   statusArray : String[];
   fromDate : String;
   toDate : String;

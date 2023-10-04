@@ -1,5 +1,3 @@
-import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
 import { IACHBankTransferQuery, IACHFundingSourceQuery, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
@@ -7,8 +5,6 @@ import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as ACHFundingSourceService from '../../../integrations/marqeta/accountFundingSource';
 import { ErrorTypes } from '../../../lib/constants';
-
-dayjs.extend(utc);
 
 export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTransfer> = async (req, res) => {
   try {

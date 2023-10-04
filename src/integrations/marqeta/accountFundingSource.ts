@@ -80,7 +80,7 @@ export const getLocalACHFundingSource = async (req : IRequest<{}, IACHFundingSou
   if (fromDate && toDate) {
     query.last_modified_time = {
       $gte: fromDate,
-      $lte: `${toDate}T23:59:59`,
+      $lt: toDate,
     };
   }
 
@@ -100,7 +100,7 @@ export const getLocalACHBankTransfer = async (req : IRequest<{}, IACHBankTransfe
   if (fromDate && toDate) {
     query.last_modified_time = {
       $gte: fromDate,
-      $lte: `${toDate}T23:59:59`,
+      $lt: toDate,
     };
   }
 
@@ -119,7 +119,7 @@ export const validateACHTransferLimit = async (query : IACHTransferValidationQue
         status: { $in: statusArray },
         last_modified_time: {
           $gte: new Date(fromDate.toString()),
-          $lte: new Date(toDate.toString()),
+          $lt: new Date(toDate.toString()),
         },
       },
     },

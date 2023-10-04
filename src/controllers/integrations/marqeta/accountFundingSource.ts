@@ -36,14 +36,15 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
       return;
     }
 
-    const beforeOneMonth = dayjs().subtract(1, 'month').format('YYYY-MM-DD');
-    const today = dayjs().format('YYYY-MM-DD');
+    const beforeOneMonth = dayjs().utc().subtract(1, 'month').format('YYYY-MM-DD');
+    const today = dayjs().utc().format('YYYY-MM-DD');
+    const nextDay = dayjs().utc().add(1, 'day').format('YYYY-MM-DD');
 
     const dailyLimitBody = {
       userId,
       fundingSourceToken,
       fromDate: today,
-      toDate: `${today}T23:59:59`,
+      toDate: nextDay,
       limit: dailyACHTransferLimit,
       type,
       amount: +amount,
@@ -61,7 +62,7 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
       userId,
       fundingSourceToken,
       fromDate: beforeOneMonth,
-      toDate: `${today}T23:59:59`,
+      toDate: nextDay,
       limit: monthlyACHTransferLimit,
       type,
       amount: +amount,
@@ -134,6 +135,8 @@ export const getLocalACHFundingSource : IRequestHandler<{}, IACHFundingSourceQue
       return;
     }
 
+    req.query.toDate = dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD');
+
     const { data } = await ACHFundingSourceService.getLocalACHFundingSource(req);
     output.api(req, res, data);
   } catch (err) {
@@ -172,6 +175,8 @@ export const getLocalACHBankTransfer : IRequestHandler<{}, IACHBankTransferQuery
       output.error(req, res, new CustomError(`please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value`, ErrorTypes.INVALID_ARG));
       return;
     }
+
+    req.query.toDate = dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD');
 
     const { data } = await ACHFundingSourceService.getLocalACHBankTransfer(req);
     output.api(req, res, data);

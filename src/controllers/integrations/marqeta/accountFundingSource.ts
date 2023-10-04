@@ -1,14 +1,12 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { IACHBankTransferQuery, IACHFundingSourceQuery, IACHTransferTypes, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IACHTransferStatuses, IMarqetaACHTransferType } from '../../../integrations/marqeta/types';
+import { IACHBankTransferQuery, IACHFundingSourceQuery, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as ACHFundingSourceService from '../../../integrations/marqeta/accountFundingSource';
 import { ErrorTypes } from '../../../lib/constants';
-import { DATE_REGEX } from '../../../lib/constants/regex';
-import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../../lib/constants/plaid';
 
 dayjs.extend(utc);
 
@@ -18,63 +16,15 @@ export const createACHBankTransfer: IRequestHandler<{}, {}, IMarqetaACHBankTrans
     const { _id: userId } = req.requestor;
     const requiredFields = ['fundingSourceToken', 'type', 'amount'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
-    const { fundingSourceToken, type, amount } = body;
 
     if (!isValid) {
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
 
-    const isTypeValid = Object.values(IMarqetaACHTransferType).includes(type.toUpperCase() as IMarqetaACHTransferType);
-    if (!isTypeValid) {
-      output.error(req, res, new CustomError('please provide correct type value', ErrorTypes.INVALID_ARG));
-      return;
-    }
+    const { isError, message } = await ACHFundingSourceService.validateCreateACHBankTransferRequest({ userId, ...body });
 
-    if (+amount > perTransferLimit) {
-      output.error(req, res, new CustomError(`Invalid Amount. Amount must be less than or equal to ${perTransferLimit} per transfer`, ErrorTypes.INVALID_ARG));
-      return;
-    }
-
-    const beforeOneMonth = dayjs().utc().subtract(1, 'month').format('YYYY-MM-DD');
-    const today = dayjs().utc().format('YYYY-MM-DD');
-    const nextDay = dayjs().utc().add(1, 'day').format('YYYY-MM-DD');
-
-    const dailyLimitBody = {
-      userId,
-      fundingSourceToken,
-      fromDate: today,
-      toDate: nextDay,
-      limit: dailyACHTransferLimit,
-      type,
-      amount: +amount,
-      statusArray: [IACHTransferStatuses.PENDING],
-    };
-
-    const isValidDailyLimit = await ACHFundingSourceService.validateACHTransferLimit(dailyLimitBody);
-
-    if (!isValidDailyLimit) {
-      output.error(req, res, new CustomError(`Invalid Amount. Daily amount transfer limit exceeded. Total transfer amount must be less than or equal to ${dailyACHTransferLimit} per day.`, ErrorTypes.INVALID_ARG));
-      return;
-    }
-
-    const monthlyLimitBody = {
-      userId,
-      fundingSourceToken,
-      fromDate: beforeOneMonth,
-      toDate: nextDay,
-      limit: monthlyACHTransferLimit,
-      type,
-      amount: +amount,
-      statusArray: [IACHTransferStatuses.PENDING, IACHTransferStatuses.PROCESSING, IACHTransferStatuses.SUBMITTED, IACHTransferStatuses.COMPLETED],
-    };
-
-    const isValidMonthlyLimit = await ACHFundingSourceService.validateACHTransferLimit(monthlyLimitBody);
-
-    if (!isValidMonthlyLimit) {
-      output.error(req, res, new CustomError(`Invalid Amount. Monthly amount transfer limit exceeded. Total transfer amount must be less than or equal to ${monthlyACHTransferLimit} per month.`, ErrorTypes.INVALID_ARG));
-      return;
-    }
+    if (isError) return output.error(req, res, new CustomError(message, ErrorTypes.INVALID_ARG));
 
     const { data } = await ACHFundingSourceService.createACHBankTransfer(req);
     await ACHFundingSourceService.mapACHBankTransfer(userId, data);
@@ -119,23 +69,15 @@ export const createACHBankTransferTransition: IRequestHandler<{}, {}, IMarqetaAC
   }
 };
 
+// Function to retrieve ACH funding source data that is mapped in the ImpactKarma database
 export const getLocalACHFundingSource : IRequestHandler<{}, IACHFundingSourceQuery, {}> = async (req, res) => {
   try {
-    const { fromDate, toDate } = req.query;
     const { _id: userId } = req.requestor;
     req.query.userId = userId;
 
-    if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate.toString()) && DATE_REGEX.test(toDate.toString()))) {
-      output.error(req, res, new CustomError('please provide correct fromDate or toDate vlue in  YYYY-MM-DD fromat', ErrorTypes.INVALID_ARG));
-      return;
-    }
+    const { isError, message } = await ACHFundingSourceService.validateGetACHFundingSourceRequest({ userId, ...req.query });
 
-    if ((fromDate && !toDate) || (!fromDate && toDate)) {
-      output.error(req, res, new CustomError(`please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value`, ErrorTypes.INVALID_ARG));
-      return;
-    }
-
-    req.query.toDate = dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD');
+    if (isError) return output.error(req, res, new CustomError(message, ErrorTypes.INVALID_ARG));
 
     const { data } = await ACHFundingSourceService.getLocalACHFundingSource(req);
     output.api(req, res, data);
@@ -144,39 +86,15 @@ export const getLocalACHFundingSource : IRequestHandler<{}, IACHFundingSourceQue
   }
 };
 
+// Function to retrieve ACH transfer data that is mapped in the ImpactKarma database
 export const getLocalACHBankTransfer : IRequestHandler<{}, IACHBankTransferQuery, {}> = async (req, res) => {
   try {
-    const { status, type, fromDate, toDate } = req.query;
     const { _id: userId } = req.requestor;
     req.query.userId = userId;
 
-    if (status) {
-      const isStatusValid : Boolean = Object.values(IACHTransferStatuses).includes(status);
-      if (!isStatusValid) {
-        output.error(req, res, new CustomError('please provide correct status value', ErrorTypes.INVALID_ARG));
-        return;
-      }
-    }
+    const { isError, message } = await ACHFundingSourceService.validateGetLocalACHBankTransferRequest({ userId, ...req.query });
 
-    if (type) {
-      const isTypeValid : Boolean = Object.values(IACHTransferTypes).includes(type);
-      if (!isTypeValid) {
-        output.error(req, res, new CustomError('please provide correct type value', ErrorTypes.INVALID_ARG));
-        return;
-      }
-    }
-
-    if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate.toString()) && DATE_REGEX.test(toDate.toString()))) {
-      output.error(req, res, new CustomError('please provide correct fromDate or toDate vlue in  YYYY-MM-DD fromat', ErrorTypes.INVALID_ARG));
-      return;
-    }
-
-    if ((fromDate && !toDate) || (!fromDate && toDate)) {
-      output.error(req, res, new CustomError(`please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value`, ErrorTypes.INVALID_ARG));
-      return;
-    }
-
-    req.query.toDate = dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD');
+    if (isError) return output.error(req, res, new CustomError(message, ErrorTypes.INVALID_ARG));
 
     const { data } = await ACHFundingSourceService.getLocalACHBankTransfer(req);
     output.api(req, res, data);

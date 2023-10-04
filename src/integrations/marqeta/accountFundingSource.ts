@@ -1,9 +1,15 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource } from './types';
+import { IACHBankTransferRequestFields, IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHFundingSourceRequestFields, IACHGetBankTransferRequestFields, IACHTransferTypes } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
+import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
+import { DATE_REGEX } from '../../lib/constants/regex';
+
+dayjs.extend(utc);
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -80,7 +86,7 @@ export const getLocalACHFundingSource = async (req : IRequest<{}, IACHFundingSou
   if (fromDate && toDate) {
     query.last_modified_time = {
       $gte: fromDate,
-      $lt: toDate,
+      $lt: dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD'),
     };
   }
 
@@ -100,7 +106,7 @@ export const getLocalACHBankTransfer = async (req : IRequest<{}, IACHBankTransfe
   if (fromDate && toDate) {
     query.last_modified_time = {
       $gte: fromDate,
-      $lt: toDate,
+      $lt: dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD'),
     };
   }
 
@@ -135,4 +141,77 @@ export const validateACHTransferLimit = async (query : IACHTransferValidationQue
 
   if ((totalAmount + amount) <= limit) return true;
   return false;
+};
+
+export const validateCreateACHBankTransferRequest = async (query : IACHBankTransferRequestFields) : Promise<{isError : Boolean, message: string}> => {
+  const { fundingSourceToken, type, amount, userId } = query;
+
+  const isTypeValid = Object.values(IMarqetaACHTransferType).includes(type.toUpperCase() as IMarqetaACHTransferType);
+  if (!isTypeValid) return { isError: true, message: 'please provide correct type value' };
+
+  if (+amount > perTransferLimit) return { isError: true, message: `Invalid Amount. Amount must be less than or equal to ${perTransferLimit} per transfer` };
+
+  const beforeOneMonth = dayjs().utc().subtract(1, 'month').format('YYYY-MM-DD');
+  const today = dayjs().utc().format('YYYY-MM-DD');
+  const nextDay = dayjs().utc().add(1, 'day').format('YYYY-MM-DD');
+
+  const dailyLimitBody = {
+    userId,
+    fundingSourceToken,
+    fromDate: today,
+    toDate: nextDay,
+    limit: dailyACHTransferLimit,
+    type,
+    amount: +amount,
+    statusArray: [IMACHTransferStatus.PENDING],
+  };
+
+  const isValidDailyLimit = await validateACHTransferLimit(dailyLimitBody);
+
+  if (!isValidDailyLimit) return { isError: true, message: `Invalid Amount. Daily amount transfer limit exceeded. Total transfer amount must be less than or equal to ${dailyACHTransferLimit} per day.` };
+
+  const monthlyLimitBody = {
+    userId,
+    fundingSourceToken,
+    fromDate: beforeOneMonth,
+    toDate: nextDay,
+    limit: monthlyACHTransferLimit,
+    type,
+    amount: +amount,
+    statusArray: [IMACHTransferStatus.PENDING, IMACHTransferStatus.PROCESSING, IMACHTransferStatus.SUBMITTED, IMACHTransferStatus.COMPLETED],
+  };
+
+  const isValidMonthlyLimit = await validateACHTransferLimit(monthlyLimitBody);
+  if (!isValidMonthlyLimit) return { isError: true, message: `Invalid Amount. Monthly amount transfer limit exceeded. Total transfer amount must be less than or equal to ${monthlyACHTransferLimit} per month.` };
+
+  return { isError: false, message: 'All request fields are Valid' };
+};
+
+export const validateGetACHFundingSourceRequest = async (query : IACHFundingSourceRequestFields) : Promise<{isError : Boolean, message: string}> => {
+  const { fromDate, toDate } = query;
+
+  if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate) && DATE_REGEX.test(toDate))) { return { isError: true, message: 'please provide correct fromDate or toDate value in  YYYY-MM-DD fromat' }; }
+
+  if ((fromDate && !toDate) || (!fromDate && toDate)) { return { isError: true, message: `please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value` }; }
+
+  return { isError: false, message: 'All request fields are Valid' };
+};
+
+export const validateGetLocalACHBankTransferRequest = async (query : IACHGetBankTransferRequestFields) : Promise<{isError : Boolean, message: string}> => {
+  const { status, type, fromDate, toDate } = query;
+  if (status) {
+    const isStatusValid : Boolean = Object.values(IMACHTransferStatus).includes(status);
+    if (!isStatusValid) return { isError: true, message: 'please provide correct status value' };
+  }
+
+  if (type) {
+    const isTypeValid : Boolean = Object.values(IACHTransferTypes).includes(type);
+    if (!isTypeValid) return { isError: true, message: 'please provide correct type value' };
+  }
+
+  if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate) && DATE_REGEX.test(toDate))) { return { isError: true, message: 'please provide correct fromDate or toDate vlue in  YYYY-MM-DD fromat' }; }
+
+  if ((fromDate && !toDate) || (!fromDate && toDate)) { return { isError: true, message: `please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value` }; }
+
+  return { isError: false, message: 'All request fields are Valid' };
 };

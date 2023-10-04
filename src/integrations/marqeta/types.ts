@@ -215,8 +215,8 @@ export interface IACHFundingSourceQuery {
   userId : String;
   fundingSourceToken? : String;
   userToken? : String;
-  fromDate? : String;
-  toDate? : String;
+  fromDate? : string;
+  toDate? : string;
 }
 
 export interface IACHFundingSourceModelQuery {
@@ -227,7 +227,7 @@ export interface IACHFundingSourceModelQuery {
   last_modified_time? : Object;
 }
 
-export enum IACHTransferStatuses {
+export enum IMACHTransferStatus {
   INITIATED = 'INITIATED',
   PENDING = 'PENDING',
   PROCESSING = 'PROCESSING',
@@ -248,9 +248,9 @@ export interface IACHBankTransferQuery {
   bankTransferToken? : String;
   fundingSourceToken? : String;
   type: IACHTransferTypes;
-  status : IACHTransferStatuses;
-  fromDate? : String;
-  toDate? : String;
+  status : IMACHTransferStatus;
+  fromDate? : string;
+  toDate? : string;
 }
 
 export interface IACHBankTransferModelQuery {
@@ -259,7 +259,7 @@ export interface IACHBankTransferModelQuery {
   bankTransferToken? : String;
   fundingSourceToken? : String;
   type? : IACHTransferTypes;
-  status? : IACHTransferStatuses;
+  status? : IMACHTransferStatus;
   last_modified_time? : Object;
 }
 
@@ -272,4 +272,16 @@ export interface IACHTransferValidationQuery {
   toDate : String;
   limit? : Number;
   amount : Number
+}
+
+export interface IACHBankTransferRequestFields extends IMarqetaACHBankTransfer {
+  userId : String;
+}
+
+export interface IACHFundingSourceRequestFields extends IACHFundingSourceQuery {
+  userId : String
+}
+
+export interface IACHGetBankTransferRequestFields extends IACHBankTransferQuery {
+  userId : String
 }

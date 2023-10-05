@@ -170,43 +170,43 @@ export interface IMarqetaMakeTransactionClearing {
 }
 
 export interface IACHTransition {
-  token: String;
-  bank_transfer_token: String;
-  status: String;
-  transaction_token: String;
+  token: string;
+  bank_transfer_token: string;
+  status: string;
+  transaction_token: string;
   created_time: Date;
   last_modified_time: Date;
 }
 
 export interface IACHBankTransfer {
-  token: String;
-  amount: Number;
-  channel: String;
-  funding_source_token: String;
-  type: String;
-  currency_code: String;
-  transfer_speed:String;
-  status: String;
+  token: string;
+  amount: number;
+  channel: string;
+  funding_source_token: string;
+  type: string;
+  currency_code: string;
+  transfer_speed: string;
+  status: string;
   transitions: IACHTransition;
   created_time: Date;
   last_modified_time: Date;
 }
 
 export interface IACHFundingSource {
-  token: String;
-  accessToken?: String;
-  account_suffix: String;
-  verification_status: String;
-  account_type: String;
-  name_on_account: String;
-  active: Boolean;
+  token: string;
+  accessToken?: string;
+  account_suffix: string;
+  verification_status: string;
+  account_type: string;
+  name_on_account: string;
+  active: boolean;
   date_sent_for_verification: Date;
-  partner: String;
-  partner_account_link_reference_token?: String;
-  is_default_account: Boolean;
-  verification_override: Boolean;
-  verification_notes: String;
-  user_token: String;
+  partner: string;
+  partner_account_link_reference_token?: string;
+  is_default_account: boolean;
+  verification_override: boolean;
+  verification_notes: string;
+  user_token: string;
   created_time?: Date;
   last_modified_time?: Date;
 }

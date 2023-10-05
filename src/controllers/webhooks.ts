@@ -394,7 +394,16 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     if (!!banktransfertransitions) {
       for (const banktransfertransition of banktransfertransitions) {
-        await ACHTransferModel.findOneAndUpdate({ token: banktransfertransition.bank_transfer_token }, { $set: { status: banktransfertransition.status }, $push: { transitions: banktransfertransition } });
+        await ACHTransferModel.findOneAndUpdate(
+          {
+            token: banktransfertransition.bank_transfer_token,
+          },
+          {
+            $set:
+              { status: banktransfertransition.status },
+            $push: { transitions: banktransfertransition },
+          },
+        );
       }
     }
 

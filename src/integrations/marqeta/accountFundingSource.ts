@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransferRequestFields, IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHFundingSourceRequestFields, IACHGetBankTransferRequestFields, IACHTransferTypes } from './types';
+import { IACHBankTransferRequestFields, IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHTransferTypes } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
@@ -86,7 +86,7 @@ export const getLocalACHFundingSource = async (req : IRequest<{}, IACHFundingSou
   if (fromDate && toDate) {
     query.last_modified_time = {
       $gte: fromDate,
-      $lt: dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD'),
+      $lt: dayjs(toDate).add(1, 'day').format('YYYY-MM-DD'),
     };
   }
 
@@ -106,7 +106,7 @@ export const getLocalACHBankTransfer = async (req : IRequest<{}, IACHBankTransfe
   if (fromDate && toDate) {
     query.last_modified_time = {
       $gte: fromDate,
-      $lt: dayjs(toDate as string).add(1, 'day').format('YYYY-MM-DD'),
+      $lt: dayjs(toDate).add(1, 'day').format('YYYY-MM-DD'),
     };
   }
 
@@ -124,8 +124,8 @@ export const validateACHTransferLimit = async (query : IACHTransferValidationQue
         type,
         status: { $in: statusArray },
         last_modified_time: {
-          $gte: new Date(fromDate.toString()),
-          $lt: new Date(toDate.toString()),
+          $gte: fromDate,
+          $lt: toDate,
         },
       },
     },
@@ -151,9 +151,9 @@ export const validateCreateACHBankTransferRequest = async (query : IACHBankTrans
 
   if (+amount > perTransferLimit) return { isError: true, message: `Invalid Amount. Amount must be less than or equal to ${perTransferLimit} per transfer` };
 
-  const beforeOneMonth = dayjs().utc().subtract(1, 'month').format('YYYY-MM-DD');
-  const today = dayjs().utc().format('YYYY-MM-DD');
-  const nextDay = dayjs().utc().add(1, 'day').format('YYYY-MM-DD');
+  const beforeOneMonth = new Date(dayjs().utc().subtract(1, 'month').format('YYYY-MM-DD'));
+  const today = new Date(dayjs().utc().format('YYYY-MM-DD'));
+  const nextDay = new Date(dayjs().utc().add(1, 'day').format('YYYY-MM-DD'));
 
   const dailyLimitBody = {
     userId,
@@ -187,31 +187,39 @@ export const validateCreateACHBankTransferRequest = async (query : IACHBankTrans
   return { isError: false, message: 'All request fields are Valid' };
 };
 
-export const validateGetACHFundingSourceRequest = async (query : IACHFundingSourceRequestFields) : Promise<{isError : Boolean, message: string}> => {
+export const validateGetACHFundingSourceRequest = async (query : IACHFundingSourceQuery) : Promise<{isError : Boolean, message: string}> => {
   const { fromDate, toDate } = query;
 
-  if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate) && DATE_REGEX.test(toDate))) { return { isError: true, message: 'please provide correct fromDate or toDate value in  YYYY-MM-DD fromat' }; }
+  if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate.toString()) && DATE_REGEX.test(toDate.toString()))) {
+    return { isError: true, message: 'Please provide correct fromDate or toDate value in YYYY-MM-DD format' };
+  }
 
-  if ((fromDate && !toDate) || (!fromDate && toDate)) { return { isError: true, message: `please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value` }; }
+  if ((fromDate && !toDate) || (!fromDate && toDate)) {
+    return { isError: true, message: `please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value` };
+  }
 
-  return { isError: false, message: 'All request fields are Valid' };
+  return { isError: false, message: 'All request fields are valid' };
 };
 
-export const validateGetLocalACHBankTransferRequest = async (query : IACHGetBankTransferRequestFields) : Promise<{isError : Boolean, message: string}> => {
+export const validateGetLocalACHBankTransferRequest = async (query : IACHBankTransferQuery) : Promise<{isError : Boolean, message: string}> => {
   const { status, type, fromDate, toDate } = query;
   if (status) {
     const isStatusValid : Boolean = Object.values(IMACHTransferStatus).includes(status);
-    if (!isStatusValid) return { isError: true, message: 'please provide correct status value' };
+    if (!isStatusValid) return { isError: true, message: 'Please provide correct status value' };
   }
 
   if (type) {
     const isTypeValid : Boolean = Object.values(IACHTransferTypes).includes(type);
-    if (!isTypeValid) return { isError: true, message: 'please provide correct type value' };
+    if (!isTypeValid) return { isError: true, message: 'Please provide correct type value' };
   }
 
-  if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate) && DATE_REGEX.test(toDate))) { return { isError: true, message: 'please provide correct fromDate or toDate vlue in  YYYY-MM-DD fromat' }; }
+  if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate.toString()) && DATE_REGEX.test(toDate.toString()))) {
+    return { isError: true, message: 'Please provide correct fromDate or toDate value in  YYYY-MM-DD format' };
+  }
 
-  if ((fromDate && !toDate) || (!fromDate && toDate)) { return { isError: true, message: `please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value` }; }
+  if ((fromDate && !toDate) || (!fromDate && toDate)) {
+    return { isError: true, message: `Please provide ${(fromDate && 'toDate') || (toDate && 'fromDate')} query prameter value` };
+  }
 
   return { isError: false, message: 'All request fields are Valid' };
 };

@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongoose';
+
 interface Identification {
   type: string;
   value: string;
@@ -212,19 +214,19 @@ export interface IACHFundingSource {
 }
 
 export interface IACHFundingSourceQuery {
-  userId : String;
-  fundingSourceToken? : String;
-  userToken? : String;
-  fromDate? : string;
-  toDate? : string;
+  userId: ObjectId;
+  fundingSourceToken?: string;
+  userToken?: string;
+  fromDate?: Date;
+  toDate?: Date;
 }
 
 export interface IACHFundingSourceModelQuery {
-  userId : String;
-  token? : String;
-  user_token? : String;
-  active : Boolean;
-  last_modified_time? : Object;
+  userId: ObjectId;
+  token?: string;
+  user_token?: string;
+  active: boolean;
+  last_modified_time?: object;
 }
 
 export enum IMACHTransferStatus {
@@ -244,44 +246,36 @@ export enum IACHTransferTypes {
 }
 
 export interface IACHBankTransferQuery {
-  userId : String;
-  bankTransferToken? : String;
-  fundingSourceToken? : String;
+  userId: ObjectId;
+  bankTransferToken?: string;
+  fundingSourceToken?: string;
   type: IACHTransferTypes;
-  status : IMACHTransferStatus;
-  fromDate? : string;
-  toDate? : string;
+  status: IMACHTransferStatus;
+  fromDate?: Date;
+  toDate?: Date;
 }
 
 export interface IACHBankTransferModelQuery {
-  userId : String;
-  token? : String;
-  bankTransferToken? : String;
-  fundingSourceToken? : String;
+  userId: ObjectId;
+  token?: string;
+  bankTransferToken?: string;
+  fundingSourceToken?: string;
   type? : IACHTransferTypes;
-  status? : IMACHTransferStatus;
-  last_modified_time? : Object;
+  status?: IMACHTransferStatus;
+  last_modified_time?: object;
 }
 
 export interface IACHTransferValidationQuery {
-  userId : String;
-  fundingSourceToken : String;
-  type : IMarqetaACHTransferType;
-  statusArray : String[];
-  fromDate : String;
-  toDate : String;
-  limit? : Number;
-  amount : Number
+  userId: ObjectId;
+  fundingSourceToken: string;
+  type: IMarqetaACHTransferType;
+  statusArray: IMACHTransferStatus[];
+  fromDate: Date;
+  toDate : Date;
+  limit?: number;
+  amount: number;
 }
 
 export interface IACHBankTransferRequestFields extends IMarqetaACHBankTransfer {
-  userId : String;
-}
-
-export interface IACHFundingSourceRequestFields extends IACHFundingSourceQuery {
-  userId : String
-}
-
-export interface IACHGetBankTransferRequestFields extends IACHBankTransferQuery {
-  userId : String
+  userId : ObjectId;
 }

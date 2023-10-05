@@ -221,12 +221,17 @@ export interface IACHFundingSourceQuery {
   toDate?: Date;
 }
 
+interface ILastModifiedTimeQuery {
+  $gte : Date;
+  $lt : Date;
+}
+
 export interface IACHFundingSourceModelQuery {
   userId: ObjectId;
   token?: string;
   user_token?: string;
   active: boolean;
-  last_modified_time?: object;
+  last_modified_time?: ILastModifiedTimeQuery;
 }
 
 export enum IMACHTransferStatus {
@@ -262,7 +267,7 @@ export interface IACHBankTransferModelQuery {
   fundingSourceToken?: string;
   type? : IACHTransferTypes;
   status?: IMACHTransferStatus;
-  last_modified_time?: object;
+  last_modified_time?: ILastModifiedTimeQuery;
 }
 
 export interface IACHTransferValidationQuery {

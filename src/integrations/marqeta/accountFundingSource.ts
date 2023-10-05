@@ -85,8 +85,8 @@ export const getLocalACHFundingSource = async (req : IRequest<{}, IACHFundingSou
   if (userToken) query.user_token = userToken;
   if (fromDate && toDate) {
     query.last_modified_time = {
-      $gte: fromDate,
-      $lt: dayjs(toDate).add(1, 'day').format('YYYY-MM-DD'),
+      $gte: new Date(fromDate),
+      $lt: new Date(dayjs(toDate).add(1, 'day').format('YYYY-MM-DD')),
     };
   }
 
@@ -105,8 +105,8 @@ export const getLocalACHBankTransfer = async (req : IRequest<{}, IACHBankTransfe
   if (status) query.status = status;
   if (fromDate && toDate) {
     query.last_modified_time = {
-      $gte: fromDate,
-      $lt: dayjs(toDate).add(1, 'day').format('YYYY-MM-DD'),
+      $gte: new Date(fromDate),
+      $lt: new Date(dayjs(toDate).add(1, 'day').format('YYYY-MM-DD')),
     };
   }
 

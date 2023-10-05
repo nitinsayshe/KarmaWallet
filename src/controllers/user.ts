@@ -6,6 +6,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 import * as UserTestIdentityService from '../services/user/testIdentities';
+import { IPushNotification, sendPushNotification } from '../integrations/firebaseCloudMessaging';
 
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
@@ -32,12 +33,22 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
 export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
   try {
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
-    const { password, email, biometricSignature } = req.body;
+    const { password, email, biometricSignature, fcmToken } = req.body;
     const { user, authKey } = await UserService.login(req, {
       biometricSignature,
       password,
       email,
+      fcmToken,
     });
+    const notification: IPushNotification = {
+      notification: {
+        title: 'Karma Wallet',
+        body: 'Welcome to the Karma Wallet Application',
+      },
+      token: 'jjhwkjdhwjdiwjdlwqjdq',
+    };
+    console.log('Sending Push Notification');
+    sendPushNotification(user._id, notification);
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));

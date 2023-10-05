@@ -92,6 +92,10 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserState,
   created_time?: string,
 }
+
+export interface IFCMTokenIntegration {
+  token: string
+}
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
@@ -101,6 +105,7 @@ export interface IUserIntegrations {
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
   biometrics?: IBiometrics[];
   marqeta?: IMarqetaUserIntegrations;
+  fcm?: IFCMTokenIntegration;
 }
 
 export interface IShareableUser {
@@ -245,6 +250,9 @@ const userSchema = new Schema({
         },
       },
     ],
+    fcm: {
+      token: { type: String },
+    },
   },
 });
 userSchema.plugin(mongoosePaginate);

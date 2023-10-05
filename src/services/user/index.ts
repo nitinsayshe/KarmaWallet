@@ -52,6 +52,7 @@ export interface ILoginData {
   password?: string;
   biometricSignature?: string;
   token?: string;
+  fcmToken: string;
 }
 
 export interface IUpdatePasswordBody {
@@ -244,7 +245,7 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
   }
 };
 
-export const login = async (req: IRequest, { email, password, biometricSignature }: ILoginData) => {
+export const login = async (req: IRequest, { email, password, biometricSignature, fcmToken }: ILoginData) => {
   email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
   if (!user) {
@@ -272,6 +273,11 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   const authKey = await Session.createSession(user._id.toString());
 
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
+
+  if (fcmToken) {
+    user.integrations.fcm.token = fcmToken;
+    await user.save();
+  }
 
   return { user, authKey };
 };

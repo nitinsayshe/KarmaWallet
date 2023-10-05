@@ -6,7 +6,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 import * as UserTestIdentityService from '../services/user/testIdentities';
-import { IPushNotification, sendPushNotification } from '../integrations/firebaseCloudMessaging';
+import { IFCMNotification, sendPushNotification } from '../integrations/firebaseCloudMessaging';
 
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
@@ -40,15 +40,12 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
       email,
       fcmToken,
     });
-    const notification: IPushNotification = {
-      notification: {
-        title: 'Karma Wallet',
-        body: 'Welcome to the Karma Wallet Application',
-      },
-      to: fcmToken,
+    const notification: IFCMNotification = {
+      title: 'Karma Wallet',
+      body: 'Welcome to the Karma Wallet Application',
     };
     console.log('Sending Push Notification');
-    sendPushNotification(user._id, notification);
+    sendPushNotification(user, notification);
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -275,8 +275,11 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
 
   if (fcmToken) {
-    user.integrations.fcm.token = fcmToken;
-    await user.save();
+    const { tokens } = user.integrations.fcm;
+    if (!tokens.includes(fcmToken)) {
+      tokens.push(fcmToken);
+      await user.save();
+    }
   }
 
   return { user, authKey };
@@ -335,6 +338,7 @@ export const getShareableUser = ({
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
   if (integrations?.marqeta) _integrations.marqeta = integrations.marqeta;
+  if (integrations?.fcm) _integrations.fcm = integrations.fcm;
   return {
     _id,
     email,

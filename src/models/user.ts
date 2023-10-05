@@ -94,7 +94,7 @@ export interface IMarqetaUserIntegrations {
 }
 
 export interface IFCMTokenIntegration {
-  token: string
+  tokens: string[]
 }
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
@@ -251,7 +251,7 @@ const userSchema = new Schema({
       },
     ],
     fcm: {
-      token: { type: String },
+      tokens: { type: Array },
     },
   },
 });

@@ -45,7 +45,7 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
         title: 'Karma Wallet',
         body: 'Welcome to the Karma Wallet Application',
       },
-      token: fcmToken,
+      to: fcmToken,
     };
     console.log('Sending Push Notification');
     sendPushNotification(user._id, notification);

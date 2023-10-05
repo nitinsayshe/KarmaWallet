@@ -271,10 +271,6 @@ export const getTransactions = async (
     projection: query?.projection || '',
     populate: query.population || [
       {
-        path: 'user',
-        model: UserModel,
-      },
-      {
         path: 'company',
         model: CompanyModel,
       },

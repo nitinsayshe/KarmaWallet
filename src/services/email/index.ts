@@ -40,6 +40,17 @@ interface IEmailTemplateParams {
   sendEmail?: boolean;
 }
 
+interface IDeleteAccountRequestVerificationTemplateParams {
+  domain?: string;
+  user: IUserDocument;
+  deleteReason: string;
+  deleteAccountRequestId: string;
+  recipientEmail?: string;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+  message?: string;
+}
+
 interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
   groupName: string;
 }
@@ -95,6 +106,8 @@ export interface IEmailJobData {
   supportTicketId?: string;
   userId?: string;
   userEmail?: string;
+  deleteAccountRequestId?: string;
+  deleteReason?: string;
 }
 
 export interface IBuildTemplateParams {
@@ -452,6 +465,26 @@ export const sendSupportTicketEmailToSupport = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { message, userEmail, name } });
   const subject = `New Support Ticket: ${supportTicketId}`;
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, message, supportTicketId, userEmail };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendDeleteAccountRequestEmail = async ({
+  user,
+  deleteReason,
+  deleteAccountRequestId,
+  recipientEmail = 'support@theimpactkarma.com',
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IDeleteAccountRequestVerificationTemplateParams) => {
+  const userEmail = user.emails.find(e => !!e.primary)?.email;
+  const { name, _id } = user;
+  const emailTemplateConfig = EmailTemplateConfigs.AccountDeleteRequest;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'deleteReason', 'deleteAccountRequestId'], { name, deleteReason, deleteAccountRequestId });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { deleteReason, userEmail, name } });
+  const subject = `New Delete Account Request: ${deleteAccountRequestId}`;
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, deleteReason, deleteAccountRequestId, userEmail };
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

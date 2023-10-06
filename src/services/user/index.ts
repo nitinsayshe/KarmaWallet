@@ -17,7 +17,7 @@ import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
+import { DeleteRequestReason, IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -27,7 +27,7 @@ import { VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangePasswordEmail, sendPasswordResetEmail } from '../email';
+import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
@@ -36,6 +36,7 @@ import { checkIfUserWithEmailExists } from './utils';
 import { filterToValidQueryParams } from '../../lib/validation';
 import { resendEmailVerification, verifyBiometric } from './verification';
 import { deleteKardUsersForUser } from '../../integrations/kard';
+import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 
 dayjs.extend(utc);
 
@@ -94,6 +95,10 @@ export interface IUpdateUserEmailParams {
   legacyUser: ILegacyUserDocument;
   req: IRequest;
   pw: string;
+}
+
+export interface IDeleteAccountRequest {
+  reason: DeleteRequestReason;
 }
 
 type UserKeys = keyof IUserData;
@@ -537,6 +542,39 @@ export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyToke
   });
   if (!_token) throw new CustomError('Token not found.', ErrorTypes.NOT_FOUND);
   return { message: 'OK' };
+};
+
+export const deleteAccountRequest = async (req: IRequest<{}, {}, IDeleteAccountRequest>) => {
+  try {
+    const { _id, name } = req.requestor;
+    const { reason } = req.body;
+    const { email } = req.requestor.emails.filter((e) => e.primary)[0];
+
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+
+    const deleteAccountRequestDocument = new DeleteAccountRequestModel({
+      userName: name,
+      userEmail: email,
+      userId: _id,
+      reason,
+    });
+
+    const deleteAccountRequestSuccess = await deleteAccountRequestDocument.save();
+    if (!deleteAccountRequestSuccess) throw new Error('Unable to creat your delete account request. Please email support@karmawallet.io.');
+
+    sendDeleteAccountRequestEmail({
+      user,
+      deleteReason: reason,
+      deleteAccountRequestId: deleteAccountRequestSuccess._id.toString(),
+    });
+
+    if (!!deleteAccountRequestSuccess) {
+      return { message: 'Your account deletion request was successful and will be forwared to our support team.' };
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 
 export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {

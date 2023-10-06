@@ -14,6 +14,18 @@ export enum UserEmailStatus {
   Bounced = 'bounced',
   Complained = 'complained',
 }
+
+export enum DeleteRequestReason {
+  DontUse = 'Don\'t use enough',
+  TooExpensive = 'Too expensive',
+  NotEnoughCashback = 'Not enough cashback',
+  Other = 'Another reason',
+}
+
+export enum DeleteRequestStatus {
+  Open = 'Open',
+  Closed = 'Closed',
+}
 interface IMarqetaIdentification {
   type: string,
   value: string,

@@ -44,6 +44,15 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
   }
 };
 
+export const deleteAccountRequest: IRequestHandler<{}, {}, UserService.IDeleteAccountRequest> = async (req, res) => {
+  try {
+    const response = await UserService.deleteAccountRequest(req);
+    output.api(req, res, response);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getProfile: IRequestHandler = async (req, res) => {
   try {
     output.api(req, res, UserService.getShareableUser(req.requestor));

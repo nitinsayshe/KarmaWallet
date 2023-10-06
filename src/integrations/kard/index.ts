@@ -247,6 +247,8 @@ export const queueSettledTransactions = async (
       };
     });
 
+    console.log('Kard API Request: queueing transactions for processing: ', JSON.stringify(req));
+
     const kc = new KardClient();
     return kc.queueTransactionsForProcessing(req);
   } catch (err) {

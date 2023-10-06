@@ -32,6 +32,17 @@ export class ACHSource {
     }
   }
 
+  // List funding source for user
+  async listACHFundingSourceForUser(userToken: string, params?: any) {
+    try {
+      const { data } = await this._marqetaClient._client.get(`/fundingsources/user/${userToken}`, camelToSnakeCase(params));
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
   // Create ACH Bank transfer
   async createACHBankTransfer(params: IMarqetaACHBankTransfer) {
     try {

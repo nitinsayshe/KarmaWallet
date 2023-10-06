@@ -2,6 +2,11 @@ import { Document, model, ObjectId, Schema } from 'mongoose';
 import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { EarnedRewardTransaction, TransactionStatus } from '../clients/kard';
+import {
+  TransactionModel as MarqetaTransactionModel,
+  TransactionModelStateEnum,
+  TransactionModelStateEnumValues,
+} from '../clients/marqeta/types';
 import { getUtcDate } from '../lib/date';
 import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 import { IModel, IRef } from '../types/model';
@@ -73,7 +78,7 @@ export interface IPlaidTransactionIntegration {
 export interface IKardTransactionIntegration {
   id?: string;
   status?: TransactionStatus;
-  rewardData?: Partial<EarnedRewardTransaction>
+  rewardData?: Partial<EarnedRewardTransaction>;
 }
 
 export interface IRareTransactionIntegration {
@@ -92,10 +97,13 @@ export interface IRareTransactionIntegration {
   tonnes_amt?: number;
 }
 
+export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel>;
+
 export interface ITransactionIntegrations {
   plaid?: IPlaidTransactionIntegration;
   rare?: IRareTransactionIntegration;
   kard?: IKardTransactionIntegration;
+  marqeta?: IMarqetaTransactionIntegration;
 }
 
 export interface ITransactionAssociation {
@@ -122,6 +130,7 @@ export interface IShareableTransaction {
   card: IRef<ObjectId, IShareableCard>;
   sector: IRef<ObjectId, ISector>;
   amount: number;
+  status: TransactionModelStateEnumValues;
   reversed: boolean;
   date: Date;
   integrations?: ITransactionIntegrations;
@@ -160,6 +169,267 @@ export type ITransactionModel = IModel<ITransaction>;
 //   - subCategory
 //   - carbonMultiplier
 
+/* export const marqetaIntegrationSchemaDefinition = { */
+/*   type: { */
+/*     identifier: { type: String }, */
+/*     token: { type: String }, */
+/*     user_token: { type: String }, */
+/*     business_token: { type: String }, */
+/*     acting_user_token: { type: String }, */
+/*     card_token: { type: String }, */
+/*     card_product_token: { type: String }, */
+/*     is_preauthorization: { type: Boolean }, */
+/*     deferred_settlement_days: { type: String }, */
+/*     national_net_cpd_of_original_txn: { type: String }, */
+/*     type: { type: String, enum: Object.values(TransactionModelTypeEnum) }, */
+/*     state: { type: String, enum: Object.values(TransactionModelStateEnum) }, */
+/*     duration: { type: Number }, */
+/*     created_time: { type: String }, */
+/*     user_transaction_time: { type: String }, */
+/*     settlement_date: { type: String }, */
+/*     request_amount: { type: Number }, */
+/*     amount: { type: Number }, */
+/*     cash_back_amount: { type: Number }, */
+/*     currency_conversion: { */
+/*       type: { */
+/*         network: { */
+/*           type: { */
+/*             original_amount: { type: Number }, */
+/*             conversion_rate: { type: Number }, */
+/*             original_currency_code: { type: String }, */
+/*             dynamic_currency_converison: { type: Boolean }, */
+/*             settlementData: { */
+/*               type: { */
+/*                 amount: { type: Number }, */
+/*                 conversion_rate: { type: Number }, */
+/*                 currency_code: { type: String }, */
+/*               }, */
+/*             }, */
+/*           }, */
+/*         }, */
+/*       }, */
+/*     }, */
+/*     issuer_interchange_amount: { type: Number }, */
+/*     currency_code: { type: String }, */
+/*     approval_code: { type: String }, */
+/*     // response: { type: String }, */
+/*     preceding_related_transaction_token: { type: String }, */
+/*     preceding_transaction: { */
+/*       type: { */
+/*         amount: { type: Number }, */
+/*         token: { type: String }, */
+/*       }, */
+/*     }, */
+/*     amount_to_be_released: { type: Number }, */
+/*     incremental_authorization_transaction_tokens: { type: [String] }, */
+/*     merchant: { */
+/*       type: { */
+/*         name: { type: String }, */
+/*         active: { type: Boolean }, */
+/*         contact: { type: { String } }, */
+/*         contact_email: { type: String }, */
+/*         longitude: { type: Number }, */
+/*         latitude: { type: Number }, */
+/*         address1: { type: String }, */
+/*         address2: { type: String }, */
+/*         city: { type: String }, */
+/*         state: { type: String }, */
+/*         province: { type: String }, */
+/*         zip: { type: String }, */
+/*         phone: { type: String }, */
+/*         country: { type: String }, */
+/*         token: { type: String }, */
+/*         partial_auth_flag: { type: Boolean }, */
+/*         created_time: { type: String }, */
+/*         last_modified_time: { type: String }, */
+/*       }, */
+/*     }, */
+/*     store: { */
+/*       type: { */
+/*         name: { type: String }, */
+/*         active: { type: Boolean }, */
+/*         contact: { type: { String } }, */
+/*         contact_email: { type: String }, */
+/*         longitude: { type: Number }, */
+/*         latitude: { type: Number }, */
+/*         address1: { type: String }, */
+/*         address2: { type: String }, */
+/*         city: { type: String }, */
+/*         state: { type: String }, */
+/*         province: { type: String }, */
+/*         zip: { type: String }, */
+/*         postal_code: { type: String }, */
+/*         phone: { type: String }, */
+/*         country: { type: String }, */
+/*         token: { type: String }, */
+/*         partial_auth_flag: { type: Boolean }, */
+/*         mid: { type: String }, */
+/*         network_mid: { type: String }, */
+/*         merchant_token: { type: String }, */
+/*         partial_approval_capable: { type: Boolean }, */
+/*         keyed_auth_cvv_enforced: { type: Boolean }, */
+/*         created_time: { type: String }, */
+/*         last_modified_time: { type: String }, */
+/*       }, */
+/*     }, */
+/*     card_acceptor: { */
+/*       type: { */
+/*         mid: { type: String }, */
+/*         mcc: { type: String }, */
+/*         network_mid: { type: String }, */
+/*         mcc_groups: { type: [String] }, */
+/*         special_merchant_id: { type: String }, */
+/*         merchant_tax_id: { type: String }, */
+/*         name: { type: String }, */
+/*         address: { type: String }, */
+/*         city: { type: String }, */
+/*         state: { type: String }, */
+/*         postal_code: { type: String }, */
+/*         country_code: { type: String }, */
+/*         poi: { */
+/*           type: { */
+/*             tid: { type: String }, */
+/*             partial_approval_capable: { type: String }, */
+/*             cardholder_presence: { type: String }, */
+/*             card_presence: { type: String }, */
+/*             processing_type: { type: String }, */
+/*             pin_preset: { type: String }, */
+/*             special_condition_indicator: { */
+/*               type: String, */
+/*               enum: Object.values(TerminalModelSpecialConditionIndicatorEnum), */
+/*             }, */
+/*           }, */
+/*         }, */
+/*         payment_facilitator_id: { type: String }, */
+/*         independent_sales_organization_id: { type: String }, */
+/*         sub_merchant_id: { type: String }, */
+/*         network_assigned_id: { type: String }, */
+/*         country_of_origin: { type: String }, */
+/*         transfer_service_provider_name: { type: String }, */
+/*         payment_facilitator_name: { type: String }, */
+/*         phone: { type: String }, */
+/*         url: { type: String }, */
+/*         customer_service_phone: { type: String }, */
+/*       }, */
+/*     }, */
+/*     gpa: { */
+/*       type: { */
+/*         currency_code: { type: String }, */
+/*         ledger_balance: { type: Number }, */
+/*         available_balance: { type: Number }, */
+/*         credit_balance: { type: Number }, */
+/*         cached_balance: { type: Number }, */
+/*         pending_credits: { type: Number }, */
+/*         impacted_amount: { type: Number }, */
+/*         balances: { */
+/*           // this one should probably be mapped to an array and saved as one */
+/*           type: [Map], */
+/*           of: { */
+/*             type: {}, */
+/*           }, */
+/*         }, */
+/*         last_updated_time: { type: String }, */
+/*       }, */
+/*     }, */
+/*     card: { */
+/*       // TODO: Do we want to omit sensitive card data here or use tokenization? */
+/*       type: { */
+/*         created_time: { type: String }, */
+/*         last_modified_time: { type: String }, */
+/*         token: { type: String }, */
+/*         user_token: { type: String }, */
+/*         card_product_token: { type: String }, */
+/*         last_four: { type: String }, */
+/*         pan: { type: String }, */
+/*         expiration: { type: String }, */
+/*         expiration_time: { type: String }, */
+/*         cvv_number: { type: String }, */
+/*         chip_cvv_number: { type: String }, */
+/*         barcode: { type: String }, */
+/*         pin_is_set: { type: Boolean }, */
+/*         state: { type: String, enum: Object.values(CardResponseStateEnum) }, */
+/*         state_reason: { type: String }, */
+/*         fullfillment_status: { type: String, enum: Object.values(CardResponseFulfillmentStatusEnum) }, */
+/*         reissue_pan_from_card_token: { type: String }, */
+/*         new_pan_from_card_token: { type: String }, */
+/*         // fulfillment: // TODO: is this ok to omit? */
+/*         bulk_issue_token: { type: String }, */
+/*         translate_pin_from_card_token: { type: String }, */
+/*         activation_actions: { */
+/*           type: { */
+/*             terminate_reissued_source_card: { type: Boolean }, */
+/*             swap_digital_wallet_tokens_from_card_token: { type: String }, */
+/*           }, */
+/*         }, */
+/*         instrument_type: { type: String, enum: Object.values(CardResponseInstrumentTypeEnum) }, */
+/*         expedite: { type: Boolean }, */
+/*         metadata: { type: Map, of: String }, */
+/*         contactless_exemption_counter: { type: Number }, */
+/*         contactless_exemption_total_amount: { type: Number }, */
+/*       }, */
+/*     }, */
+/*     // gpa_order_unload */
+/*     // gpa_order */
+/*     // program_transfer */
+/*     // fee_response */
+/*     // peer_transfer */
+/*     // msa_orders */
+/*     // msa_order_unload */
+/*     // offer_orders */
+/*     // auto_reload */
+/*     // direct_deposit */
+/*     // pull_from_card */
+/*     // polarity: { type: String, enum: Object.values(TransactionModelPolarityEnum) }, */
+/*     // */
+/*     // real_time_fee_group - this one should be mapped to an array from a Set */
+/**/
+/*     // 'fee'?: Fee; */
+/*     // 'chargeback'?: ChargebackResponse; */
+/*     // 'dispute'?: DisputeModel; */
+/*     network: { type: String }, */
+/*     subnetwork: { type: String }, */
+/*     // 'network_metadata'?: NetworkMetadata; */
+/*     acquirer_fee_amount: { type: Number }, */
+/*     // 'fees'?: Array<NetworkFeeModel>; */
+/*     // 'digital_wallet_token'?: DigitalWalletToken; */
+/*     // 'user'?: CardholderMetadata; */
+/*     // 'business'?: BusinessMetadata; */
+/*     // 'acquirer'?: Acquirer; */
+/*     // 'fraud'?: FraudView; */
+/*     // 'pos'?: Pos; */
+/*     // 'address_verification'?: AddressVerificationModel; */
+/*     // 'card_security_code_verification'?: CardSecurityCodeVerification; */
+/*     // 'transaction_metadata'?: TransactionMetadata; */
+/*     // 'original_credit'?: OriginalCredit; */
+/*     // 'account_funding'?: AccountFunding; */
+/*     // 'card_holder_model'?: UserCardHolderResponse; */
+/*     standin_approved_by: { type: String }, */
+/*     standin_by: { type: String }, */
+/*     standin_reason: { type: String }, */
+/*     network_reference_id: { type: String }, */
+/*     acquirer_reference_id: { type: String }, */
+/*     // 'cardholder_authentication_data'?: CardholderAuthenticationData; */
+/*     transaction_attributes: { type: Map, of: String }, */
+/*     clearing_record_sequence_number: { type: String }, */
+/*     issuer_received_time: { type: String }, */
+/*     issuer_payment_node: { type: String }, */
+/*     // 'program'?: Program; */
+/*     batch_number: { type: String }, */
+/*     from_account: { type: String }, */
+/*     multi_clearing_sequence_number: { type: String }, */
+/*     multi_clearing_sequence_count: { type: String }, */
+/*     isaIndicator: { type: String, enum: Object.values(TransactionModelIsaIndicatorEnum) }, */
+/*     enhanced_data_token: { type: String }, */
+/*     advice_reason_code: { type: String }, */
+/*     advice_reason_details: { type: String }, */
+/*     bank_transfer_token: { type: String }, */
+/*     interchange_rate_descriptor: { type: String }, */
+/*     fee_type: { type: String }, */
+/*     // 'atc_information'?: ATCInformationModel; */
+/*     local_transaction_date: { type: String }, */
+/*   }, */
+/* }; */
+
 export const transactionSchemaDefinition = {
   user: {
     type: Schema.Types.ObjectId,
@@ -197,6 +467,7 @@ export const transactionSchemaDefinition = {
     ref: 'plaid_category_mapping',
   },
   amount: { type: Number },
+  status: { type: String, enum: Object.values(TransactionModelStateEnum) },
   date: { type: Date },
   // if true, means this transaction was cancelled, bounced
   // refunded, or otherwise not processed.
@@ -286,6 +557,7 @@ export const transactionSchemaDefinition = {
         },
       },
     },
+    marqeta: Schema.Types.Mixed,
   },
   createdOn: { type: Date, default: () => getUtcDate() },
   /**

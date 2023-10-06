@@ -1,18 +1,27 @@
 /* eslint-disable no-restricted-syntax */
+import fs from 'fs';
 import Fuse from 'fuse.js';
 import { parse, transforms } from 'json2csv';
-import fs from 'fs';
+import { Schema } from 'mongoose';
 import path from 'path';
 import { Transaction } from 'plaid';
-import { Schema } from 'mongoose';
-import { CompanyModel, ICompany } from '../../models/company';
 import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
-import { IV2TransactionMatchedCompanyName, V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
-import { ICompanyMatchingResult, IMatchedTransaction } from './types';
+import { CompanyModel, ICompany } from '../../models/company';
 import { PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
-import { IRef } from '../../types/model';
 import { ISector } from '../../models/sector';
+import {
+  IV2TransactionMatchedCompanyName,
+  V2TransactionMatchedCompanyNameModel,
+} from '../../models/v2_transaction_matchedCompanyName';
+import { IRef } from '../../types/model';
+import { ICompanyMatchingResult, IMatchedTransaction } from './types';
 
+interface ICompanyWithCleanedName extends ICompany {
+  companyCleanedName: string;
+  _id: Schema.Types.ObjectId;
+}
+
+type FuseCleanedCompanyNameResult = Fuse.FuseResult<ICompanyWithCleanedName>[];
 const stringReplacements = [
   ' W/D',
   ' INC',
@@ -45,10 +54,6 @@ const regexReplacements = [/[0-9]+/gi, /\.$/, /-$/, /,$/];
 
 const THRESHOLD = 0.000000101;
 
-interface ICompanyWithCleanedName extends ICompany {
-  companyCleanedName: string;
-}
-
 interface IMatchTransactionsToCompaniesParams {
   transactions: Transaction[];
   cleanedCompanies: ICompanyWithCleanedName[];
@@ -63,11 +68,14 @@ export const getCleanCompanies = async () => {
     // TODO: fix these to adjust company names from QA
     // https://docs.google.com/spreadsheets/d/1llrGNNRHOUpkieyGW-HpV0mRSbouTBKQwsu-7mH_3uw/edit?usp=sharing
     let companyCleanedName = company.companyName;
-    for (const replacement of stringReplacements) companyCleanedName = companyCleanedName.replace(new RegExp(replacement, 'gi'), '');
+    for (const replacement of stringReplacements) {
+      companyCleanedName = companyCleanedName.replace(new RegExp(replacement, 'gi'), '');
+    }
     for (const replacement of regexReplacements) companyCleanedName = companyCleanedName.replace(replacement, '');
     const companyCleaned = {
       ...company,
       companyCleanedName: companyCleanedName.trim().toLowerCase(),
+      _id: company._id,
     };
     return companyCleaned;
   });
@@ -162,8 +170,8 @@ export const getMatchResults = async ({
       keys: ['companyCleanedName'],
     };
     const fuse = new Fuse(cleanedCompanies, fuseOptions);
-    const nameResult = fuse.search(name);
-    let merchantNameResult: any[] = [];
+    const nameResult: FuseCleanedCompanyNameResult = fuse.search(name);
+    let merchantNameResult: FuseCleanedCompanyNameResult = [];
     if (merchantName) merchantNameResult = fuse.search(merchantName);
     // END SEARCH ALL COMPANIES FOR MATCHES
 
@@ -218,6 +226,7 @@ export const getMatchResults = async ({
     }
   }
   console.timeEnd(timeString);
+
   return results;
 };
 

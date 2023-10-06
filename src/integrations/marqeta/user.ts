@@ -1,7 +1,16 @@
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { User } from '../../clients/marqeta/user';
 import { IRequest } from '../../types/request';
-import { IMarqetaCreateUser, IMarqetaUserTransition, IMarqetaClientAccessToken, IMarqetaLookUp, IMarqetaUserToken } from './types';
+import {
+  IMarqetaCreateUser,
+  IMarqetaUserTransition,
+  IMarqetaClientAccessToken,
+  IMarqetaLookUp,
+  IMarqetaUserToken,
+  GetUserByEmailResponse,
+  ListUsersResponse,
+  UserModel,
+} from './types';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -14,17 +23,17 @@ export const createUser = async (params: IMarqetaCreateUser) => {
   return userResponse;
 };
 
-export const listUsers = async () => {
+export const listUsers = async (): Promise<ListUsersResponse> => {
   const userResponse = await user.listUsers();
   return userResponse;
 };
 
-export const getUser = async (userToken: string) => {
+export const getUser = async (userToken: string): Promise<UserModel> => {
   const userResponse = await user.getUser(userToken);
   return userResponse;
 };
 
-export const getUserByEmail = async (params: IMarqetaLookUp) => {
+export const getUserByEmail = async (params: IMarqetaLookUp): Promise<GetUserByEmailResponse> => {
   const userResponse = await user.getUserByEmail(params);
   return userResponse;
 };

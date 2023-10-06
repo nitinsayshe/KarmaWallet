@@ -1,4 +1,6 @@
 import { ObjectId } from 'mongoose';
+import { Transaction } from 'plaid';
+import { TransactionModel } from '../../clients/marqeta/types';
 
 interface Identification {
   type: string;
@@ -37,7 +39,7 @@ export interface IMarqetaCreateUser {
   // metadata: Metadata;
 }
 export interface IMarqetaLookUp {
-  email: string
+  email: string;
 }
 export interface IMarqetaUserTransition extends IMarqetaUserToken {
   channel: string;
@@ -57,14 +59,13 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   fundingSourceToken: string;
 }
 
-export interface IMarqetaProcessKyc extends IMarqetaUserToken {
-}
+export interface IMarqetaProcessKyc extends IMarqetaUserToken {}
 
 enum IMarqetaCardState {
   ACTIVE = 'ACTIVE',
   LIMITED = 'LIMITED',
   SUSPENDED = 'SUSPENDED',
-  TERMINATED = 'TERMINATED'
+  TERMINATED = 'TERMINATED',
 }
 
 export interface IMarqetaCardTransition {
@@ -77,13 +78,13 @@ export interface IMarqetaCardTransition {
 enum kyc_required {
   ALWAYS = 'ALWAYS',
   CONDITIONAL = 'CONDITIONAL',
-  NEVER = 'NEVER'
+  NEVER = 'NEVER',
 }
 
 export enum IMarqetaKycState {
   failure = 'failure',
   success = 'success',
-  pending = 'pending'
+  pending = 'pending',
 }
 
 interface IMarqetaACHGroupConfig {
@@ -135,7 +136,7 @@ export enum CardholderVerificationMethod {
   login = 'LOGIN',
   otp = 'OTP',
   otp_cvv = 'OTP_CVV',
-  other = 'OTHER'
+  other = 'OTHER',
 }
 export interface IMarqetaPinControlToken {
   cardToken: string;
@@ -284,3 +285,61 @@ export interface IACHTransferValidationQuery {
 export interface IACHBankTransferRequestFields extends IMarqetaACHBankTransfer {
   userId : ObjectId;
 }
+
+export type CardModel = {
+  created_time?: string;
+  last_modified_time?: string;
+  token: string;
+  user_token?: string;
+  card_product_token?: string;
+  last_four?: string;
+  pan?: string;
+  expiration?: string;
+  expiration_time?: string;
+  barcode?: string;
+  pin_is_set?: boolean;
+  state?: string;
+  state_reason?: string;
+  fulfillment_status?: string;
+  instrument_type?: string;
+  expedite?: boolean;
+  metadata?: Record<string, any>;
+};
+
+export type UserModel = {
+  token: string;
+  active?: boolean;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  address1?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+  birth_date?: string;
+  uses_parent_account?: boolean;
+  corporate_card_holder?: boolean;
+  created_time?: string;
+  last_modified_time?: string;
+  metadata?: Record<string, any>;
+  account_holder_group_token?: string;
+  status?: string;
+  identifications?: Identification[];
+};
+
+export type PaginatedMarqetaResponse<DataType> = {
+  count: number;
+  start_index: number;
+  end_index: number;
+  is_more: boolean;
+  data: DataType;
+};
+
+export type ListUsersResponse = PaginatedMarqetaResponse<UserModel[]>;
+export type GetUserByEmailResponse = PaginatedMarqetaResponse<UserModel[]>;
+export type ListCardsResponse = { cards: PaginatedMarqetaResponse<CardModel[]> };
+export type ListTransactionsResponse = { data: PaginatedMarqetaResponse<TransactionModel[]> };
+export type ListACHFundingSourcesForUserResponse = { data: PaginatedMarqetaResponse<IACHFundingSource[]> };
+
+export type EnrichedMarqetaTransaction = Transaction & { marqeta_transaction: TransactionModel };

@@ -34,7 +34,7 @@ export const listUser: IRequestHandler<{}, {}, {}> = async (req, res) => {
 export const getUser: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
     const { userToken } = req.params;
-    const { data } = await UserService.getUser(userToken);
+    const data = await UserService.getUser(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -45,6 +45,8 @@ export const updateUser: IRequestHandler<{ userToken: string }, {}, IMarqetaCrea
   try {
     const { userToken } = req.params;
     const { body } = req;
+    // TODO: check if the response body has a 'data' field
+    // https://www.marqeta.com/docs/core-api/users#putUsersToken
     const { data } = await UserService.updateUser(userToken, body);
     output.api(req, res, data);
   } catch (err) {
@@ -61,6 +63,7 @@ export const userTransition: IRequestHandler<{ userToken: string }, {}, IMarqeta
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
+    // TODO: check if the response body has a 'data' field
     const { data } = await UserService.userTransition(req);
     output.api(req, res, data);
   } catch (err) {
@@ -71,6 +74,7 @@ export const userTransition: IRequestHandler<{ userToken: string }, {}, IMarqeta
 export const listUserTransition: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
     const { userToken } = req.params;
+    // TODO: check if the response body has a 'data' field
     const { data } = await UserService.listUserTransition(userToken);
     output.api(req, res, data);
   } catch (err) {
@@ -87,6 +91,7 @@ export const createClientAccessToken: IRequestHandler<{}, {}, IMarqetaClientAcce
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
+    // TODO: check if the response body has a 'data' field
     const { data } = await UserService.createClientAccessToken(req);
     output.api(req, res, data);
   } catch (err) {
@@ -97,6 +102,7 @@ export const createClientAccessToken: IRequestHandler<{}, {}, IMarqetaClientAcce
 export const getClientAccessToken: IRequestHandler<{ accessToken: string }, {}, {}> = async (req, res) => {
   try {
     const { accessToken } = req.params;
+    // TODO: check if the response body has a 'data' field
     const { data } = await UserService.getClientAccessToken(accessToken);
     output.api(req, res, data);
   } catch (err) {
@@ -113,6 +119,7 @@ export const createUserAuthToken: IRequestHandler<{}, {}, IMarqetaUserToken> = a
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
+    // TODO: check if the response body has a 'data' field
     const { data } = await UserService.createUserAuthToken(req);
     output.api(req, res, data);
   } catch (err) {

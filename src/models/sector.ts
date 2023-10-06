@@ -1,9 +1,4 @@
-import {
-  Schema,
-  model,
-  Document,
-  PaginateModel,
-} from 'mongoose';
+import { Schema, model, Document, PaginateModel } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 
@@ -25,6 +20,7 @@ export interface ISector {
   parentSectors: IRef<Schema.Types.ObjectId, ISector>[];
   averageScores: ISectorAverageScores;
   icon: string;
+  mccs: number[];
 }
 
 export interface ISectorDocument extends ISector, Document {}
@@ -56,10 +52,17 @@ const sectorSchema = new Schema({
     avgDiversityInclusionScore: { type: Number },
   },
   // TODO: add validation to ensure that any sub-sectors include corresponding parent tiers
-  parentSectors: [{
-    type: Schema.Types.ObjectId,
-    ref: 'sector',
-  }],
+  parentSectors: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'sector',
+    },
+  ],
+  mccs: [
+    {
+      type: Number,
+    },
+  ],
 });
 sectorSchema.plugin(mongoosePaginate);
 

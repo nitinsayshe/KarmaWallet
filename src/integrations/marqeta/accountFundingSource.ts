@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransferRequestFields, IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHTransferTypes } from './types';
+import { IACHBankTransferRequestFields, IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHTransferTypes, ListACHFundingSourcesForUserResponse } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
@@ -26,6 +26,12 @@ export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: 
   } else {
     await ACHFundingSourceModel.updateOne({ userId, token }, ACHFundingSourceData);
   }
+};
+
+// list user's funding sources
+export const listACHFundingSourcesForUser = async (userId: string, params?: any): Promise<ListACHFundingSourcesForUserResponse> => {
+  const sources = await achFundingSource.listACHFundingSourceForUser(userId, params);
+  return { data: sources };
 };
 
 // store ACH bank transfer  to karma DB

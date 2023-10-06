@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongoose';
+
 interface Identification {
   type: string;
   value: string;
@@ -209,4 +211,76 @@ export interface IACHFundingSource {
   user_token: String;
   created_time?: Date;
   last_modified_time?: Date;
+}
+
+export interface IACHFundingSourceQuery {
+  userId: ObjectId;
+  fundingSourceToken?: string;
+  userToken?: string;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+interface ILastModifiedTimeQuery {
+  $gte : Date;
+  $lt : Date;
+}
+
+export interface IACHFundingSourceModelQuery {
+  userId: ObjectId;
+  token?: string;
+  user_token?: string;
+  active: boolean;
+  last_modified_time?: ILastModifiedTimeQuery;
+}
+
+export enum IMACHTransferStatus {
+  INITIATED = 'INITIATED',
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  SUBMITTED = 'SUBMITTED',
+  RETURNED = 'RETURNED',
+  COMPLETED = 'COMPLETED',
+  ERROR = 'ERROR',
+  CANCELLED = 'CANCELLED'
+}
+
+export enum IACHTransferTypes {
+  PUSH = 'PUSH',
+  PULL = 'PULL'
+}
+
+export interface IACHBankTransferQuery {
+  userId: ObjectId;
+  bankTransferToken?: string;
+  fundingSourceToken?: string;
+  type: IACHTransferTypes;
+  status: IMACHTransferStatus;
+  fromDate?: Date;
+  toDate?: Date;
+}
+
+export interface IACHBankTransferModelQuery {
+  userId: ObjectId;
+  token?: string;
+  bankTransferToken?: string;
+  fundingSourceToken?: string;
+  type? : IACHTransferTypes;
+  status?: IMACHTransferStatus;
+  last_modified_time?: ILastModifiedTimeQuery;
+}
+
+export interface IACHTransferValidationQuery {
+  userId: ObjectId;
+  fundingSourceToken: string;
+  type: IMarqetaACHTransferType;
+  statusArray: IMACHTransferStatus[];
+  fromDate: Date;
+  toDate : Date;
+  limit?: number;
+  amount: number;
+}
+
+export interface IACHBankTransferRequestFields extends IMarqetaACHBankTransfer {
+  userId : ObjectId;
 }

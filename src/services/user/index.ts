@@ -6,6 +6,7 @@ import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact } from '../../integrations/activecampaign';
+import { deleteKardUsersForUser } from '../../integrations/kard';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -34,7 +35,6 @@ import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscription
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
 import { resendEmailVerification } from './verification';
-import { deleteKardUsersForUser } from '../../integrations/kard';
 
 dayjs.extend(utc);
 

@@ -68,6 +68,7 @@ export const getCleanCompanies = async () => {
     const companyCleaned = {
       ...company,
       companyCleanedName: companyCleanedName.trim().toLowerCase(),
+      _id: company._id,
     };
     return companyCleaned;
   });

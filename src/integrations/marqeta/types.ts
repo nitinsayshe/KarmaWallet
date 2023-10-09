@@ -38,6 +38,7 @@ export interface IMarqetaCreateUser {
   // do we need this??
   // metadata: Metadata;
 }
+
 export interface IMarqetaUserAddress{
   address1?: string;
   address2?: string;
@@ -46,6 +47,7 @@ export interface IMarqetaUserAddress{
   country?: string;
   postalCode?: string;
 }
+
 export interface IMarqetaUpdateUser extends IMarqetaUserAddress{
   firstName?: string;
   lastName?: string;

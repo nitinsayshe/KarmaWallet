@@ -36,6 +36,7 @@ import { checkIfUserWithEmailExists } from './utils';
 import { filterToValidQueryParams } from '../../lib/validation';
 import { resendEmailVerification, verifyBiometric } from './verification';
 import { deleteKardUsersForUser } from '../../integrations/kard';
+import { updateMarqetaUser } from '../../integrations/marqeta/user';
 
 dayjs.extend(utc);
 
@@ -72,6 +73,7 @@ export interface IUserData extends ILoginData {
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
+  integrations?: IUserIntegrations
 }
 export interface IRegisterUserData {
   name: string;
@@ -428,6 +430,7 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const { requestor } = req;
+  const { userToken } = requestor.integrations.marqeta;
   const updates = req.body;
   const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
   if (!!updates?.email) {
@@ -435,7 +438,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
-  const allowedFields: UserKeys[] = ['name', 'zipcode'];
+  const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
@@ -448,6 +451,11 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
+        break;
+      case 'integrations':
+        // update the data in marqeta
+        await updateMarqetaUser(userToken, updates.integrations.marqeta);
+        requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, updates.integrations.marqeta);
         break;
       default:
         break;

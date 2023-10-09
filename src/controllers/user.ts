@@ -33,18 +33,18 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
 export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
   try {
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
-    const { password, email, biometricSignature, fcmToken } = req.body;
+    const { password, email, biometricSignature, fcmToken, deviceInfo } = req.body;
     const { user, authKey } = await UserService.login(req, {
       biometricSignature,
       password,
       email,
       fcmToken,
+      deviceInfo,
     });
     const notification: IFCMNotification = {
       title: 'Karma Wallet',
       body: 'Welcome to the Karma Wallet Application',
     };
-    console.log('Sending Push Notification');
     sendPushNotification(user, notification);
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {

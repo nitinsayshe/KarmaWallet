@@ -17,7 +17,7 @@ import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
+import { IDeviceInfo, IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -53,6 +53,15 @@ export interface ILoginData {
   biometricSignature?: string;
   token?: string;
   fcmToken: string;
+  deviceInfo?: {
+    manufacturer: string,
+    bundleId: string,
+    deviceId: string,
+    apiLevel: string,
+    applicaitonName: string,
+    model: string,
+    buildNumber: string,
+  };
 }
 
 export interface IUpdatePasswordBody {
@@ -245,7 +254,26 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
   }
 };
 
-export const login = async (req: IRequest, { email, password, biometricSignature, fcmToken }: ILoginData) => {
+export const addFCMAndDeviceInfo = async (user: IUserDocument, fcmToken: string, deviceInfo: IDeviceInfo) => {
+  // Add FCM token and device info of the user
+  const { deviceId } = deviceInfo;
+  if (fcmToken && deviceId) {
+    const { fcm } = user.integrations;
+    const existingDeviceIndex = fcm.findIndex((item) => item.deviceId === deviceId);
+
+    if (existingDeviceIndex !== -1) {
+      // Device already exists, update the token
+      user.integrations.fcm[existingDeviceIndex].token = fcmToken;
+    } else {
+      // Device doesn't exist, add a new entry
+      user.integrations.fcm.push({ token: fcmToken, deviceId });
+      user.deviceInfo.push(deviceInfo);
+    }
+    await user.save();
+  }
+};
+
+export const login = async (req: IRequest, { email, password, biometricSignature, fcmToken, deviceInfo }: ILoginData) => {
   email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
   if (!user) {
@@ -274,13 +302,7 @@ export const login = async (req: IRequest, { email, password, biometricSignature
 
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
 
-  if (fcmToken) {
-    const { tokens } = user.integrations.fcm;
-    if (!tokens.includes(fcmToken)) {
-      tokens.push(fcmToken);
-      await user.save();
-    }
-  }
+  addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
 
   return { user, authKey };
 };

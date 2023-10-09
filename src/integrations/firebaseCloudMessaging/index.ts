@@ -16,17 +16,17 @@ export interface IFCMNotification {
 }
 export interface IPushNotification {
   notification: IFCMNotification,
-  token: string,
+  token: String,
 }
 export const sendPushNotification = (user: IUserDocument, notification: IFCMNotification) => {
   // Get FCM token of the user
   const { integrations } = getShareableUser(user);
-  const { tokens } = integrations.fcm;
-  tokens.forEach(async (token) => {
-    // Send the message to devices targeted by its FCM token
+  const { fcm } = integrations;
+  fcm.forEach(async (fcmObject) => {
+    // Send the notification to devices targeted by its FCM token
     const pushNotification: IPushNotification = {
       notification,
-      token,
+      token: fcmObject.token,
     };
     console.log('Notification Data:', notification);
     await admin.messaging().send(pushNotification)

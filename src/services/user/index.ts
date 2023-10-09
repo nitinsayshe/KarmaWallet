@@ -453,9 +453,12 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
         break;
       case 'integrations':
-        // update the data in marqeta
-        await updateMarqetaUser(userToken, updates.integrations.marqeta);
-        requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, updates.integrations.marqeta);
+        // update the address data in marqeta and km Db
+        if (updates?.integrations?.marqeta) {
+          const { marqeta } = updates.integrations;
+          await updateMarqetaUser(userToken, marqeta);
+          requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, marqeta);
+        }
         break;
       default:
         break;

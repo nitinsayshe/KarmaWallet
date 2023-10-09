@@ -38,19 +38,21 @@ export interface IMarqetaCreateUser {
   // do we need this??
   // metadata: Metadata;
 }
-export interface IMarqetaUpdateUser {
-  firstName?: string;
-  lastName?: string;
-  token?: string;
-  email?: string;
-  identifications?: Identification[];
-  birthDate?: string;
+export interface IMarqetaUserAddress{
   address1?: string;
   address2?: string;
   city?: string;
   state?: string;
   country?: string;
   postalCode?: string;
+}
+export interface IMarqetaUpdateUser extends IMarqetaUserAddress{
+  firstName?: string;
+  lastName?: string;
+  token?: string;
+  email?: string;
+  identifications?: Identification[];
+  birthDate?: string;
   // do we need this??
   // metadata: Metadata;
 }

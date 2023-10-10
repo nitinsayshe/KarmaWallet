@@ -85,6 +85,8 @@ jobs:
     - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.PRODUCTION_KARD_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.PRODUCTION_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.PRODUCTION_MARQETA_ACCESS_TOKEN}}' >> .env
+    - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.PRODUCTION_MARQETA_WEBHOOK_ID}}' >> .env
+    - run: echo 'MARQETA_WEBHOOK_PASSWORD=${{secrets.PRODUCTION_MARQETA_WEBHOOK_PASSWORD}}' >> .env
     - run: echo 'MARQETA_BASE_URL=https://api.marqeta.com/v3/' >> .env
     - run: npm i
     - run: pm2 restart all --update-env

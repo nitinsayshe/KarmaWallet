@@ -4,7 +4,6 @@ import { createCard } from '../../integrations/marqeta/card';
 import { processUserKyc } from '../../integrations/marqeta/kyc';
 import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
 import { createUser, getUserByEmail, updateUser } from '../../integrations/marqeta/user';
-import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus, IKarmaCardApplication, IKarmaCardApplicationDocument, IShareableCardApplication, KarmaCardApplicationModel } from '../../models/karmaCardApplication';
 import { IUrlParam, UserModel } from '../../models/user';
 import { VisitorModel } from '../../models/visitor';
@@ -13,6 +12,7 @@ import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
 import { IMarqetaCardProducts, IMarqetaUserState, ReasonCode } from './utils';
+import { generateRandomPasswordString } from '../../lib/misc';
 
 export interface IKarmaCardRequestBody {
   address1: string;

@@ -10,7 +10,7 @@ import { RedisClient } from './src/clients/redis';
 import cors from './src/middleware/cors';
 import checkToken from './src/middleware/checkToken';
 import identify from './src/middleware/identify';
-import rateLimiter from './src/middleware/rateLimiter';
+import { emailRateLimiter, KWRateLimiterKeyPrefixes, rateLimiter } from './src/middleware/rateLimiter';
 import errorHandler from './src/middleware/errorHandler';
 import { SocketClient } from './src/clients/socket';
 import routers from './src/routers';
@@ -35,13 +35,25 @@ const port = process.env.PORT || 8012;
   app.use(identify);
   app.use(express.urlencoded({ extended: true }) as any); // temp workaround for broken types with express typings
   app.use(express.json({ limit: `${100 * 1024 * 1024}mb` }) as any); // temp workaround for broken types with express typings { limit: `${100 * 1024 * 1024}mb` }
-  app.use(await rateLimiter({ keyPrefix: 'main-middleware' }));
+  app.use(await rateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.Main }));
 
   const httpServer = app.listen(port, () => {
     console.log('\n --------------------------\n', `| Listening on port ${port} |`, '\n --------------------------');
-    console.log(' --------------------------\n', `|   Process id ${process.pid}     |`, '\n --------------------------\n');
+    console.log(
+      ' --------------------------\n',
+      `|   Process id ${process.pid}     |`,
+      '\n --------------------------\n',
+    );
   });
   SocketClient.init(httpServer);
-  routers(app);
   app.use(errorHandler);
+
+  // create endpoint rate limiters
+  app.set(
+    KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate,
+    await emailRateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate }, app),
+  );
+  app.set(KWRateLimiterKeyPrefixes.Login, await emailRateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.Login }, app));
+
+  routers(app);
 })();

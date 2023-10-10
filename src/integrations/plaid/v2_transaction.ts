@@ -146,6 +146,8 @@ export const saveTransactions = async (
   }
   const cards = await CardModel.find({ status: 'linked', userId: _user._id });
   const cardDictionary = cards.reduce((acc, card) => {
+    // short circuit if card is not linked to plaid (i.e. marqeta card)
+    if (!card.integrations?.plaid?.accountId) return acc;
     // @ts-ignore
     acc[card.integrations.plaid.accountId] = card._id;
     return acc;

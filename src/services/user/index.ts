@@ -6,11 +6,14 @@ import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact } from '../../integrations/activecampaign';
+import { deleteKardUsersForUser } from '../../integrations/kard';
+import { updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { isValidEmailFormat } from '../../lib/string';
+import { filterToValidQueryParams } from '../../lib/validation';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
@@ -31,12 +34,9 @@ import { sendChangePasswordEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
-import { validatePassword } from './utils/validate';
 import { checkIfUserWithEmailExists } from './utils';
-import { filterToValidQueryParams } from '../../lib/validation';
+import { validatePassword } from './utils/validate';
 import { resendEmailVerification, verifyBiometric } from './verification';
-import { deleteKardUsersForUser } from '../../integrations/kard';
-import { updateMarqetaUser } from '../../integrations/marqeta/user';
 
 dayjs.extend(utc);
 

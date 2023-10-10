@@ -28,13 +28,10 @@ export const sendPushNotification = (user: IUserDocument, notification: IFCMNoti
       notification,
       token: fcmObject.token,
     };
-    console.log('Notification Data:', notification);
+
     await admin.messaging().send(pushNotification)
-      .then((response: any) => {
-        console.log('Successfully sent message:', response);
-      })
-      .catch((error: any) => {
-        console.log('Error sending message:', error);
+      .catch((_error: any) => {
+        // no-op
       });
   });
 };

@@ -41,6 +41,8 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
       fcmToken,
       deviceInfo,
     });
+
+    // Just for testing purpose, a push notification event is triggered after user logs in.
     const notification: IFCMNotification = {
       title: 'Karma Wallet',
       body: 'Welcome to the Karma Wallet Application',

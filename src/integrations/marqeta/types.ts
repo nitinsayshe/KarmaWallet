@@ -39,7 +39,7 @@ export interface IMarqetaCreateUser {
   // metadata: Metadata;
 }
 
-export interface IMarqetaUserAddress{
+export interface IMarqetaUserAddress {
   address1?: string;
   address2?: string;
   city?: string;
@@ -48,7 +48,7 @@ export interface IMarqetaUserAddress{
   postalCode?: string;
 }
 
-export interface IMarqetaUpdateUser extends IMarqetaUserAddress{
+export interface IMarqetaUpdateUser extends IMarqetaUserAddress {
   firstName?: string;
   lastName?: string;
   token?: string;
@@ -79,7 +79,7 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   fundingSourceToken: string;
 }
 
-export interface IMarqetaProcessKyc extends IMarqetaUserToken {}
+export interface IMarqetaProcessKyc extends IMarqetaUserToken { }
 
 enum IMarqetaCardState {
   ACTIVE = 'ACTIVE',
@@ -243,8 +243,8 @@ export interface IACHFundingSourceQuery {
 }
 
 interface ILastModifiedTimeQuery {
-  $gte : Date;
-  $lt : Date;
+  $gte: Date;
+  $lt: Date;
 }
 
 export interface IACHFundingSourceModelQuery {
@@ -286,7 +286,7 @@ export interface IACHBankTransferModelQuery {
   token?: string;
   bankTransferToken?: string;
   fundingSourceToken?: string;
-  type? : IACHTransferTypes;
+  type?: IACHTransferTypes;
   status?: IMACHTransferStatus;
   last_modified_time?: ILastModifiedTimeQuery;
 }
@@ -297,13 +297,13 @@ export interface IACHTransferValidationQuery {
   type: IMarqetaACHTransferType;
   statusArray: IMACHTransferStatus[];
   fromDate: Date;
-  toDate : Date;
+  toDate: Date;
   limit?: number;
   amount: number;
 }
 
 export interface IACHBankTransferRequestFields extends IMarqetaACHBankTransfer {
-  userId : ObjectId;
+  userId: ObjectId;
 }
 
 export type CardModel = {

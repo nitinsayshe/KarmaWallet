@@ -3,7 +3,7 @@ import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
 import { processUserKyc } from '../../integrations/marqeta/kyc';
 import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
-import { createUser, getUserByEmail, updateUser } from '../../integrations/marqeta/user';
+import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus, IKarmaCardApplication, IKarmaCardApplicationDocument, IShareableCardApplication, KarmaCardApplicationModel } from '../../models/karmaCardApplication';
 import { IUrlParam, UserModel } from '../../models/user';
@@ -64,8 +64,7 @@ export const getShareableKarmaCardApplication = ({
 
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   // find the email is already register with marqeta or not
-  // const { data } = await user.getUserByEmail({ email: userData.email });
-  const { data } = await getUserByEmail({ email: userData.email });
+  const { data } = await getMarqetaUserByEmail({ email: userData.email });
   let marqetaUserResponse;
   let kycResponse;
   let virtualCardResponse;
@@ -74,10 +73,10 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   if (data.length > 0) {
     // if email is register in marqeta then update the user in marqeta
     const userToken = data[0].token;
-    marqetaUserResponse = await updateUser(userToken, userData);
+    marqetaUserResponse = await updateMarqetaUser(userToken, userData);
   } else {
     // if not register then register user to marqeta
-    marqetaUserResponse = await createUser(userData);
+    marqetaUserResponse = await createMarqetaUser(userData);
   }
   // perform the kyc through marqeta & create the card
   if (!!marqetaUserResponse && marqetaUserResponse?.status !== IMarqetaUserState.active) {

@@ -69,6 +69,10 @@ export type CreateTestTransactionsRequest = {
   transactions?: Partial<ITransactionDocument>[];
 };
 
+export type CreateTestSectorsRequest = {
+  sectors?: Partial<ISectorDocument>[];
+};
+
 export interface IRemoveableDocument {
   remove: () => Promise<this>;
 }
@@ -420,3 +424,26 @@ export const createNumMonthsOfTransactions = async (
     }),
   );
 };
+
+export const createSomeSectors = async (req: CreateTestSectorsRequest): Promise<ISectorDocument[]> => (await Promise.all(
+  req?.sectors?.map(async (s) => {
+    const newSector = new SectorModel();
+    newSector.name = s?.name || 'Test Sector';
+    newSector.tier = s?.tier || 1;
+    newSector.carbonMultiplier = s?.carbonMultiplier || 1;
+    newSector.icon = s?.icon || undefined;
+    newSector.averageScores = s?.averageScores || {
+      numCompanies: 0,
+      avgScore: 0,
+      avgPlanetScore: 0,
+      avgPeopleScore: 0,
+      avgSustainabilityScore: 0,
+      avgClimateActionScore: 0,
+      avgCommunityWelfareScore: 0,
+      avgDiversityInclusionScore: 0,
+    };
+    newSector.parentSectors = s?.parentSectors || [];
+    newSector.mccs = s?.mccs || undefined;
+    return newSector.save();
+  }),
+)) || [];

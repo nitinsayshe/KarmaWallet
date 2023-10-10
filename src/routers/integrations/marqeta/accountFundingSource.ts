@@ -13,4 +13,10 @@ router.route('/banktransfer/:achToken')
 router.route('/banktransfer')
   .get(ACHFundingSourceController.listACHBankTransfer);
 
+router.route('/fundingSource')
+  .get(authenticate, ACHFundingSourceController.getLocalACHFundingSource);
+
+router.route('/getBankTransfer')
+  .get(authenticate, ACHFundingSourceController.getLocalACHBankTransfer);
+
 export default router;

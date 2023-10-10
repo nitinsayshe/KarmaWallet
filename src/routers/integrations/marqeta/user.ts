@@ -4,30 +4,30 @@ import * as UserController from '../../../controllers/integrations/marqeta/user'
 const router = Router();
 
 router.route('/create')
-  .post(UserController.createUser);
+  .post(UserController.createMarqetaUser);
 
 router.route('/list')
-  .get(UserController.listUser);
+  .get(UserController.listMarqetaUser);
 
 router.route('/profile/:userToken')
-  .get(UserController.getUser);
+  .get(UserController.getMarqetaUser);
 
 router.route('/update/:userToken')
-  .put(UserController.updateUser);
+  .put(UserController.updateMarqetaUser);
 
 router.route('/transition/:userToken')
-  .post(UserController.userTransition);
+  .post(UserController.userMarqetaTransition);
 
 router.route('/transition/:userToken')
-  .get(UserController.listUserTransition);
+  .get(UserController.listMarqetaUserTransition);
 
 router.route('/accesstoken')
-  .post(UserController.createClientAccessToken);
+  .post(UserController.createMarqetaClientAccessToken);
 
 router.route('/accesstoken/:accessToken')
-  .get(UserController.listUserTransition);
+  .get(UserController.listMarqetaUserTransition);
 
 router.route('/onetime-auth')
-  .post(UserController.createUserAuthToken);
+  .post(UserController.createMarqetaUserAuthToken);
 
 export default router;

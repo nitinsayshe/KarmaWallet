@@ -23,6 +23,7 @@ import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
+import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
@@ -112,14 +113,14 @@ interface IMarqetaWebhookCardsEvent {
   pan: String;
   expiration: String;
   card_token: String;
-  user_token: String,
-  fulfillment_status: String,
-  created_time: String,
-  card_product_token: String,
+  user_token: String;
+  fulfillment_status: String;
+  created_time: String;
+  card_product_token: String;
   last_four: String;
   expiration_time: Date;
   pin_is_set: Boolean;
-  card: Object
+  card: Object;
 }
 
 interface IMarqetaCardActionEvent {
@@ -132,20 +133,31 @@ interface IMarqetaCardActionEvent {
 }
 
 interface IMarqetaUserTranactionEvent {
-  token: String,
-  status: String,
-  reason_code: String,
-  channel: String,
-  created_time: Date,
-  last_modified_time:Date,
-  user_token: String,
-  metadata: Object
+  token: String;
+  status: String;
+  reason_code: String;
+  channel: String;
+  created_time: Date;
+  last_modified_time:Date;
+  user_token: String;
+  metadata: Object;
+}
+
+interface IMarqetaBankTransferTransitionEvent {
+  token: String;
+  bank_transfer_token: String;
+  status: String;
+  reason: String;
+  channel: String;
+  created_time: Date;
+  last_modified_time: Date;
 }
 
 interface IMarqetaWebhookBody {
   cards : IMarqetaWebhookCardsEvent[];
   cardactions : IMarqetaCardActionEvent[];
   usertransitions : IMarqetaUserTranactionEvent[];
+  banktransfertransitions : IMarqetaBankTransferTransitionEvent[];
 }
 
 interface IMarqetaWebhookHeader {
@@ -358,7 +370,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, usertransitions } = req.body;
+    const { cards, cardactions, usertransitions, banktransfertransitions } = req.body;
 
     if (!!cards) {
       for (const card of cards) {
@@ -377,6 +389,21 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!usertransitions) {
       for (const usertransition of usertransitions) {
         await UserModel.findOneAndUpdate({ 'integrations.marqeta.userToken': usertransition?.user_token }, { 'integrations.marqeta.kycResult.status': usertransition.status }, { new: true });
+      }
+    }
+
+    if (!!banktransfertransitions) {
+      for (const banktransfertransition of banktransfertransitions) {
+        await ACHTransferModel.findOneAndUpdate(
+          {
+            token: banktransfertransition.bank_transfer_token,
+          },
+          {
+            $set:
+              { status: banktransfertransition.status },
+            $push: { transitions: banktransfertransition },
+          },
+        );
       }
     }
 

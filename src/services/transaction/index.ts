@@ -544,7 +544,6 @@ export const getShareableTransaction = ({
   }
 
   if (!!integrations?.marqeta) {
-    // get the card mask associated with this transaction
     const {
       token,
       user_token: userToken,
@@ -920,7 +919,7 @@ export const getMatchedCompanies = async (req: IRequest<{}, IGetMatchedCompanies
   }
 };
 
-export const getMarqetaTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>) => {
+export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>) => {
   const { transactionId } = req.params;
   const matchedTransaction = await TransactionModel
     .findOne({

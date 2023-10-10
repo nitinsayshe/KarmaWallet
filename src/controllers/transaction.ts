@@ -7,7 +7,7 @@ import { ITransactionDocument } from '../models/transaction';
 
 export const getTransaction: IRequestHandler<TransactionService.ITransactionIdParam> = async (req, res) => {
   try {
-    const transactionData = await TransactionService.getMarqetaTransaction(req);
+    const transactionData = await TransactionService.getTransaction(req);
     output.api(req, res, transactionData);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -5,6 +5,15 @@ import * as TransactionService from '../services/transaction';
 import { IRequest, IRequestHandler } from '../types/request';
 import { ITransactionDocument } from '../models/transaction';
 
+export const getTransaction: IRequestHandler<TransactionService.ITransactionIdParam> = async (req, res) => {
+  try {
+    const transactionData = await TransactionService.getMarqetaTransaction(req);
+    output.api(req, res, transactionData);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const getTransactions: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });

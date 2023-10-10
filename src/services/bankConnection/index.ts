@@ -106,3 +106,35 @@ export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, 
 
   return { message: 'Banks have been removed.' };
 };
+
+export interface IFormattedBankConnection {
+  accessToken: string;
+  fundingSourceToken: string;
+  institution: string;
+  accounts: IShareableBankConnection[];
+}
+
+export const getFormattedBankConnection = (shareableBankConnections: IShareableBankConnection[]): IFormattedBankConnection[] => {
+  const formattedResponse: IFormattedBankConnection[] = [];
+
+  shareableBankConnections.forEach(connection => {
+    const formattedConnection = formattedResponse.find(element => element?.institution === connection?.institution);
+    if (!!formattedConnection) {
+      const formattedConnectionIndex = formattedResponse.indexOf(formattedConnection);
+      formattedResponse[formattedConnectionIndex] = {
+        ...formattedConnection,
+        accounts: [...formattedConnection.accounts, connection],
+      };
+    } else {
+      const newformattedConnection = {
+        accessToken: connection?.integrations?.plaid?.accessToken,
+        fundingSourceToken: connection?.fundingSourceToken,
+        institution: connection?.institution,
+        accounts: [connection],
+      };
+      formattedResponse.push(newformattedConnection);
+    }
+  });
+
+  return formattedResponse;
+};

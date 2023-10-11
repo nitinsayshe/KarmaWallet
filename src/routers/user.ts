@@ -16,7 +16,7 @@ const registerRoutes = async (app: Express) => {
   );
   router.post('/password/token/verify', UserController.verifyPasswordResetToken);
   router.put('/password/token', UserController.resetPasswordFromToken);
-  router.post('/checkEmail', UserController.checkIfEmailAlreadyInUse);
+  router.post('/check-email', UserController.checkIfEmailAlreadyInUse);
 
   router.get('/test-identities', UserController.getTestIdentities);
 

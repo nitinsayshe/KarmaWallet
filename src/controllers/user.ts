@@ -6,6 +6,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 import * as UserTestIdentityService from '../services/user/testIdentities';
+import { KWRateLimiterKeyPrefixes, setRateLimiterHeaders, unblockFromEmailLimiterOnSuccess } from '../middleware/rateLimiter';
 
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
@@ -17,7 +18,10 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
       output.error(
         req,
         res,
-        new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG),
+        new CustomError(
+          `Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`,
+          ErrorTypes.INVALID_ARG,
+        ),
       );
       return;
     }
@@ -32,14 +36,18 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
 export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
   try {
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
-    const { password, email, biometricSignature } = req.body;
+    const { password, email, biometricSignature, fcmToken, deviceInfo } = req.body;
     const { user, authKey } = await UserService.login(req, {
       biometricSignature,
       password,
       email,
+      fcmToken,
+      deviceInfo,
     });
+
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
+    setRateLimiterHeaders(req, res);
     output.error(req, res, asCustomError(err));
   }
 };
@@ -93,6 +101,7 @@ export const createPasswordResetToken: IRequestHandler<{}, {}, UserService.ILogi
     const data = await UserService.createPasswordResetToken(req);
     output.api(req, res, data);
   } catch (err) {
+    setRateLimiterHeaders(req, res);
     output.error(req, res, asCustomError(err));
   }
 };
@@ -106,7 +115,7 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVeri
   }
 };
 
-export const verifyUserDoesNotAlreadyExist: IRequestHandler<{}, {}, UserVerificationService.IEmail> = async (req, res) => {
+export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserService.IEmail> = async (req, res) => {
   try {
     const data = await UserVerificationService.verifyUserDoesNotAlreadyExist(req);
     output.api(req, res, data);
@@ -115,16 +124,24 @@ export const verifyUserDoesNotAlreadyExist: IRequestHandler<{}, {}, UserVerifica
   }
 };
 
-export const resetPasswordFromToken: IRequestHandler<{}, {}, (UserService.ILoginData & UserService.IUpdatePasswordBody)> = async (req, res) => {
+export const resetPasswordFromToken: IRequestHandler<
+{},
+{},
+UserService.ILoginData & UserService.IUpdatePasswordBody
+> = async (req, res) => {
   try {
     const user = await UserService.resetPasswordFromToken(req);
     output.api(req, res, UserService.getShareableUser(user));
+    await unblockFromEmailLimiterOnSuccess(req, res, KWRateLimiterKeyPrefixes.Login);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const resendEmailVerification: IRequestHandler<{}, {}, Partial<UserService.IEmailVerificationData>> = async (req, res) => {
+export const resendEmailVerification: IRequestHandler<{}, {}, Partial<UserService.IEmailVerificationData>> = async (
+  req,
+  res,
+) => {
   try {
     const data = await UserVerificationService.resendEmailVerification(req);
     output.api(req, res, data);

@@ -2,7 +2,7 @@
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { IRequest } from '../../types/request';
-import { IMarqetaCardTransition, IMarqetaCreateCard } from './types';
+import { IMarqetaCardTransition, IMarqetaCreateCard, ListCardsResponse } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
@@ -14,7 +14,7 @@ export const createCard = async (params:IMarqetaCreateCard) => {
   return cardResponse;
 };
 
-export const listCards = async (userToken: string) => {
+export const listCards = async (userToken: string): Promise<ListCardsResponse> => {
   const cardResponse = await card.listCards(userToken);
   return { cards: cardResponse };
 };

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express-serve-static-core';
 import { IAppDocument } from '../models/app';
 import { IUserDocument } from '../models/user';
+import { RateLimiterHeaders } from './headers';
 
 /**
  * adds:
@@ -16,6 +17,7 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
   body: B;
   requestor?: IUserDocument;
   apiRequestor?: IAppDocument;
+  rateLimiterHeaders?: RateLimiterHeaders;
   authKey?: string;
   identifierKey?:string;
   headers: any;

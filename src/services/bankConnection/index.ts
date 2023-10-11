@@ -5,7 +5,7 @@ import { IRequest } from '../../types/request';
 import { IUserDocument } from '../../models/user';
 import { getShareableUser } from '../user';
 import { IRef } from '../../types/model';
-import { BankStatus, ErrorTypes } from '../../lib/constants';
+import { BankConnectionStatus, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { PlaidClient } from '../../clients/plaid';
 import { updateACHFundingSource } from '../../integrations/marqeta/accountFundingSource';
@@ -14,7 +14,7 @@ export const _getBankConnections = async (query: any) => BankConnectionModel.fin
 
 export const getBankConnections = async (req: IRequest) => {
   const { requestor } = req;
-  const banks = await _getBankConnections({ $and: [{ userId: requestor._id, status: BankStatus.Linked }] });
+  const banks = await _getBankConnections({ $and: [{ userId: requestor._id, status: BankConnectionStatus.Linked }] });
 
   if (!banks) throw new CustomError('Banks belongs to this user does not exist', ErrorTypes.NOT_FOUND);
   return banks;
@@ -76,7 +76,6 @@ const _removePlaidBank = async (requestor: IUserDocument, accessToken: string) =
     }
   }
   await BankConnectionModel.updateMany(
-    { status: BankStatus.Unlinked },
     { 'integrations.plaid.accessToken': accessToken },
     {
       'integrations.plaid.accessToken': null,
@@ -98,11 +97,43 @@ export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, 
   await _removePlaidBank(requestor, accessToken);
 
   _banks.forEach(async (data) => {
-    data.status = BankStatus.Unlinked;
+    data.status = BankConnectionStatus.Removed;
     data.unlinkedDate = dayjs().utc().toDate();
     data.lastModified = dayjs().utc().toDate();
     await data.save();
   });
 
   return { message: 'Banks have been removed.' };
+};
+
+export interface IFormattedBankConnection {
+  accessToken: string;
+  fundingSourceToken: string;
+  institution: string;
+  accounts: IShareableBankConnection[];
+}
+
+export const getFormattedBankConnection = (shareableBankConnections: IShareableBankConnection[]): IFormattedBankConnection[] => {
+  const formattedResponse: IFormattedBankConnection[] = [];
+
+  shareableBankConnections.forEach(connection => {
+    const formattedConnection = formattedResponse.find(element => element?.institution === connection?.institution);
+    if (!!formattedConnection) {
+      const formattedConnectionIndex = formattedResponse.indexOf(formattedConnection);
+      formattedResponse[formattedConnectionIndex] = {
+        ...formattedConnection,
+        accounts: [...formattedConnection.accounts, connection],
+      };
+    } else {
+      const newformattedConnection = {
+        accessToken: connection?.integrations?.plaid?.accessToken,
+        fundingSourceToken: connection?.fundingSourceToken,
+        institution: connection?.institution,
+        accounts: [connection],
+      };
+      formattedResponse.push(newformattedConnection);
+    }
+  });
+
+  return formattedResponse;
 };

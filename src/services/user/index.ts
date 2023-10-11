@@ -6,18 +6,21 @@ import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact } from '../../integrations/activecampaign';
+import { deleteKardUsersForUser } from '../../integrations/kard';
+import { updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { isValidEmailFormat } from '../../lib/string';
+import { filterToValidQueryParams } from '../../lib/validation';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
 import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { DeleteRequestReason, IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
+import { DeleteRequestReason, IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel, IDeviceInfo } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -31,11 +34,9 @@ import { sendChangePasswordEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
-import { validatePassword } from './utils/validate';
 import { checkIfUserWithEmailExists } from './utils';
-import { filterToValidQueryParams } from '../../lib/validation';
+import { validatePassword } from './utils/validate';
 import { resendEmailVerification, verifyBiometric } from './verification';
-import { deleteKardUsersForUser } from '../../integrations/kard';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 
 dayjs.extend(utc);
@@ -53,6 +54,16 @@ export interface ILoginData {
   password?: string;
   biometricSignature?: string;
   token?: string;
+  fcmToken: string;
+  deviceInfo?: {
+    manufacturer: string,
+    bundleId: string,
+    deviceId: string,
+    apiLevel: string,
+    applicaitonName: string,
+    model: string,
+    buildNumber: string,
+  };
 }
 
 export interface IUpdatePasswordBody {
@@ -73,6 +84,7 @@ export interface IUserData extends ILoginData {
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
+  integrations?: IUserIntegrations
 }
 export interface IRegisterUserData {
   name: string;
@@ -249,7 +261,26 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
   }
 };
 
-export const login = async (req: IRequest, { email, password, biometricSignature }: ILoginData) => {
+export const addFCMAndDeviceInfo = async (user: IUserDocument, fcmToken: string, deviceInfo: IDeviceInfo) => {
+  // Add FCM token and device info of the user
+  const { deviceId } = deviceInfo;
+  if (fcmToken && deviceId) {
+    const { fcm } = user.integrations;
+    const existingDeviceIndex = fcm.findIndex((item) => item.deviceId === deviceId);
+
+    if (existingDeviceIndex !== -1) {
+      // Device already exists, update the token
+      user.integrations.fcm[existingDeviceIndex].token = fcmToken;
+    } else {
+      // Device doesn't exist, add a new entry
+      user.integrations.fcm.push({ token: fcmToken, deviceId });
+      user.deviceInfo.push(deviceInfo);
+    }
+    await user.save();
+  }
+};
+
+export const login = async (req: IRequest, { email, password, biometricSignature, fcmToken, deviceInfo }: ILoginData) => {
   email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
   if (!user) {
@@ -278,6 +309,9 @@ export const login = async (req: IRequest, { email, password, biometricSignature
 
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
 
+  if (fcmToken && deviceInfo) {
+    addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
+  }
   return { user, authKey };
 };
 
@@ -334,6 +368,7 @@ export const getShareableUser = ({
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
   if (integrations?.marqeta) _integrations.marqeta = integrations.marqeta;
+  if (integrations?.fcm) _integrations.fcm = integrations.fcm;
   return {
     _id,
     email,
@@ -433,6 +468,7 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const { requestor } = req;
+  const { userToken } = requestor.integrations.marqeta;
   const updates = req.body;
   const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
   if (!!updates?.email) {
@@ -440,7 +476,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
-  const allowedFields: UserKeys[] = ['name', 'zipcode'];
+  const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
@@ -453,6 +489,14 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
+        break;
+      case 'integrations':
+        // update the address data in marqeta and km Db
+        if (updates?.integrations?.marqeta) {
+          const { marqeta } = updates.integrations;
+          await updateMarqetaUser(userToken, marqeta);
+          requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, marqeta);
+        }
         break;
       default:
         break;

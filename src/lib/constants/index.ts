@@ -85,7 +85,7 @@ export enum UnsdgNames {
   Planet = 'Planet',
 }
 
-export enum BankStatus{
+export enum BankConnectionStatus{
   Linked = 'linked',
   Unlinked = 'unlinked',
   Error = 'error',
@@ -327,3 +327,11 @@ export const enum StateAbbreviation {
 }
 
 export const CentsInUSD = 100;
+
+export const TransactionIntegrationTypesEnum = {
+  Plaid: 'plaid',
+  Marqeta: 'marqeta',
+  Rare: 'rare',
+  Kard: 'kard',
+} as const;
+export type TransactionIntegrationTypesEnumValues = typeof TransactionIntegrationTypesEnum[keyof typeof TransactionIntegrationTypesEnum];

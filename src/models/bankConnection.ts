@@ -2,7 +2,7 @@ import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
-import { BankStatus } from '../lib/constants';
+import { BankConnectionStatus } from '../lib/constants';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -76,7 +76,7 @@ const bankConnectionSchema = new Schema({
       },
     },
   },
-  status: { type: String, default: BankStatus.Linked },
+  status: { type: String, default: BankConnectionStatus.Linked },
   createdOn: { type: Date, default: () => getUtcDate().toDate() },
   lastModified: { type: Date, default: () => getUtcDate().toDate() },
 });

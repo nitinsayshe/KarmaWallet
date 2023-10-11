@@ -15,6 +15,7 @@ import { CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constant
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
+import { sleep } from '../../lib/misc';
 import { CardModel, ICard, ICardDocument, IKardIntegration } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ITransaction } from '../../models/transaction';
@@ -22,6 +23,8 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { getNetworkFromBin } from '../../services/card/utils';
 
 const uuidSchema = z.string().uuid();
+const QueueTransactionBatchSize = 50;
+const QueueTransactionBackoffMs = 1000;
 
 export const getFormattedUserName = (name: string): string => name?.trim()?.split(' ')?.join('') || '';
 
@@ -211,10 +214,53 @@ const populateCompaniesOnTransactions = async (
   );
 };
 
+const sendTransactionsInBatches = async (
+  batches: Partial<ITransaction & { _id: Types.ObjectId }>[][],
+  card: ICardDocument,
+): Promise<AxiosResponse<{}, any>[]> => {
+  const responses: AxiosResponse<{}, any>[] = [];
+  const kc = new KardClient();
+  for (let i = 0; i < batches.length; i++) {
+    try {
+      const batch = batches[i];
+      const req: QueueTransactionsRequest = batch.map((t): Transaction => {
+        const description = `Transaction with ${
+          (t.company as ICompanyDocument)?.companyName
+        } on ${t.date.toISOString()} for ${t.amount * CentsInUSD} USD cents`;
+        return {
+          transactionId: t.integrations?.kard?.id,
+          referringPartnerUserId: card?.integrations?.kard?.userId,
+          amount: t.amount * CentsInUSD,
+          status: t?.integrations?.kard?.status,
+          currency: t?.integrations?.plaid?.iso_currency_code,
+          description,
+          settledDate: t?.date?.toISOString(),
+          merchantName: (t.company as ICompanyDocument)?.companyName,
+          mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
+          cardBIN: decrypt((t?.card as ICard)?.binToken),
+          cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
+          authorizationDate: t?.date?.toISOString(),
+        };
+      });
+
+      console.log(
+        `Kard API Request ${i} of ${batches.length}: queueing transactions for processing: `,
+        JSON.stringify(req),
+      );
+      responses.push(await kc.queueTransactionsForProcessing(req));
+      sleep(QueueTransactionBackoffMs);
+    } catch (err) {
+      console.error('Error queuing transactions: ', err);
+    }
+  }
+
+  return responses;
+};
+
 export const queueSettledTransactions = async (
   card: ICardDocument | Types.ObjectId,
   transactions: Partial<ITransaction & { _id: Types.ObjectId }>[],
-): Promise<AxiosResponse<{}, any> | void> => {
+): Promise<AxiosResponse<{}, any>[] | void> => {
   try {
     if (!(card as ICardDocument)?.name) {
       card = await CardModel.findById(card);
@@ -227,28 +273,21 @@ export const queueSettledTransactions = async (
     // populate companies
     transactions = await populateCompaniesOnTransactions(transactions);
 
-    // map to KardTransaction
-    const req: QueueTransactionsRequest = transactions.map((t): Transaction => {
-      const description = `Transaction with ${(t.company as ICompanyDocument)?.companyName
-      } on ${t.date.toISOString()} for ${t.amount * CentsInUSD} USD cents`;
-      return {
-        transactionId: t.integrations?.kard?.id,
-        referringPartnerUserId: c?.integrations?.kard?.userId,
-        amount: t.amount * CentsInUSD,
-        status: t?.integrations?.kard?.status,
-        currency: t?.integrations?.plaid?.iso_currency_code,
-        description,
-        settledDate: t?.date?.toISOString(),
-        merchantName: (t.company as ICompanyDocument)?.companyName,
-        mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
-        cardBIN: decrypt((t?.card as ICard)?.binToken),
-        cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
-        authorizationDate: t?.date?.toISOString(),
-      };
-    });
+    // filter out transactions that don't have a company match
+    transactions = transactions.filter((t) => !!t.company);
 
-    const kc = new KardClient();
-    return kc.queueTransactionsForProcessing(req);
+    // slpit transactions into chunks of 50
+    const batches: Partial<
+    ITransaction & {
+      _id: Types.ObjectId;
+    }
+    >[][] = [];
+
+    for (let i = 0; i < transactions.length; i += QueueTransactionBatchSize) {
+      batches.push(transactions.slice(i, i + QueueTransactionBatchSize));
+    }
+
+    return sendTransactionsInBatches(batches, c);
   } catch (err) {
     console.error('Error queuing transactions: ', err);
   }

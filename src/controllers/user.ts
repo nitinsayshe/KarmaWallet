@@ -6,7 +6,6 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 import * as UserTestIdentityService from '../services/user/testIdentities';
-import { IFCMNotification, sendPushNotification } from '../integrations/firebaseCloudMessaging';
 
 export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
   try {
@@ -42,12 +41,6 @@ export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req
       deviceInfo,
     });
 
-    // Just for testing purpose, a push notification event is triggered after user logs in.
-    const notification: IFCMNotification = {
-      title: 'Karma Wallet',
-      body: 'Welcome to the Karma Wallet Application',
-    };
-    sendPushNotification(user, notification);
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -97,6 +97,7 @@ export interface IFCMTokenIntegration {
   token: String;
   deviceId: String;
 }
+
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;

@@ -6,7 +6,7 @@ import { RedisClient } from '../clients/redis';
 import { ErrorTypes } from '../lib/constants';
 import CustomError from '../lib/customError';
 import { error } from '../services/output';
-import { ILoginData } from '../services/user';
+import { ILoginData } from '../services/user/types';
 import { RateLimiterHeaders } from '../types/headers';
 import { IRequest } from '../types/request';
 

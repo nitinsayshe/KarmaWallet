@@ -332,7 +332,10 @@ describe('kard client interface can fetch session tokes, create, update, and del
     expect(newKardUser).toBeDefined();
     const res = await queueSettledTransactions(testCards[0]._id, transactionsToQueue);
     expect(res).toBeDefined();
-    expect((res as AxiosResponse)?.status).toBe(201);
+    const response = res as AxiosResponse[];
+    response.forEach((r) => {
+      expect(r.status).toBe(201);
+    });
 
     // clean up
     await deleteKardUsersForUser(testUserWithKardIntegration);
@@ -351,8 +354,10 @@ describe('kard client interface can fetch session tokes, create, update, and del
     expect(newKardUser).toBeDefined();
     const res = await queueSettledTransactions(testCards[0], transactionsToQueue);
     expect(res).toBeDefined();
-    expect((res as AxiosResponse)?.status).toBe(201);
-
+    const response = res as AxiosResponse[];
+    response.forEach((r) => {
+      expect(r.status).toBe(201);
+    });
     // clean up
     await deleteKardUsersForUser(testUserWithKardIntegration);
   }, 15000);

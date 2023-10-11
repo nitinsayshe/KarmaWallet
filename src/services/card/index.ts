@@ -303,14 +303,14 @@ export const unenrollFromKardRewards = async (
 };
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
-  const { user_token, card_token, expiration_time, last_four, pan } = cardData;
+  const { user_token, token: card_token, expiration_time, last_four, pan } = cardData;
 
   // Find the existing card document with Marqeta integration
   let card = await CardModel.findOne({
     $and: [
       { userId: _userId },
       { 'integrations.marqeta': { $exists: true } },
-      { 'integrations.marqeta.card_token': cardData.card_token },
+      { 'integrations.marqeta.card_token': card_token },
     ],
   });
 

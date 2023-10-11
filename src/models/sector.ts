@@ -61,6 +61,7 @@ const sectorSchema = new Schema({
   mccs: [
     {
       type: Number,
+      index: true,
     },
   ],
 });

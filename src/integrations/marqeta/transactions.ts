@@ -1,5 +1,6 @@
 import { Transaction } from 'plaid';
 import { ObjectId } from 'mongoose';
+import { parseInt } from 'lodash';
 import { Transactions } from '../../clients/marqeta/transactions';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { IRequest } from '../../types/request';
@@ -19,7 +20,7 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import transaction from '../plaid/transaction';
-import { ISectorDocument } from '../../models/sector';
+import { ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 import { UserModel } from '../../models/user';
 import { CardModel } from '../../models/card';
@@ -119,6 +120,97 @@ const matchTransactionsToCompaniesByMCC = async (
   return { matched, notMatched };
 };
 
+const getCompanyAndSectorFromMarqetaTransaction = async (
+  t: EnrichedMarqetaTransaction & { company: ObjectId },
+): Promise<{ company: IRef<ObjectId, ICompanyDocument> | null; sector: IRef<ObjectId, ISectorDocument> }> => {
+  try {
+    const companyId = t.company;
+    const company = await CompanyModel.findById(companyId);
+    if (!company?._id) {
+      console.error(`No company with id ${companyId} found`);
+    }
+    const sector = company.sectors.find((s) => s.primary)?.sector as IRef<ObjectId, ISectorDocument>;
+    return { company, sector };
+  } catch (err) {
+    console.error(`Error getting company from transaction match: ${JSON.stringify(t)} `);
+    console.error(err);
+  }
+};
+
+const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocument> | null> => {
+  try {
+    const sector = await SectorModel.findOne({ mccs: mcc });
+    if (!sector?._id) {
+      console.error(`No sector with mcc ${mcc} found`);
+    }
+    return sector;
+  } catch (err) {
+    console.error(`Error getting sector from mcc: ${mcc} `);
+    console.error(err);
+  }
+};
+
+const createNewTransactionFromMarqetaTransaction = async (t: Transaction): Promise<ITransactionDocument> => {
+  const marqetaMatchedTransaction = t as Transaction & { marqeta_transaction: TransactionModel };
+
+  const newTransaction = new MongooseTransactionModel();
+  let sector = null;
+  let company = null;
+
+  if (!!(t as EnrichedMarqetaTransaction & { company: ObjectId }).company) {
+    ({ company, sector } = await getCompanyAndSectorFromMarqetaTransaction(
+      t as EnrichedMarqetaTransaction & { company: ObjectId },
+    ));
+  } else {
+    sector = await getSectorFromMCC(
+      parseInt((t as EnrichedMarqetaTransaction).marqeta_transaction?.card_acceptor?.mcc, 10),
+    );
+  }
+
+  if (!!sector) newTransaction.sector = sector;
+  if (!!company) newTransaction.company = company;
+
+  try {
+    const user = await UserModel.findOne({
+      'integrations.marqeta.userToken': marqetaMatchedTransaction?.marqeta_transaction?.user_token,
+    });
+    if (!user?._id) {
+      throw Error(
+        `No user found associated with the marqeta user token :${marqetaMatchedTransaction?.marqeta_transaction?.user_token}`,
+      );
+    }
+    newTransaction.user = user;
+  } catch (err) {
+    console.error(err);
+    throw new CustomError(
+      `Error looking up the user associated with this transaction: ${JSON.stringify(t)} `,
+      ErrorTypes.SERVER,
+    );
+  }
+
+  try {
+    const card = await CardModel.findOne({
+      'integrations.marqeta.token': marqetaMatchedTransaction?.marqeta_transaction?.card_token,
+    });
+    if (!card?._id) {
+      throw Error(
+        `No card found associated with the marqeta card token :${marqetaMatchedTransaction?.marqeta_transaction?.card_token}`,
+      );
+    }
+    newTransaction.card = card;
+  } catch (err) {
+    console.error(err);
+    throw new CustomError(
+      `Error looking up the card associated with this transaction: ${JSON.stringify(t)} `,
+      ErrorTypes.SERVER,
+    );
+  }
+  newTransaction.amount = marqetaMatchedTransaction.amount;
+  newTransaction.status = marqetaMatchedTransaction.marqeta_transaction.state;
+  newTransaction.integrations.marqeta = marqetaMatchedTransaction.marqeta_transaction;
+  return newTransaction;
+};
+
 // Note: this only creates the transaction documents, which would still need to be saved to the db
 export const mapMarqetaTransactionToKarmaTransaction = async (
   marqetaTransactions: TransactionModel[],
@@ -135,71 +227,18 @@ export const mapMarqetaTransactionToKarmaTransaction = async (
   if (notMatched.length > 0) {
     console.log(`no matches found for ${notMatched.length} transactions`);
   }
+
+  // merge matched and notMatched back together
+  const allTransactions = [...matched, ...notMatched];
+
   if (!matched?.length || matched.length < 1) {
     throw new CustomError(`No match found for request: ${JSON.stringify(transaction)} `, ErrorTypes.SERVER);
   }
 
   // map matched transactions to db transactions
   const transactionDocuments: ITransactionDocument[] = await Promise.all(
-    matched.map(async (t) => {
-      const marqetaMatchedTransaction = t as Transaction & { marqeta_transaction: TransactionModel };
-      let company: IRef<ObjectId, ICompanyDocument>;
-      let sector: IRef<ObjectId, ISectorDocument>;
-      try {
-        const matchedCompany = await CompanyModel.findById(t.company);
-
-        if (!matchedCompany?._id) {
-          throw Error('No company found');
-        }
-        sector = matchedCompany.sectors.find((s) => s.primary)?.sector as IRef<ObjectId, ISectorDocument>;
-      } catch (err) {
-        console.error(err);
-        throw new CustomError(`Error getting company from transaction match: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
-      }
-
-      const newTransaction = new MongooseTransactionModel();
-      try {
-        const user = await UserModel.findOne({
-          'integrations.marqeta.userToken': marqetaMatchedTransaction?.marqeta_transaction?.user_token,
-        });
-        if (!user?._id) {
-          throw Error(
-            `No user found associated with the marqeta user token :${marqetaMatchedTransaction?.marqeta_transaction?.user_token}`,
-          );
-        }
-        newTransaction.user = user;
-      } catch (err) {
-        console.error(err);
-        throw new CustomError(
-          `Error looking up the user associated with this transaction: ${JSON.stringify(t)} `,
-          ErrorTypes.SERVER,
-        );
-      }
-
-      try {
-        const card = await CardModel.findOne({
-          'integrations.marqeta.token': marqetaMatchedTransaction?.marqeta_transaction?.card_token,
-        });
-        if (!card?._id) {
-          throw Error(
-            `No card found associated with the marqeta card token :${marqetaMatchedTransaction?.marqeta_transaction?.card_token}`,
-          );
-        }
-        newTransaction.card = card;
-      } catch (err) {
-        console.error(err);
-        throw new CustomError(
-          `Error looking up the card associated with this transaction: ${JSON.stringify(t)} `,
-          ErrorTypes.SERVER,
-        );
-      }
-      newTransaction.amount = marqetaMatchedTransaction.amount;
-      newTransaction.status = marqetaMatchedTransaction.marqeta_transaction.state;
-      newTransaction.company = company;
-      newTransaction.sector = sector;
-      newTransaction.integrations.marqeta = marqetaMatchedTransaction.marqeta_transaction;
-      return newTransaction;
-    }),
+    allTransactions.map(async (t) => createNewTransactionFromMarqetaTransaction(t)),
   );
+
   return transactionDocuments;
 };

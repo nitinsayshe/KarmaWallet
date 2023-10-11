@@ -20,7 +20,7 @@ import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { DeleteRequestReason, IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel, IDeviceInfo } from '../../models/user';
+import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel, IDeviceInfo } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -37,7 +37,7 @@ import * as TokenService from '../token';
 import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
 import { resendEmailVerification, verifyBiometric } from './verification';
-import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
+import { DeleteAccountRequestModel, DeleteRequestReason } from '../../models/deleteAccountRequest';
 
 dayjs.extend(utc);
 

@@ -4,12 +4,25 @@ import {
   Model,
   ObjectId,
 } from 'mongoose';
-import { DeleteRequestReason, DeleteRequestStatus } from './user';
 import { IModel } from '../types/model';
 import { getUtcDate } from '../lib/date';
 
+export enum DeleteRequestReason {
+  SecurityPrivacy = 'Privacy or security concerns',
+  DontUnderstandPlatform = 'I don\'t understand the platform',
+  DontUseKarmaWalletEnough = 'I don\'t use Karma Wallet enough',
+  CashbackIssues = 'Issues related to cashback',
+  CostOfPlatform = 'Cost of platform',
+  Other = 'Other',
+}
+
+export enum DeleteRequestStatus {
+  Open = 'Open',
+  Closed = 'Closed',
+  Resolved = 'Resolved',
+}
+
 export interface IDeleteAccountRequest {
-  _id: ObjectId;
   userId: ObjectId;
   userName: string;
   userEmail: string;
@@ -21,6 +34,7 @@ export interface IDeleteAccountRequest {
 export interface IDeleteAccountRequestDocument extends IDeleteAccountRequest, Document {
   _id: ObjectId;
 }
+
 export type IDeleteAccountRequestModel = IModel<IDeleteAccountRequest>;
 
 const deleteAccountRequestSchema = new Schema(

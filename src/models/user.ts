@@ -15,20 +15,6 @@ export enum UserEmailStatus {
   Complained = 'complained',
 }
 
-export enum DeleteRequestReason {
-  SecurityPrivacy = 'Privacy or security concerns',
-  DontUnderstandPlatform = 'I don\'t understand the platform',
-  DontUseKarmaWalletEnough = 'I don\'t use Karma Wallet enough',
-  CashbackIssues = 'Issues related to cashback',
-  CostOfPlatform = 'Cost of platform',
-  Other = 'Other',
-}
-
-export enum DeleteRequestStatus {
-  Open = 'Open',
-  Closed = 'Closed',
-  Resolved = 'Resolved',
-}
 interface IMarqetaIdentification {
   type: string,
   value: string,

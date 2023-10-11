@@ -924,6 +924,7 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
   const matchedTransaction = await TransactionModel
     .findOne({
       _id: transactionId,
+      user: req.requestor._id,
     })
     .populate('company')
     .populate('sector');

@@ -1,4 +1,3 @@
-import { AqpQuery } from 'api-query-params';
 import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { Transaction } from 'plaid';
 import { SafeParseError, z, ZodError } from 'zod';
@@ -44,108 +43,14 @@ import { calculateCompanyScore } from '../scripts/calculate_company_scores';
 import { getShareableSector } from '../sectors';
 import { getShareableUser } from '../user';
 import { _getTransactions } from './utils';
+import { ITransactionsAggregationRequestQuery, ITransactionsRequestQuery, IGetRecentTransactionsRequestQuery, EnrichTransactionRequest, EnrichTransactionResponse, IGetFalsePositivesQuery, ICreateFalsePositiveRequest, IFalsePositiveIdParam, IUpdateFalsePositiveRequest, IGetManualMatchesQuery, ICreateManualMatchRequest, IManualMatchIdParam, IUpdateManualMatchRequest, IGetMatchedCompaniesQuery, ITransactionIdParam } from './types';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
 const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
 const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
 
-export enum ITransactionsConfig {
-  MostRecent = 'recent',
-}
-
-export interface ITransactionIdParam {
-  transactionId: string;
-}
-
-export interface IGetRecentTransactionsRequestQuery {
-  limit?: number;
-  unique?: boolean;
-  userId?: string | ObjectId;
-}
-
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
-export interface ITransactionsRequestQuery extends AqpQuery {
-  userId?: string;
-  includeOffsets?: boolean;
-  includeNullCompanies?: boolean;
-  onlyOffsets?: boolean;
-  integrationType?: TransactionIntegrationTypesEnumValues;
-}
-
-export interface ITransactionsAggregationRequestQuery {
-  userId?: string;
-  ratings?: CompanyRating[];
-  page?: number;
-  limit?: number;
-}
-
-export interface ITransactionOptions {
-  includeOffsets?: boolean;
-  includeNullCompanies?: boolean;
-}
-
-type EnrichTransactionResponse = {
-  company: ICompanyProtocol;
-  carbonEmissionKilograms: number; // emmissions associated with the transaction
-  karmaScore: number; // 0 to 100
-};
-
-export type EnrichTransactionRequest = {
-  companyName: string;
-  alternateCompanyName?: string;
-  amount: number; // in USD
-};
-
-export interface IGetFalsePositivesQuery {
-  page: number;
-  limit: number;
-  matchType: string;
-  originalValue: string;
-  company: string;
-  search: string;
-}
-
-export interface ICreateFalsePositiveRequest {
-  matchType: string;
-  originalValue: string;
-}
-
-export interface IUpdateFalsePositiveRequest {
-  matchType?: string;
-  originalValue?: string;
-}
-export interface IFalsePositiveIdParam {
-  id: string;
-}
-
-export interface IGetManualMatchesQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
-
-export interface ICreateManualMatchRequest {
-  matchType: string;
-  company: string;
-  originalValue: string;
-}
-
-export interface IManualMatchIdParam {
-  id: string;
-}
-
-export interface IUpdateManualMatchRequest {
-  matchType?: string;
-  company?: string;
-  originalValue?: string;
-}
-
-export interface IGetMatchedCompaniesQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-}
 
 export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
   try {
@@ -288,7 +193,27 @@ export const getTransactions = async (
   req: IRequest<{}, ITransactionsRequestQuery>,
   query: FilterQuery<ITransaction>,
 ) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
+  let startDateQuery = {};
+  let endDateQuery = {};
+
+  if (!!startDate) {
+    delete query.startDate;
+    startDateQuery = {
+      date: {
+        $gte: startDate,
+      },
+    };
+  }
+
+  if (!!endDate) {
+    delete query.endDate;
+    endDateQuery = {
+      date: {
+        $lte: endDate,
+      },
+    };
+  }
 
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
@@ -320,11 +245,12 @@ export const getTransactions = async (
     sort: query?.sort ? { ...query.sort, _id: -1 } : { date: -1, _id: -1 },
     limit: query?.limit || 10,
   };
+
   const filter: FilterQuery<ITransaction> = {
     $and: [
       ...Object.entries(query.filter)
         .filter(
-          ([key]) => key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets',
+          ([key]) => key !== 'userId' && key !== 'includeOffsets' && key !== 'includeNullCompanies' && key !== 'onlyOffsets' && key !== 'startDate' && key !== 'endDate',
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
@@ -350,6 +276,8 @@ export const getTransactions = async (
   if (!includeOffsets && !onlyOffsets) filter.$and.push({ 'integrations.rare': null });
   if (!includeNullCompanies) filter.$and.push({ company: { $ne: null } });
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
+  if (!!startDate) filter.$and.push(startDateQuery);
+  if (!!endDate) filter.$and.push(endDateQuery);
 
   const transactions = await TransactionModel.paginate(filter, paginationOptions);
 

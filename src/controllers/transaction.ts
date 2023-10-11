@@ -2,10 +2,11 @@ import aqp from 'api-query-params';
 import * as output from '../services/output';
 import { asCustomError } from '../lib/customError';
 import * as TransactionService from '../services/transaction';
+import * as TransactionTypes from '../services/transaction/types';
 import { IRequest, IRequestHandler } from '../types/request';
 import { ITransactionDocument } from '../models/transaction';
 
-export const getTransaction: IRequestHandler<TransactionService.ITransactionIdParam> = async (req, res) => {
+export const getTransaction: IRequestHandler<TransactionTypes.ITransactionIdParam> = async (req, res) => {
   try {
     const transactionData = await TransactionService.getTransaction(req);
     output.api(req, res, transactionData);
@@ -17,7 +18,7 @@ export const getTransaction: IRequestHandler<TransactionService.ITransactionIdPa
 export const getTransactions: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
-    const transactions = await TransactionService.getTransactions(req as IRequest<{}, TransactionService.ITransactionsRequestQuery>, query);
+    const transactions = await TransactionService.getTransactions(req as IRequest<{}, TransactionTypes.ITransactionsRequestQuery>, query);
     const sharableTransactions = {
       ...transactions,
       docs: transactions.docs.map((t: ITransactionDocument) => TransactionService.getShareableTransaction(t)),
@@ -53,7 +54,7 @@ export const getMostRecentTransactions: IRequestHandler = async (req, res) => {
 
 export const getRatedTransactions: IRequestHandler = async (req, res) => {
   try {
-    const transactions = await TransactionService.getRatedTransactions(req as IRequest<{}, TransactionService.ITransactionsRequestQuery>);
+    const transactions = await TransactionService.getRatedTransactions(req as IRequest<{}, TransactionTypes.ITransactionsRequestQuery>);
 
     const sharableTransactions = {
       ...transactions,
@@ -66,7 +67,7 @@ export const getRatedTransactions: IRequestHandler = async (req, res) => {
   }
 };
 
-export const hasTransactions: IRequestHandler<{}, TransactionService.ITransactionsRequestQuery> = async (req, res) => {
+export const hasTransactions: IRequestHandler<{}, TransactionTypes.ITransactionsRequestQuery> = async (req, res) => {
   try {
     const userHasTransactions = await TransactionService.hasTransactions(req);
     output.api(req, res, { hasTransactions: userHasTransactions });

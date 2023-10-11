@@ -27,7 +27,7 @@ import { VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
+import { sendChangePasswordEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
@@ -553,6 +553,11 @@ export const deleteAccountRequest = async (req: IRequest<{}, {}, IDeleteAccountR
     const user = await UserModel.findById(_id);
     if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
 
+    const requestExists = await DeleteAccountRequestModel.findOne({ userId: _id });
+    if (!!requestExists) {
+      return { message: 'A request to delete your account has already been recieved and we are working on deleting your account.' };
+    }
+
     const deleteAccountRequestDocument = new DeleteAccountRequestModel({
       userName: name,
       userEmail: email,
@@ -561,13 +566,13 @@ export const deleteAccountRequest = async (req: IRequest<{}, {}, IDeleteAccountR
     });
 
     const deleteAccountRequestSuccess = await deleteAccountRequestDocument.save();
-    if (!deleteAccountRequestSuccess) throw new Error('Unable to creat your delete account request. Please email support@karmawallet.io.');
+    if (!deleteAccountRequestSuccess) throw new CustomError('Unable to create your delete account request. Please email support@karmawallet.io.', ErrorTypes.UNPROCESSABLE);
 
-    sendDeleteAccountRequestEmail({
-      user,
-      deleteReason: reason,
-      deleteAccountRequestId: deleteAccountRequestSuccess._id.toString(),
-    });
+    // sendDeleteAccountRequestEmail({
+    //   user,
+    //   deleteReason: reason,
+    //   deleteAccountRequestId: deleteAccountRequestSuccess._id.toString(),
+    // });
 
     if (!!deleteAccountRequestSuccess) {
       return { message: 'Your account deletion request was successful and will be forwared to our support team.' };

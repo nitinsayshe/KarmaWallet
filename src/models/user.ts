@@ -92,6 +92,12 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserState,
   created_time?: string,
 }
+
+export interface IFCMTokenIntegration {
+  token: String;
+  deviceId: String;
+}
+
 export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
@@ -101,6 +107,7 @@ export interface IUserIntegrations {
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
   biometrics?: IBiometrics[];
   marqeta?: IMarqetaUserIntegrations;
+  fcm?: IFCMTokenIntegration[];
 }
 
 export interface IShareableUser {
@@ -110,6 +117,16 @@ export interface IShareableUser {
   zipcode: string;
   role: string; // cannot mark as UserRoles due to how mongoose treats enums
   legacyId: string;
+}
+
+export interface IDeviceInfo {
+  manufacturer: string;
+  bundleId: string;
+  deviceId: string;
+  apiLevel: string;
+  applicaitonName: string;
+  model: string;
+  buildNumber: string;
 }
 
 export interface IUser extends IShareableUser {
@@ -127,6 +144,7 @@ export interface IUser extends IShareableUser {
       article: IRef<ObjectId, IArticle>;
     }[];
   };
+  deviceInfo?:IDeviceInfo[]
 }
 
 export interface IUserDocument extends IUser, Document { }
@@ -245,7 +263,17 @@ const userSchema = new Schema({
         },
       },
     ],
+    fcm: [{ token: String, deviceId: String }],
   },
+  deviceInfo: [{
+    manufacturer: { type: String },
+    bundleId: { type: String },
+    deviceId: { type: String },
+    apiLevel: { type: String },
+    applicaitonName: { type: String },
+    model: { type: String },
+    buildNumber: { type: String },
+  }],
 });
 userSchema.plugin(mongoosePaginate);
 

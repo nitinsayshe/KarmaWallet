@@ -30,6 +30,7 @@ export interface IKardIntegration {
 }
 
 export interface IMarqetaCardIntegration {
+  token: string;
   expiration_time: Date;
   user_token: string;
   card_token: string,

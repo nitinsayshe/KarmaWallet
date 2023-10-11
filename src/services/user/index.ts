@@ -30,7 +30,7 @@ import { VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangePasswordEmail, sendPasswordResetEmail } from '../email';
+import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
@@ -612,11 +612,11 @@ export const deleteAccountRequest = async (req: IRequest<{}, {}, IDeleteAccountR
     const deleteAccountRequestSuccess = await deleteAccountRequestDocument.save();
     if (!deleteAccountRequestSuccess) throw new CustomError('Unable to create your delete account request. Please email support@karmawallet.io.', ErrorTypes.UNPROCESSABLE);
 
-    // sendDeleteAccountRequestEmail({
-    //   user,
-    //   deleteReason: reason,
-    //   deleteAccountRequestId: deleteAccountRequestSuccess._id.toString(),
-    // });
+    sendDeleteAccountRequestEmail({
+      user,
+      deleteReason: reason,
+      deleteAccountRequestId: deleteAccountRequestSuccess._id.toString(),
+    });
 
     if (!!deleteAccountRequestSuccess) {
       return { message: 'Your account deletion request was successful and will be forwared to our support team.' };

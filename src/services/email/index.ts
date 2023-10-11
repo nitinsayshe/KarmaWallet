@@ -451,7 +451,7 @@ export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopul
 
 export const sendSupportTicketEmailToSupport = async ({
   user,
-  recipientEmail = 'senad@theimpactkarma.com',
+  recipientEmail = 'support@theimpactkarma.com',
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   message,

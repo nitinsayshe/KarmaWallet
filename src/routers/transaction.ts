@@ -19,4 +19,7 @@ router.route('/most-recent')
 router.route('/rated')
   .get(authenticate, TransactionController.getRatedTransactions);
 
+router.route('/:transactionId')
+  .get(authenticate, TransactionController.getTransaction);
+
 export default (app: Express) => app.use('/transaction', router);

@@ -54,6 +54,10 @@ export enum ITransactionsConfig {
   MostRecent = 'recent',
 }
 
+export interface ITransactionIdParam {
+  transactionId: string;
+}
+
 export interface IGetRecentTransactionsRequestQuery {
   limit?: number;
   unique?: boolean;
@@ -560,6 +564,8 @@ export const getShareableTransaction = ({
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
+      merchantName: integrations.marqeta.card_acceptor.name,
+      cardMask: integrations.marqeta.card.last_four,
     };
 
     shareableTransaction.integrations = {
@@ -666,6 +672,20 @@ export const matchTransactionCompanies = async (transactions: Transaction[], sav
   }
 };
 
+export const getCarbonEmissionsForTransaction = (carbonMultiplier: number, transactionAmount : number) => {
+  // get the carbon emmissions
+  let carbonEmissionKilograms = 0;
+
+  if (!!carbonMultiplier && !!transactionAmount) {
+    carbonEmissionKilograms = roundToPercision(
+      carbonMultiplier * transactionAmount,
+      2,
+    );
+  }
+
+  return carbonEmissionKilograms;
+};
+
 export const enrichTransaction = async (
   req: IRequest<{}, {}, EnrichTransactionRequest>,
 ): Promise<EnrichTransactionResponse> => {
@@ -717,13 +737,10 @@ export const enrichTransaction = async (
       );
     }
 
-    // get the carbon emmissions
     let carbonEmissionKilograms = 0;
+
     if (!!(sector?.sector as ISectorDocument)?.carbonMultiplier && !!matchedTransaction?.amount) {
-      carbonEmissionKilograms = roundToPercision(
-        (sector?.sector as ISectorDocument).carbonMultiplier * matchedTransaction.amount,
-        2,
-      );
+      carbonEmissionKilograms = getCarbonEmissionsForTransaction((sector?.sector as ISectorDocument)?.carbonMultiplier, matchedTransaction?.amount);
     }
 
     // get a karma score
@@ -896,4 +913,29 @@ export const getMatchedCompanies = async (req: IRequest<{}, IGetMatchedCompanies
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>) => {
+  const { transactionId } = req.params;
+  const matchedTransaction = await TransactionModel
+    .findOne({
+      _id: transactionId,
+      user: req.requestor._id,
+    })
+    .populate('company')
+    .populate('sector');
+
+  if (!matchedTransaction) throw new CustomError('No transaction found with given id.', ErrorTypes.NOT_FOUND);
+
+  const sectorData = await SectorModel.findById(matchedTransaction.sector);
+  let carbonEmissionsMetricTonnes = 0;
+
+  if (!!sectorData && !!sectorData?.carbonMultiplier && !!matchedTransaction?.amount) {
+    carbonEmissionsMetricTonnes = getCarbonEmissionsForTransaction(sectorData.carbonMultiplier, matchedTransaction?.amount) / 1000;
+  }
+
+  return {
+    carbonEmissionsMetricTonnes,
+    transaction: getShareableTransaction(matchedTransaction),
+  };
 };

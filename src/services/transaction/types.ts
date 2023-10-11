@@ -70,6 +70,7 @@ export interface IUpdateFalsePositiveRequest {
   matchType?: string;
   originalValue?: string;
 }
+
 export interface IFalsePositiveIdParam {
   id: string;
 }

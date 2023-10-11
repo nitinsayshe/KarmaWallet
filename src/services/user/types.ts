@@ -1,4 +1,5 @@
 import { UserRoles } from '../../lib/constants';
+import { DeleteRequestReason } from '../../models/deleteAccountRequest';
 import { ILegacyUserDocument } from '../../models/legacyUser';
 import { IUserIntegrations, IUserDocument } from '../../models/user';
 import { IRequest } from '../../types/request';
@@ -72,3 +73,7 @@ export interface IUpdateUserEmailParams {
 }
 
 export type UserKeys = keyof IUserData;
+
+export interface IDeleteAccountRequest {
+  reason: DeleteRequestReason;
+}

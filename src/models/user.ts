@@ -14,6 +14,7 @@ export enum UserEmailStatus {
   Bounced = 'bounced',
   Complained = 'complained',
 }
+
 interface IMarqetaIdentification {
   type: string,
   value: string,

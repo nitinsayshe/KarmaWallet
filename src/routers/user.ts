@@ -8,7 +8,7 @@ const router = Router();
 const registerRoutes = async (app: Express) => {
   router.post('/register', UserController.register);
   router.post('/login', app.get(KWRateLimiterKeyPrefixes.Login), UserController.login);
-
+  router.post('/deleteAccountRequest', UserController.deleteAccountRequest);
   router.post(
     '/password/token/create',
     app.get(KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate),
@@ -17,9 +17,6 @@ const registerRoutes = async (app: Express) => {
   router.post('/password/token/verify', UserController.verifyPasswordResetToken);
   router.put('/password/token', UserController.resetPasswordFromToken);
   router.post('/check-email', UserController.checkIfEmailAlreadyInUse);
-
-  router.get('/test-identities', UserController.getTestIdentities);
-
   router.get('/test-identities', UserController.getTestIdentities);
 
   // Authenticated

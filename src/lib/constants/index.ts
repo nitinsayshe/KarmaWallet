@@ -85,7 +85,7 @@ export enum UnsdgNames {
   Planet = 'Planet',
 }
 
-export enum BankStatus{
+export enum BankConnectionStatus{
   Linked = 'linked',
   Unlinked = 'unlinked',
   Error = 'error',

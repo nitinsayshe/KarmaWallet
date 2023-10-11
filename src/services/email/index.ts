@@ -451,7 +451,7 @@ export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopul
 
 export const sendSupportTicketEmailToSupport = async ({
   user,
-  recipientEmail = 'support@theimpactkarma.com',
+  recipientEmail = 'senad@theimpactkarma.com',
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   message,
@@ -480,7 +480,7 @@ export const sendDeleteAccountRequestEmail = async ({
   const userEmail = user.emails.find(e => !!e.primary)?.email;
   const { name, _id } = user;
   const emailTemplateConfig = EmailTemplateConfigs.AccountDeleteRequest;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'deleteReason', 'deleteAccountRequestId'], { name, deleteReason, deleteAccountRequestId });
+  const { isValid, missingFields } = verifyRequiredFields(['user', 'deleteReason', 'deleteAccountRequestId'], { user, deleteReason, deleteAccountRequestId });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { deleteReason, userEmail, name } });
   const subject = `New Delete Account Request: ${deleteAccountRequestId}`;

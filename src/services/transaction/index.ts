@@ -194,11 +194,13 @@ export const getTransactions = async (
   query: FilterQuery<ITransaction>,
 ) => {
   const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
+  if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};
   let endDateQuery = {};
 
   if (!!startDate) {
+    if (isNaN(new Date(startDate).getTime())) throw new CustomError('Invalid start date found. Must be a valid date.');
     delete query.startDate;
     startDateQuery = {
       date: {
@@ -208,6 +210,7 @@ export const getTransactions = async (
   }
 
   if (!!endDate) {
+    if (isNaN(new Date(startDate).getTime())) throw new CustomError('Invalid end date found. Must be a valid date.');
     delete query.endDate;
     endDateQuery = {
       date: {
@@ -216,15 +219,9 @@ export const getTransactions = async (
     };
   }
 
-  if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
-
   const paginationOptions = {
     projection: query?.projection || '',
     populate: query.population || [
-      {
-        path: 'company',
-        model: CompanyModel,
-      },
       {
         path: 'card',
         model: CardModel,
@@ -232,6 +229,10 @@ export const getTransactions = async (
       {
         path: 'sector',
         model: SectorModel,
+      },
+      {
+        path: 'company',
+        model: CompanyModel,
       },
       {
         path: 'association.user',
@@ -401,6 +402,7 @@ export const getShareableTransaction = ({
   company,
   card,
   sector,
+  status,
   amount,
   date,
   reversed,
@@ -435,6 +437,7 @@ export const getShareableTransaction = ({
     reversed,
     createdOn,
     lastModified,
+    status,
   };
 
   if (integrations?.rare) {
@@ -453,13 +456,9 @@ export const getShareableTransaction = ({
   }
 
   if (!!integrations?.kard) {
-    const {
-      id,
-      status,
-    } = integrations.kard;
     const kardIntegration = {
-      id,
-      status,
+      id: integrations.kard.id,
+      status: integrations.kard.status,
     };
 
     shareableTransaction.integrations = {
@@ -508,7 +507,7 @@ export const getShareableTransaction = ({
 
 export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>) => {
   try {
-    const { userId, includeOffsets, includeNullCompanies } = req.query;
+    const { userId, includeOffsets, includeNullCompanies, integrationType } = req.query;
     const _userId = userId ?? req.requestor._id;
 
     const query: FilterQuery<ITransaction> = {
@@ -522,6 +521,7 @@ export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
 
     if (!includeOffsets) query.$and.push({ 'integrations.rare': null });
     if (!includeNullCompanies) query.$and.push({ company: { $ne: null } });
+    if (!!integrationType) query.$and.push(getTransactionIntegrationFilter(integrationType));
 
     const count = await getTransactionCount(query);
 

@@ -19,7 +19,6 @@ import { IMatchedTransaction } from '../plaid/types';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
-import transaction from '../plaid/transaction';
 import { ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 import { UserModel } from '../../models/user';
@@ -100,9 +99,9 @@ const matchTransactionsToCompaniesByMCC = async (
   }> => {
   matched = [
     ...matched,
-    ...(await Promise.all(
-      notMatched
-        .map(async (t) => {
+    ...(
+      await Promise.all(
+        notMatched.map(async (t) => {
           const company = await getCompanyByMCC(
             parseInt((t as EnrichedMarqetaTransaction)?.marqeta_transaction?.card_acceptor?.mcc, 10),
           );
@@ -113,9 +112,9 @@ const matchTransactionsToCompaniesByMCC = async (
           notMatched = notMatched.filter((n) => t?.marqeta_transaction?.token !== n?.marqeta_transaction?.token);
           (t as IMatchedTransaction).company = company._id;
           return t;
-        })
-        .filter((t) => !!t),
-    )),
+        }),
+      )
+    ).filter((t) => !!t),
   ];
   return { matched, notMatched };
 };
@@ -134,6 +133,7 @@ const getCompanyAndSectorFromMarqetaTransaction = async (
   } catch (err) {
     console.error(`Error getting company from transaction match: ${JSON.stringify(t)} `);
     console.error(err);
+    return { company: null, sector: null };
   }
 };
 
@@ -147,11 +147,34 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
   } catch (err) {
     console.error(`Error getting sector from mcc: ${mcc} `);
     console.error(err);
+    return null;
   }
 };
 
-const createNewTransactionFromMarqetaTransaction = async (t: Transaction): Promise<ITransactionDocument> => {
+const createAndSaveNewTransactionFromMarqetaTransaction = async (t: Transaction): Promise<ITransactionDocument> => {
   const marqetaMatchedTransaction = t as Transaction & { marqeta_transaction: TransactionModel };
+
+  try {
+    // check if this transaction already exists in the db
+    const existingTransaction = await MongooseTransactionModel.findOne({
+      $and: [
+        { 'integrations.marqeta.token': { $exists: true } },
+        { 'integrations.marqeta.token': marqetaMatchedTransaction },
+      ],
+    });
+    if (!!existingTransaction?._id) {
+      console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
+      existingTransaction.integrations.marqeta = marqetaMatchedTransaction.marqeta_transaction;
+      existingTransaction.status = marqetaMatchedTransaction.marqeta_transaction.state;
+      existingTransaction.amount = marqetaMatchedTransaction.amount;
+      existingTransaction.date = new Date(marqetaMatchedTransaction.marqeta_transaction.user_transaction_time);
+
+      return existingTransaction.save();
+    }
+  } catch (err) {
+    console.error(err);
+    console.error(`Error looking up the transaction associated with this marqeta transaction: ${JSON.stringify(t)}`);
+  }
 
   const newTransaction = new MongooseTransactionModel();
   let sector = null;
@@ -208,36 +231,30 @@ const createNewTransactionFromMarqetaTransaction = async (t: Transaction): Promi
   newTransaction.amount = marqetaMatchedTransaction.amount;
   newTransaction.status = marqetaMatchedTransaction.marqeta_transaction.state;
   newTransaction.integrations.marqeta = marqetaMatchedTransaction.marqeta_transaction;
-  return newTransaction;
+  newTransaction.date = new Date(marqetaMatchedTransaction.marqeta_transaction.user_transaction_time);
+  return newTransaction.save();
 };
 
-// Note: this only creates the transaction documents, which would still need to be saved to the db
-export const mapMarqetaTransactionToKarmaTransaction = async (
+export const mapAndSaveMarqetaTransactionToKarmaTransaction = async (
   marqetaTransactions: TransactionModel[],
   saveMatches = false,
 ): Promise<ITransactionDocument[]> => {
   const mapped = mapMarqetaTransactionToPlaidTransaction(marqetaTransactions);
   let { matched, notMatched } = await matchTransactionCompanies(mapped, saveMatches);
-
   ({ matched, notMatched } = await matchTransactionsToCompaniesByMCC(
     matched as (EnrichedMarqetaTransaction & { company: ObjectId })[],
     notMatched as EnrichedMarqetaTransaction[],
   ));
 
-  if (notMatched.length > 0) {
-    console.log(`no matches found for ${notMatched.length} transactions`);
-  }
+  if (matched.length > 0) console.log(`matches found for ${matched?.length} transactions`);
+  if (notMatched.length > 0) console.log(`no matches found for ${notMatched?.length} transactions`);
 
   // merge matched and notMatched back together
   const allTransactions = [...matched, ...notMatched];
 
-  if (!matched?.length || matched.length < 1) {
-    throw new CustomError(`No match found for request: ${JSON.stringify(transaction)} `, ErrorTypes.SERVER);
-  }
-
   // map matched transactions to db transactions
   const transactionDocuments: ITransactionDocument[] = await Promise.all(
-    allTransactions.map(async (t) => createNewTransactionFromMarqetaTransaction(t)),
+    allTransactions.map(async (t) => createAndSaveNewTransactionFromMarqetaTransaction(t)),
   );
 
   return transactionDocuments;

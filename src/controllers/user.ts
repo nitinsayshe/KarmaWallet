@@ -103,7 +103,7 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVeri
 
 export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserService.IEmail> = async (req, res) => {
   try {
-    const data = await UserService.checkIfEmailAlreadyInUse(req.body.email);
+    const data = await UserVerificationService.verifyUserDoesNotAlreadyExist(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

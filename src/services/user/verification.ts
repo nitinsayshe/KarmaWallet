@@ -20,6 +20,10 @@ export interface IEmailVerificationData {
   tokenValue: string;
 }
 
+export interface IEmail {
+  email: string;
+}
+
 export const emailChecks = (user: IUserDocument, email: string) => {
   email = email?.toLowerCase();
   if (!isemail.validate(email, { minDomainAtoms: 2 })) throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
@@ -52,4 +56,18 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
   // TODO: update to verified when support for owner approval is added.
   await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
   return { email };
+};
+
+export const checkIfUserWithEmailExists = async (email: string) => {
+  const userExists = await UserModel.findOne({ 'emails.email': email });
+  return !!userExists;
+};
+
+// provides endpoint for UI to check if an email already exists on a user
+export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
+  const email = req.body.email?.toLowerCase();
+  if (!email) throw new CustomError('No email provided.', ErrorTypes.INVALID_ARG);
+  const userExists = await checkIfUserWithEmailExists(email);
+  if (!!userExists) throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
+  return 'User with this email does not exist';
 };

@@ -334,4 +334,5 @@ export const TransactionIntegrationTypesEnum = {
   Rare: 'rare',
   Kard: 'kard',
 } as const;
+
 export type TransactionIntegrationTypesEnumValues = typeof TransactionIntegrationTypesEnum[keyof typeof TransactionIntegrationTypesEnum];

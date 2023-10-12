@@ -194,6 +194,7 @@ export const getTransactions = async (
   query: FilterQuery<ITransaction>,
 ) => {
   const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
+
   let startDateQuery = {};
   let endDateQuery = {};
 

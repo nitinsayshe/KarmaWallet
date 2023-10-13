@@ -117,7 +117,7 @@ export const getFormattedBankConnection = (shareableBankConnections: IShareableB
   const formattedResponse: IFormattedBankConnection[] = [];
 
   shareableBankConnections.forEach(connection => {
-    const formattedConnection = formattedResponse.find(element => element?.institution === connection?.institution);
+    const formattedConnection = formattedResponse.find(element => element?.accessToken === connection?.integrations?.plaid?.accessToken);
     if (!!formattedConnection) {
       const formattedConnectionIndex = formattedResponse.indexOf(formattedConnection);
       formattedResponse[formattedConnectionIndex] = {

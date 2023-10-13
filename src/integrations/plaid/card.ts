@@ -53,25 +53,31 @@ class Card {
   /**
    * @returns the object structure to be saved in the karma db
    */
-  toKarmaFormat = () => ({
-    userId: this._userId,
-    name: this._account?.name,
-    mask: this._account.mask,
-    type: this._account.type,
-    subtype: this._account.subtype,
-    status: CardStatus.Linked,
-    institution: this._institution?.name,
-    integrations: {
-      plaid: {
+  toKarmaFormat = () => {
+    const karmaFormatObj: Partial<ICardDocument> = {
+      userId: this._userId,
+      name: this._account?.name,
+      mask: this._account.mask,
+      type: this._account.type,
+      subtype: this._account.subtype,
+      status: CardStatus.Linked,
+      institution: this._institution?.name,
+      integrations: {},
+    };
+
+    if (!!this._accessToken && !!this._plaid_items) {
+      karmaFormatObj.integrations.plaid = {
         accessToken: this._accessToken,
         accountId: `${this._account.id}`,
         items: Array.from(this._plaid_items),
         publicToken: this._publicToken,
         linkSessionId: this._linkSessionId,
         institutionId: this._institution?.institution_id,
-      },
-    },
-  });
+        unlinkedAccessTokens: null,
+      };
+    }
+    return karmaFormatObj;
+  };
 
   _totalTransactionsForThisCard = 0;
   mapTransactions = async (plaidTransactions: PlaidTransaction[]) => {

@@ -7,6 +7,7 @@ export enum ApiKeyStatus {
   Active = 'active',
   Inactive = 'inactive',
 }
+
 export const IMapMarqetaCard = {
   name: 'Karma Wallet Prepaid Reloadable Card',
   type: 'depository',
@@ -16,6 +17,7 @@ export const IMapMarqetaCard = {
   initialTransactionsProcessing: false,
   isEnrolledInAutomaticRewards: true,
 };
+
 export interface IErrorType {
   AUTHENTICATION: ICustomErrorBody;
   CONFLICT: ICustomErrorBody;
@@ -85,7 +87,7 @@ export enum UnsdgNames {
   Planet = 'Planet',
 }
 
-export enum BankStatus{
+export enum BankConnectionStatus{
   Linked = 'linked',
   Unlinked = 'unlinked',
   Error = 'error',
@@ -334,4 +336,5 @@ export const TransactionIntegrationTypesEnum = {
   Rare: 'rare',
   Kard: 'kard',
 } as const;
+
 export type TransactionIntegrationTypesEnumValues = typeof TransactionIntegrationTypesEnum[keyof typeof TransactionIntegrationTypesEnum];

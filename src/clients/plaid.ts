@@ -13,7 +13,7 @@ import {
 import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
 import PlaidUser from '../integrations/plaid/user';
-import { BankStatus, CardStatus, ErrorTypes } from '../lib/constants';
+import { BankConnectionStatus, CardStatus, ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
@@ -180,7 +180,7 @@ export class PlaidClient extends SdkClient {
           await this.getIdentity(accessToken), // get user identity through plaid
         ]);
         const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
-        const data = { ...plaidItem, accounts, item, status: BankStatus.Linked, institution: { name, institution_id } };
+        const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };
         await plaidUserInstance.addBanks(data, processorToken);
         return {
           message: 'Processor token successfully generated',

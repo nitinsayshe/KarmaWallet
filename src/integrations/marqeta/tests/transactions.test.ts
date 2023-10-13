@@ -18,7 +18,7 @@ import { ICardDocument } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
 import { IMarqetaUserState } from '../../../services/karmaCard/utils';
-import { mapMarqetaTransactionToKarmaTransaction as mapMarqetaTransactionsToKarmaTransactions } from '../transactions';
+import { mapAndSaveMarqetaTransactionToKarmaTransaction as mapMarqetaTransactionsToKarmaTransactions } from '../transactions';
 import { IMarqetaKycState } from '../types';
 import { TransactionModel } from '../../../clients/marqeta/types';
 import { ISectorDocument } from '../../../models/sector';
@@ -144,5 +144,6 @@ describe('tests marqeta integration transaction logic', () => {
       expect(t.card_token).toBe(testCardWithMarqetaIntegration.integrations.marqeta.card_token);
       expect(t.amount).toBe(testTransactionAmount);
     });
+    await cleanUpDocuments([...karmaTransactions]);
   });
 });

@@ -14,6 +14,7 @@ export enum EmailTemplateKeys {
   EarnedCashbackNotification = 'earnedCashbackNotification',
   CashbackPayoutNotification = 'cashbackPayoutNotification',
   SupportTicket = 'supportTicket',
+  AccountDeleteRequest = 'accountDeleteRequest',
 }
 
 export enum EmailTemplateTypes {
@@ -25,6 +26,7 @@ export enum EmailTemplateTypes {
   Essential = 'essential',
   CashbackNotificaiton = 'cashbackNotification',
   SupportTicket = 'supportTicket',
+  AccountDeleteRequest = 'accountDeleteRequest',
 }
 
 export interface IEmailTemplateConfig {
@@ -89,6 +91,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   SupportTicket: {
     name: EmailTemplateKeys.SupportTicket,
     type: EmailTemplateTypes.SupportTicket,
+  },
+  AccountDeleteRequest: {
+    name: EmailTemplateKeys.AccountDeleteRequest,
+    type: EmailTemplateTypes.AccountDeleteRequest,
   },
 };
 

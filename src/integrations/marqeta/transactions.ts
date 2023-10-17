@@ -152,18 +152,12 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
 const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqetaTransaction): Promise<ITransactionDocument> => {
   try {
     // check if this transaction already exists in the db
-    // TODO: remove this
-    console.log(`Looking up existing transaction for marqeta transaction: ${JSON.stringify(t, null, 2)}`);
-    // TODO: remove this
     const existingTransaction = await MongooseTransactionModel.findOne({
       $and: [
         { 'integrations.marqeta.token': { $exists: true } },
         { 'integrations.marqeta.token': t?.marqeta_transaction?.token },
       ],
     });
-    // TODO: remove this
-    console.log(`found: ${JSON.stringify(existingTransaction, null, 2)}`);
-    // TODO: remove this
     if (!!existingTransaction?._id) {
       console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
       existingTransaction.integrations.marqeta = t.marqeta_transaction;

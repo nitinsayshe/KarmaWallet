@@ -339,6 +339,8 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
 
     const transactions = await _getTransactions(query);
 
+    if (integrationType === TransactionIntegrationTypesEnum.Marqeta) return transactions.slice(0, _limit);
+
     const uniqueCompanies = new Set();
     const recentTransactions: ITransactionDocument[] = [];
 
@@ -501,7 +503,7 @@ export const getShareableTransaction = ({
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: integrations.marqeta.card_acceptor.name,
+      merchantName: integrations?.marqeta?.card_acceptor?.name || null,
       cardMask: integrations.marqeta.card.last_four,
     };
 

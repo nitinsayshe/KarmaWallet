@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import { MongoClient } from '../../../clients/mongo';
-import { cleanUpDocuments, createSomeCards, createSomePromos, createSomeUsers } from '../../../lib/testingUtils';
+import { cleanUpDocuments } from '../../../lib/model';
+import { createSomeCards, createSomePromos, createSomeUsers } from '../../../lib/testingUtils';
 import { ICardDocument } from '../../../models/card';
 import { IPromoDocument } from '../../../models/promo';
 import { IUserDocument, IUserIntegrations } from '../../../models/user';

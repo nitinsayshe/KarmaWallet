@@ -13,9 +13,9 @@ import { MongoClient } from '../../../clients/mongo';
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
+import { cleanUpDocuments } from '../../../lib/model';
 import { getRandomInt } from '../../../lib/number';
 import {
-  cleanUpDocuments,
   createSomeUsers,
   createSomeCompanies,
   createSomeCards,

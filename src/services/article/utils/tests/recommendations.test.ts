@@ -2,9 +2,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/glob
 import dayjs from 'dayjs';
 import { Types } from 'mongoose';
 import { MongoClient } from '../../../../clients/mongo';
+import { cleanUpDocuments } from '../../../../lib/model';
 import { kwSlugify } from '../../../../lib/slugify';
 import {
-  cleanUpDocuments,
   createSomeArticles,
   createSomeCompanies,
   createSomeTransactionsWithCompany,

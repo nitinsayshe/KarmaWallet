@@ -138,7 +138,7 @@ interface IMarqetaUserTranactionEvent {
   reason_code: String;
   channel: String;
   created_time: Date;
-  last_modified_time:Date;
+  last_modified_time: Date;
   user_token: String;
   metadata: Object;
 }
@@ -154,14 +154,14 @@ interface IMarqetaBankTransferTransitionEvent {
 }
 
 interface IMarqetaWebhookBody {
-  cards : IMarqetaWebhookCardsEvent[];
-  cardactions : IMarqetaCardActionEvent[];
-  usertransitions : IMarqetaUserTranactionEvent[];
-  banktransfertransitions : IMarqetaBankTransferTransitionEvent[];
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  usertransitions: IMarqetaUserTranactionEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
 }
 
 interface IMarqetaWebhookHeader {
-  authorization : string;
+  authorization: string;
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -364,11 +364,16 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
   try {
     const marqetAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
 
-    const { headers } = <{headers : IMarqetaWebhookHeader}>req;
+    const { headers } = <{ headers: IMarqetaWebhookHeader }>req;
 
     if (headers?.authorization !== `Basic ${marqetAuthBuffer}`) {
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
+
+    // TODO: REMOVE THIS
+    console.log('\n\n/////////////// MARQETA WEBHOOK ///////////////////////\n\n');
+    console.log(JSON.stringify(req.body, null, 2));
+    // TODO: REMOVE THIS
 
     const { cards, cardactions, usertransitions, banktransfertransitions } = req.body;
 

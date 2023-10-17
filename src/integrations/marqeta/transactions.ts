@@ -23,6 +23,7 @@ import { ISectorDocument, SectorModel } from '../../models/sector';
 import { IRef } from '../../types/model';
 import { UserModel } from '../../models/user';
 import { CardModel } from '../../models/card';
+import { saveDocuments } from '../../lib/model';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -58,20 +59,14 @@ export const listTransaction = async (
 
 export const mapMarqetaTransactionToPlaidTransaction = (
   marqetaTransactions: TransactionModel[],
-): (Transaction & { marqeta_transaction: TransactionModel }
-  )[] => {
+): EnrichedMarqetaTransaction[] => {
   const mapped: (Transaction & { marqeta_transaction: TransactionModel })[] = marqetaTransactions
-    ?.map((t) => {
-      if (!t?.card_acceptor?.name && !t?.merchant?.name && !t?.card_acceptor?.mcc) {
-        return null;
-      }
-      return {
-        name: t?.card_acceptor?.name || t?.merchant?.name,
-        amount: t?.amount,
-        merchant_name: t?.merchant?.name || t?.card_acceptor?.name,
-        marqeta_transaction: t, // adding this on here for referencing after matching
-      } as Transaction & { marqeta_transaction: TransactionModel };
-    })
+    ?.map((t) => ({
+      name: t?.card_acceptor?.name || t?.merchant?.name,
+      amount: t?.amount,
+      merchant_name: t?.card_acceptor?.name || t?.merchant?.name,
+      marqeta_transaction: t, // adding this on here for referencing after matching
+    } as Transaction & { marqeta_transaction: TransactionModel }))
     .filter((t) => !!t);
   return mapped;
 };
@@ -127,6 +122,7 @@ const getCompanyAndSectorFromMarqetaTransaction = async (
     const company = await CompanyModel.findById(companyId);
     if (!company?._id) {
       console.error(`No company with id ${companyId} found`);
+      return { company: null, sector: null };
     }
     const sector = company.sectors.find((s) => s.primary)?.sector as IRef<ObjectId, ISectorDocument>;
     return { company, sector };
@@ -138,10 +134,12 @@ const getCompanyAndSectorFromMarqetaTransaction = async (
 };
 
 const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocument> | null> => {
+  if (!mcc || isNaN(mcc)) return null;
   try {
     const sector = await SectorModel.findOne({ mccs: mcc });
     if (!sector?._id) {
       console.error(`No sector with mcc ${mcc} found`);
+      return null;
     }
     return sector;
   } catch (err) {
@@ -151,25 +149,23 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
   }
 };
 
-const createAndSaveNewTransactionFromMarqetaTransaction = async (t: Transaction): Promise<ITransactionDocument> => {
-  const marqetaMatchedTransaction = t as Transaction & { marqeta_transaction: TransactionModel };
-
+const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqetaTransaction): Promise<ITransactionDocument> => {
   try {
     // check if this transaction already exists in the db
     const existingTransaction = await MongooseTransactionModel.findOne({
       $and: [
         { 'integrations.marqeta.token': { $exists: true } },
-        { 'integrations.marqeta.token': marqetaMatchedTransaction },
+        { 'integrations.marqeta.token': t?.marqeta_transaction?.token },
       ],
     });
     if (!!existingTransaction?._id) {
       console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
-      existingTransaction.integrations.marqeta = marqetaMatchedTransaction.marqeta_transaction;
-      existingTransaction.status = marqetaMatchedTransaction.marqeta_transaction.state;
-      existingTransaction.amount = marqetaMatchedTransaction.amount;
-      existingTransaction.date = new Date(marqetaMatchedTransaction.marqeta_transaction.user_transaction_time);
+      existingTransaction.integrations.marqeta = t.marqeta_transaction;
+      existingTransaction.status = t.marqeta_transaction.state;
+      existingTransaction.amount = t.amount;
+      existingTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
 
-      return existingTransaction.save();
+      return existingTransaction;
     }
   } catch (err) {
     console.error(err);
@@ -195,11 +191,11 @@ const createAndSaveNewTransactionFromMarqetaTransaction = async (t: Transaction)
 
   try {
     const user = await UserModel.findOne({
-      'integrations.marqeta.userToken': marqetaMatchedTransaction?.marqeta_transaction?.user_token,
+      'integrations.marqeta.userToken': t?.marqeta_transaction?.user_token,
     });
     if (!user?._id) {
       throw Error(
-        `No user found associated with the marqeta user token :${marqetaMatchedTransaction?.marqeta_transaction?.user_token}`,
+        `No user found associated with the marqeta user token :${t?.marqeta_transaction?.user_token}`,
       );
     }
     newTransaction.user = user;
@@ -213,11 +209,11 @@ const createAndSaveNewTransactionFromMarqetaTransaction = async (t: Transaction)
 
   try {
     const card = await CardModel.findOne({
-      'integrations.marqeta.token': marqetaMatchedTransaction?.marqeta_transaction?.card_token,
+      'integrations.marqeta.token': t?.marqeta_transaction?.card_token,
     });
     if (!card?._id) {
       throw Error(
-        `No card found associated with the marqeta card token :${marqetaMatchedTransaction?.marqeta_transaction?.card_token}`,
+        `No card found associated with the marqeta card token :${t?.marqeta_transaction?.card_token}`,
       );
     }
     newTransaction.card = card;
@@ -228,34 +224,47 @@ const createAndSaveNewTransactionFromMarqetaTransaction = async (t: Transaction)
       ErrorTypes.SERVER,
     );
   }
-  newTransaction.amount = marqetaMatchedTransaction.amount;
-  newTransaction.status = marqetaMatchedTransaction.marqeta_transaction.state;
-  newTransaction.integrations.marqeta = marqetaMatchedTransaction.marqeta_transaction;
-  newTransaction.date = new Date(marqetaMatchedTransaction.marqeta_transaction.user_transaction_time);
-  return newTransaction.save();
+  newTransaction.amount = t.amount;
+  newTransaction.status = t.marqeta_transaction.state;
+  newTransaction.integrations.marqeta = t.marqeta_transaction;
+  newTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
+  return newTransaction;
 };
 
-export const mapAndSaveMarqetaTransactionToKarmaTransaction = async (
+export const mapMarqetaTransactionToKarmaTransaction = async (
   marqetaTransactions: TransactionModel[],
   saveMatches = false,
 ): Promise<ITransactionDocument[]> => {
   const mapped = mapMarqetaTransactionToPlaidTransaction(marqetaTransactions);
-  let { matched, notMatched } = await matchTransactionCompanies(mapped, saveMatches);
+
+  // filter out transactions that aren't authorizations
+  const authorizations = mapped.filter((t) => t?.marqeta_transaction?.type === 'authorization');
+  let { matched, notMatched } = await matchTransactionCompanies(authorizations, saveMatches);
   ({ matched, notMatched } = await matchTransactionsToCompaniesByMCC(
     matched as (EnrichedMarqetaTransaction & { company: ObjectId })[],
     notMatched as EnrichedMarqetaTransaction[],
   ));
 
+  const nonAuthorizations = mapped.filter((t) => t?.marqeta_transaction?.type !== 'authorization');
+  notMatched = [...notMatched, ...nonAuthorizations];
+
   if (matched.length > 0) console.log(`matches found for ${matched?.length} transactions`);
   if (notMatched.length > 0) console.log(`no matches found for ${notMatched?.length} transactions`);
 
   // merge matched and notMatched back together
-  const allTransactions = [...matched, ...notMatched];
+  const allTransactions = [...(matched as (EnrichedMarqetaTransaction & { company: ObjectId })[]), ...(notMatched as EnrichedMarqetaTransaction[])];
 
   // map matched transactions to db transactions
   const transactionDocuments: ITransactionDocument[] = await Promise.all(
-    allTransactions.map(async (t) => createAndSaveNewTransactionFromMarqetaTransaction(t)),
+    allTransactions.map(async (t) => getNewOrUpdatedTransactionFromMarqetaTransaction(t)),
   );
 
   return transactionDocuments;
+};
+
+export const mapAndSaveMarqetaTransactionToKarmaTransaction = async (
+  marqetaTransactions: TransactionModel[],
+): Promise<ITransactionDocument[]> => {
+  const transactionsToSave = await mapMarqetaTransactionToKarmaTransaction(marqetaTransactions, true);
+  return (saveDocuments(transactionsToSave)) as unknown as ITransactionDocument[];
 };

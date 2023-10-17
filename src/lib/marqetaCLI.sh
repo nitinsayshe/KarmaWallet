@@ -1,7 +1,11 @@
 #! /usr/bin/env bash
-
-# depends on fzf `brew install fzf`
-# depends on MARQETA_ACCESS_TOKEN and MARQETA_APPLICATION_TOKEN and $MARQETA_BASE_URL
+#
+# Super Crude Marqeta CLI for Dirty Debugging
+#
+# Dependancies:
+# - fzf `brew install fzf`
+# - others that may be installed already (curl, base64, awk, xargs)
+# - api url and credentials: MARQETA_ACCESS_TOKEN, MARQETA_APPLICATION_TOKEN and MARQETA_BASE_URL
 #
 MARQETA_API_URL=$MARQETA_BASE_URL
 MARQETA_API_AUTH_TOKEN="$(echo -n "$MARQETA_APPLICATION_TOKEN:$MARQETA_ACCESS_TOKEN" | base64)"
@@ -54,13 +58,26 @@ case $choice in
         #REQUEST activate card
         curl -X POST "${MARQETA_API_URL}cardtransitions"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"card_token\":\"$CARD_TOKEN\",\"channel\":\"API\",\"state\":\"ACTIVE\",\"reason_code\":\"00\"}"
         ;;
+    'deactivate card')
+        #REQUEST deactivate card
+        curl -X POST "${MARQETA_API_URL}cardtransitions"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"card_token\":\"$CARD_TOKEN\",\"channel\":\"API\",\"state\":\"SUSPENDED\",\"reason_code\":\"00\"}"
+        ;;
+    'list webhooks')
+        #REQUEST list webhooks
+        curl -X GET "${MARQETA_API_URL}webhooks"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{}"
+        ;;
     'create a deposit account')
         #REQUEST create a deposit account
-        curl -X POST "${MARQETA_API_URL}depositaccounts"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"user_token\":\"$USER_TOKEN\", }"
+        curl -X POST "${MARQETA_API_URL}depositaccounts"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"user_token\":\"$USER_TOKEN\" }"
         ;;
     'list deposit accounts for user')
         #REQUEST list deposit accounts for user
         curl -X GET "${MARQETA_API_URL}depositaccounts/user/$USER_TOKEN"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{}"
+        ;;
+
+    'simulate direct deposit credit')
+        #REQUEST simulate direct deposit credit
+        curl -X POST "${MARQETA_API_URL}simulations/directdeposits/credit"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"amount\":100.00,\"account_number\":\"$ACCOUNT_NUMBER\",\"settlement_date\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",\"earlyPayEligible\":true}"
         ;;
     'simulate ach credit')
         #REQUEST simulate ach credit 
@@ -94,7 +111,10 @@ case $choice in
         #REQUEST get balance for user
         curl -X GET "${MARQETA_API_URL}balances/$USER_TOKEN"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{}"
         ;;
-
+    'list ach transfers for user')
+        #REQUEST list ach transfers for user 
+        curl -X GET "${MARQETA_API_URL}banktransfers/ach/?user_token=${USER_TOKEN}"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"amount\":100.00,\"account_number\":\"$ACCOUNT_NUMBER\",\"settlement_date\":\"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\",\"type\":\"DEBIT\"}"
+        ;;
     'create ach funding source')
         #REQUEST create ach funding source 
         curl -X POST "${MARQETA_API_URL}fundingsources/ach"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"account_number\":\"${ACCOUNT_NUMBER}\",\"routing_number\":\"${ROUTING}\",\"name_on_account\":\"${NAME_ON_ACCOUNT}\",\"account_type\":\"checking\",\"user_token\":\"${USER_TOKEN}\"}"
@@ -108,6 +128,10 @@ case $choice in
         #REQUEST create gpa order
         curl -X POST "${MARQETA_API_URL}gpaorders"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{\"amount\":100,\"currency_code\":\"USD\",\"funding_source_token\":\"${FUNDING_SOURCE_TOKEN}\",\"user_token\":\"${USER_TOKEN}\"}"
         ;;
+    'get direct deposit records for user')
+        #REQUEST get direct deposit records for user 
+        curl -X GET "${MARQETA_API_URL}directdeposits/?user_token=${USER_TOKEN}"  -H "accept: application/json" -H "Content-Type: application/json" -H "Authorization: Basic $MARQETA_API_AUTH_TOKEN" -d "{}"
+        ;;
     # It is a common practice to use the wildcard asterisk symbol (*) as a final
     # pattern to define the default case. This pattern will always match.
     *)
@@ -116,4 +140,4 @@ case $choice in
     ;;
 esac
 
-#! /usr/bin/env bash
+

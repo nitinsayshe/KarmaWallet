@@ -37,6 +37,9 @@ import { getShareableMerchant } from '../merchant';
 import { getCompanyRatingsThresholds } from '../misc';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
+import { CompanyDataSourceModel } from '../../models/companyDataSource';
+import { DataSourceModel, IDataSourceDocument } from '../../models/dataSource';
+import { getUtcDate } from '../../lib/date';
 
 dayjs.extend(utc);
 
@@ -299,6 +302,52 @@ export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>)
     },
   });
 
+export const getCompanyDataSources = async (companyId: ObjectId) => {
+  const date = getUtcDate().toDate();
+
+  const match = {
+    company: companyId,
+    'dateRange.start': { $lte: date },
+    'dateRange.end': { $gte: date },
+  };
+
+  const pipeline = [
+    {
+      $match: match,
+    },
+    {
+      $lookup: {
+        from: 'data_sources',
+        localField: 'source',
+        foreignField: '_id',
+        as: 'source',
+      },
+    },
+    {
+      $unwind: {
+        path: '$source',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
+
+  const datasources = await CompanyDataSourceModel.aggregate(pipeline);
+  const _datasources: IDataSourceDocument[] = [];
+  const parents: ObjectId[] = [];
+  // we need to return only the sources without parents or the parents (we don't want to return children with parents)
+  for (const ds of datasources) {
+    if (ds.source.hidden && !ds.source.parentSource) continue;
+    if (ds.source.parentSource && !parents.find(p => ds.source.parentSource.toString() === p.toString())) {
+      parents.push(ds.source.parentSource.toString());
+      continue;
+    }
+    if (!ds.source.parentSource && !ds.source.hidden) _datasources.push(ds.source);
+  }
+  const _parents = await DataSourceModel.find({ _id: { $in: parents } });
+
+  return [..._datasources, ..._parents];
+};
+
 export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
     const query: FilterQuery<ICompany> = { _id, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
@@ -350,8 +399,9 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 
     const unsdgs = await getCompanyUNSDGs(req, { company });
     const companiesOwned = await getCompaniesOwned(req, company);
+    const companyDataSources = await getCompanyDataSources(company._id);
 
-    return { company, unsdgs, companiesOwned };
+    return { company, unsdgs, companiesOwned, companyDataSources };
   } catch (err) {
     throw asCustomError(err);
   }
@@ -814,6 +864,15 @@ export const getShareableCompanyUnsdg = ({
 }: ICompanyUnsdgDocument) => ({
   unsdg: getShareableUnsdg(unsdg as IUnsdgDocument),
   value,
+});
+
+export const getShareableDataSource = ({
+  name, url, description, logoUrl,
+}: IDataSourceDocument) => ({
+  name,
+  url,
+  description,
+  logoUrl,
 });
 
 export const initCompanyBatchJob = async (req: IRequest<{}, {}, IBatchedCompanyParentChildRelationshipsRequestBody>, jobName: JobNames) => {

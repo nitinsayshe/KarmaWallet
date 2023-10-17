@@ -3,8 +3,9 @@ import {
   model,
   Document,
   Model,
+  ObjectId,
 } from 'mongoose';
-import { IModel } from '../types/model';
+import { IModel, IRef } from '../types/model';
 
 export interface IJustCapitalDataSourceIntegrations {
   dummyPlaceholder: string;
@@ -30,6 +31,7 @@ export interface IDataSource {
   rank?: number;
   description?: string;
   hidden: boolean;
+  parentSource?: IRef<ObjectId, IDataSource>;
 }
 
 export interface IDataSourceDocument extends IDataSource, Document {}
@@ -59,6 +61,7 @@ const dataSourceSchema = new Schema({
   },
   createdAt: { type: Date },
   lastModified: { type: Date },
+  parentSource: { type: Schema.Types.ObjectId, ref: 'data_source' },
 });
 
 export const DataSourceModel = model<IDataSourceDocument, Model<IDataSource>>('data_source', dataSourceSchema);

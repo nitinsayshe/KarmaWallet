@@ -309,7 +309,7 @@ export const getTransactions = async (
 
 export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTransactionsRequestQuery>) => {
   try {
-    const { limit = 5, unique = true, userId } = req.query;
+    const { limit = 5, unique = true, userId, integrationType } = req.query;
     const _limit = parseInt(limit.toString());
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
@@ -330,7 +330,12 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     }
 
     query.$and.push({ 'integrations.rare': null });
-    query.$and.push({ company: { $ne: null } });
+
+    if (!!integrationType) {
+      query.$and.push(getTransactionIntegrationFilter(integrationType));
+    } else {
+      query.$and.push({ company: { $ne: null } });
+    }
 
     const transactions = await _getTransactions(query);
 

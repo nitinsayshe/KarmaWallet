@@ -24,7 +24,7 @@ import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
 import { CompanyModel, ICompanyDocument, ICompanySector, IShareableCompany } from '../../models/company';
 import { GroupModel } from '../../models/group';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
-import { IShareableTransaction, ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
+import { IMarqetaTransactionIntegration, IShareableTransaction, ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
@@ -339,6 +339,8 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
 
     const transactions = await _getTransactions(query);
 
+    if (integrationType === TransactionIntegrationTypesEnum.Marqeta) return transactions.slice(0, _limit);
+
     const uniqueCompanies = new Set();
     const recentTransactions: ITransactionDocument[] = [];
 
@@ -399,6 +401,11 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
     transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
     return transaction;
   });
+};
+
+export const getMarqetaTransactionType = (marqetaData: IMarqetaTransactionIntegration) => {
+  if (!!marqetaData.direct_deposit && !!marqetaData.direct_deposit.token) return 'direct_deposit';
+  return 'authorization';
 };
 
 export const getShareableTransaction = ({
@@ -477,7 +484,6 @@ export const getShareableTransaction = ({
       token,
       user_token: userToken,
       card_token: cardToken,
-      type,
       state,
       created_time: createdTime,
       request_amount: requestAmount,
@@ -490,14 +496,14 @@ export const getShareableTransaction = ({
       token,
       userToken,
       cardToken,
-      type,
+      type: getMarqetaTransactionType(integrations.marqeta) as any,
       state,
       createdTime,
       requestAmount,
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: integrations.marqeta.card_acceptor.name,
+      merchantName: integrations?.marqeta?.card_acceptor?.name || null,
       cardMask: integrations.marqeta.card.last_four,
     };
 

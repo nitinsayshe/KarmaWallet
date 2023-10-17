@@ -25,6 +25,8 @@ import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
 import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
+import { TransactionModel } from '../clients/marqeta/types';
+import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -158,6 +160,7 @@ interface IMarqetaWebhookBody {
   cardactions: IMarqetaCardActionEvent[];
   usertransitions: IMarqetaUserTranactionEvent[];
   banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: TransactionModel[];
 }
 
 interface IMarqetaWebhookHeader {
@@ -370,12 +373,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    // TODO: REMOVE THIS
-    console.log('\n\n/////////////// MARQETA WEBHOOK ///////////////////////\n\n');
-    console.log(JSON.stringify(req.body, null, 2));
-    // TODO: REMOVE THIS
-
-    const { cards, cardactions, usertransitions, banktransfertransitions } = req.body;
+    const { cards, cardactions, usertransitions, banktransfertransitions, transactions } = req.body;
 
     if (!!cards) {
       for (const card of cards) {
@@ -410,6 +408,10 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           },
         );
       }
+    }
+
+    if (!!transactions) {
+      await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
     }
 
     output.api(

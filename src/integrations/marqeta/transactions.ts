@@ -231,7 +231,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqet
   return newTransaction;
 };
 
-export const mapMarqetaTransactionToKarmaTransaction = async (
+export const mapMarqetaTransactionsToKarmaTransactions = async (
   marqetaTransactions: TransactionModel[],
   saveMatches = false,
 ): Promise<ITransactionDocument[]> => {
@@ -262,9 +262,9 @@ export const mapMarqetaTransactionToKarmaTransaction = async (
   return transactionDocuments;
 };
 
-export const mapAndSaveMarqetaTransactionToKarmaTransaction = async (
+export const mapAndSaveMarqetaTransactionsToKarmaTransactions = async (
   marqetaTransactions: TransactionModel[],
 ): Promise<ITransactionDocument[]> => {
-  const transactionsToSave = await mapMarqetaTransactionToKarmaTransaction(marqetaTransactions, true);
+  const transactionsToSave = await mapMarqetaTransactionsToKarmaTransactions(marqetaTransactions, true);
   return (saveDocuments(transactionsToSave)) as unknown as ITransactionDocument[];
 };

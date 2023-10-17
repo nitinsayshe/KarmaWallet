@@ -132,7 +132,7 @@ interface IMarqetaCardActionEvent {
   user_token: String;
 }
 
-interface IMarqetaUserTranactionEvent {
+interface IMarqetaUserTransitionsEvent {
   token: String;
   status: String;
   reason_code: String;
@@ -153,11 +153,55 @@ interface IMarqetaBankTransferTransitionEvent {
   last_modified_time: Date;
 }
 
+interface ITransactionCardAcceptor {
+  mid: string;
+  mcc: string;
+  name: string;
+  street_address: string;
+  city: string;
+  state: string;
+  postal_code: string;
+  country_code: string;
+}
+
+interface ITransactionGPA {
+  currency_code: string;
+  ledger_balance: number;
+  available_balance: number;
+  credit_balance: number;
+  pending_credits: number;
+  impacted_amount: number;
+  balances: object;
+}
+
+interface IMarqetaTransactionEvent {
+  type : string;
+  state : string;
+  token : string;
+  user_token : string;
+  gpa : ITransactionGPA;
+  card_acceptor : ITransactionCardAcceptor;
+  user : object;
+  user_transaction_time : Date;
+  amount : number;
+  currency_code : string;
+  duration : number;
+  network : string;
+  settlement_date : string;
+  response : {
+    code : string;
+    memo : string;
+  };
+  created_time : string;
+  [key : string] : any;
+}
+
 interface IMarqetaWebhookBody {
   cards : IMarqetaWebhookCardsEvent[];
   cardactions : IMarqetaCardActionEvent[];
-  usertransitions : IMarqetaUserTranactionEvent[];
+  usertransitions : IMarqetaUserTransitionsEvent[];
   banktransfertransitions : IMarqetaBankTransferTransitionEvent[];
+  transactions : IMarqetaTransactionEvent[];
 }
 
 interface IMarqetaWebhookHeader {
@@ -370,14 +414,16 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, usertransitions, banktransfertransitions } = req.body;
+    const { cards, cardactions, usertransitions, banktransfertransitions, transactions } = req.body;
 
+    // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
       for (const card of cards) {
         await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
       }
     }
 
+    // Card action events include PIN set, PIN change, and PIN reveal actions
     if (!!cardactions) {
       for (const cardaction of cardactions) {
         if (cardaction.type === 'pin.set') {
@@ -386,12 +432,14 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       }
     }
 
+    // User transitions events include activities such as a user being created, activated, suspended, or closed
     if (!!usertransitions) {
       for (const usertransition of usertransitions) {
         await UserModel.findOneAndUpdate({ 'integrations.marqeta.userToken': usertransition?.user_token }, { 'integrations.marqeta.kycResult.status': usertransition.status }, { new: true });
       }
     }
 
+    // ACH Origination transition events include activities such as bank transfer being transitioned to a pending, processing, submitted, completed, returned, or cancelled state
     if (!!banktransfertransitions) {
       for (const banktransfertransition of banktransfertransitions) {
         await ACHTransferModel.findOneAndUpdate(
@@ -404,6 +452,34 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
             $push: { transitions: banktransfertransition },
           },
         );
+      }
+    }
+
+    if (transactions) {
+      for (const transaction of transactions) {
+        // event for Authorization Transaction initialization
+        if (transaction.type === 'authorization') {
+          console.log('authorization >>>>>>>>>>>>>>>>>>>>>>>>>>');
+          console.log(transaction);
+        }
+
+        // event for Authorization Transaction clearing
+        if (transaction.type === 'authorization.clearing') {
+          console.log('authorization.clearing >>>>>>>>>>>>>>>>>>>>>>>>>>');
+          console.log(transaction);
+        }
+
+        // event for Funding GPA via Funding Source Program (Reward related transaction)
+        if (transaction.type === 'gpa.credit') {
+          console.log('gpa.credit >>>>>>>>>>>>>>>>>>>>>>>>>>');
+          console.log(transaction);
+        }
+
+        // event for ATM withdrawal transaction
+        if (transaction.type === 'pindebit.atm.withdrawal') {
+          console.log('pindebit.atm.withdrawal >>>>>>>>>>>>>>>>>>>>>>>>>>');
+          console.log(transaction);
+        }
       }
     }
 

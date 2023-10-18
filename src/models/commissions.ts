@@ -5,6 +5,7 @@ import { IModel, IRef } from '../types/model';
 import { IShareableCompany } from './company';
 import { IShareableMerchant } from './merchant';
 import { IPromo } from './promo';
+import { IShareableTransaction } from './transaction';
 import { IShareableUser } from './user';
 
 // https://kb.wildfire-corp.com/article/ygwr-commission-history
@@ -68,6 +69,7 @@ export interface IShareableCommission {
   merchant: IRef<ObjectId, IShareableMerchant>;
   company: IRef<ObjectId, IShareableCompany>;
   user: IRef<ObjectId, IShareableUser>;
+  transaction: IRef<ObjectId, IShareableTransaction>;
   amount: number;
   date: Date;
   lastStatusUpdate: Date;
@@ -143,7 +145,6 @@ const commission = new Schema({
     },
     karma: {
       amount: { type: Number },
-      createdOn: { type: Date, default: () => getUtcDate() },
       promo: { type: Schema.Types.ObjectId, ref: 'promo' },
     },
     kard: {

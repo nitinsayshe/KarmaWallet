@@ -13,7 +13,7 @@ import {
 import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
 import PlaidUser from '../integrations/plaid/user';
-import { CardStatus, ErrorTypes } from '../lib/constants';
+import { BankConnectionStatus, CardStatus, ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
@@ -168,14 +168,24 @@ export class PlaidClient extends SdkClient {
       const itemId = response.data.item_id;
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
-      await plaidUserInstance.load();
+      let processorToken = '';
+      let accounts;
+      let item;
 
+      await plaidUserInstance.load();
       // if accounts is empty generete a preocessor token
       if (!plaidItem.accounts) {
-        const processorToken = await this.getProcessorToken(accessToken);
+        [processorToken, { accounts, item }] = await Promise.all([
+          await this.getProcessorToken(accessToken), // get the processor token from plaid
+          await this.getIdentity(accessToken), // get user identity through plaid
+        ]);
+        const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
+        const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };
+        await plaidUserInstance.addBanks(data, processorToken);
         return {
           message: 'Processor token successfully generated',
           itemId,
+          accessToken,
           processorToken,
         };
       }
@@ -203,6 +213,27 @@ export class PlaidClient extends SdkClient {
   getItem = async (accessToken: string) => {
     const response = await this._client.itemGet({ access_token: accessToken });
     return response.data.item;
+  };
+
+  getIdentity = async (accessToken: string) => {
+    try {
+      const response = await this._client.identityGet({ access_token: accessToken });
+      return response.data;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
+  };
+
+  getInstitutionsById = async (institutionId: string) => {
+    try {
+      const response = await this._client.institutionsGetById({
+        institution_id: institutionId,
+        country_codes: [CountryCode.Us],
+      });
+      return response.data.institution;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
   };
 
   removeItem = async ({ access_token }: { access_token: string }) => {

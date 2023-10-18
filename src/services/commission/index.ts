@@ -10,10 +10,7 @@ import {
   KarmaCommissionStatus,
 } from '../../models/commissions';
 import { IRequest } from '../../types/request';
-import {
-  CommissionPayoutModel,
-  KarmaCommissionPayoutStatus,
-} from '../../models/commissionPayout';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
 import {
   currentAccurualsQuery,
   getNextPayoutDate,
@@ -21,15 +18,17 @@ import {
   getUserLifetimeCashbackPayoutsTotal,
 } from './utils';
 import { CommissionPayoutDayForUser, ErrorTypes, UserRoles, ImpactKarmaCompanyData } from '../../lib/constants';
-import { UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import {
   CommissionPayoutOverviewModel,
+  ICommissionPayoutOverviewDocument,
   KarmaCommissionPayoutOverviewStatus,
 } from '../../models/commissionPayoutOverview';
 import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
 import CustomError from '../../lib/customError';
 import { IPromo } from '../../models/promo';
 import { getUtcDate } from '../../lib/date';
+import { createPayoutNotificationFromCommissionPayout } from '../notification';
 
 dayjs.extend(utc);
 
@@ -179,7 +178,7 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
   const users = await UserModel.find({});
 
   for (const user of users) {
-    if (!user.integrations?.paypal) continue;
+    if (!user.integrations?.paypal || !user?.integrations?.marqeta?.userToken) continue;
 
     if (!user.integrations?.paypal?.payerId) {
       console.log(`[+] Skipping user ${user._id} - no paypal integration`);
@@ -192,10 +191,7 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
           $match: {
             user: user._id,
             status: {
-              $in: [
-                KarmaCommissionStatus.ReceivedFromVendor,
-                KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
-              ],
+              $in: [KarmaCommissionStatus.ReceivedFromVendor, KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment],
               $nin: [
                 KarmaCommissionStatus.PendingPaymentToUser,
                 KarmaCommissionStatus.PaidToUser,
@@ -233,30 +229,63 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
         { $set: { status: KarmaCommissionStatus.PendingPaymentToUser, lastStatusUpdate: getUtcDate() } },
       );
       console.log(`[+] Created CommissionPayout for user ${user._id}`);
+      await createPayoutNotificationFromCommissionPayout(commissionPayout);
     } catch (err) {
       console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
     }
   }
 };
 
-export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
+export const generateCommissionPayoutOverview = async (
+  payoutDate: Date,
+): Promise<void | ICommissionPayoutOverviewDocument> => {
   const commissionPayouts = await CommissionPayoutModel.find({
     status: KarmaCommissionPayoutStatus.Pending,
   });
+  if (!commissionPayouts.length) {
+    throw new CustomError('No commission payouts found for this time period.', ErrorTypes.GEN);
+  }
+
+  // count the amounts broken down by source (karma, wildfire, kard, etc)
+  // count the payout total by destination (paypal, marqeta, etc)
   let karmaAmount = 0;
   let wildfireAmount = 0;
   let kardAmount = 0;
-
-  if (!commissionPayouts.length) throw new CustomError('No commission payouts found for this time period.', ErrorTypes.GEN);
+  let paypalPayoutAmount = 0;
+  let marqetaPayoutAmount = 0;
+  let unknownDestinationAmount = 0;
 
   for (const payout of commissionPayouts) {
     const payoutCommissions = payout.commissions;
+
     for (const commission of payoutCommissions) {
-      const commissionData = await CommissionModel.findById(commission);
-      if (!!commissionData?.integrations?.karma?.amount) karmaAmount += commissionData.allocation.user;
-      if (!!commissionData?.integrations?.wildfire?.CommissionID) wildfireAmount += commissionData.allocation.user;
-      if (!!commissionData?.integrations?.kard?.reward) kardAmount += commissionData.allocation.user;
-      // add kard here
+      const commissionData: (ICommissionDocument & { user: IUserDocument })[] = await CommissionModel.aggregate()
+        .match({ _id: commission })
+        .lookup({
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        })
+        .unwind({ path: '$user' });
+      if (!commissionData?.length || commissionData.length < 1) {
+        console.error('Commission not found for payout', payout._id, commission);
+        continue;
+      }
+
+      if (!!commissionData?.[0]?.integrations?.karma?.amount) karmaAmount += commissionData[0].allocation.user;
+      if (!!commissionData?.[0]?.integrations?.wildfire?.CommissionID) {
+        wildfireAmount += commissionData[0].allocation.user;
+      }
+      if (!!commissionData?.[0]?.integrations?.kard?.reward) kardAmount += commissionData[0].allocation.user;
+
+      if (!!commissionData[0]?.user?.integrations?.marqeta?.userToken) {
+        marqetaPayoutAmount += commissionData[0].allocation.user;
+      } else if (!!commissionData[0]?.user?.integrations?.paypal?.payerId) {
+        paypalPayoutAmount += commissionData[0].allocation.user;
+      } else {
+        unknownDestinationAmount += commissionData[0].allocation.user;
+      }
     }
   }
 
@@ -271,16 +300,20 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date) => {
         wildfire: wildfireAmount,
         kard: kardAmount,
       },
+      disbursementBreakdown: {
+        paypal: paypalPayoutAmount,
+        marqeta: marqetaPayoutAmount,
+        unknown: unknownDestinationAmount,
+      },
     });
-
-    await commissionPayoutOverview.save();
     console.log('[+] Created CommissionPayoutOverview');
+    return commissionPayoutOverview.save();
   } catch (err) {
-    console.log('[+] Error create CommissionPayoutOverview', err);
+    console.log('[+] Error creating CommissionPayoutOverview', err);
   }
 };
 
-export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId: string) => {
+export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) => {
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
     if (!commissionPayoutOverview) {
@@ -292,20 +325,27 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
     ) {
       throw new CustomError('Commission payout overview is not verified.', ErrorTypes.GEN);
     }
+
     const paypalClient = new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
-    const commissionPayoutOverviewAmount = commissionPayoutOverview.amount;
+    const paypalCommissionPayoutOverviewAmount = commissionPayoutOverview.disbursementBreakdown.paypal;
+
     const { commissionPayouts } = commissionPayoutOverview;
 
-    if (paypalPrimaryBalanceAmount < commissionPayoutOverviewAmount) {
+    // Check that the paypal account has enough funds to cover the users with paypal payouts
+    if (paypalPrimaryBalanceAmount < paypalCommissionPayoutOverviewAmount) {
       throw new CustomError(
-        `[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout overview amount: ${commissionPayoutOverviewAmount}`,
+        `[+] Insufficient funds in PayPal account for this commission payout overview. Available balance: ${paypalPrimaryBalanceAmount}, Commission payout overview amount: ${paypalCommissionPayoutOverviewAmount}`,
         ErrorTypes.GEN,
       );
     }
 
+    // TODO: check if there is enough money in the marqeta account to cover
+    // amount in commissionPayoutOverview.destination.marqeta
+
     const paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
+    const marqetaFormattedPayouts: any[] = []; // Improve typing once we know what is needed
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
@@ -315,6 +355,9 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
       },
     };
 
+    // Adding Valid Commission Payouts to Paypal Formatted Payouts Array
+    // Checking that each commission payout has an associated user and hasn't alreacy benn paid
+    // If so, we add it to the paypal formatted payouts array
     for (const commissionPayout of commissionPayouts) {
       const payoutData = await CommissionPayoutModel.findById(commissionPayout);
       if (!payoutData) {
@@ -333,35 +376,44 @@ export const sendCommissionPayoutsThruPaypal = async (commissionPayoutOverviewId
         continue;
       }
 
-      const { paypal } = user.integrations;
+      const { paypal, marqeta } = user.integrations;
 
-      if (!paypal) {
-        console.log('[+] User does not have paypal integration. Skipping payout.');
+      if (!paypal && !marqeta) {
+        console.log('[+] User does not have paypal or marqeta integration. Skipping payout.');
         continue;
       }
 
-      if (!paypal.payerId) {
-        console.log('[+] User does not have paypal payerId. Skipping payout.');
-        continue;
+      if (!!marqeta?.userToken) {
+        // TODO: aggregate data needed for a marqueta payout
+      } else if (!!paypal?.payerId) {
+        // prepare for paypal payout
+        paypalFormattedPayouts.push({
+          recipient_type: 'PAYPAL_ID',
+          amount: {
+            value: payoutData.amount.toString(),
+            currency: 'USD',
+          },
+          receiver: paypal.payerId,
+          note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
+          sender_item_id: payoutData._id.toString(),
+        });
       }
-
-      paypalFormattedPayouts.push({
-        recipient_type: 'PAYPAL_ID',
-        amount: {
-          value: payoutData.amount.toString(),
-          currency: 'USD',
-        },
-        receiver: paypal.payerId,
-        note: 'Ready to earn even more? Browse thousands of company ratings then shop sustainably to earn cashback on Karma Wallet.',
-        sender_item_id: payoutData._id.toString(),
-      });
     }
 
-    if (!paypalFormattedPayouts.length) console.log('[+] No valid payouts to send.');
+    if (!!paypalFormattedPayouts.length) {
+      const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
+      console.log('[+] Paypal payout sent', paypalResponse);
+    } else {
+      console.log('[-] No valid paypal payouts to send.');
+    }
 
-    const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
-    console.log('[+] Paypal payout sent', paypalResponse);
+    if (!!marqetaFormattedPayouts.length) {
+      // TODO: send marqeta payouts
+    } else {
+      console.log('[-] No valid marqeta payouts to send.');
+    }
 
+    // Updating our db
     commissionPayoutOverview.status = KarmaCommissionPayoutOverviewStatus.Sent;
     await commissionPayoutOverview.save();
   } catch (err: any) {

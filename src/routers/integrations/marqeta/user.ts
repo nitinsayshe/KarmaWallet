@@ -1,31 +1,33 @@
 import { Router } from 'express';
 import * as UserController from '../../../controllers/integrations/marqeta/user';
-import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
 router.route('/create')
-  .post(authenticate, UserController.createUser);
+  .post(UserController.createMarqetaUser);
 
 router.route('/list')
-  .get(UserController.listUser);
+  .get(UserController.listMarqetaUser);
 
-router.route('/profile')
-  .get(authenticate, UserController.getUser);
+router.route('/profile/:userToken')
+  .get(UserController.getMarqetaUser);
 
-router.route('/update')
-  .put(authenticate, UserController.updateUser);
+router.route('/update/:userToken')
+  .put(UserController.updateMarqetaUser);
 
-router.route('/transition')
-  .post(authenticate, UserController.userTransition);
+router.route('/transition/:userToken')
+  .post(UserController.userMarqetaTransition);
 
-router.route('/transition')
-  .get(authenticate, UserController.listUserTransition);
+router.route('/transition/:userToken')
+  .get(UserController.listMarqetaUserTransition);
 
 router.route('/accesstoken')
-  .post(UserController.createClientAccessToken);
+  .post(UserController.createMarqetaClientAccessToken);
 
 router.route('/accesstoken/:accessToken')
-  .get(UserController.listUserTransition);
+  .get(UserController.listMarqetaUserTransition);
+
+router.route('/onetime-auth')
+  .post(UserController.createMarqetaUserAuthToken);
 
 export default router;

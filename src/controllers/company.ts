@@ -35,6 +35,7 @@ export const getCompanyById: IRequestHandler<{ companyId: string }> = async (req
       company: CompanyService.getShareableCompany(company.company),
       unsdgs: company.unsdgs.map(unsdg => CompanyService.getShareableCompanyUnsdg(unsdg)),
       companiesOwned: company.companiesOwned.map(c => CompanyService.getShareableCompany(c)),
+      companyDataSources: company.companyDataSources.map(cds => CompanyService.getShareableDataSource(cds)),
     });
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -118,6 +119,20 @@ export const getPartner: IRequestHandler<{}, CompanyService.IGetPartnerQuery, {}
   try {
     const result = await CompanyService.getPartner(req);
     output.api(req, res, CompanyService.getShareableCompany(result));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getFeaturedCashbackCompanies: IRequestHandler = async (req, res) => {
+  try {
+    const query = aqp(req.query, { skipKey: 'page' });
+    const companies = await CompanyService.getFeaturedCashbackCompanies(req, query);
+    const sharableCompanies = {
+      ...companies,
+      docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),
+    };
+    output.api(req, res, sharableCompanies);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

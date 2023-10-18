@@ -5,11 +5,13 @@ import {
   IShareableMerchant,
   IWildfireMerchantIntegration,
 } from '../../models/merchant';
+import { getMerchantRateTypeFromString, MerchantRateType } from '../merchantRates';
 import { getMerchantRateDescription } from './utils';
 
 export interface IShareableMerchantWithEnrichedData extends IShareableMerchant {
   maxDescription?: string;
   maxAmount: string;
+  maxRateType?: MerchantRateType;
   domain?: string;
 }
 
@@ -20,6 +22,10 @@ export type ShareableMerchantIntegration = {
     type: Boolean;
   };
   domain: string;
+  maxRate?: {
+    type: MerchantRateType;
+    amount: number;
+  };
 };
 
 export const getShareableIntegrationFromWildfireIntegration = (
@@ -32,6 +38,12 @@ export const getShareableIntegrationFromWildfireIntegration = (
     Name,
     PaysNewCustomersOnly,
     domain: domain?.Domain || '',
+    maxRate: {
+      type: getMerchantRateTypeFromString(domain?.Merchant?.MaxRate?.Kind),
+      amount: !!domain?.Merchant?.MaxRate?.Amount
+        ? Math.round(domain.Merchant.MaxRate.Amount * UserCommissionPercentage * 100) / 100
+        : 0,
+    },
   };
 };
 
@@ -43,6 +55,12 @@ export const getShareableIntegrationFromKardIntegration = (
     merchantId: id,
     Name: name,
     domain: websiteURL || '',
+    maxRate: {
+      type: getMerchantRateTypeFromString(kardIntegration?.maxOffer?.commissionType),
+      amount: kardIntegration?.maxOffer?.totalCommission
+        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
+        : 0,
+    },
   };
 };
 
@@ -53,6 +71,7 @@ export const getShareableMerchant = ({
 }: IMerchantDocument): IShareableMerchantWithEnrichedData => {
   let maxDescription = '';
   let maxAmount = '';
+  let maxRateType: MerchantRateType;
   let _integrations = {};
   if (integrations?.wildfire) {
     const amount = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Amount;
@@ -61,6 +80,7 @@ export const getShareableMerchant = ({
     const maxAmountNumber = !!amount ? Math.round(amount * UserCommissionPercentage * 100) / 100 : 0;
     const descriptions = getMerchantRateDescription(kind?.toLowerCase(), maxAmountNumber);
     maxAmount = descriptions.maxAmount;
+    maxRateType = getMerchantRateTypeFromString(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind);
     maxDescription = descriptions.maxDescription;
     name = integrations?.wildfire.Name;
     _integrations = {
@@ -71,10 +91,14 @@ export const getShareableMerchant = ({
     const maxAmountNumber = !!integrations.kard?.maxOffer?.totalCommission
       ? Math.round((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
       : 0;
-    const descriptions = getMerchantRateDescription(integrations.kard?.maxOffer?.commissionType, maxAmountNumber);
-    maxAmount = descriptions.maxAmount;
-    maxDescription = descriptions.maxDescription;
-    name = integrations?.kard?.name;
+    const previousMaxAmount = parseFloat(maxAmount);
+    if ((!previousMaxAmount || isNaN(previousMaxAmount)) || (!!maxAmountNumber && maxAmountNumber > previousMaxAmount)) {
+      const descriptions = getMerchantRateDescription(integrations.kard?.maxOffer?.commissionType, maxAmountNumber);
+      maxAmount = descriptions.maxAmount;
+      maxRateType = getMerchantRateTypeFromString(integrations.kard?.maxOffer?.commissionType);
+      maxDescription = descriptions.maxDescription;
+      name = integrations?.kard?.name;
+    }
 
     _integrations = {
       ..._integrations,
@@ -87,6 +111,7 @@ export const getShareableMerchant = ({
     integrations: _integrations,
     maxDescription,
     maxAmount,
+    maxRateType,
   };
 };
 

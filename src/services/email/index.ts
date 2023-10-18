@@ -16,6 +16,7 @@ import { EmailTemplateKeys, EmailTemplateConfigs, IEmailTemplateConfig } from '.
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
 import { IVisitorDocument } from '../../models/visitor';
+import { IUserDocument } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -31,11 +32,23 @@ interface ICreateSentEmailParams {
 interface IEmailTemplateParams {
   user?: Types.ObjectId;
   name: string;
+  amount?: string;
   recipientEmail: string;
   senderEmail?: string;
   replyToAddresses?: string[];
   domain?: string;
   sendEmail?: boolean;
+}
+
+interface IDeleteAccountRequestVerificationTemplateParams {
+  domain?: string;
+  user: IUserDocument;
+  deleteReason: string;
+  deleteAccountRequestId: string;
+  recipientEmail?: string;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+  message?: string;
 }
 
 interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
@@ -46,6 +59,18 @@ interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
   groupName?: string;
   visitor?: IVisitorDocument;
+  companyName?: string;
+  amount?: string;
+}
+
+interface ISupportEmailVerificationTemplateParams {
+  domain?: string;
+  message: string;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+  user: IUserDocument;
+  supportTicketId: string;
+  recipientEmail?: string;
 }
 
 interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
@@ -68,6 +93,7 @@ export interface IEmailJobData {
   replyToAddresses: string[];
   emailTemplateConfig?: IEmailTemplateConfig;
   groupName?: string;
+  companyName?: string;
   verificationLink?: string;
   domain?: string;
   name?: string;
@@ -75,12 +101,21 @@ export interface IEmailJobData {
   token?: string;
   isSuccess?: boolean;
   passwordResetLink?: string;
+  amount?: string;
+  message?: string;
+  supportTicketId?: string;
+  userId?: string;
+  userEmail?: string;
+  deleteAccountRequestId?: string;
+  deleteReason?: string;
 }
+
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
   data: Partial<IEmailJobData>;
   templatePath?: string;
   stylePath?: string;
+
 }
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
@@ -182,6 +217,27 @@ export const sendAccountCreationVerificationEmail = async ({
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'Verify your Email Address';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendChangePasswordEmail = async ({
+  name,
+  user,
+  token,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IEmailVerificationTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ChangePassword;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail, token });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const passwordResetLink = `${domain}/?createpassword=${token}`;
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
+  const subject = 'Change Your Karma Wallet Password';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -339,6 +395,45 @@ export const sendPasswordResetEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+export const sendEarnedCashbackRewardEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  companyName,
+  name,
+  sendEmail = true }: Partial<IEmailVerificationTemplateParams>) => {
+  const emailTemplateConfig = EmailTemplateConfigs.EarnedCashbackReward;
+  const { isValid, missingFields } = verifyRequiredFields(['companyName', 'domain', 'recipientEmail', 'name'], { companyName, domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, companyName } });
+  const subject = 'Great job! You earned a cashback reward.';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendCashbackPayoutEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  sendEmail = true,
+}: Partial<IEmailVerificationTemplateParams>) => {
+  const emailTemplateConfig = EmailTemplateConfigs.CashbackPayoutNotification;
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'domain', 'recipientEmail', 'name'], { amount, domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, amount } } as IBuildTemplateParams);
+  const subject = 'Casback rewards have been dispersed!';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const createSentEmailDocument = async ({ user, key, email, visitor }: ICreateSentEmailParams) => {
   if ((!user && !visitor) || !key || !email) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   const sentEmailDocument = new SentEmailModel({
@@ -353,3 +448,43 @@ export const createSentEmailDocument = async ({ user, key, email, visitor }: ICr
 
 // for internal use only - used to generate HTML for dev purposes
 export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopulateEmailTemplateRequest>>) => buildTemplate({ templateName: req?.body?.template, data: req.body });
+
+export const sendSupportTicketEmailToSupport = async ({
+  user,
+  recipientEmail = 'support@theimpactkarma.com',
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  message,
+  supportTicketId,
+}: ISupportEmailVerificationTemplateParams) => {
+  const userEmail = user.emails.find(e => !!e.primary).email;
+  const { name, _id } = user;
+  const emailTemplateConfig = EmailTemplateConfigs.SupportTicket;
+  const { isValid, missingFields } = verifyRequiredFields(['user', 'message', 'supportTicketId'], { user, message, supportTicketId });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { message, userEmail, name } });
+  const subject = `New Support Ticket: ${supportTicketId}`;
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, message, supportTicketId, userEmail };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendDeleteAccountRequestEmail = async ({
+  user,
+  deleteReason,
+  deleteAccountRequestId,
+  recipientEmail = 'support@theimpactkarma.com',
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+}: IDeleteAccountRequestVerificationTemplateParams) => {
+  const userEmail = user.emails.find(e => !!e.primary)?.email;
+  const { name, _id } = user;
+  const emailTemplateConfig = EmailTemplateConfigs.AccountDeleteRequest;
+  const { isValid, missingFields } = verifyRequiredFields(['user', 'deleteReason', 'deleteAccountRequestId'], { user, deleteReason, deleteAccountRequestId });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { deleteReason, userEmail, name } });
+  const subject = `New Delete Account Request: ${deleteAccountRequestId}`;
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, deleteReason, deleteAccountRequestId, userEmail };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};

@@ -4,10 +4,10 @@ import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
-router.route('/create')
+router.route('/create/:userToken')
   .post(authenticate, DepositAccountController.createDepositAccount);
 
-router.route('/list')
+router.route('/list/:userToken')
   .get(authenticate, DepositAccountController.listDepositAccount);
 
 export default router;

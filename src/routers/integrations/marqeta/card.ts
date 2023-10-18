@@ -7,13 +7,13 @@ const router = Router();
 router.route('/create')
   .post(authenticate, CardController.createCard);
 
-router.route('/list')
-  .get(authenticate, CardController.listCards);
+router.route('/list/:userToken')
+  .get(CardController.listCards);
+
+router.route('/:cardToken')
+  .get(CardController.getCardDetails);
 
 router.route('/transition')
   .post(CardController.cardTransition);
-
-router.route('/:cardToken')
-  .get(authenticate, CardController.getCardDetails);
 
 export default router;

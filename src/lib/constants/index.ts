@@ -8,6 +8,16 @@ export enum ApiKeyStatus {
   Inactive = 'inactive',
 }
 
+export const IMapMarqetaCard = {
+  name: 'Karma Wallet Prepaid Reloadable Card',
+  type: 'depository',
+  subtype: 'reloadable',
+  status: 'linked',
+  institution: 'Karma Wallet',
+  initialTransactionsProcessing: false,
+  isEnrolledInAutomaticRewards: true,
+};
+
 export interface IErrorType {
   AUTHENTICATION: ICustomErrorBody;
   CONFLICT: ICustomErrorBody;
@@ -60,6 +70,11 @@ export enum CardStatus {
   Removed = 'removed',
 }
 
+export enum KardEnrollmentStatus {
+  Enrolled = 'enrolled',
+  Unenrolled = 'unenrolled',
+}
+
 export enum CardNetwork {
   Visa = 'VISA',
   Mastercard = 'MASTERCARD',
@@ -70,6 +85,13 @@ export enum CardNetwork {
 export enum UnsdgNames {
   People = 'People',
   Planet = 'Planet',
+}
+
+export enum BankConnectionStatus{
+  Linked = 'linked',
+  Unlinked = 'unlinked',
+  Error = 'error',
+  Removed = 'removed',
 }
 
 export const ErrorTypes = {
@@ -147,6 +169,10 @@ export const AllowedOrigins = [
   'http://cu.sandbox.karmawallet.io',
   'https://dev.cu.sandbox.karmawallet.io',
   'http://dev.cu.sandbox.karmawallet.io',
+  'https://frontend.demo.karmawallet.io',
+  'http://frontend.demo.karmawallet.io',
+  'https://sandbox2.karmawallet.io',
+  'http://sandbox2.karmawallet.io',
 ];
 
 export const emailVerificationDays = 10;
@@ -307,3 +333,12 @@ export const enum StateAbbreviation {
 }
 
 export const CentsInUSD = 100;
+
+export const TransactionIntegrationTypesEnum = {
+  Plaid: 'plaid',
+  Marqeta: 'marqeta',
+  Rare: 'rare',
+  Kard: 'kard',
+} as const;
+
+export type TransactionIntegrationTypesEnumValues = typeof TransactionIntegrationTypesEnum[keyof typeof TransactionIntegrationTypesEnum];

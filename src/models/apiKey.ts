@@ -17,7 +17,7 @@ export interface IApiKey {
 
 export type IApiKeyModel = IModel<IApiKey>;
 
-export interface IApiKeyDocument extends IApiKey, Document {}
+export interface IApiKeyDocument extends IApiKey, Document { }
 
 const apiKeySchema = new Schema({
   keyHash: { type: String, required: true },

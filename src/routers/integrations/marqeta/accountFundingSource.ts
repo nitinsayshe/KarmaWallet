@@ -4,7 +4,19 @@ import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
-router.route('/create')
-  .post(authenticate, ACHFundingSourceController.createAchFundingSource);
+router.route('/banktransfer')
+  .post(authenticate, ACHFundingSourceController.createACHBankTransfer);
+
+router.route('/banktransfer/:achToken')
+  .get(ACHFundingSourceController.getACHBankTransfer);
+
+router.route('/banktransfer')
+  .get(ACHFundingSourceController.listACHBankTransfer);
+
+router.route('/fundingSource')
+  .get(authenticate, ACHFundingSourceController.getLocalACHFundingSource);
+
+router.route('/getBankTransfer')
+  .get(authenticate, ACHFundingSourceController.getLocalACHBankTransfer);
 
 export default router;

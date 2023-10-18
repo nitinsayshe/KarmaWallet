@@ -1,5 +1,6 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
-import { CardStatus } from '../lib/constants';
+import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
+import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
 
@@ -23,13 +24,33 @@ export interface IRareCardIntegration {
 }
 
 export interface IKardIntegration {
-  dateAdded: Date;
+  createdOn: Date;
+  userId: string;
+  enrollmentStatus: KardEnrollmentStatus;
+}
+
+export interface IMarqetaCardIntegration {
+  token?: string;
+  expiration_time: Date;
+  user_token: string;
+  card_token: string,
+  card_product_token: string;
+  pan: string;
+  last_four: string;
+  expr_month: number;
+  expr_year: number;
+  created_time: Date;
+  pin_is_set: boolean;
+  state: string;
+  instrument_type: string;
+  barcode: string;
 }
 
 export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;
   kard?: IKardIntegration;
+  marqeta?: IMarqetaCardIntegration;
 }
 
 export interface IShareableCard {
@@ -46,16 +67,18 @@ export interface IShareableCard {
   removedDate?: Date;
   initialTransactionsProcessing: boolean;
   lastTransactionSync: Date;
+  institutionId?: string;
+  isEnrolledInAutomaticRewards?: boolean;
+  integrations: ICardIntegrations;
 }
 
 export interface ICard extends IShareableCard {
   userId: IRef<ObjectId, IUserDocument>;
-  integrations: ICardIntegrations;
   lastFourDigitsToken?: string;
   binToken?: string;
 }
 
-export interface ICardDocument extends ICard, Document {}
+export interface ICardDocument extends ICard, Document { }
 export type ICardModel = IModel<ICard>;
 
 const cardSchema = new Schema({
@@ -98,13 +121,34 @@ const cardSchema = new Schema({
     },
     kard: {
       type: {
-        dateAdded: { type: Date },
+        createdOn: { type: Date },
+        userId: { type: String },
+        enrollmentStatus: {
+          type: String,
+          enum: Object.values(KardEnrollmentStatus),
+        },
+      },
+    },
+    marqeta: {
+      type: {
+        user_token: { type: String },
+        card_token: { type: String },
+        card_product_token: { type: String },
+        last_four: { type: String },
+        pan: { type: String },
+        expr_month: { type: Number },
+        expr_year: { type: Number },
+        pin_is_set: { type: Boolean },
+        state: { type: String },
+        barcode: { type: String },
+        created_time: { type: Date },
+        instrument_type: { type: String },
       },
     },
   },
   initialTransactionsProcessing: { type: Boolean },
-  createdOn: { type: Date },
-  lastModified: { type: Date },
+  createdOn: { type: Date, default: () => getUtcDate().toDate() },
+  lastModified: { type: Date, default: () => getUtcDate().toDate() },
   lastTransactionSync: { type: Date },
   lastFourDigitsToken: { type: String },
   binToken: { type: String },

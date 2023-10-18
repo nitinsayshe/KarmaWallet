@@ -15,6 +15,8 @@ const checkToken: IRequestHandler = async (req, res, next) => {
   if (req?.headers['x-wf-signature'] && req?.url === '/webhook/wildfire') return next();
 
   if (req?.url === '/webhook/paypal') return next();
+  if (req?.url === '/webhook/kard') return next();
+  if (req?.url === '/webhook/marqeta') return next();
 
   const token = req.headers.authorization;
   if (!!token && token.replace('Bearer ', '') === process.env.PUBLIC_TOKEN) {

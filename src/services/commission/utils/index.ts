@@ -7,6 +7,7 @@ import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentag
 import CustomError from '../../../lib/customError';
 import { getUtcDate } from '../../../lib/date';
 import { roundToPercision } from '../../../lib/misc';
+import { CardModel } from '../../../models/card';
 import {
   CommissionPayoutModel,
   KarmaCommissionPayoutStatus,
@@ -28,6 +29,7 @@ import { MerchantModel } from '../../../models/merchant';
 import { TransactionModel } from '../../../models/transaction';
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
+import { createEarnedCashbackNotificationFromCommission } from '../../notification';
 
 export type IWildfireCommission = {
   CommissionID: number;
@@ -309,34 +311,39 @@ export const mapKardCommissionToKarmaCommisison = async (
     },
   };
 
-  const associatedTransaction = await TransactionModel.findOneAndUpdate(
-    {
-      'integrations.kard.id': transaction.issuerTransactionId,
-    },
-    { 'integrations.kard.rewardData': { ...transaction } },
-    { new: true },
-    // not upserting here, but what if we get a reward for a transaction we can't findk
-  );
-  if (!associatedTransaction?._id) {
+  const associatedTransaction = await TransactionModel.findOne({
+    'integrations.kard.id': transaction.issuerTransactionId,
+  });
+
+  if (!!associatedTransaction?.integrations?.kard) {
+    associatedTransaction.integrations.kard.rewardData = { ...transaction };
+    associatedTransaction?.save();
+  } else {
     throw new Error('Transaction not found');
   }
 
-  // crate a new commission if it does not exist
+  // create a new commission if it does not exist
   const existingCommission = await CommissionModel.findOne({
     transaction: associatedTransaction._id,
   });
+
   if (!existingCommission) {
     const merchant = await MerchantModel.findOne({
       'integrations.kard.id': reward.merchantId,
     });
-    if (!merchant) throw new Error('Merchant not found');
+    if (!merchant?._id) throw new Error('Merchant not found');
+
     const company = await CompanyModel.findOne({ merchant: merchant?._id });
-    if (!company) throw new Error('Company not found');
-    const user = await UserModel.findOne({ 'itegrations.kard.userId': kardUser?.referringPartnerUserId });
-    if (!user) throw new Error('User not found');
+    if (!company?._id) throw new Error('Company not found');
+
+    const card = await CardModel.findOne({ 'integrations.kard.userId': kardUser?.referringPartnerUserId });
+    if (!card?._id) throw new Error(`Card not found for refferringPartnerUserId: ${kardUser?.referringPartnerUserId}`);
+
+    const user = await UserModel.findOne({ _id: card.userId });
+    if (!user?._id) throw new Error(`User not found for user id: ${card.userId}`);
 
     const newCommission = new CommissionModel({
-      user: user?._id,
+      user: user._id,
       company: company?._id,
       merchant: merchant?._id,
       transaction: associatedTransaction?._id,
@@ -375,9 +382,24 @@ export const processKardWebhook = async (body: EarnedRewardWebhookBody): Promise
   try {
     const commission = await mapKardCommissionToKarmaCommisison(body);
     if (!commission) throw Error('Error creating karma commisison');
+    await createEarnedCashbackNotificationFromCommission(commission);
   } catch (e) {
     console.log('Error mapping kard commission to karma commission');
     console.log(e);
     return new CustomError('Error mapping kard commission to karma commission', ErrorTypes.SERVICE);
   }
+};
+
+export const aggregateCommissionTotalAndIds = (
+  commissions: ICommissionDocument[],
+): { commissionsTotal: number; commissionIds: ObjectId[] } => {
+  const [commissionsTotal, commissionIds] = commissions.reduce(
+    (acc, c) => {
+      acc[0] += c.allocation.user;
+      acc[1].push(c._id);
+      return acc;
+    },
+    [0, []],
+  );
+  return { commissionsTotal, commissionIds };
 };

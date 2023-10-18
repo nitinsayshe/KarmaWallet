@@ -1,21 +1,22 @@
 import argon2 from 'argon2';
+import { randomUUID } from 'crypto';
 import dayjs from 'dayjs';
 import { Types } from 'mongoose';
 import { TransactionPaymentChannelEnum, TransactionTransactionTypeEnum } from 'plaid';
 import { deleteUser } from '.';
 import { MainBullClient } from '../../clients/bull/main';
-import { createKardUserAndAddIntegrations } from '../../integrations/kard';
 import { IMatchedTransaction } from '../../integrations/plaid/types';
 import {
   getCompanyPrimarySectorDictionary,
   getPlaidCategoryMappingDictionary,
 } from '../../integrations/plaid/v2_matching';
 import { saveTransactions } from '../../integrations/plaid/v2_transaction';
-import { CardStatus, UserRoles } from '../../lib/constants';
+import { CardStatus, KardEnrollmentStatus, UserRoles } from '../../lib/constants';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { encrypt } from '../../lib/encryption';
+import { saveDocuments } from '../../lib/model';
 import { getRandomInt } from '../../lib/number';
-import { createSomeCards, createSomeUsers, saveDocuments } from '../../lib/testingUtils';
+import { createSomeCards, createSomeUsers} from '../../lib/testingUtils';
 import { CardModel, ICardDocument } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { IUserDocument, UserEmailStatus, UserModel } from '../../models/user';
@@ -132,7 +133,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '01741',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('Walden1854!'),
       },
@@ -146,7 +147,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '04556',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('SilentSpring1962@'),
       },
@@ -160,7 +161,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '64755',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('CropRotation1930s#'),
       },
@@ -174,7 +175,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
           },
         ],
         zipcode: '69980',
-        role: UserRoles.Member,
+        role: UserRoles.None,
         isTestIdentity: true,
         password: await argon2.hash('SaveTheRainforest1988$'),
       },
@@ -187,7 +188,7 @@ const createTestUsers = async (): Promise<IUserDocument[]> => {
   }
 };
 
-const getCompaniesByName = async (names: string[]): Promise<ICompanyDocument[]> => {
+export const getCompaniesByName = async (names: string[]): Promise<ICompanyDocument[]> => {
   try {
     const companies = await CompanyModel.find({ companyName: { $in: names } });
     if (!companies) {
@@ -278,32 +279,6 @@ type TestUserDocuments = {
   chico: IUserDocument;
 };
 
-const registerUserWithKardAndAddCard = async (
-  user: IUserDocument,
-  card: ICardDocument,
-): Promise<ICardDocument | null> => {
-  try {
-    const { updatedCard } = await createKardUserAndAddIntegrations(user, card);
-    return updatedCard || null;
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-};
-
-const addUsersToKard = async (
-  usersWithCards: { user: IUserDocument; card: ICardDocument }[],
-): Promise<ICardDocument[] | null> => Promise.all(
-  usersWithCards.map(async ({ user, card }) => {
-    try {
-      return registerUserWithKardAndAddCard(user, card);
-    } catch (err) {
-      console.error(err);
-      return null;
-    }
-  }),
-);
-
 const createTestCards = async (
   users: Partial<TestUserDocuments>,
 ): Promise<{
@@ -313,6 +288,11 @@ const createTestCards = async (
 } | null> => {
   try {
     const { henry, george, chico } = users;
+    const masks = {
+      henry: `7${getRandomInt(100, 999)}`,
+      george: `5${getRandomInt(100, 999)}`,
+      chico: `4${getRandomInt(100, 999)}`,
+    };
     const [henrysCard, georgesCard, chicosCard] = await createSomeCards({
       cards: [
         {
@@ -330,21 +310,23 @@ const createTestCards = async (
               publicToken: 'public-sandbox-test',
               linkSessionId: 'link-session-sandbox-test',
               institutionId: 'ins_test',
-              unlinkedAccessTokens: ['unlinked-access-token-123'],
+              unlinkedAccessTokens: [],
             },
             kard: {
-              dateAdded: dayjs().toDate(),
+              createdOn: dayjs().toDate(),
+              userId: randomUUID(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
           lastModified: dayjs().subtract(2, 'week').toDate(),
-          mask: '7722',
-          lastFourDigitsToken: encrypt('7722'),
-          binToken: encrypt('442266'),
+          mask: masks.henry,
+          lastFourDigitsToken: encrypt(masks.henry),
+          binToken: encrypt(`4${getRandomInt(10000, 99999)}`),
         },
         {
           userId: george._id,
-          status: CardStatus.Unlinked,
+          status: CardStatus.Linked,
           name: 'Adv Checking',
           subtype: 'checking',
           type: 'depository',
@@ -357,18 +339,14 @@ const createTestCards = async (
               publicToken: 'public-sandbox-test',
               linkSessionId: 'link-session-sandbox-test',
               institutionId: 'ins_test',
-              unlinkedAccessTokens: ['unlinked-access-token-123'],
-            },
-            kard: {
-              dateAdded: dayjs().toDate(),
+              unlinkedAccessTokens: [],
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
-          unlinkedDate: dayjs().subtract(1, 'week').toDate(),
-          lastModified: dayjs().subtract(1, 'week').toDate(),
-          mask: '5523',
-          lastFourDigitsToken: encrypt('5523'),
-          binToken: encrypt('542233'),
+          lastModified: dayjs().subtract(3, 'month').toDate(),
+          mask: masks.george,
+          lastFourDigitsToken: encrypt(masks.george),
+          binToken: encrypt(`5${getRandomInt(10000, 99999)}`),
         },
         {
           userId: chico._id,
@@ -388,23 +366,23 @@ const createTestCards = async (
               unlinkedAccessTokens: ['unlinked-access-token-123'],
             },
             kard: {
-              dateAdded: dayjs().toDate(),
+              createdOn: dayjs().toDate(),
+              userId: randomUUID(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
           createdOn: dayjs().subtract(3, 'month').toDate(),
           removedDate: dayjs().subtract(1, 'week').toDate(),
           lastModified: dayjs().subtract(1, 'week').toDate(),
-          mask: '4422',
-          lastFourDigitsToken: encrypt('4422'),
-          binToken: encrypt('442233'),
+          mask: masks.chico,
+          lastFourDigitsToken: encrypt(masks.chico),
+          binToken: encrypt(`4${getRandomInt(10000, 99999)}`),
         },
       ],
     });
     if (!henrysCard || !georgesCard || !chicosCard) {
       throw new Error('Could not create test cards');
     }
-    // send cards to Kard
-
     return { henrysCard, georgesCard, chicosCard };
   } catch (err) {
     console.error(err);
@@ -483,7 +461,7 @@ IMatchedTransaction & {
   return transactions;
 };
 
-export const createTransactionsForIdentity = async (
+export const createTestTransactions = async (
   userId: Types.ObjectId,
   card: ICardDocument,
   companies: ICompanyDocument[],
@@ -509,7 +487,7 @@ export const createTransactionsForIdentity = async (
       transactions.push(...addTransactionsWithCompanyForUserFromEndDate(company, userId.toString(), card, endDate, 2));
     });
 
-    await mockIncomingPlaidTransactions(transactions);
+    /* await mockIncomingPlaidTransactions(transactions); */
     console.log('successfully created transactions...');
   } catch (err) {
     console.error(err);
@@ -525,7 +503,7 @@ export const createTransactionsWithWalmartAndAmazonThisMonth = async (
     if (!walmart || !amazon) {
       throw new Error('Could not find Walmart or Amazon');
     }
-    await createTransactionsForIdentity(userId, card, [walmart, amazon]);
+    await createTestTransactions(userId, card, [walmart, amazon]);
   } catch (err) {
     console.error(err);
   }
@@ -552,59 +530,26 @@ export const createHenrysTransactions = async (userId: Types.ObjectId, card: ICa
       throw new Error('Error retrieving companies');
     }
 
-    const transactions: Partial<
-    IMatchedTransaction & {
-      companyDocument: ICompanyDocument;
-      userId: string;
-      card: ICardDocument;
-    }
-    >[] = [
-      ...addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        lastMonthStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        betterWorldBooks,
-        userId.toString(),
-        card,
-        twoMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        betterWorldBooks,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        twoMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-    ];
+    addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(chalk, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(bluebirdBotanicals, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(betterWorldBooks, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(walmart, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(dollarGeneral, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(bluebirdBotanicals, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(bluebirdBotanicals, userId.toString(), card, threeMonthsAgoStartDate);
 
-    await mockIncomingPlaidTransactions(transactions);
+    /* await mockIncomingPlaidTransactions(transactions); */
     console.log("successfully created henry's transactions...");
   } catch (err) {
     console.error(err);
@@ -632,59 +577,31 @@ export const createGeorgesTransactions = async (userId: Types.ObjectId, card: IC
       throw new Error('Error retrieving companies');
     }
 
-    const transactions: Partial<
-    IMatchedTransaction & {
-      companyDocument: ICompanyDocument;
-      userId: string;
-      card: ICardDocument;
-    }
-    >[] = [
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        lastMonthStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        twoMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        bluebirdBotanicals,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromStartDate(
-        dollarGeneral,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, threeMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(
-        betterWorldBooks,
-        userId.toString(),
-        card,
-        threeMonthsAgoStartDate,
-      ),
-      ...addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, lastMonthEndDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, twoMonthsAgoStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, threeMonthsAgoStartDate),
-    ];
+    addTransactionsWithCompanyForUserFromStartDate(bluebirdBotanicals, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(bluebirdBotanicals, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(
+      bluebirdBotanicals,
+      userId.toString(),
+      card,
+      threeMonthsAgoStartDate,
+    );
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(amazon, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromStartDate(dollarGeneral, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(apple, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(betterWorldBooks, userId.toString(), card, threeMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, lastMonthEndDate);
+    addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, twoMonthsAgoStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(coffee, userId.toString(), card, threeMonthsAgoStartDate);
 
-    await mockIncomingPlaidTransactions(transactions);
+    /* await mockIncomingPlaidTransactions(transactions); */
     console.log("successfully created george's transactions...");
   } catch (err) {
     console.error(err);
@@ -709,18 +626,9 @@ export const createChicosTransactions = async (userId: Types.ObjectId, card: ICa
 
     // add 10 transactions with walmart at the beginning of last month
     // and 10 transactions with amazon at the end of last month
-    const transactions: Partial<
-    IMatchedTransaction & {
-      companyDocument: ICompanyDocument;
-      userId: string;
-      card: ICardDocument;
-    }
-    >[] = [
-      ...addTransactionsWithCompanyForUserFromStartDate(walmart, userId.toString(), card, lastMonthStartDate),
-      ...addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate),
-    ];
+    addTransactionsWithCompanyForUserFromStartDate(walmart, userId.toString(), card, lastMonthStartDate);
+    addTransactionsWithCompanyForUserFromEndDate(amazon, userId.toString(), card, lastMonthEndDate);
 
-    await mockIncomingPlaidTransactions(transactions);
     console.log("successfully created chico's transactions...");
   } catch (err) {
     console.error(err);
@@ -728,10 +636,6 @@ export const createChicosTransactions = async (userId: Types.ObjectId, card: ICa
 };
 
 const triggerMonthlyImpactReport = (userId: Types.ObjectId): void => {
-  if (!MainBullClient.queue) {
-    console.error('MainBullClient queue is not intitalized');
-    return;
-  }
   MainBullClient.createJob(
     JobNames.UserMonthlyImpactReport,
     { generateFullHistory: true, uid: userId },
@@ -759,11 +663,6 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     console.log('successfully created cards...');
 
     console.log('adding users to kard...');
-    await addUsersToKard([
-      { user: henry, card: henrysCard },
-      { user: george, card: georgesCard },
-      { user: chico, card: chicosCard },
-    ]);
 
     // create transactions for each user with a card
     await createHenrysTransactions(henry._id, henrysCard);
@@ -771,11 +670,16 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     await createChicosTransactions(chico._id, chicosCard);
 
     // trigger monthly impact reports for each user
+    console.log('triggering monthly impact reports...');
     triggerMonthlyImpactReport(henry._id);
     triggerMonthlyImpactReport(george._id);
     triggerMonthlyImpactReport(chico._id);
 
+    console.log('saving updated documents...');
     const updatedUsers = await saveDocuments([henry, george, chico]);
+    if (!updatedUsers) {
+      throw new Error('Error saving updated users');
+    }
 
     const testIdentities = {
       henry: (updatedUsers as IUserDocument[])?.find((user) => user._id.toString() === henry._id.toString()),
@@ -789,4 +693,24 @@ export const createTestIdentities = async (): Promise<TestUserDocuments> => {
     console.error(`Error creating test identity data: ${err}`);
     return null;
   }
+};
+
+export const triggerResetTestIdentities = (): void => {
+  console.log('triggering reset test identities');
+  MainBullClient.createJob(
+    JobNames.ResetTestIdentities,
+    { jobId: `${JobNames.ResetTestIdentities}` },
+    {},
+    {
+      onComplete: () => {
+        console.log(`${JobNames.ResetTestIdentities} finished`);
+        console.log(`Triggering ${JobNames.GenerateUserImpactTotals}`);
+        MainBullClient.createJob(
+          JobNames.GenerateUserImpactTotals,
+          {},
+          { jobId: `${JobNames.GenerateUserImpactTotals}` },
+        );
+      },
+    },
+  );
 };

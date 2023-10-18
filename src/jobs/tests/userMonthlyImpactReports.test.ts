@@ -1,8 +1,8 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import dayjs from 'dayjs';
 import { MongoClient } from '../../clients/mongo';
+import { cleanUpDocuments } from '../../lib/model';
 import {
-  cleanUpDocuments,
   createNumMonthsOfTransactions,
   createSomeCompanies,
   createSomeTransactionsWithCompany,

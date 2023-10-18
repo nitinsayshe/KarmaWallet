@@ -10,6 +10,11 @@ export enum EmailTemplateKeys {
   WelcomeCCG1 = 'welcomeCCG1',
   TransactionsProcessed = 'transactionsProcessed',
   PasswordReset = 'passwordReset',
+  ChangePassword = 'changePassword',
+  EarnedCashbackNotification = 'earnedCashbackNotification',
+  CashbackPayoutNotification = 'cashbackPayoutNotification',
+  SupportTicket = 'supportTicket',
+  AccountDeleteRequest = 'accountDeleteRequest',
 }
 
 export enum EmailTemplateTypes {
@@ -19,6 +24,9 @@ export enum EmailTemplateTypes {
   CreateAccountVerification = 'createAccountVerification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   Essential = 'essential',
+  CashbackNotificaiton = 'cashbackNotification',
+  SupportTicket = 'supportTicket',
+  AccountDeleteRequest = 'accountDeleteRequest',
 }
 
 export interface IEmailTemplateConfig {
@@ -26,10 +34,15 @@ export interface IEmailTemplateConfig {
   type: EmailTemplateTypes;
 }
 
-export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
+export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   PasswordReset: {
     name: EmailTemplateKeys.PasswordReset,
     type: EmailTemplateTypes.Essential,
+  },
+  // email to prompt user to change password after user account auto-created
+  ChangePassword: {
+    name: EmailTemplateKeys.ChangePassword,
+    type: EmailTemplateTypes.Verification,
   },
   GroupVerification: {
     name: EmailTemplateKeys.GroupVerification,
@@ -66,6 +79,22 @@ export const EmailTemplateConfigs: {[key: string]: IEmailTemplateConfig} = {
   TransactionsProcessed: {
     name: EmailTemplateKeys.TransactionsProcessed,
     type: EmailTemplateTypes.Essential,
+  },
+  EarnedCashbackReward: {
+    name: EmailTemplateKeys.EarnedCashbackNotification,
+    type: EmailTemplateTypes.CashbackNotificaiton,
+  },
+  CashbackPayoutNotification: {
+    name: EmailTemplateKeys.CashbackPayoutNotification,
+    type: EmailTemplateTypes.CashbackNotificaiton,
+  },
+  SupportTicket: {
+    name: EmailTemplateKeys.SupportTicket,
+    type: EmailTemplateTypes.SupportTicket,
+  },
+  AccountDeleteRequest: {
+    name: EmailTemplateKeys.AccountDeleteRequest,
+    type: EmailTemplateTypes.AccountDeleteRequest,
   },
 };
 

@@ -85,3 +85,10 @@ export const inDateRange = (endDate: Date, startDate: Date) => {
   const currentDate = dayjs().utc();
   return currentDate.isBetween(dayjs(startDate), dayjs(endDate));
 };
+
+export const extractYearAndMonth = (dateString: Date) => {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = date.getMonth() + 1;
+  return { year, month };
+};

@@ -13,6 +13,18 @@ import { IUnsdg, IUnsdgDocument } from './unsdg';
 import { IUnsdgCategory, IUnsdgCategoryDocument } from './unsdgCategory';
 import { IUnsdgSubcategory, IUnsdgSubcategoryDocument } from './unsdgSubcategory';
 
+export enum CashbackCompanyDisplayLocation {
+  'homeMobile' = 'homeMobile',
+  'homeWeb' = 'homeWeb',
+  'browseCompanies' = 'browseCompanies',
+  'cashbackScreenMobile' = 'cashbackScreenMobile',
+}
+
+export interface IFeaturedCashbackCompany {
+  status: boolean;
+  location: CashbackCompanyDisplayLocation[];
+}
+
 export enum CompanyCreationStatus {
   Completed = 'completed',
   PendingDataSources = 'pending-data-sources',
@@ -97,6 +109,7 @@ export interface IShareableCompany {
   lastModified: Date;
   evaluatedUnsdgs: IEvaluatedCompanyUnsdg[];
   partnerStatus: ICompanyPartnerStatus;
+  featuredCashback?: IFeaturedCashbackCompany;
 }
 
 export interface ICompany extends IShareableCompany {
@@ -105,6 +118,7 @@ export interface ICompany extends IShareableCompany {
   // eslint-disable-next-line no-use-before-define
   parentCompany: IRef<ObjectId, ICompanyDocument>;
   notes: string;
+  mcc: number;
 }
 
 export interface ICompanyDocument extends ICompany, Document {
@@ -119,6 +133,7 @@ const companySchema = new Schema(
     // TODO: update this field whenver unsdgs are updated.
     // too expensive to make virtual
     combinedScore: { type: Number },
+    mcc: { type: Number },
     rating: {
       type: String,
       enum: Object.values(CompanyRating),
@@ -209,6 +224,10 @@ const companySchema = new Schema(
       description: {
         type: String,
       },
+    },
+    featuredCashback: {
+      status: { type: Boolean },
+      location: { type: [String], enum: CashbackCompanyDisplayLocation },
     },
   },
   {

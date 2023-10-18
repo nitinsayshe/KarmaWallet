@@ -18,6 +18,7 @@ import {
   ICompany,
   ICompanyDocument,
   IShareableCompany,
+  CashbackCompanyDisplayLocation,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
@@ -36,6 +37,9 @@ import { getShareableMerchant } from '../merchant';
 import { getCompanyRatingsThresholds } from '../misc';
 import { getShareableSector } from '../sectors';
 import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from '../unsdgs';
+import { CompanyDataSourceModel } from '../../models/companyDataSource';
+import { DataSourceModel, IDataSourceDocument } from '../../models/dataSource';
+import { getUtcDate } from '../../lib/date';
 
 dayjs.extend(utc);
 
@@ -86,6 +90,16 @@ export interface IGetCompanyDataParams {
 export interface IGetPartnerQuery {
   companyId: string;
 }
+
+export interface IGetFeaturedCashbackCompaniesQuery {
+  location?: CashbackCompanyDisplayLocation;
+  'sectors.sector'?: string;
+}
+
+export interface IGetFeaturedCashbackCompaniesRequest {
+  query: IGetFeaturedCashbackCompaniesQuery;
+}
+
 interface ISubcategoryScore {
   subcategory: string;
   score: number;
@@ -122,7 +136,6 @@ export interface ICompanyProtocol {
   categoryScores: ICategoryScore[];
   wildfireId?: number;
   sector: ISector;
-
 }
 
 interface IPagination {
@@ -139,6 +152,12 @@ export interface IGetCompaniesResponse {
 
 export interface ISearchCompaniesQuery {
   search: string;
+}
+
+interface IFeaturedCashbackUpdatesParams {
+  companyId: string;
+  status: boolean;
+  location: CashbackCompanyDisplayLocation[];
 }
 
 export const _getPaginatedCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
@@ -283,6 +302,52 @@ export const getCompanyUNSDGs = (_: IRequest, query: FilterQuery<ICompanyUnsdg>)
     },
   });
 
+export const getCompanyDataSources = async (companyId: ObjectId) => {
+  const date = getUtcDate().toDate();
+
+  const match = {
+    company: companyId,
+    'dateRange.start': { $lte: date },
+    'dateRange.end': { $gte: date },
+  };
+
+  const pipeline = [
+    {
+      $match: match,
+    },
+    {
+      $lookup: {
+        from: 'data_sources',
+        localField: 'source',
+        foreignField: '_id',
+        as: 'source',
+      },
+    },
+    {
+      $unwind: {
+        path: '$source',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+  ];
+
+  const datasources = await CompanyDataSourceModel.aggregate(pipeline);
+  const _datasources: IDataSourceDocument[] = [];
+  const parents: ObjectId[] = [];
+  // we need to return only the sources without parents or the parents (we don't want to return children with parents)
+  for (const ds of datasources) {
+    if (ds.source.hidden && !ds.source.parentSource) continue;
+    if (ds.source.parentSource && !parents.find(p => ds.source.parentSource.toString() === p.toString())) {
+      parents.push(ds.source.parentSource.toString());
+      continue;
+    }
+    if (!ds.source.parentSource && !ds.source.hidden) _datasources.push(ds.source);
+  }
+  const _parents = await DataSourceModel.find({ _id: { $in: parents } });
+
+  return [..._datasources, ..._parents];
+};
+
 export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
     const query: FilterQuery<ICompany> = { _id, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
@@ -334,8 +399,9 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 
     const unsdgs = await getCompanyUNSDGs(req, { company });
     const companiesOwned = await getCompaniesOwned(req, company);
+    const companyDataSources = await getCompanyDataSources(company._id);
 
-    return { company, unsdgs, companiesOwned };
+    return { company, unsdgs, companiesOwned, companyDataSources };
   } catch (err) {
     throw asCustomError(err);
   }
@@ -345,8 +411,14 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const { filter } = query;
   let unsdgQuery = {};
   let searchQuery = {};
+  let merchantQuery = {};
+  let merchantLookup = {};
+  let merchantUnwind = {};
+  let merchantFilter = {};
   const unsdgs = filter?.evaluatedUnsdgs;
   const search = filter?.companyName;
+  const cashbackOnly = !!filter?.merchant;
+  const karmaCollectiveMember = !!filter?.karmaCollectiveMember;
 
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
@@ -364,6 +436,42 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     };
   }
 
+  if (cashbackOnly) {
+    delete filter.merchant;
+
+    merchantQuery = {
+      merchant: { $ne: null },
+    };
+
+    merchantFilter = {
+      $or: [
+        { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+        { $and:
+            [
+              { 'merchant.integrations.kard': { $exists: true } },
+              { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+            ],
+        },
+      ],
+    };
+
+    merchantLookup = {
+      $lookup: {
+        from: 'merchants',
+        localField: 'merchant',
+        foreignField: '_id',
+        as: 'merchant',
+      },
+    };
+
+    merchantUnwind = {
+      $unwind: {
+        path: '$merchant',
+        preserveNullAndEmptyArrays: true,
+      },
+    };
+  }
+
   if (search) {
     delete filter.companyName;
     searchQuery = { $text: { $search: String(search) } };
@@ -371,7 +479,6 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
 
   const cleanedFilter = convertFilterToObjectId(filter);
   const hiddenQuery = !includeHidden ? { 'hidden.status': false } : {};
-  const creationQuery = { 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
 
   const options: any = {
     projection: query?.projection || '',
@@ -381,47 +488,41 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   };
 
   let matchQuery: any = {
-    ...creationQuery,
     ...hiddenQuery,
     ...unsdgQuery,
     ...searchQuery,
+    ...merchantQuery,
   };
 
   if (cleanedFilter) matchQuery = { ...matchQuery, ...cleanedFilter };
+  let aggregateSteps: any;
 
-  const aggregateSteps: any = [
-    {
-      $match: matchQuery,
-    },
-    {
-      $lookup: {
-        from: 'companies',
-        localField: 'parentCompany',
-        foreignField: '_id',
-        as: 'parentCompany',
+  if (cashbackOnly) {
+    aggregateSteps = [
+      {
+        $match: matchQuery,
       },
-    },
-    {
-      $lookup: {
-        from: 'merchants',
-        localField: 'merchant',
-        foreignField: '_id',
-        as: 'merchant',
+      merchantLookup,
+      merchantUnwind,
+    ];
+
+    aggregateSteps.push({ $match: merchantFilter });
+
+    if (!!karmaCollectiveMember) {
+      delete filter.karmaCollectiveMember;
+      aggregateSteps.push({
+        $match: {
+          'merchant.karmaCollectiveMember': true,
+        },
+      });
+    }
+  } else {
+    aggregateSteps = [
+      {
+        $match: matchQuery,
       },
-    },
-    {
-      $unwind: {
-        path: '$parentCompany',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $unwind: {
-        path: '$merchant',
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-  ];
+    ];
+  }
 
   if (cleanedFilter?.['values.value']) {
     const valuesQuery = cleanedFilter?.['values.value'];
@@ -503,7 +604,34 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   }
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
-  return CompanyModel.aggregatePaginate(companyAggregate, options);
+  const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
+
+  // avoiding $lookup in aggregate pipeline to avoid performance issues while joining parentCompany and merchant on results
+
+  const parentCompanyIds = companies.docs.map(c => c.parentCompany);
+  const parentCompanies = await CompanyModel.find({ _id: { $in: parentCompanyIds } });
+  // assign parent companies to companies
+  companies.docs.forEach(company => {
+    const parentCompany = parentCompanies.find(c => c._id?.toString() === company.parentCompany?.toString());
+    company.parentCompany = parentCompany;
+  });
+
+  const merchantIds = companies.docs.map(c => c.merchant);
+  const merchants = await MerchantModel.find({ _id: { $in: merchantIds } });
+  companies.docs.forEach(company => {
+    const merchant = merchants.find(c => c._id?.toString() === company.merchant?.toString());
+    if (!merchant) return;
+
+    if (!!merchant?.integrations?.wildfire && !merchant?.integrations?.wildfire?.domains[0]?.Merchant?.MaxRate.Amount) {
+      company.merchant = null;
+    } else if (!!merchant?.integrations?.kard && !merchant?.integrations?.kard?.maxOffer?.totalCommission) {
+      company.merchant = null;
+    } else {
+      company.merchant = merchant;
+    }
+  });
+
+  return companies;
 };
 
 export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
@@ -513,7 +641,6 @@ export const compare = async (__: IRequest, query: FilterQuery<ICompany>, includ
 
   const _query: FilterQuery<ICompany> = {
     _id: { $in: query.companies },
-    'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] },
   };
   if (!includeHidden) query['hidden.status'] = false;
   const companies: ICompanyDocument[] = await CompanyModel.find(_query)
@@ -737,6 +864,15 @@ export const getShareableCompanyUnsdg = ({
 }: ICompanyUnsdgDocument) => ({
   unsdg: getShareableUnsdg(unsdg as IUnsdgDocument),
   value,
+});
+
+export const getShareableDataSource = ({
+  name, url, description, logoUrl,
+}: IDataSourceDocument) => ({
+  name,
+  url,
+  description,
+  logoUrl,
 });
 
 export const initCompanyBatchJob = async (req: IRequest<{}, {}, IBatchedCompanyParentChildRelationshipsRequestBody>, jobName: JobNames) => {
@@ -1017,4 +1153,112 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
   });
 
   return partner;
+};
+
+export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackCompaniesRequest, query: FilterQuery<ICompany>) => {
+  const { location } = req.query;
+  let sectorQuery = {};
+  let companiesQuery = {};
+
+  if (!!location?.length) {
+    const locationArray = location.split(',');
+    companiesQuery = {
+      'featuredCashback.location': {
+        $in: locationArray,
+      },
+      'featuredCashback.status': {
+        $eq: true,
+      },
+    };
+  }
+
+  if (!!req.query['sectors.sector']) {
+    sectorQuery = {
+      'sectors.sector': {
+        $in: req.query['sectors.sector'].split(','),
+      },
+    };
+  }
+
+  const excludeNegativeCompanies = {
+    rating: {
+      $ne: CompanyRating.Negative,
+    },
+  };
+
+  const merchantQuery: any = {
+    merchant: { $ne: null },
+  };
+
+  const merchantFilter: any = {
+    $or: [
+      { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+      { $and:
+          [
+            { 'merchant.integrations.kard': { $exists: true } },
+            { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+          ],
+      },
+    ],
+  };
+
+  const merchantLookup = {
+    $lookup: {
+      from: 'merchants',
+      localField: 'merchant',
+      foreignField: '_id',
+      as: 'merchant',
+    },
+  };
+
+  const merchantUnwind = {
+    $unwind: {
+      path: '$merchant',
+      preserveNullAndEmptyArrays: true,
+    },
+  };
+
+  const aggregateSteps: any = [
+    {
+      $match: {
+        ...companiesQuery,
+        ...sectorQuery,
+        ...merchantQuery,
+        ...excludeNegativeCompanies,
+      },
+    },
+    merchantLookup,
+    merchantUnwind,
+    {
+      $match: merchantFilter,
+    },
+  ];
+
+  const options: any = {
+    projection: query?.projection || '',
+    page: query?.skip || 1,
+    limit: query?.limit || 10,
+    sort: query?.sort ? { ...query.sort, companyName: 1 } : { companyName: 1, _id: 1 },
+  };
+
+  const companyAggregate = CompanyModel.aggregate(aggregateSteps);
+  const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
+  // const companiesWithMerchantData = await addMerchantInfoToCompanies(companies.docs);
+  // companies.docs = companiesWithMerchantData;
+
+  return companies;
+};
+
+export const updateCompaniesFeaturedCashbackStatus = async (companiesToUpdate: IFeaturedCashbackUpdatesParams[]) => {
+  for (const companyToUpdate of companiesToUpdate) {
+    const { companyId, status } = companyToUpdate;
+    const company = await CompanyModel.findById(companyId);
+    const data = {
+      status,
+      location: companyToUpdate.location,
+    };
+    if (!company) continue;
+    company.featuredCashback = data;
+    await company.save();
+  }
 };

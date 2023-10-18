@@ -4,26 +4,27 @@ import * as output from '../../../services/output';
 import { asCustomError } from '../../../lib/customError';
 import * as KYCService from '../../../integrations/marqeta/kyc';
 
-export const processUserKyc: IRequestHandler<{}, {}, IMarqetaProcessKyc> = async (req, res) => {
+export const processUserKyc: IRequestHandler<{ userToken: string }, {}, IMarqetaProcessKyc> = async (req, res) => {
   try {
-    const { user: data } = await KYCService.processUserKyc(req);
+    const { userToken } = req.params;
+    const { user: data } = await KYCService.processUserKyc(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const listUserKyc: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const listUserKyc: IRequestHandler<{ userToken: string }, {}, {}> = async (req, res) => {
   try {
-    const { _id: userId } = req.requestor;
-    const { user: data } = await KYCService.listUserKyc(userId);
+    const { userToken } = req.params;
+    const { data } = await KYCService.listUserKyc(userToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const getKycResult: IRequestHandler<{kycToken:string}, {}, {}> = async (req, res) => {
+export const getKycResult: IRequestHandler<{ kycToken: string }, {}, {}> = async (req, res) => {
   try {
     const { user: data } = await KYCService.getKycResult(req);
     output.api(req, res, data);

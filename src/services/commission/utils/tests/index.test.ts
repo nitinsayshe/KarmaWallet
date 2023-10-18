@@ -10,16 +10,30 @@ import {
   TransactionStatus,
 } from '../../../../clients/kard';
 import { MongoClient } from '../../../../clients/mongo';
+import { CardStatus, KardEnrollmentStatus } from '../../../../lib/constants';
 import { getUtcDate } from '../../../../lib/date';
+import { cleanUpDocuments } from '../../../../lib/model';
 import { getRandomInt } from '../../../../lib/number';
-import { createSomeCompanies, createSomeMerchants, createSomeUsers } from '../../../../lib/testingUtils';
+import {
+  createSomeCards,
+  createSomeCommissions,
+  createSomeCompanies,
+  createSomeMerchants,
+  createSomeTransactions,
+  createSomeUsers,
+} from '../../../../lib/testingUtils';
+import { ICardDocument } from '../../../../models/card';
 import { ICommissionDocument } from '../../../../models/commissions';
 import { ICompanyDocument } from '../../../../models/company';
 import { IMerchantDocument } from '../../../../models/merchant';
+import { INotificationDocument, NotificationStatus, NotificationType } from '../../../../models/notification';
+import { ITransactionDocument } from '../../../../models/transaction';
 import { IUserDocument, UserEmailStatus } from '../../../../models/user';
+import { createEarnedCashbackNotificationFromCommission } from '../../../notification';
 
 describe('tests commission utils logic', () => {
-  let testUserWithKardIntegration: IUserDocument;
+  let testUserWithLinkedCard: IUserDocument;
+  let testCardWithKardIntegration: ICardDocument;
   let testMerchantWithKardIntegration: IMerchantDocument;
   let testMerchantCompany: ICompanyDocument;
   const testUserWithKardIntegrationCardInfo = {
@@ -28,6 +42,8 @@ describe('tests commission utils logic', () => {
     network: CardNetwork.Visa,
   };
   let testEarnedWebhookBody: EarnedRewardWebhookBody | null = null;
+  let testCommission: ICommissionDocument;
+  let testTransactions: ITransactionDocument[] = [];
 
   afterEach(() => {
     /* clean up between tests */
@@ -35,9 +51,15 @@ describe('tests commission utils logic', () => {
 
   afterAll(async () => {
     // clean up db
-    await testUserWithKardIntegration?.remove();
-    await testMerchantWithKardIntegration?.remove();
-    await testMerchantCompany?.remove();
+    await cleanUpDocuments([
+      testUserWithLinkedCard,
+      testMerchantWithKardIntegration,
+      testMerchantCompany,
+      testCommission,
+      testCardWithKardIntegration,
+      ...testTransactions,
+    ]);
+
     MongoClient.disconnect();
   });
 
@@ -71,7 +93,7 @@ describe('tests commission utils logic', () => {
 
     [testMerchantCompany] = await createSomeCompanies({ companies: [{ merchant: testMerchantWithKardIntegration }] });
 
-    [testUserWithKardIntegration] = await createSomeUsers({
+    [testUserWithLinkedCard] = await createSomeUsers({
       users: [
         {
           name: 'testUserWithKardIntegration User',
@@ -82,20 +104,38 @@ describe('tests commission utils logic', () => {
               status: UserEmailStatus.Verified,
             },
           ],
+        },
+      ],
+    });
+    [testCardWithKardIntegration] = await createSomeCards({
+      cards: [
+        {
+          userId: testUserWithLinkedCard._id,
+          status: CardStatus.Linked,
           integrations: {
             kard: {
               userId: randomUUID(),
-              dateAccountCreated: getUtcDate().toDate(),
+              createdOn: getUtcDate().toDate(),
+              enrollmentStatus: KardEnrollmentStatus.Enrolled,
             },
           },
         },
       ],
     });
 
+    [testCommission] = await createSomeCommissions({
+      commissions: [
+        {
+          user: testUserWithLinkedCard,
+          merchant: testMerchantWithKardIntegration,
+          company: testMerchantCompany,
+        },
+      ],
+    });
     testEarnedWebhookBody = {
       issuer: process.env.KARD_ISSUER_NAME || 'test issuer',
       user: {
-        referringPartnerUserId: testUserWithKardIntegration.integrations.kard.userId,
+        referringPartnerUserId: testCardWithKardIntegration.integrations.kard.userId,
       },
       reward: {
         merchantId: testMerchantWithKardIntegration.integrations.kard.id,
@@ -116,16 +156,52 @@ describe('tests commission utils logic', () => {
       postDineInLinkURL: 'https://www.test.com',
       error: null,
     } as EarnedRewardWebhookBody;
+
+    testTransactions = await createSomeTransactions({
+      transactions: [
+        {
+          user: testUserWithLinkedCard,
+          card: testCardWithKardIntegration,
+          integrations: {
+            kard: {
+              id: testEarnedWebhookBody.transaction.issuerTransactionId,
+              status: TransactionStatus.SETTLED,
+            },
+          },
+          company: testMerchantCompany,
+          amount: 10000,
+          createdOn: getUtcDate().toDate(),
+        },
+      ],
+    });
+  });
+
+  it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
+    const earnedRewardNotification = await createEarnedCashbackNotificationFromCommission(testCommission, true);
+    expect(earnedRewardNotification).toBeDefined();
+    expect(earnedRewardNotification).not.toBeNull();
+    const n = earnedRewardNotification as INotificationDocument;
+    expect((n.user as IUserDocument)._id.toString()).toBe((testCommission.user as IUserDocument)._id.toString());
+    expect(n.type).toBe(NotificationType.EarnedCashback);
+    expect(n.status).toBe(NotificationStatus.Unread);
+    expect(n.data).toBeDefined();
+    expect(n.data).not.toBeNull();
+    expect(n.data).toHaveProperty('name');
+    expect(n.data).toHaveProperty('companyName');
+    expect(n.body).toBeDefined();
+    expect(n.body).not.toBeNull();
+    await n.remove();
   });
 
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
     const karmaCommission = (await mapKardCommissionToKarmaCommisison(testEarnedWebhookBody)) as ICommissionDocument;
-
     expect(karmaCommission).toBeDefined();
     expect(karmaCommission).not.toBeNull();
     expect(karmaCommission).toHaveProperty('allocation');
+    expect(karmaCommission.user.toString()).toBe(testUserWithLinkedCard._id.toString());
+    expect(karmaCommission.transaction.toString()).toBe(testTransactions?.[0]._id.toString());
     expect(karmaCommission.allocation.user).toBe(7.5);
     expect(karmaCommission.allocation.karma).toBe(2.5);
     await karmaCommission.remove();
-  });
+  }, 10000);
 });

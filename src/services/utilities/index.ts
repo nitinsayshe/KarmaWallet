@@ -42,7 +42,7 @@ export const validateHtml = async (req: IRequest<{}, {}, IValidateHtmlBody>) => 
   return result;
 };
 
-export const camelToSnakeCase:any = (data: any) => {
+export const camelToSnakeCase: any = (data: any) => {
   if (typeof data === 'object' && data !== null) {
     if (Array.isArray(data)) {
       return data.map((item) => camelToSnakeCase(item));

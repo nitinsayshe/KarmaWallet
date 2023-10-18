@@ -25,15 +25,6 @@ export const getCarbonOffsetDonationSuggestions: IRequestHandler<{}, ImpactServi
   }
 };
 
-export const getFeaturedCashback: IRequestHandler = async (req, res) => {
-  try {
-    const companies = await ImpactService.getFeaturedCashback();
-    output.api(req, res, companies.map((c: ICompanyDocument) => getShareableCompany(c)));
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
 export const getImpactRatings: IRequestHandler = async (req, res) => {
   try {
     const impactRatings = await ImpactService.getImpactRatings(req);

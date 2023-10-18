@@ -43,7 +43,7 @@ export type Transaction = {
   description: string; // merchant name
   description2?: string;
   coreProviderId?: string; // name of processor
-  msc?: string; // merchant category code
+  mcc?: string; // merchant category code
   transactionDate?: string; // timestamp required for REVERSED, DECLINED, RETURNED status - do not include if settled
   authorizationDate?: string; // timestamp required for APPROVED status
   settledDate?: string; // timestamp required for SETTLED status

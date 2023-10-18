@@ -2,24 +2,21 @@
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { IRequest } from '../../types/request';
-import { IMarqetaCardTransition, IMarqetaCreateCard } from './types';
-
+import { IMarqetaCardTransition, IMarqetaCreateCard, ListCardsResponse } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
 // Instantiate the CARD class
 const card = new Card(marqetaClient);
 
-export const createCard = async (req: IRequest<{}, {}, IMarqetaCreateCard>) => {
-  const { _id: userId } = req.requestor;
-  const params = { userToken: userId.toString(), ...req.body };
-  const userResponse = await card.createCard(params);
-  return { user: userResponse };
+export const createCard = async (params:IMarqetaCreateCard) => {
+  const cardResponse = await card.createCard(params);
+  return cardResponse;
 };
 
-export const listCards = async (userToken:string) => {
-  const userResponse = await card.listCards(userToken);
-  return { user: userResponse };
+export const listCards = async (userToken: string): Promise<ListCardsResponse> => {
+  const cardResponse = await card.listCards(userToken);
+  return { cards: cardResponse };
 };
 
 export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransition>) => {
@@ -28,9 +25,8 @@ export const cardTransition = async (req: IRequest<{}, {}, IMarqetaCardTransitio
   return { user: userResponse };
 };
 
-export const getCardDetails = async (req: IRequest<{ cardToken: string }, { showCvv: string }, {}>) => {
+export const getCardDetails = async (req: IRequest<{ cardToken: string }, {}, {}>) => {
   const { cardToken } = req.params;
-  const { showCvv } = req.query;
-  const userResponse = await card.getCardDetails(cardToken, { show_cvv_number: showCvv });
+  const userResponse = await card.getCardDetails(cardToken);
   return { data: userResponse };
 };

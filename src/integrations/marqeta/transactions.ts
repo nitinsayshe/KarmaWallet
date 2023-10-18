@@ -149,27 +149,42 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
   }
 };
 
-const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqetaTransaction): Promise<ITransactionDocument> => {
+const getExistingTransactionFromMarqetaTransacationToken = async (token: string): Promise<ITransactionDocument | null> => {
   try {
-    // check if this transaction already exists in the db
     const existingTransaction = await MongooseTransactionModel.findOne({
       $and: [
         { 'integrations.marqeta.token': { $exists: true } },
-        { 'integrations.marqeta.token': t?.marqeta_transaction?.token },
+        { 'integrations.marqeta.token': token },
       ],
     });
-    if (!!existingTransaction?._id) {
-      console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
-      existingTransaction.integrations.marqeta = t.marqeta_transaction;
-      existingTransaction.status = t.marqeta_transaction.state;
-      existingTransaction.amount = t.amount;
-      existingTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
-
-      return existingTransaction;
+    if (!existingTransaction?._id) {
+      throw Error(`No transaction found with token: ${token}`);
     }
+    return existingTransaction;
   } catch (err) {
     console.error(err);
-    console.error(`Error looking up the transaction associated with this marqeta transaction: ${JSON.stringify(t)}`);
+    console.error(`Error looking up transaction with marqeta token: ${token}}`);
+    return null;
+  }
+};
+
+const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqetaTransaction): Promise<ITransactionDocument> => {
+  // check if this transaction already exists in the db
+  const isClearingTransaction = !!t?.marqeta_transaction?.preceding_related_transaction_token && t.marqeta_transaction.type === 'authorization.clearing';
+  const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
+  const existingTransaction = await getExistingTransactionFromMarqetaTransacationToken(lookupToken);
+  if (!!existingTransaction) {
+    console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
+    if (isClearingTransaction) {
+      existingTransaction.integrations.marqeta.clearing = t.marqeta_transaction;
+    } else {
+      existingTransaction.integrations.marqeta = t.marqeta_transaction;
+    }
+    existingTransaction.status = t.marqeta_transaction.state;
+    existingTransaction.amount = t.amount;
+    existingTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
+
+    return existingTransaction;
   }
 
   const newTransaction = new MongooseTransactionModel();
@@ -226,7 +241,11 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqet
   }
   newTransaction.amount = t.amount;
   newTransaction.status = t.marqeta_transaction.state;
-  newTransaction.integrations.marqeta = t.marqeta_transaction;
+  if (isClearingTransaction) {
+    existingTransaction.integrations.marqeta.clearing = t.marqeta_transaction;
+  } else {
+    existingTransaction.integrations.marqeta = t.marqeta_transaction;
+  }
   newTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
   return newTransaction;
 };

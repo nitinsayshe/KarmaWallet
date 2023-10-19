@@ -97,7 +97,7 @@ export interface IRareTransactionIntegration {
   tonnes_amt?: number;
 }
 
-export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel>;
+export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel> & {clearing?: Partial<MarqetaTransactionModel>};
 
 export interface ITransactionIntegrations {
   plaid?: IPlaidTransactionIntegration;

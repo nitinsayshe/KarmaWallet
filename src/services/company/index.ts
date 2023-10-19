@@ -1243,8 +1243,7 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
   const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
-  // const companiesWithMerchantData = await addMerchantInfoToCompanies(companies.docs);
-  // companies.docs = companiesWithMerchantData;
+  console.log('////// these are the companies', companies);
 
   return companies;
 };

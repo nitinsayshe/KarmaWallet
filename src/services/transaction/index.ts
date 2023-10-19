@@ -24,7 +24,7 @@ import { CardModel, ICardDocument, IShareableCard } from '../../models/card';
 import { CompanyModel, ICompanyDocument, ICompanySector, IShareableCompany } from '../../models/company';
 import { GroupModel } from '../../models/group';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
-import { IShareableTransaction, ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
+import { IMarqetaTransactionIntegration, IShareableTransaction, ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
@@ -309,7 +309,7 @@ export const getTransactions = async (
 
 export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTransactionsRequestQuery>) => {
   try {
-    const { limit = 5, unique = true, userId } = req.query;
+    const { limit = 5, unique = true, userId, integrationType } = req.query;
     const _limit = parseInt(limit.toString());
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
@@ -330,9 +330,16 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     }
 
     query.$and.push({ 'integrations.rare': null });
-    query.$and.push({ company: { $ne: null } });
+
+    if (!!integrationType) {
+      query.$and.push(getTransactionIntegrationFilter(integrationType));
+    } else {
+      query.$and.push({ company: { $ne: null } });
+    }
 
     const transactions = await _getTransactions(query);
+
+    if (integrationType === TransactionIntegrationTypesEnum.Marqeta) return transactions.slice(0, _limit);
 
     const uniqueCompanies = new Set();
     const recentTransactions: ITransactionDocument[] = [];
@@ -394,6 +401,11 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
     transaction.integrations.rare.certificateUrl = matchedRareTransaction?.certificate_url;
     return transaction;
   });
+};
+
+export const getMarqetaTransactionType = (marqetaData: IMarqetaTransactionIntegration) => {
+  if (!!marqetaData.direct_deposit && !!marqetaData.direct_deposit.token) return 'direct_deposit';
+  return 'authorization';
 };
 
 export const getShareableTransaction = ({
@@ -472,7 +484,6 @@ export const getShareableTransaction = ({
       token,
       user_token: userToken,
       card_token: cardToken,
-      type,
       state,
       created_time: createdTime,
       request_amount: requestAmount,
@@ -485,14 +496,14 @@ export const getShareableTransaction = ({
       token,
       userToken,
       cardToken,
-      type,
+      type: getMarqetaTransactionType(integrations.marqeta) as any,
       state,
       createdTime,
       requestAmount,
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: integrations.marqeta.card_acceptor.name,
+      merchantName: integrations?.marqeta?.card_acceptor?.name || null,
       cardMask: integrations.marqeta.card.last_four,
     };
 

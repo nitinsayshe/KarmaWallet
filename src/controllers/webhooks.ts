@@ -25,6 +25,8 @@ import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
 import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
+import { TransactionModel } from '../clients/marqeta/types';
+import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
@@ -154,55 +156,12 @@ interface IMarqetaBankTransferTransitionEvent {
   last_modified_time: Date;
 }
 
-interface ITransactionCardAcceptor {
-  mid: string;
-  mcc: string;
-  name: string;
-  street_address: string;
-  city: string;
-  state: string;
-  postal_code: string;
-  country_code: string;
-}
-
-interface ITransactionGPA {
-  currency_code: string;
-  ledger_balance: number;
-  available_balance: number;
-  credit_balance: number;
-  pending_credits: number;
-  impacted_amount: number;
-  balances: object;
-}
-
-interface IMarqetaTransactionEvent {
-  type: string;
-  state: string;
-  token: string;
-  user_token: string;
-  gpa: ITransactionGPA;
-  card_acceptor: ITransactionCardAcceptor;
-  user: object;
-  user_transaction_time: Date;
-  amount: number;
-  currency_code: string;
-  duration: number;
-  network: string;
-  settlement_date: string;
-  response: {
-    code: string;
-    memo: string;
-  };
-  created_time: string;
-  [key: string]: any;
-}
-
 interface IMarqetaWebhookBody {
   cards: IMarqetaWebhookCardsEvent[];
   cardactions: IMarqetaCardActionEvent[];
   usertransitions: IMarqetaUserTransitionsEvent[];
   banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
-  transactions: IMarqetaTransactionEvent[];
+  transactions: TransactionModel[];
 }
 
 interface IMarqetaWebhookHeader {
@@ -522,7 +481,9 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         }
       }
     }
-
+    if (!!transactions) {
+      await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+    }
     output.api(
       req,
       res,

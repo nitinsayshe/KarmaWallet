@@ -9,9 +9,9 @@ import { MongoClient } from '../../../clients/mongo';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { encrypt } from '../../../lib/encryption';
+import { cleanUpDocuments } from '../../../lib/model';
 import { getRandomInt } from '../../../lib/number';
 import {
-  cleanUpDocuments,
   createSomeUsers,
   CreateTestCardsRequest,
   createSomeCards,

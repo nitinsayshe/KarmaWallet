@@ -79,7 +79,7 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   fundingSourceToken: string;
 }
 
-export interface IMarqetaProcessKyc extends IMarqetaUserToken { }
+export interface IMarqetaProcessKyc extends IMarqetaUserToken {}
 
 enum IMarqetaCardState {
   ACTIVE = 'ACTIVE',
@@ -263,12 +263,12 @@ export enum IMACHTransferStatus {
   RETURNED = 'RETURNED',
   COMPLETED = 'COMPLETED',
   ERROR = 'ERROR',
-  CANCELLED = 'CANCELLED'
+  CANCELLED = 'CANCELLED',
 }
 
 export enum IACHTransferTypes {
   PUSH = 'PUSH',
-  PULL = 'PULL'
+  PULL = 'PULL',
 }
 
 export interface IACHBankTransferQuery {
@@ -348,6 +348,143 @@ export type UserModel = {
   identifications?: Identification[];
 };
 
+export const ACHTransferTransitionStatusEnum = {
+  Pending: 'PENDING',
+  Processing: 'PROCESSING',
+  Submitted: 'SUBMITTED',
+  Returned: 'RETURNED',
+  Completed: 'COMPLETED',
+  Cancelled: 'CANCELLED',
+} as const;
+export type ACHTransferTransitionStatusEnumValues =
+  (typeof ACHTransferTransitionStatusEnum)[keyof typeof ACHTransferTransitionStatusEnum];
+
+export const ACHTransferTransitionChannelEnum = {
+  API: 'API',
+  SYSTEM: 'SYSTEM',
+} as const;
+export type ACHTransferTransitionChannelEnumValues =
+  (typeof ACHTransferTransitionChannelEnum)[keyof typeof ACHTransferTransitionChannelEnum];
+
+export type ACHTransferTransition = {
+  token: string;
+  bank_transfer_token: string;
+  status: ACHTransferTransitionStatusEnumValues;
+  reason: string;
+  channel: ACHTransferTransitionChannelEnumValues;
+  created_time: string;
+  last_modified_time: string;
+};
+
+export const ACHTransferTransitionTypeEnum = {
+  Push: 'PUSH',
+  Pull: 'PULL',
+} as const;
+export type ACHTransferTransitionTypeEnumValues =
+  (typeof ACHTransferTransitionTypeEnum)[keyof typeof ACHTransferTransitionTypeEnum];
+
+export const ACHTransferTransitionTransferSpeedEnum = {
+  Standard: 'STANDARD',
+  SameDay: 'SAME_DAY',
+} as const;
+export type ACHTransferTransitionTransferSpeedEnumValues =
+  (typeof ACHTransferTransitionTransferSpeedEnum)[keyof typeof ACHTransferTransitionTransferSpeedEnum];
+
+export type ACHTransferModel = {
+  token: string;
+  amount: number;
+  memo?: string;
+  funding_source_token: string;
+  type: ACHTransferTransitionTypeEnumValues;
+  currency_code: string;
+  transfer_speed: ACHTransferTransitionTransferSpeedEnumValues;
+  statement_descriptor: string;
+  standard_entry_class_code: string;
+  status: IMACHTransferStatus;
+  transitions: ACHTransferTransition[];
+  created_time: string;
+  last_modified_time: string;
+};
+
+export const DirectDepositStateEnum = {
+  Pending: 'PENDING',
+  Applied: 'APPLIED',
+  Reversed: 'REVERSED',
+  Rejected: 'REJECTED',
+} as const;
+export type DirectDepositStateEnumValues = (typeof DirectDepositStateEnum)[keyof typeof DirectDepositStateEnum];
+
+export const DirectDepositTypeEnum = {
+  Credit: 'CREDIT',
+  Debit: 'DEBIT',
+} as const;
+export type DirectDepositTypeEnumValues = (typeof DirectDepositTypeEnum)[keyof typeof DirectDepositTypeEnum];
+
+export type DirectDepositModel = {
+  token: string;
+  amount: number;
+  type: DirectDepositTypeEnumValues;
+  state: DirectDepositStateEnumValues;
+  settlement_date: string;
+  state_reason: string;
+  state_reason_code: string;
+  direct_deposit_account_token: string;
+  user_token?: string;
+  business_token?: string;
+  standard_entry_class_code: string;
+  company_name: string;
+  company_discretionary_data: string;
+  company_identification: string;
+  company_entry_description: string;
+  individual_identification_number: string;
+  individual_name: string;
+  created_time: string;
+  last_modified_time: string;
+};
+
+export type WebhookCustomHeader = {
+  [key: string]: string;
+};
+
+export type WebhookModel = {
+  active?: boolean;
+  config: {
+    basic_auth_password: string;
+    basic_auth_username: string;
+    custom_header?: WebhookCustomHeader;
+    secret?: string;
+    url: string;
+    use_mtls?: boolean;
+  };
+  events: string[];
+  name: string;
+  token?: string;
+};
+
+export type WebhookWithModifiedAndCreatedDates = WebhookModel & {
+  created_time?: string;
+  last_modified_time?: string;
+};
+
+export type WebhookPingModel = {
+  token: string;
+  payload: string;
+};
+
+export type WebhookPingRequest = {
+  pings: WebhookPingModel[];
+};
+
+export const WebhookEventTypeEnum = {
+  ChargebackTransition: 'chargebacktransition',
+  DigitalWalletTokenTransition: 'digitalwallettokentransition',
+  CardTransition: 'cardtransition',
+  UserTransition: 'usertransition',
+  BusinessTransition: 'businesstransition',
+  Transaction: 'transaction',
+} as const;
+export type WebhookEventTypeEnumValues = (typeof WebhookEventTypeEnum)[keyof typeof WebhookEventTypeEnum];
+
 export type PaginatedMarqetaResponse<DataType> = {
   count: number;
   start_index: number;
@@ -361,5 +498,7 @@ export type GetUserByEmailResponse = PaginatedMarqetaResponse<UserModel[]>;
 export type ListCardsResponse = { cards: PaginatedMarqetaResponse<CardModel[]> };
 export type ListTransactionsResponse = { data: PaginatedMarqetaResponse<TransactionModel[]> };
 export type ListACHFundingSourcesForUserResponse = { data: PaginatedMarqetaResponse<IACHFundingSource[]> };
+export type ListACHBankTransfersResponse = { data: PaginatedMarqetaResponse<ACHTransferModel[]> };
+export type ListWebhooksResponse = { data: PaginatedMarqetaResponse<WebhookWithModifiedAndCreatedDates[]> };
 
 export type EnrichedMarqetaTransaction = Transaction & { marqeta_transaction: TransactionModel };

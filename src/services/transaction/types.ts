@@ -16,7 +16,10 @@ export interface IGetRecentTransactionsRequestQuery {
   limit?: number;
   unique?: boolean;
   userId?: string | ObjectId;
+  integrationType: TransactionIntegrationTypesEnumValues;
 }
+
+export interface IGetTransactionsRequestQuery {}
 
 export interface ITransactionsRequestQuery extends AqpQuery {
   userId?: string;
@@ -95,6 +98,7 @@ export interface IUpdateManualMatchRequest {
   matchType?: string;
   company?: string;
   originalValue?: string;
+  integrationType?: TransactionIntegrationTypesEnumValues;
 }
 
 export interface IGetMatchedCompaniesQuery {

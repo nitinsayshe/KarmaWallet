@@ -8,7 +8,6 @@ import { MongoClient } from '../../../clients/mongo';
 import { CardStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import {
-  cleanUpDocuments,
   createSomeCards,
   createSomeCompanies,
   createSomeSectors,
@@ -18,10 +17,11 @@ import { ICardDocument } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
 import { IMarqetaUserState } from '../../../services/karmaCard/utils';
-import { mapAndSaveMarqetaTransactionToKarmaTransaction as mapMarqetaTransactionsToKarmaTransactions } from '../transactions';
 import { IMarqetaKycState } from '../types';
 import { TransactionModel } from '../../../clients/marqeta/types';
 import { ISectorDocument } from '../../../models/sector';
+import { cleanUpDocuments } from '../../../lib/model';
+import { mapMarqetaTransactionsToKarmaTransactions } from '../transactions';
 
 // Thest values should match up with the request in ./data/testMarqetaTransaction.json
 const mccToMatch = 9999;
@@ -144,6 +144,5 @@ describe('tests marqeta integration transaction logic', () => {
       expect(t.card_token).toBe(testCardWithMarqetaIntegration.integrations.marqeta.card_token);
       expect(t.amount).toBe(testTransactionAmount);
     });
-    await cleanUpDocuments([...karmaTransactions]);
   });
 });

@@ -209,6 +209,21 @@ interface IMarqetaWebhookHeader {
   authorization: string;
 }
 
+export enum MarqetaWebhookConstants {
+  PIN_SET = 'pin.set',
+  COMPLETED = 'COMPLETED',
+  AUTHORIZATION = 'authorization',
+  AUTHORIZATION_CLEARING = 'authorization.clearing',
+  GPA_CREDIT = 'gpa.credit',
+  PIN_DEBIT = 'pindebit',
+  COMPLETION = 'COMPLETION'
+}
+
+const MCCStandards = {
+  DINING: ['5812', '5814'],
+  GAS: ['5542'],
+};
+
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
   if (
     process.env.KW_ENV !== 'staging'
@@ -433,7 +448,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     // Card action events include PIN set, PIN change, and PIN reveal actions
     if (!!cardactions) {
       for (const cardaction of cardactions) {
-        if (cardaction.type === 'pin.set') {
+        if (cardaction.type === MarqetaWebhookConstants.PIN_SET) {
           await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': cardaction?.card_token }, { 'integrations.marqeta.pin_is_set': true }, { new: true });
         }
       }
@@ -460,7 +475,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           },
         );
         // Send push notification of funds available for use
-        if (banktransfertransition.status === 'COMPLETED' && userTransitions?.userId) {
+        if (banktransfertransition.status === MarqetaWebhookConstants.COMPLETED && userTransitions?.userId) {
           const user = await UserModel.findById(userTransitions?.userId);
           if (user) {
             sendNotificationForReloadSuccess(user, 'redirectLinkGoesHere!');
@@ -477,30 +492,30 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         }
 
         // event for Authorization Transaction initialization
-        if (transaction.type === 'authorization') {
+        if (transaction.type === MarqetaWebhookConstants.AUTHORIZATION) {
           console.log('authorization ', transaction);
         }
 
         // event for Authorization Transaction clearing
-        if (transaction.type === 'authorization.clearing') {
+        if (transaction.type === MarqetaWebhookConstants.AUTHORIZATION_CLEARING) {
           console.log('authorization.clearing ', transaction);
         }
 
         // event for Funding GPA via Funding Source Program (Reward related transaction)
-        if (transaction.type === 'gpa.credit') {
-          if (user && transaction?.gpa_order?.amount) {
+        if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
+          if (user && transaction?.gpa_order?.amount && transaction?.state === MarqetaWebhookConstants.COMPLETION) {
             sendNotificationOfRewardDeposit(user, transaction?.gpa_order?.amount);
           }
         }
-        if (transaction.type.includes('pindebit')) {
+        if (transaction.type.includes(MarqetaWebhookConstants.PIN_DEBIT)) {
           // Send push notification of transaction
-          if (user && transaction?.amount && transaction?.card_acceptor?.name) {
+          if (user && transaction?.state === MarqetaWebhookConstants.COMPLETION && transaction?.amount && transaction?.card_acceptor?.name) {
             sendNotificationOfTransaction(user, transaction?.amount, transaction?.card_acceptor?.name);
 
             // Send push notification for spending on dining or gas
-            if (transaction?.card_acceptor?.mcc === '5812' || transaction?.card_acceptor?.mcc === '5814') {
+            if (MCCStandards.DINING.includes(transaction?.card_acceptor?.mcc)) {
               sendNotificationForSpendingOnDining(user);
-            } else if (transaction?.card_acceptor?.mcc === '5542') {
+            } else if (MCCStandards.GAS.includes(transaction?.card_acceptor?.mcc)) {
               sendNotificationForSpendingOnGas(user);
             }
           }

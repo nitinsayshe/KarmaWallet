@@ -57,11 +57,6 @@ export const sendPushNotification = (user: IUserDocument, notificationObject: IF
     }
 
     await admin.messaging().send(pushNotification)
-      .then((response: any) => {
-        console.log('----------------------------Notification-----------------------------');
-        console.log('Notification Sent: ', pushNotification, '\nResponse :', response);
-        console.log('----------------------------Notification-----------------------------');
-      })
       .catch((error: any) => {
         console.log('Error in sending push notification: ', error);
       });

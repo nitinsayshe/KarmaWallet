@@ -14,7 +14,7 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import CustomError, { asCustomError } from '../lib/customError';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
-import { UserModel } from '../models/user';
+import { IUserDocument, UserModel } from '../models/user';
 import { _getCard } from '../services/card';
 import { mapWildfireCommissionToKarmaCommission, processKardWebhook } from '../services/commission/utils';
 import { getGroup, IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
@@ -25,6 +25,7 @@ import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
 import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
+import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -138,7 +139,7 @@ interface IMarqetaUserTransitionsEvent {
   reason_code: String;
   channel: String;
   created_time: Date;
-  last_modified_time:Date;
+  last_modified_time: Date;
   user_token: String;
   metadata: Object;
 }
@@ -175,37 +176,37 @@ interface ITransactionGPA {
 }
 
 interface IMarqetaTransactionEvent {
-  type : string;
-  state : string;
-  token : string;
-  user_token : string;
-  gpa : ITransactionGPA;
-  card_acceptor : ITransactionCardAcceptor;
-  user : object;
-  user_transaction_time : Date;
-  amount : number;
-  currency_code : string;
-  duration : number;
-  network : string;
-  settlement_date : string;
-  response : {
-    code : string;
-    memo : string;
+  type: string;
+  state: string;
+  token: string;
+  user_token: string;
+  gpa: ITransactionGPA;
+  card_acceptor: ITransactionCardAcceptor;
+  user: object;
+  user_transaction_time: Date;
+  amount: number;
+  currency_code: string;
+  duration: number;
+  network: string;
+  settlement_date: string;
+  response: {
+    code: string;
+    memo: string;
   };
-  created_time : string;
-  [key : string] : any;
+  created_time: string;
+  [key: string]: any;
 }
 
 interface IMarqetaWebhookBody {
-  cards : IMarqetaWebhookCardsEvent[];
-  cardactions : IMarqetaCardActionEvent[];
-  usertransitions : IMarqetaUserTransitionsEvent[];
-  banktransfertransitions : IMarqetaBankTransferTransitionEvent[];
-  transactions : IMarqetaTransactionEvent[];
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  usertransitions: IMarqetaUserTransitionsEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: IMarqetaTransactionEvent[];
 }
 
 interface IMarqetaWebhookHeader {
-  authorization : string;
+  authorization: string;
 }
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -408,7 +409,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
   try {
     const marqetAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
 
-    const { headers } = <{headers : IMarqetaWebhookHeader}>req;
+    const { headers } = <{ headers: IMarqetaWebhookHeader }>req;
 
     if (headers?.authorization !== `Basic ${marqetAuthBuffer}`) {
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
@@ -420,6 +421,12 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!cards) {
       for (const card of cards) {
         await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
+        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
+
+        // Send push notification of card transition
+        if (user) {
+          sendNotificationForCardTransition(user, card?.state);
+        }
       }
     }
 
@@ -442,7 +449,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     // ACH Origination transition events include activities such as bank transfer being transitioned to a pending, processing, submitted, completed, returned, or cancelled state
     if (!!banktransfertransitions) {
       for (const banktransfertransition of banktransfertransitions) {
-        await ACHTransferModel.findOneAndUpdate(
+        const userTransitions = await ACHTransferModel.findOneAndUpdate(
           {
             token: banktransfertransition.bank_transfer_token,
           },
@@ -452,33 +459,51 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
             $push: { transitions: banktransfertransition },
           },
         );
+        // Send push notification of funds available for use
+        if (banktransfertransition.status === 'COMPLETED' && userTransitions?.userId) {
+          const user = await UserModel.findById(userTransitions?.userId);
+          if (user) {
+            sendNotificationForReloadSuccess(user, 'redirectLinkGoesHere!');
+            sendNotificationOfFundsAvailable(user);
+          }
+        }
       }
     }
-
+    let user: IUserDocument = null;
     if (transactions) {
       for (const transaction of transactions) {
+        if (user === null) {
+          user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
+        }
+
         // event for Authorization Transaction initialization
         if (transaction.type === 'authorization') {
-          console.log('authorization >>>>>>>>>>>>>>>>>>>>>>>>>>');
-          console.log(transaction);
+          console.log('authorization ', transaction);
         }
 
         // event for Authorization Transaction clearing
         if (transaction.type === 'authorization.clearing') {
-          console.log('authorization.clearing >>>>>>>>>>>>>>>>>>>>>>>>>>');
-          console.log(transaction);
+          console.log('authorization.clearing ', transaction);
         }
 
         // event for Funding GPA via Funding Source Program (Reward related transaction)
         if (transaction.type === 'gpa.credit') {
-          console.log('gpa.credit >>>>>>>>>>>>>>>>>>>>>>>>>>');
-          console.log(transaction);
+          if (user && transaction?.gpa_order?.amount) {
+            sendNotificationOfRewardDeposit(user, transaction?.gpa_order?.amount);
+          }
         }
+        if (transaction.type.includes('pindebit')) {
+          // Send push notification of transaction
+          if (user && transaction?.amount && transaction?.card_acceptor?.name) {
+            sendNotificationOfTransaction(user, transaction?.amount, transaction?.card_acceptor?.name);
 
-        // event for ATM withdrawal transaction
-        if (transaction.type === 'pindebit.atm.withdrawal') {
-          console.log('pindebit.atm.withdrawal >>>>>>>>>>>>>>>>>>>>>>>>>>');
-          console.log(transaction);
+            // Send push notification for spending on dining or gas
+            if (transaction?.card_acceptor?.mcc === '5812' || transaction?.card_acceptor?.mcc === '5814') {
+              sendNotificationForSpendingOnDining(user);
+            } else if (transaction?.card_acceptor?.mcc === '5542') {
+              sendNotificationForSpendingOnGas(user);
+            }
+          }
         }
       }
     }

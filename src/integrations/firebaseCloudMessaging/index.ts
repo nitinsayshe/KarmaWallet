@@ -26,23 +26,42 @@ admin.initializeApp({
 export interface IFCMNotification {
   title: string,
   body: string,
+  data?: {
+    redirectLink: string
+  },
 }
 export interface IPushNotification {
   notification: IFCMNotification,
   token: String,
+  data?: {
+    redirectLink: string
+  },
 }
-export const sendPushNotification = (user: IUserDocument, notification: IFCMNotification) => {
+export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification) => {
   // Get FCM token of the user
   const { integrations } = getShareableUser(user);
   const { fcm } = integrations;
+
   fcm.forEach(async (fcmObject) => {
     // Send the notification to devices targeted by its FCM token
     const pushNotification: IPushNotification = {
-      notification,
+      notification: {
+        title: notificationObject.title,
+        body: notificationObject.body,
+      },
       token: fcmObject.token,
     };
+    // Include data only if it exists
+    if (notificationObject.data) {
+      pushNotification.data = notificationObject.data;
+    }
 
     await admin.messaging().send(pushNotification)
+      .then((response: any) => {
+        console.log('----------------------------Notification-----------------------------');
+        console.log('Notification Sent: ', pushNotification, '\nResponse :', response);
+        console.log('----------------------------Notification-----------------------------');
+      })
       .catch((error: any) => {
         console.log('Error in sending push notification: ', error);
       });

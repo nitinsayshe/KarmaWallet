@@ -39,10 +39,10 @@ export const sendNotificationOfTransaction = (user: IUserDocument, amount: numbe
   }
 };
 
-export const sendNotificationOfBalanceThreshold = (user: IUserDocument, accountNumber: number, redirectLink: string) => {
+export const sendNotificationOfBalanceThreshold = (user: IUserDocument, redirectLink: string) => {
   const notification: IFCMNotification = {
     title: 'Low Balance Alert',
-    body: `Your account ${accountNumber} has a low balance. Click to reload your Karma Wallet Card.`,
+    body: 'Your account has a low balance. Click to reload your Karma Wallet Card.',
     data: {
       redirectLink,
     },

@@ -27,7 +27,7 @@ import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
 import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
-import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
+import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfBalanceThreshold, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -181,6 +181,10 @@ export enum MarqetaWebhookConstants {
 const MCCStandards = {
   DINING: ['5812', '5814'],
   GAS: ['5542'],
+};
+
+const InsufficientFundsConstants = {
+  CODES: ['1016', '1865', '1923'],
 };
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
@@ -468,7 +472,12 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         }
         if (transaction.type.includes(MarqetaWebhookConstants.PIN_DEBIT)) {
           // Send push notification of transaction
-          if (user && transaction?.state === MarqetaWebhookConstants.COMPLETION && transaction?.amount && transaction?.card_acceptor?.name) {
+          const { code } = (transaction.response as any);
+
+          // Check if transaction response code is of insufficient funds, to trigger low balance push notification
+          if (InsufficientFundsConstants.CODES.includes(code) && user) {
+            sendNotificationOfBalanceThreshold(user, 'RedirectLinkGoesHere!');
+          } else if (user && transaction?.state === MarqetaWebhookConstants.COMPLETION && transaction?.amount && transaction?.card_acceptor?.name) {
             sendNotificationOfTransaction(user, transaction?.amount, transaction?.card_acceptor?.name);
 
             // Send push notification for spending on dining or gas

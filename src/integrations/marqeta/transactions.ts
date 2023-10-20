@@ -170,11 +170,11 @@ const getExistingTransactionFromMarqetaTransacationToken = async (token: string)
 
 const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqetaTransaction): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
-  const isClearingTransaction = !!t?.marqeta_transaction?.preceding_related_transaction_token && t.marqeta_transaction.type === 'authorization.clearing';
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
   const existingTransaction = await getExistingTransactionFromMarqetaTransacationToken(lookupToken);
   if (!!existingTransaction) {
     console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
+    const isClearingTransaction = !!t?.marqeta_transaction?.preceding_related_transaction_token && t.marqeta_transaction.type === 'authorization.clearing';
     if (isClearingTransaction) {
       existingTransaction.integrations.marqeta.clearing = t.marqeta_transaction;
     } else {
@@ -241,11 +241,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (t:EnrichedMarqet
   }
   newTransaction.amount = t.amount;
   newTransaction.status = t.marqeta_transaction.state;
-  if (isClearingTransaction) {
-    existingTransaction.integrations.marqeta.clearing = t.marqeta_transaction;
-  } else {
-    existingTransaction.integrations.marqeta = t.marqeta_transaction;
-  }
+  newTransaction.integrations.marqeta = t.marqeta_transaction;
   newTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
   return newTransaction;
 };

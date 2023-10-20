@@ -6,6 +6,7 @@ import jsonwebtoken from 'jsonwebtoken';
 import jwkToPem from 'jwk-to-pem';
 import pino from 'pino';
 import {
+  AccountSubtype,
   Configuration, CountryCode, ItemPublicTokenExchangeRequest, LinkTokenCreateRequest, PlaidApi,
   PlaidEnvironments, ProcessorTokenCreateRequestProcessorEnum, Products, SandboxItemFireWebhookRequestWebhookCodeEnum,
   SandboxPublicTokenCreateRequest, Transaction, TransactionsGetRequest, WebhookVerificationKeyGetRequest,
@@ -109,18 +110,28 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  getProcessorToken = async (accessToken: string) => {
+  getProcessorTokens = async (accessToken: string) => {
     try {
       const { data } = await this._client.accountsGet({ access_token: accessToken });
-      const config = {
-        access_token: accessToken,
-        account_id: data.accounts[0].account_id,
-        processor: ProcessorTokenCreateRequestProcessorEnum.Marqeta,
-      };
-      // Get the processor token from plaid
-      const processorTokenResponse = await this._client.processorTokenCreate(config);
-      const processorToken = processorTokenResponse.data.processor_token;
-      return processorToken;
+      // array of processor tokens only for checking & savings
+      const processorTokens = [];
+      const PlaidAccountAllowList = [AccountSubtype.Savings, AccountSubtype.Checking];
+      for (const account of data.accounts) {
+        if (!!PlaidAccountAllowList.includes(account.subtype as AccountSubtype)) {
+          const config = {
+            access_token: accessToken,
+            account_id: account.account_id,
+            processor: ProcessorTokenCreateRequestProcessorEnum.Marqeta,
+          };
+          // Get the processor token from plaid
+          const processorTokenResponse = await this._client.processorTokenCreate(config);
+          processorTokens.push({ accountId: account.account_id, processorToken: processorTokenResponse.data.processor_token });
+        }
+      }
+      if (!processorTokens.length) {
+        throw new CustomError('user must provide checking or savings account ', ErrorTypes.FORBIDDEN);
+      }
+      return processorTokens;
     } catch (e) {
       // Handle the error here or throw it to be handled elsewhere
       this.handlePlaidError(e as IPlaidErrorResponse);
@@ -168,25 +179,25 @@ export class PlaidClient extends SdkClient {
       const itemId = response.data.item_id;
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
-      let processorToken = '';
+      let processorTokens;
       let accounts;
       let item;
 
       await plaidUserInstance.load();
       // if accounts is empty generete a preocessor token
       if (!plaidItem.accounts) {
-        [processorToken, { accounts, item }] = await Promise.all([
-          await this.getProcessorToken(accessToken), // get the processor token from plaid
+        [processorTokens, { accounts, item }] = await Promise.all([
+          await this.getProcessorTokens(accessToken), // get the processor token from plaid
           await this.getIdentity(accessToken), // get user identity through plaid
         ]);
         const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
         const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };
-        await plaidUserInstance.addBanks(data, processorToken);
+        await plaidUserInstance.addBanks(data, processorTokens);
         return {
           message: 'Processor token successfully generated',
           itemId,
           accessToken,
-          processorToken,
+          processorTokens,
         };
       }
       await plaidUserInstance.addCards(plaidItem, true);

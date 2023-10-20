@@ -25,24 +25,26 @@ export enum IACHTransferTypes {
 }
 
 export interface IACHTransition {
-  token: String;
-  bank_transfer_token: String;
+  token: string;
+  bank_transfer_token: string;
   status: IACHTransferStatuses;
-  transaction_token: String;
+  transaction_token: string;
   created_time: Date;
   last_modified_time: Date;
 }
 
 export interface IShareableACHTransfer {
   _id: ObjectId;
-  userId:IRef<ObjectId, IShareableUser>;
-  token: String;
-  amount: Number;
-  channel: String;
-  funding_source_token: String;
+  userId: IRef<ObjectId, IShareableUser>;
+  // use this as the bank_transfer_token when making updates
+  token: string;
+  amount: number;
+  channel: string;
+  // token for the ACH funding source (in the ach_funding_sources collection)
+  funding_source_token: string;
   type: IACHTransferTypes;
-  currency_code: String;
-  transfer_speed:String;
+  currency_code: string;
+  transfer_speed: string;
   status: IACHTransferStatuses;
   transitions: IACHTransition;
   created_time: Date;
@@ -55,6 +57,11 @@ export interface IACHTransfer extends IShareableACHTransfer {
 
 export interface IACHTransferDocument extends IACHTransfer, Document {
   _id: ObjectId;
+}
+
+export interface IACHTrasferDocumentWithSourceData extends IACHTransferDocument {
+  accountMask: string;
+  accountType: string;
 }
 
 export type IACHTransferModel = IModel<IACHTransfer>;

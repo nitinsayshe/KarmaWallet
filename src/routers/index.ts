@@ -29,6 +29,7 @@ import banner from './banner';
 import karmaCard from './karmaCard';
 import supportTicket from './supportTicket';
 import faqs from './faq';
+import achTransfer from './achTransfer';
 
 const routers = (app: Express) => {
   admin(app);
@@ -61,6 +62,7 @@ const routers = (app: Express) => {
   karmaCard(app);
   supportTicket(app);
   faqs(app);
+  achTransfer(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

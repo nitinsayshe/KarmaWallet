@@ -54,6 +54,16 @@ export class ACHSource {
     }
   }
 
+  async updateACHBankTransfer(params: IMarqetaACHBankTransferTransition) {
+    try {
+      const { data } = await this._marqetaClient._client.post('/banktransfers/ach/transitions', camelToSnakeCase(params));
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
   // list ACH Bank transfers
   async listACHBankTransfer(queryParams: Record<string, string>) {
     try {

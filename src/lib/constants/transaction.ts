@@ -8,3 +8,11 @@ export const sectorsToExcludeFromTransactions = [
   new Types.ObjectId('62192ef3f022c9e3fbff0c28'), // payment services
   new Types.ObjectId('62192ef2f022c9e3fbff0b0e'), // commercial banking
 ];
+
+export const TransactionTypeEnum = {
+  Debit: 'debit',
+  Credit: 'credit',
+  Adjustment: 'adjustment',
+  Deposit: 'deposit',
+} as const;
+export type TransactionTypeEnumValues = (typeof TransactionTypeEnum)[keyof typeof TransactionTypeEnum];

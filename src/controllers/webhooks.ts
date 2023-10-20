@@ -27,7 +27,7 @@ import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
 import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
-import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfBalanceThreshold, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
+import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfBalanceThreshold, sendNotificationOfEarnedReward, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -467,6 +467,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         // event for Funding GPA via Funding Source Program (Reward related transaction)
         if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
           if (user && transaction?.gpa_order?.amount && transaction?.state === MarqetaWebhookConstants.COMPLETION) {
+            sendNotificationOfEarnedReward(user, transaction?.gpa_order?.amount);
             sendNotificationOfRewardDeposit(user, transaction?.gpa_order?.amount);
           }
         }

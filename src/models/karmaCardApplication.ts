@@ -3,10 +3,10 @@ import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IMarqetaKycResult, IShareableUser } from './user';
 
-export enum ApplicationStatus{
+export enum ApplicationStatus {
   SUCCESS = 'success',
   FAILED = 'failed',
-  DECLINED ='declined'
+  DECLINED = 'declined'
 }
 
 export interface IShareableCardApplication {
@@ -17,6 +17,7 @@ export interface IShareableCardApplication {
   lastName: string;
   email: string;
   address1: string;
+  address2: string;
   birthDate: string;
   city: string;
   postalCode: string;
@@ -46,6 +47,7 @@ const karmaCardApplication = new Schema({
   lastName: { type: String },
   email: { type: String },
   address1: { type: String },
+  address2: { type: String },
   birthDate: { type: String },
   city: { type: String },
   postalCode: { type: String },

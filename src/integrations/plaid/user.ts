@@ -1,5 +1,5 @@
 import { FilterQuery, isValidObjectId } from 'mongoose';
-import { Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
+import { AccountSubtype, Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
 import { UserModel, IUserDocument, IUser } from '../../models/user';
 import { createAchFundingSource } from '../marqeta/accountFundingSource';
 import Bank from './bank';
@@ -52,29 +52,39 @@ class User {
     return { unmappedTransactions, duplicateTransactions: duplicates };
   };
 
-  addBanks = async (plaidItem: IPlaidBankItem, preocessorToken: string) => {
+  addBanks = async (plaidItem: IPlaidBankItem, preocessorTokens: { accountId: string, processorToken: string }[]) => {
     // get the user , to extract the marqeta userToken
     const user = await UserModel.findById(this.userId);
+    const { accounts } = plaidItem;
+    const PlaidAccountAllowList = [AccountSubtype.Savings, AccountSubtype.Checking];
 
-    // create marqeta funding source and map data to Karma DB
-    const { data } = await createAchFundingSource(this.userId, {
-      userToken: user.integrations.marqeta.userToken,
-      partnerAccountLinkReferenceToken: preocessorToken,
-      partner: 'PLAID',
-    }, plaidItem.access_token);
+    // merge/map the account Obj and processorToke with respect to account_id
+    const mapAccountsAndProcessorTokens = accounts.map(account => ({
+      ...account,
+      processorToken: preocessorTokens.find(item => item.accountId === account.account_id)?.processorToken,
+    }));
 
-    // add fundingSourceToken to plaidItem
-    plaidItem.fundingSourceToken = data.token;
+    for (const account of mapAccountsAndProcessorTokens) {
+      if (!!PlaidAccountAllowList.includes(account.subtype as AccountSubtype)) {
+        // create marqeta funding source and map data to Karma DB
+        const { data } = await createAchFundingSource(this.userId, {
+          userToken: user.integrations.marqeta.userToken,
+          partnerAccountLinkReferenceToken: account.processorToken,
+          partner: 'PLAID',
+        }, plaidItem.access_token);
 
-    for (const account of plaidItem.accounts) {
-      if (!!this._banks[`${account.account_id}`]) {
-        // updating an existing bank
-        this._banks[`${account.account_id}`].update(account, plaidItem);
-      } else {
-        // creating a new bank for this user
-        this._banks[`${account.account_id}`] = new Bank(this.userId, account, plaidItem);
+        // add fundingSourceToken to plaidItem
+        plaidItem.fundingSourceToken = data.token;
+
+        if (!!this._banks[`${account.account_id}`]) {
+          // updating an existing bank
+          this._banks[`${account.account_id}`].update(account, plaidItem);
+        } else {
+          // creating a new bank for this user
+          this._banks[`${account.account_id}`] = new Bank(this.userId, account, plaidItem);
+        }
+        await this._banks[`${account.account_id}`].save();
       }
-      await this._banks[`${account.account_id}`].save();
     }
   };
 

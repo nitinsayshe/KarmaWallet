@@ -108,7 +108,6 @@ export const removeBankConnection = async (req: IRequest<IRemoveBankParams, {}, 
 
 export interface IFormattedBankConnection {
   accessToken: string;
-  fundingSourceToken: string;
   institution: string;
   accounts: IShareableBankConnection[];
 }
@@ -117,7 +116,7 @@ export const getFormattedBankConnection = (shareableBankConnections: IShareableB
   const formattedResponse: IFormattedBankConnection[] = [];
 
   shareableBankConnections.forEach(connection => {
-    const formattedConnection = formattedResponse.find(element => element?.accessToken === connection?.integrations?.plaid?.accessToken);
+    const formattedConnection = formattedResponse.find(element => element?.institution === connection?.institution);
     if (!!formattedConnection) {
       const formattedConnectionIndex = formattedResponse.indexOf(formattedConnection);
       formattedResponse[formattedConnectionIndex] = {
@@ -127,7 +126,6 @@ export const getFormattedBankConnection = (shareableBankConnections: IShareableB
     } else {
       const newformattedConnection = {
         accessToken: connection?.integrations?.plaid?.accessToken,
-        fundingSourceToken: connection?.fundingSourceToken,
         institution: connection?.institution,
         accounts: [connection],
       };

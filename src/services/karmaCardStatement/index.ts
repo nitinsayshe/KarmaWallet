@@ -21,22 +21,21 @@ export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdP
 };
 
 export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCardStatement) => {
-  console.log('////// this is the statement data', statement);
-  const { startDate, endDate, transactions, userId, _id } = statement;
+  const { userId, _id } = statement;
   const user = await UserModel.findById(userId);
   if (!user) throw new CustomError(`A user with id ${userId} was not found.`, ErrorTypes.NOT_FOUND);
   const { first_name, last_name, address1, address2, postal_code, city, state } = user.integrations.marqeta;
   const fullName = `${first_name} ${last_name}`;
   const cityStatePostal = `${city}, ${state} ${postal_code}`;
-  const formattedStartDate = dayjs(startDate).format('MMM DD, YYYY');
-  const formattedEndDate = dayjs(endDate).format('MMM DD, YYYY');
-  const logoPath = path.resolve(__dirname, 'logos', 'karma_wallet_logo.png');
+  // const formattedStartDate = dayjs(startDate).format('MMM DD, YYYY');
+  // const formattedEndDate = dayjs(endDate).format('MMM DD, YYYY');
+  // const logoPath = path.resolve(__dirname, 'logos', 'karma_wallet_logo.png');
 
-  const statementTransactions = await TransactionModel.find({
-    _id: {
-      $in: transactions,
-    },
-  });
+  // const statementTransactions = await TransactionModel.find({
+  //   _id: {
+  //     $in: transactions,
+  //   },
+  // });
 
   const doc = new PDFDocument();
   const invoiceName = `karma-card-statement-${_id}.pdf`;
@@ -126,7 +125,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
     userId,
   });
 
-  const successfulPdf = await generateKarmaCardStatementPDF(newStatement);
-
+  await generateKarmaCardStatementPDF(newStatement);
+  // placeholder for testing, if generation fails we would also want to delete the statement maybe?
   await newStatement.delete();
 };

@@ -1,13 +1,14 @@
 import { Express, Router } from 'express';
 import * as UserController from '../controllers/user';
 import authenticate from '../middleware/authenticate';
+import biometricAuthenticate from '../middleware/biometricAuthenticate';
 import { KWRateLimiterKeyPrefixes } from '../middleware/rateLimiter';
 
 const router = Router();
 
 const registerRoutes = async (app: Express) => {
   router.post('/register', UserController.register);
-  router.post('/login', app.get(KWRateLimiterKeyPrefixes.Login), UserController.login);
+  router.post('/login', biometricAuthenticate, app.get(KWRateLimiterKeyPrefixes.Login), UserController.login);
   router.post('/deleteAccountRequest', UserController.deleteAccountRequest);
   router.post(
     '/password/token/create',

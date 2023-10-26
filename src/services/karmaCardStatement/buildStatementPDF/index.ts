@@ -15,8 +15,9 @@ dayjs.extend(utc);
 const formatNumberWithCommas = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 
 export const getDescription = (transaction: ITransaction) => {
-  const { type } = transaction;
+  // const { type } = transaction;
   // will either get the bank info, subtype or merchant here
+  console.log('//// update with new transaction code', transaction);
   return 'Bank of America';
 };
 
@@ -94,10 +95,9 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
 };
 
 export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCardStatement) => {
-  const { userId, _id, transactions, startDate, endDate, transactionTotals } = statement;
+  const { userId, _id, transactions } = statement;
   const user = await UserModel.findById(userId);
-  const hasTransactions = transactions.length > 0;
-
+  // if no transactions will need to do slightly different logic
   if (!user) throw new CustomError(`A user with id ${userId} was not found.`, ErrorTypes.CONFLICT);
   const { first_name, last_name, address1, address2, postal_code, city, state } = user.integrations.marqeta;
   const fullName = `${first_name} ${last_name}`;
@@ -196,15 +196,10 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
       header: { disabled: true },
       horizontal: { disabled: true },
     },
-    prepareRow: (row?: any, indexColumn?: number) => {
+    prepareRow: (row?: any) => {
       doc.font('Helvetica').fontSize(8);
       return row;
     },
   });
-
-  // const transactionsTable: any = {
-
-  // };
-
   doc.end();
 };

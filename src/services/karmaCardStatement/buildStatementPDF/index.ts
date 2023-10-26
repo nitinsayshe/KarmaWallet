@@ -109,15 +109,36 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     },
   });
 
-  const doc = new PDFKit();
+  let pageNumber = 0;
+  const doc = new PDFKit({ autoFirstPage: false, margins: { top: 72, bottom: 72, left: 72, right: 72 } });
   const invoiceName = `karma-card-statement-${_id}.pdf`;
   const invoicePath = path.resolve(__dirname, 'test_pdfs', invoiceName);
   const logoPath = path.resolve(__dirname, '', 'karma_wallet_logo.png');
+  const spaceFromSide = 72;
+  doc.on('pageAdded', () => {
+    pageNumber += 1;
+    const { bottom } = doc.page.margins;
+    doc.page.margins.bottom = 0;
+    doc.font('Helvetica').fontSize(8);
+    doc.text(
+      `Page ${pageNumber}`,
+      0.5 * (doc.page.width - 100),
+      doc.page.height - 50,
+      {
+        width: 100,
+        align: 'center',
+        lineBreak: false,
+      },
+    );
+
+    // Reset text writer position
+    doc.text('', 50, 50);
+    doc.page.margins.bottom = bottom;
+  });
   doc.pipe(fs.createWriteStream(invoicePath));
+  doc.addPage();
   doc.image(logoPath, { width: 100 }).moveDown();
   const { width } = doc.page;
-  const spaceFromSide = 72;
-
   doc.moveDown();
   doc.moveDown();
   doc
@@ -201,5 +222,34 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
       return row;
     },
   });
+  // page with dispute text
+  doc.addPage();
+  doc.image(logoPath, { width: 100 }).moveDown();
+  doc.moveDown();
+  doc.moveDown();
+  doc.moveDown();
+  doc
+    .text('General Purpose Accounts provided by:')
+    .moveDown()
+    .text('Pathward N.A.')
+    .text('5501 South Broadband Lane')
+    .text('Sioux Falls, SD 57108');
+
+  doc.moveDown();
+  doc.moveDown();
+  doc.moveDown();
+  doc.moveDown();
+  doc
+    .font('Helvetica-Bold')
+    .text('What to Do if You Think You Found a Mistake on Your Statement')
+    .moveDown()
+    .font('Helvetica')
+    .text('In case of errors or questions about your electronic transfers, please email us at support@karmawallet.io as soon as you can, if you think your statement or receipt is wrong or if you need more information about a transfer on the statement or receipt. We must hear from you no later than 60 days after we sent you the FIRST statement on which the error or problem appeared.')
+    .moveDown()
+    .text('(1) Tell us your name, Karma Wallet account number, and/or 16 digit card number.')
+    .text('(2) Describe the error or the transfer you are unsure about, and explain as clearly as you can why you believe it is an error or why you need more information.')
+    .text('(3) Tell us the dollar amount of the suspected error.')
+    .moveDown()
+    .text('We will investigate your complaint and will correct any error promptly. If we take more than 10 business days to do this, we will credit your account for the amount you think is in error, so that you will have the use of the money during the time it takes us to complete our investigation.');
   doc.end();
 };

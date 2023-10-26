@@ -26,16 +26,15 @@ admin.initializeApp({
 export interface IFCMNotification {
   title: string,
   body: string,
-  data?: {
-    redirectLink: string
-  },
+  type?: string
 }
 export interface IPushNotification {
   notification: IFCMNotification,
   token: String,
-  data?: {
-    redirectLink: string
-  },
+  data: {
+    type: string
+  }
+
 }
 export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification) => {
   // Get FCM token of the user
@@ -50,11 +49,10 @@ export const sendPushNotification = (user: IUserDocument, notificationObject: IF
         body: notificationObject.body,
       },
       token: fcmObject.token,
+      data: {
+        type: notificationObject.type,
+      },
     };
-    // Include data only if it exists
-    if (notificationObject.data) {
-      pushNotification.data = notificationObject.data;
-    }
 
     await admin.messaging().send(pushNotification)
       .catch((error: any) => {

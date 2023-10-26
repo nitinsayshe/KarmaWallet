@@ -27,7 +27,7 @@ import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
 import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
-import { sendNotificationForCardTransition, sendNotificationForReloadSuccess, sendNotificationForSpendingOnDining, sendNotificationForSpendingOnGas, sendNotificationOfBalanceThreshold, sendNotificationOfEarnedReward, sendNotificationOfFundsAvailable, sendNotificationOfRewardDeposit, sendNotificationOfTransaction } from '../integrations/firebaseCloudMessaging/fcmEvents';
+import { PushNotificationTypes, triggerPushNotification } from '../integrations/firebaseCloudMessaging/fcmEvents';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -403,7 +403,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
         // Send push notification of card transition
         if (user) {
-          sendNotificationForCardTransition(user, card?.state);
+          triggerPushNotification(PushNotificationTypes.CARD_TRANSITION, user, undefined, undefined, card?.state);
         }
       }
     }
@@ -441,8 +441,9 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         if (banktransfertransition.status === MarqetaWebhookConstants.COMPLETED && userTransitions?.userId) {
           const user = await UserModel.findById(userTransitions?.userId);
           if (user) {
-            sendNotificationForReloadSuccess(user, 'redirectLinkGoesHere!');
-            sendNotificationOfFundsAvailable(user);
+            triggerPushNotification(PushNotificationTypes.RELOAD_SUCCESS, user);
+
+            triggerPushNotification(PushNotificationTypes.FUNDS_AVAILABLE, user);
           }
         }
       }
@@ -467,8 +468,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         // event for Funding GPA via Funding Source Program (Reward related transaction)
         if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
           if (user && transaction?.gpa_order?.amount && transaction?.state === MarqetaWebhookConstants.COMPLETION) {
-            sendNotificationOfEarnedReward(user, transaction?.gpa_order?.amount);
-            sendNotificationOfRewardDeposit(user, transaction?.gpa_order?.amount);
+            triggerPushNotification(PushNotificationTypes.EARNED_CASHBACK, user, transaction?.gpa_order?.amount);
+            triggerPushNotification(PushNotificationTypes.REWARD_DEPOSIT, user, transaction?.gpa_order?.amount);
           }
         }
         if (transaction.type.includes(MarqetaWebhookConstants.PIN_DEBIT)) {
@@ -476,16 +477,19 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           const { code } = (transaction.response as any);
 
           // Check if transaction response code is of insufficient funds, to trigger low balance push notification
+
           if (InsufficientFundsConstants.CODES.includes(code) && user) {
-            sendNotificationOfBalanceThreshold(user, 'RedirectLinkGoesHere!');
+            triggerPushNotification(PushNotificationTypes.BALANCE_THRESHOLD, user);
           } else if (user && transaction?.state === MarqetaWebhookConstants.COMPLETION && transaction?.amount && transaction?.card_acceptor?.name) {
-            sendNotificationOfTransaction(user, transaction?.amount, transaction?.card_acceptor?.name);
+            triggerPushNotification(PushNotificationTypes.TRANSACTION_COMPLETE, user, transaction?.amount, transaction?.card_acceptor?.name);
 
             // Send push notification for spending on dining or gas
             if (MCCStandards.DINING.includes(transaction?.card_acceptor?.mcc)) {
-              sendNotificationForSpendingOnDining(user);
+              // Notification of transaction on dining
+              triggerPushNotification(PushNotificationTypes.TRANSACTION_OF_DINING, user);
             } else if (MCCStandards.GAS.includes(transaction?.card_acceptor?.mcc)) {
-              sendNotificationForSpendingOnGas(user);
+              // Notification of transaction on gas
+              triggerPushNotification(PushNotificationTypes.TRANSACTION_OF_GAS, user);
             }
           }
         }

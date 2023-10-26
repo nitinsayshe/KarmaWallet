@@ -1,15 +1,13 @@
+/* eslint-disable new-cap */
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
-import fs from 'fs';
-import path from 'path';
-import PDFDocument from 'pdfkit';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
-import { IShareableKarmaCardStatement, KarmaCardStatementModel } from '../../models/karmaCardStatement';
-import { TransactionModel } from '../../models/transaction';
-import { UserModel } from '../../models/user';
+import { KarmaCardStatementModel } from '../../models/karmaCardStatement';
+import { ITransaction, TransactionModel } from '../../models/transaction';
 import { IRequest } from '../../types/request';
 import { IKarmaCardStatementIdParam } from './types';
+import { generateKarmaCardStatementPDF } from './buildStatementPDF';
 
 export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
@@ -20,71 +18,20 @@ export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdP
   return karmaCardStatement;
 };
 
-export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCardStatement) => {
-  const { userId, _id } = statement;
-  const user = await UserModel.findById(userId);
-  if (!user) throw new CustomError(`A user with id ${userId} was not found.`, ErrorTypes.NOT_FOUND);
-  const { first_name, last_name, address1, address2, postal_code, city, state } = user.integrations.marqeta;
-  const fullName = `${first_name} ${last_name}`;
-  const cityStatePostal = `${city}, ${state} ${postal_code}`;
-  // const formattedStartDate = dayjs(startDate).format('MMM DD, YYYY');
-  // const formattedEndDate = dayjs(endDate).format('MMM DD, YYYY');
-  // const logoPath = path.resolve(__dirname, 'logos', 'karma_wallet_logo.png');
-
-  // const statementTransactions = await TransactionModel.find({
-  //   _id: {
-  //     $in: transactions,
-  //   },
-  // });
-
-  const doc = new PDFDocument();
-  const invoiceName = `karma-card-statement-${_id}.pdf`;
-  const invoicePath = path.resolve(__dirname, 'test_pdfs', invoiceName);
-  doc.pipe(fs.createWriteStream(invoicePath));
-
-  doc
-    .fontSize(10)
-    .font('Helvetica-Bold')
-    .text('Account Holder', 20, 20);
-
-  doc
-    .fontSize(10)
-    .font('Helvetica')
-    .text(fullName, 20, 35);
-
-  doc
-    .fontSize(10)
-    .font('Helvetica-Bold')
-    .text('Address', 160, 20);
-
-  doc
-    .fontSize(10)
-    .font('Helvetica')
-    .text(address1, 160, 35);
-
-  if (address2) {
-    doc
-      .fontSize(10)
-      .font('Helvetica')
-      .text(address2, 160, 50);
-
-    doc
-      .fontSize(10)
-      .font('Helvetica')
-      .text(cityStatePostal, 160, 75);
-  } else {
-    doc
-      .fontSize(10)
-      .font('Helvetica')
-      .text(cityStatePostal, 160, 50);
-  }
-
-  // doc.image(logoPath, {
-  //   fit: [1, 300],
-  //   align: 'center',
-  //   valign: 'center',
-  // });
-  doc.end();
+export const getStatementData = (transactionsArray?: ITransaction[]) => {
+  console.log('///// placeholder will have logic to get all of these properties generated');
+  return {
+    startDate: dayjs().subtract(1, 'month'),
+    endDate: dayjs(),
+    transactions: transactionsArray || [],
+    endBalance: 7000.43,
+    startBalance: 9000,
+    deposits: 100,
+    credits: 80,
+    debits: 300,
+    cashback: 20,
+    adjustments: 0,
+  };
 };
 
 export const generateKarmaCardStatement = async (userId: string, startDate: string, endDate: string) => {
@@ -99,8 +46,6 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
     endDate,
   });
 
-  console.log('////// this is the existing statement', existingStatement);
-
   if (!!existingStatement) {
     throw new CustomError(`A karma card statement for user ${userId} already exists for the date range ${startDate} - ${endDate}.`, ErrorTypes.CONFLICT);
   }
@@ -114,14 +59,13 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
     'integrations.marqeta': { $exists: true },
   });
 
-  console.log('///// these are the transactions', transactions);
-
   const transactionIds = transactions.map(t => t._id);
 
   const newStatement = await KarmaCardStatementModel.create({
     startDate: dayjs(startDate),
     endDate: dayjs(endDate),
     transactions: transactionIds,
+    transactionTotals: getStatementData(transactions),
     userId,
   });
 

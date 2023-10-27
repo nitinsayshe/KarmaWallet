@@ -11,12 +11,7 @@ import {
 } from '../../models/commissions';
 import { IRequest } from '../../types/request';
 import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
-import {
-  currentAccurualsQuery,
-  getNextPayoutDate,
-  getUserCurrentAccrualsBalance,
-  getUserLifetimeCashbackPayoutsTotal,
-} from './utils';
+import { currentAccurualsQuery, getNextPayoutDate, getUserCurrentAccrualsBalance, getUserLifetimeCashbackPayoutsTotal } from './utils';
 import { CommissionPayoutDayForUser, ErrorTypes, UserRoles, ImpactKarmaCompanyData } from '../../lib/constants';
 import { IUserDocument, UserModel } from '../../models/user';
 import {
@@ -29,6 +24,9 @@ import CustomError from '../../lib/customError';
 import { IPromo } from '../../models/promo';
 import { getUtcDate } from '../../lib/date';
 import { createPayoutNotificationFromCommissionPayout } from '../notification';
+import { GpaOrderTagEnum, IMarqetaCreateGPAorder } from '../../integrations/marqeta/types';
+import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/accountFundingSource';
+import { sendPayouts } from '../../controllers/integrations/marqeta/gpa';
 
 dayjs.extend(utc);
 
@@ -104,10 +102,7 @@ const getCommissionTypes = (type: CommissionType | string): CommissionType[] => 
     return [];
   }
   return split?.filter(
-    (t) => t === CommissionType.karma
-      || t === CommissionType.wildfire
-      || t === CommissionType.kard
-      || t === CommissionType.all,
+    (t) => t === CommissionType.karma || t === CommissionType.wildfire || t === CommissionType.kard || t === CommissionType.all,
   );
 };
 
@@ -192,11 +187,7 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
             user: user._id,
             status: {
               $in: [KarmaCommissionStatus.ReceivedFromVendor, KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment],
-              $nin: [
-                KarmaCommissionStatus.PendingPaymentToUser,
-                KarmaCommissionStatus.PaidToUser,
-                KarmaCommissionStatus.Failed,
-              ],
+              $nin: [KarmaCommissionStatus.PendingPaymentToUser, KarmaCommissionStatus.PaidToUser, KarmaCommissionStatus.Failed],
             },
           },
         },
@@ -236,9 +227,7 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
   }
 };
 
-export const generateCommissionPayoutOverview = async (
-  payoutDate: Date,
-): Promise<void | ICommissionPayoutOverviewDocument> => {
+export const generateCommissionPayoutOverview = async (payoutDate: Date): Promise<void | ICommissionPayoutOverviewDocument> => {
   const commissionPayouts = await CommissionPayoutModel.find({
     status: KarmaCommissionPayoutStatus.Pending,
   });
@@ -316,7 +305,7 @@ export const generateCommissionPayoutOverview = async (
 export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) => {
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
-    if (!commissionPayoutOverview) {
+    if (!commissionPayoutOverview?._id) {
       throw new CustomError('Commission payout overview not found.', ErrorTypes.INVALID_ARG);
     }
     if (
@@ -345,7 +334,7 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
     // amount in commissionPayoutOverview.destination.marqeta
 
     const paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
-    const marqetaFormattedPayouts: any[] = []; // Improve typing once we know what is needed
+    const marqetaFormattedPayouts: IMarqetaCreateGPAorder[] = [];
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
@@ -360,7 +349,7 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
     // If so, we add it to the paypal formatted payouts array
     for (const commissionPayout of commissionPayouts) {
       const payoutData = await CommissionPayoutModel.findById(commissionPayout);
-      if (!payoutData) {
+      if (!payoutData?._id) {
         console.log('[+] Commission payout not found. Skipping payout.');
         continue;
       }
@@ -371,7 +360,7 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
       }
 
       const user = await UserModel.findById(payoutData.user);
-      if (!user) {
+      if (!user?._id) {
         console.log('[+] User not found. Skipping payout.');
         continue;
       }
@@ -384,9 +373,15 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
       }
 
       if (!!marqeta?.userToken) {
-        // TODO: aggregate data needed for a marqueta payout
+        marqetaFormattedPayouts.push({
+          userToken: marqeta.userToken,
+          amount: payoutData.amount,
+          fees: 0,
+          currencyCode: 'USD',
+          tags: GpaOrderTagEnum.CashbackPayout,
+          fundingSourceToken: MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN,
+        });
       } else if (!!paypal?.payerId) {
-        // prepare for paypal payout
         paypalFormattedPayouts.push({
           recipient_type: 'PAYPAL_ID',
           amount: {
@@ -408,7 +403,8 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
     }
 
     if (!!marqetaFormattedPayouts.length) {
-      // TODO: send marqeta payouts
+      await sendPayouts(marqetaFormattedPayouts);
+      console.log('[+] Marqeta payouts sent');
     } else {
       console.log('[-] No valid marqeta payouts to send.');
     }
@@ -464,7 +460,7 @@ export const updateCommissionPayoutOverviewStatus = async (
 export const addCashbackToUser = async (req: IRequest<IAddKarmaCommissionToUserRequestParams>) => {
   const { userId, promo } = req.params;
 
-  const newCommission = await new CommissionModel({
+  const newCommission = new CommissionModel({
     merchant: new Types.ObjectId(ImpactKarmaCompanyData.merchantId),
     company: new Types.ObjectId(ImpactKarmaCompanyData.companyId),
     user: new Types.ObjectId(userId),

@@ -241,7 +241,7 @@ export const resendFailedPayoutsonCommissionOverview = async (commissionOverview
     let commissionPayoutAmount = 0;
     const commissionOverview = await CommissionPayoutOverviewModel.findOne({ _id: commissionOverviewId });
     const commissionPayoutIds = commissionOverview.commissionPayouts;
-    const paypalClient = await new PaypalClient();
+    const paypalClient = new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
 

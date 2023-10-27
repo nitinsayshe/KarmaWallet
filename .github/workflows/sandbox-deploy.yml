@@ -95,6 +95,7 @@ jobs:
     - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.SANDBOX_MARQETA_WEBHOOK_ID}}' >> .env
     - run: echo 'MARQETA_WEBHOOK_PASSWORD=${{secrets.SANDBOX_MARQETA_WEBHOOK_PASSWORD}}' >> .env
     - run: echo 'MARQETA_BASE_URL=${{secrets.SANDBOX_MARQETA_BASE_URL}}' >> .env
+    - run: echo 'MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN=${{secrets.STAGING_MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

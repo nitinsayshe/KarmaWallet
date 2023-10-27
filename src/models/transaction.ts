@@ -7,7 +7,7 @@ import {
   TransactionModelStateEnum,
   TransactionModelStateEnumValues,
 } from '../clients/marqeta/types';
-import { TransactionTypeEnumValues, TransactionTypeEnum } from '../lib/constants/transaction';
+import { TransactionTypeEnumValues, TransactionTypeEnum, TransactionSubtypeEnumValues, TransactionSubtypeEnum } from '../lib/constants/transaction';
 import { getUtcDate } from '../lib/date';
 import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 import { IModel, IRef } from '../types/model';
@@ -133,6 +133,7 @@ export interface IShareableTransaction {
   amount: number;
   status: TransactionModelStateEnumValues;
   type?: TransactionTypeEnumValues;
+  subType?: TransactionSubtypeEnumValues;
   reversed: boolean;
   date: Date;
   integrations?: ITransactionIntegrations;
@@ -202,6 +203,7 @@ export const transactionSchemaDefinition = {
   status: { type: String, enum: Object.values(TransactionModelStateEnum) },
   date: { type: Date },
   type: { type: String, enum: Object.values(TransactionTypeEnum) },
+  subType: { type: String, enum: Object.values(TransactionSubtypeEnum) },
   // if true, means this transaction was cancelled, bounced
   // refunded, or otherwise not processed.
   reversed: { type: Boolean },

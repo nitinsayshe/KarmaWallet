@@ -25,30 +25,51 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
     transactionsArray,
     userId,
   });
+
   const hasTransactions = transactionsArray.length > 0;
 
   let endBalanceFromLastStatement = 0;
-  if (hasTransactions) {
+  let transactionsSortedByDate: ITransaction[] | [] = [];
+  let endBalance = 0;
+  let startBalance = 0;
+  let debits = 0;
+  let deposits = 0;
+  let adjustments = 0;
+  let cashback = 0;
+  let credits = 0;
+
+  if (!!hasTransactions) {
     const statements = await KarmaCardStatementModel.find({ userId });
     if (statements.length === 0) return 0;
     const lastStatement = statements[statements.length - 1];
     endBalanceFromLastStatement = lastStatement.transactionTotals.endBalance;
+    transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
+    endBalance = transactionsSortedByDate[transactionsSortedByDate.length - 1].integrations.marqeta.gpa.available_balance;
+    startBalance = transactionsSortedByDate[0].integrations.marqeta.gpa.available_balance;
+    /// / update these when we have Andy's PR
+    debits = 187.52;
+    deposits = 200;
+    adjustments = 0;
+    cashback = 20.45;
+    credits = 40.23;
+  } else {
+    endBalance = endBalanceFromLastStatement;
+    startBalance = endBalanceFromLastStatement;
   }
-  const transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
 
   // get balance
 
   return {
     startDate: dayjs().subtract(1, 'month'),
     endDate: dayjs(),
-    transactions: transactionsArray || [],
-    endBalance: hasTransactions ? transactionsSortedByDate[transactionsSortedByDate.length - 1].integrations.marqeta.gpa.available_balance : endBalanceFromLastStatement,
-    startBalance: hasTransactions ? transactionsSortedByDate[0].integrations.marqeta.gpa.available_balance : endBalanceFromLastStatement,
-    deposits: 100,
-    credits: 80,
-    debits: 300,
-    cashback: 20,
-    adjustments: 0,
+    transactions: transactionsSortedByDate,
+    endBalance,
+    startBalance,
+    debits,
+    deposits,
+    adjustments,
+    cashback,
+    credits,
   };
 };
 

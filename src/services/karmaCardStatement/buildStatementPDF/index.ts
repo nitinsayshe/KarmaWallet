@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import path from 'path';
-import fs from 'fs';
 import PDFKit from 'pdfkit-table';
 import utc from 'dayjs/plugin/utc';
 import { ErrorTypes } from '../../../lib/constants';
@@ -103,8 +102,10 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
 
   let pageNumber = 0;
   const doc = new PDFKit({ autoFirstPage: false, margins: { top: 53, bottom: 53, left: 53, right: 53 } });
-  const invoiceName = `karma-card-statement-${_id}.pdf`;
-  const invoicePath = path.resolve(__dirname, 'test_pdfs', invoiceName);
+  // Uncommented the below if you want to save a PDF to the local test_pdfs folder
+  // const invoiceName = `karma-card-statement-${_id}.pdf`;
+  // const invoicePath = path.resolve(__dirname, 'test_pdfs', invoiceName);
+  // doc.pipe(fs.createWriteStream(invoicePath));
   const logoPath = path.resolve(__dirname, '', 'karma_wallet_logo.png');
   const spaceFromSide = 53;
   doc.on('pageAdded', () => {
@@ -127,7 +128,6 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     doc.text('', 50, 50);
     doc.page.margins.bottom = bottom;
   });
-  doc.pipe(fs.createWriteStream(invoicePath));
   doc.addPage();
   doc.image(logoPath, { width: 100 }).moveDown();
   const { width } = doc.page;
@@ -244,8 +244,5 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     .moveDown()
     .text('We will investigate your complaint and will correct any error promptly. If we take more than 10 business days to do this, we will credit your account for the amount you think is in error, so that you will have the use of the money during the time it takes us to complete our investigation.');
   doc.end();
-
-  console.log('////// thi is the doc', doc);
-
   return doc;
 };

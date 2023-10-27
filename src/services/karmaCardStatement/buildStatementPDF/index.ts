@@ -50,16 +50,7 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
 export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
   const { startBalance, endBalance, debits, deposits, adjustments, cashback, credits } = statement.transactionTotals;
   const { startDate, endDate } = statement;
-
-  console.log('///// data', {
-    endBalance,
-    startBalance,
-    debits,
-    deposits,
-    adjustments,
-    cashback,
-    credits,
-  });
+  const todaysDate = dayjs().format('MM/DD/YYYY');
 
   const totalsTable: any = {
     headers: [
@@ -73,7 +64,7 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
         'Open balance',
         startBalance === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(startBalance.toFixed(2)))}`,
         'Statement date',
-        dayjs(startDate).format('MM/DD/YYYY'),
+        todaysDate,
       ],
       [
         'Deposits (ACH)',
@@ -120,11 +111,11 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
   });
 
   let pageNumber = 0;
-  const doc = new PDFKit({ autoFirstPage: false, margins: { top: 72, bottom: 72, left: 72, right: 72 } });
+  const doc = new PDFKit({ autoFirstPage: false, margins: { top: 53, bottom: 53, left: 53, right: 53 } });
   const invoiceName = `karma-card-statement-${_id}.pdf`;
   const invoicePath = path.resolve(__dirname, 'test_pdfs', invoiceName);
   const logoPath = path.resolve(__dirname, '', 'karma_wallet_logo.png');
-  const spaceFromSide = 72;
+  const spaceFromSide = 53;
   doc.on('pageAdded', () => {
     pageNumber += 1;
     const { bottom } = doc.page.margins;
@@ -262,4 +253,8 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     .moveDown()
     .text('We will investigate your complaint and will correct any error promptly. If we take more than 10 business days to do this, we will credit your account for the amount you think is in error, so that you will have the use of the money during the time it takes us to complete our investigation.');
   doc.end();
+
+  console.log('////// thi is the doc', doc);
+
+  return doc;
 };

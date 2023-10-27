@@ -10,6 +10,7 @@ import { IKarmaCardStatementIdParam } from './types';
 import { generateKarmaCardStatementPDF } from './buildStatementPDF';
 import { UserModel } from '../../models/user';
 import { CardModel } from '../../models/card';
+import { uploadPDF } from '../upload';
 
 export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
@@ -21,13 +22,7 @@ export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdP
 };
 
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
-  console.log('////// here are the transactions and user id', {
-    transactionsArray,
-    userId,
-  });
-
   const hasTransactions = transactionsArray.length > 0;
-
   let endBalanceFromLastStatement = 0;
   let transactionsSortedByDate: ITransaction[] | [] = [];
   let endBalance = 0;
@@ -39,10 +34,6 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
   let credits = 0;
 
   if (!!hasTransactions) {
-    const statements = await KarmaCardStatementModel.find({ userId });
-    if (statements.length === 0) return 0;
-    const lastStatement = statements[statements.length - 1];
-    endBalanceFromLastStatement = lastStatement.transactionTotals.endBalance;
     transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
     endBalance = transactionsSortedByDate[transactionsSortedByDate.length - 1].integrations.marqeta.gpa.available_balance;
     startBalance = transactionsSortedByDate[0].integrations.marqeta.gpa.available_balance;
@@ -53,16 +44,19 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
     cashback = 20.45;
     credits = 40.23;
   } else {
-    endBalance = endBalanceFromLastStatement;
-    startBalance = endBalanceFromLastStatement;
+    const statements = await KarmaCardStatementModel.find({ userId });
+    const lastStatement = statements[statements.length - 1];
+    endBalanceFromLastStatement = lastStatement?.transactionTotals?.endBalance;
+    if (!statements.length) {
+      endBalance = 0;
+      startBalance = 0;
+    } else {
+      endBalance = endBalanceFromLastStatement;
+      startBalance = endBalanceFromLastStatement;
+    }
   }
 
-  // get balance
-
   return {
-    startDate: dayjs().subtract(1, 'month'),
-    endDate: dayjs(),
-    transactions: transactionsSortedByDate,
     endBalance,
     startBalance,
     debits,
@@ -77,6 +71,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
   if (!startDate) throw new CustomError('A start date is required.', ErrorTypes.INVALID_ARG);
   if (!endDate) throw new CustomError('An end date is required.', ErrorTypes.INVALID_ARG);
+  let statement;
   // throw error if already an existing statement for this user and time period
   const existingStatement = await KarmaCardStatementModel.findOne({
     userId,
@@ -87,32 +82,38 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   const user = await UserModel.findById(userId);
 
   if (!!existingStatement) {
-    throw new CustomError(`A karma card statement for user ${userId} already exists for the date range ${startDate} - ${endDate}.`, ErrorTypes.CONFLICT);
+    statement = existingStatement;
+  } else {
+    const transactions = await TransactionModel.find({
+      user: userId,
+      date: {
+        $gte: startDate,
+        $lte: endDate,
+      },
+      'integrations.marqeta': { $exists: true },
+    });
+
+    const transactionTotals = await getStatementData(transactions, user._id.toString());
+
+    statement = await KarmaCardStatementModel.create({
+      transactions,
+      startDate: dayjs(startDate),
+      endDate: dayjs(endDate),
+      transactionTotals,
+      userId,
+      pdf: '',
+    });
   }
 
-  const transactions = await TransactionModel.find({
-    user: userId,
-    date: {
-      $gte: startDate,
-      $lte: endDate,
-    },
-    'integrations.marqeta': { $exists: true },
-  });
+  const pdfDoc = await generateKarmaCardStatementPDF(statement);
 
-  const transactionIds = transactions.map(t => t._id);
+  if (!!pdfDoc) {
+    const s3Data = await uploadPDF(pdfDoc, statement._id.toString());
+    statement.pdf = s3Data.filename;
+  }
 
-  const newStatement = await KarmaCardStatementModel.create({
-    startDate: dayjs(startDate),
-    endDate: dayjs(endDate),
-    transactions: transactionIds,
-    transactionTotals: getStatementData(transactions, user._id.toString()),
-    userId,
-    pdf: '',
-  });
-
-  await generateKarmaCardStatementPDF(newStatement);
   // placeholder for testing, if generation fails we would also want to delete the statement maybe?
-  await newStatement.save();
+  await statement.save();
 };
 
 // run on the first of each month
@@ -126,8 +127,10 @@ export const generateKarmaCardStatementsForAllUsers = async () => {
   });
 
   const cardholders = karmaCards.map(c => c.userId.toString());
+  const noDuplicateCardholders = [...new Set(cardholders)];
 
-  for (const cardholder of cardholders) {
+  for (const cardholder of noDuplicateCardholders) {
+    console.log(`[+] Generating statement for user ${cardholder}`);
     await generateKarmaCardStatement(cardholder, firstDayOfLastMonth.toString(), lastDayofLastMonth.toString());
   }
 };

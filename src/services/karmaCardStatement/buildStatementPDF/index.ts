@@ -12,8 +12,6 @@ import { UserModel } from '../../../models/user';
 
 dayjs.extend(utc);
 
-const formatNumberWithCommas = (num: number) => num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
 export const getDescription = (transaction: ITransaction) => {
   // const { type } = transaction;
   // will either get the bank info, subtype or merchant here
@@ -37,8 +35,8 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
       return [
         dayjs(date).format('MM/DD'),
         type || 'Debit',
-        `$${formatNumberWithCommas(parseInt(amount.toFixed(2)))}`,
-        `$${formatNumberWithCommas(parseInt(balance.toFixed(2)))}`,
+        `$${amount.toFixed(2)}`,
+        `$${balance.toFixed(2)}`,
         getDescription(t),
       ];
     }),
@@ -50,7 +48,6 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
 export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
   const { startBalance, endBalance, debits, deposits, adjustments, cashback, credits } = statement.transactionTotals;
   const { startDate, endDate } = statement;
-  const todaysDate = dayjs().format('MM/DD/YYYY');
 
   const totalsTable: any = {
     headers: [
@@ -61,34 +58,28 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
     ],
     rows: [
       [
-        'Open balance',
-        startBalance === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(startBalance.toFixed(2)))}`,
-        'Statement date',
-        todaysDate,
-      ],
-      [
-        'Deposits (ACH)',
-        deposits === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(deposits.toFixed(2)))}`,
+        'Opening Balance',
+        startBalance === 0 ? '$0.00' : `$${startBalance.toFixed(2)}`,
         'Statement Period',
         `${dayjs(startDate).utc().format('MM/DD/YYYY')} - ${dayjs(endDate).utc().format('MM/DD/YYYY')} `,
       ],
       [
         'Total Credits',
-        credits === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(credits.toFixed(2)))}`,
-        'Cashback',
-        `$${formatNumberWithCommas(parseInt(cashback.toFixed(2)))}`,
-      ],
-      [
+        credits === 0 ? '$0.00' : `$${credits.toFixed(2)}`,
         'Total Debits',
-        debits === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(debits.toFixed(2)))}`,
-        'Adjustments/Disputes',
-        `$${formatNumberWithCommas(parseInt(adjustments.toFixed(2)))}`,
+        debits === 0 ? '$0.00' : `$${debits.toFixed(2)}`,
       ],
       [
+        'Deposits (ACH)',
+        deposits === 0 ? '$0.00' : `$${deposits.toFixed(2)}`,
+        'Adjustments/Disputes',
+        `$${adjustments.toFixed(2)}`,
+      ],
+      [
+        'Cashback',
+        `$${cashback.toFixed(2)}`,
         'Ending Balance',
-        endBalance === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(endBalance.toFixed(2)))}`,
-        '',
-        '',
+        endBalance === 0 ? '$0.00' : `$${endBalance.toFixed(2)}`,
       ],
     ],
   };

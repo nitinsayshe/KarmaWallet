@@ -135,7 +135,7 @@ export class AwsClient extends SdkClient {
       throw error;
     }
   };
-
+  // create an endpoint that will send in the id of the statement we want a pdf, get the url, stream it for s3 and return it to the frontend
   getS3ResourceStream = async (key: string, bucket = process.env.S3_BUCKET) => {
     try {
       const params = {
@@ -144,7 +144,6 @@ export class AwsClient extends SdkClient {
       };
 
       const stream = await this._client.s3.getObject(params).createReadStream();
-
       return stream;
     } catch (err) {
       const error = asCustomError(err);

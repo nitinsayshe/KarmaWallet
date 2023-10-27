@@ -11,6 +11,7 @@ import { generateKarmaCardStatementPDF } from './buildStatementPDF';
 import { UserModel } from '../../models/user';
 import { CardModel } from '../../models/card';
 import { uploadPDF } from '../upload';
+import { AwsClient } from '../../clients/aws';
 
 export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
@@ -133,4 +134,21 @@ export const generateKarmaCardStatementsForAllUsers = async () => {
     console.log(`[+] Generating statement for user ${cardholder}`);
     await generateKarmaCardStatement(cardholder, firstDayOfLastMonth.toString(), lastDayofLastMonth.toString());
   }
+};
+
+export const getKarmaCardStatementPDF = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
+  const { statementId } = req.params;
+  if (!statementId) {
+    throw new CustomError('A statement id is required.', ErrorTypes.INVALID_ARG);
+  }
+
+  const statement = await KarmaCardStatementModel.findOne({ _id: statementId });
+
+  if (!statement) {
+    throw new CustomError(`A statement with id ${statementId} was not found.`, ErrorTypes.NOT_FOUND);
+  }
+
+  const awsClient = new AwsClient();
+  const pdfStream = await awsClient.getS3ResourceStream(statement.pdf, 'karmacardstatements.karmawallet');
+  return pdfStream;
 };

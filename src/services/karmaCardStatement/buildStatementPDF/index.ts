@@ -51,6 +51,16 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
   const { startBalance, endBalance, debits, deposits, adjustments, cashback, credits } = statement.transactionTotals;
   const { startDate, endDate } = statement;
 
+  console.log('///// data', {
+    endBalance,
+    startBalance,
+    debits,
+    deposits,
+    adjustments,
+    cashback,
+    credits,
+  });
+
   const totalsTable: any = {
     headers: [
       { label: '', property: 'transactionText1', width: 90, height: 0, headerColor: 'white' },
@@ -61,31 +71,31 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
     rows: [
       [
         'Open balance',
-        `$${formatNumberWithCommas(parseInt(startBalance.toFixed(2)))}`,
+        startBalance === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(startBalance.toFixed(2)))}`,
         'Statement date',
         dayjs(startDate).format('MM/DD/YYYY'),
       ],
       [
         'Deposits (ACH)',
-        `$${formatNumberWithCommas(parseInt(deposits.toFixed(2)))}`,
+        deposits === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(deposits.toFixed(2)))}`,
         'Statement Period',
         `${dayjs(startDate).utc().format('MM/DD/YYYY')} - ${dayjs(endDate).utc().format('MM/DD/YYYY')} `,
       ],
       [
         'Total Credits',
-        `$${formatNumberWithCommas(parseInt(credits.toFixed(2)))}`,
+        credits === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(credits.toFixed(2)))}`,
         'Cashback',
         `$${formatNumberWithCommas(parseInt(cashback.toFixed(2)))}`,
       ],
       [
         'Total Debits',
-        `$${formatNumberWithCommas(parseInt(debits.toFixed(2)))}`,
+        debits === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(debits.toFixed(2)))}`,
         'Adjustments/Disputes',
         `$${formatNumberWithCommas(parseInt(adjustments.toFixed(2)))}`,
       ],
       [
         'Ending Balance',
-        `$${formatNumberWithCommas(parseInt(endBalance.toFixed(2)))}`,
+        endBalance === 0 ? '$0.00' : `$${formatNumberWithCommas(parseInt(endBalance.toFixed(2)))}`,
         '',
         '',
       ],

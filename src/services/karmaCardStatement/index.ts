@@ -8,6 +8,8 @@ import { ITransaction, TransactionModel } from '../../models/transaction';
 import { IRequest } from '../../types/request';
 import { IKarmaCardStatementIdParam } from './types';
 import { generateKarmaCardStatementPDF } from './buildStatementPDF';
+import { UserModel } from '../../models/user';
+import { CardModel } from '../../models/card';
 
 export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
@@ -18,14 +20,30 @@ export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdP
   return karmaCardStatement;
 };
 
-export const getStatementData = (transactionsArray?: ITransaction[]) => {
-  console.log('///// placeholder will have logic to get all of these properties generated');
+export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
+  console.log('////// here are the transactions and user id', {
+    transactionsArray,
+    userId,
+  });
+  const hasTransactions = transactionsArray.length > 0;
+
+  let endBalanceFromLastStatement = 0;
+  if (hasTransactions) {
+    const statements = await KarmaCardStatementModel.find({ userId });
+    if (statements.length === 0) return 0;
+    const lastStatement = statements[statements.length - 1];
+    endBalanceFromLastStatement = lastStatement.transactionTotals.endBalance;
+  }
+  const transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
+
+  // get balance
+
   return {
     startDate: dayjs().subtract(1, 'month'),
     endDate: dayjs(),
     transactions: transactionsArray || [],
-    endBalance: 7000.43,
-    startBalance: 9000,
+    endBalance: hasTransactions ? transactionsSortedByDate[transactionsSortedByDate.length - 1].integrations.marqeta.gpa.available_balance : endBalanceFromLastStatement,
+    startBalance: hasTransactions ? transactionsSortedByDate[0].integrations.marqeta.gpa.available_balance : endBalanceFromLastStatement,
     deposits: 100,
     credits: 80,
     debits: 300,
@@ -38,13 +56,14 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
   if (!startDate) throw new CustomError('A start date is required.', ErrorTypes.INVALID_ARG);
   if (!endDate) throw new CustomError('An end date is required.', ErrorTypes.INVALID_ARG);
-
   // throw error if already an existing statement for this user and time period
   const existingStatement = await KarmaCardStatementModel.findOne({
     userId,
     startDate,
     endDate,
   });
+
+  const user = await UserModel.findById(userId);
 
   if (!!existingStatement) {
     throw new CustomError(`A karma card statement for user ${userId} already exists for the date range ${startDate} - ${endDate}.`, ErrorTypes.CONFLICT);
@@ -65,11 +84,29 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
     startDate: dayjs(startDate),
     endDate: dayjs(endDate),
     transactions: transactionIds,
-    transactionTotals: getStatementData(transactions),
+    transactionTotals: getStatementData(transactions, user._id.toString()),
     userId,
+    pdf: '',
   });
 
   await generateKarmaCardStatementPDF(newStatement);
   // placeholder for testing, if generation fails we would also want to delete the statement maybe?
-  await newStatement.delete();
+  await newStatement.save();
+};
+
+// run on the first of each month
+export const generateKarmaCardStatementsForAllUsers = async () => {
+  const lastMonth = dayjs().utc().subtract(1, 'month');
+  const firstDayOfLastMonth = lastMonth.startOf('month');
+  const lastDayofLastMonth = lastMonth.endOf('month');
+
+  const karmaCards = await CardModel.find({
+    'integrations.marqeta': { $exists: true },
+  });
+
+  const cardholders = karmaCards.map(c => c.userId.toString());
+
+  for (const cardholder of cardholders) {
+    await generateKarmaCardStatement(cardholder, firstDayOfLastMonth.toString(), lastDayofLastMonth.toString());
+  }
 };

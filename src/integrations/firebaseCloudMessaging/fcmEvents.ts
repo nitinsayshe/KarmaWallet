@@ -1,4 +1,6 @@
 import { IFCMNotification, sendPushNotification } from '.';
+import { getUtcDate } from '../../lib/date';
+import { INotificationDocument, NotificationChannel, NotificationModel, NotificationStatus, NotificationType } from '../../models/notification';
 import { IUserDocument } from '../../models/user';
 
 export enum PushNotificationTypes {
@@ -13,15 +15,49 @@ export enum PushNotificationTypes {
   CARD_TRANSITION = 'CARD_TRANSITION'
 }
 
+export const createNotificationSchema = (notification: IFCMNotification, user: IUserDocument, amount?: number, companyName?: string): INotificationDocument => {
+  const notificationData = new NotificationModel({
+    type: undefined,
+    channel: NotificationChannel.Push,
+    user: user?._id.toString(),
+    body: notification.body,
+    data: undefined,
+    status: NotificationStatus.Read,
+    createdOn: getUtcDate(),
+  });
+  if (notification.type === PushNotificationTypes.EARNED_CASHBACK) {
+    notificationData.type = NotificationType.EarnedCashback;
+    notificationData.data = {
+      name: user?.name,
+      amount: String(amount),
+      companyName,
+    };
+  } else if (notification.type === PushNotificationTypes.REWARD_DEPOSIT) {
+    notificationData.type = NotificationType.Payout;
+    notificationData.data = {
+      name: user?.name,
+      payoutAmount: String(amount),
+    };
+  } else {
+    notificationData.type = NotificationType.Group;
+    notificationData.data = {
+      name: user?.name,
+      amount: String(amount),
+      companyName,
+    };
+  }
+  return notificationData;
+};
+
 export const sendNotificationOfEarnedReward = (user: IUserDocument, amount: number) => {
   if (amount) {
     const notification: IFCMNotification = {
       title: 'Received Cashback',
       body: `You earned $${amount} in Karma Cash`,
       type: PushNotificationTypes.EARNED_CASHBACK,
-
     };
-    sendPushNotification(user, notification);
+    const notificationsDataToSave = createNotificationSchema(notification, user, amount);
+    sendPushNotification(user, notification, notificationsDataToSave);
   }
 };
 
@@ -33,7 +69,8 @@ export const sendNotificationOfRewardDeposit = (user: IUserDocument, amount: num
       type: PushNotificationTypes.REWARD_DEPOSIT,
 
     };
-    sendPushNotification(user, notification);
+    const notificationsDataToSave = createNotificationSchema(notification, user, amount);
+    sendPushNotification(user, notification, notificationsDataToSave);
   }
 };
 
@@ -44,7 +81,8 @@ export const sendNotificationOfFundsAvailable = (user: IUserDocument) => {
     type: PushNotificationTypes.FUNDS_AVAILABLE,
 
   };
-  sendPushNotification(user, notification);
+  const notificationsDataToSave = createNotificationSchema(notification, user);
+  sendPushNotification(user, notification, notificationsDataToSave);
 };
 
 export const sendNotificationOfTransaction = (user: IUserDocument, amount: number, companyName: string) => {
@@ -55,7 +93,8 @@ export const sendNotificationOfTransaction = (user: IUserDocument, amount: numbe
       type: PushNotificationTypes.TRANSACTION_COMPLETE,
 
     };
-    sendPushNotification(user, notification);
+    const notificationsDataToSave = createNotificationSchema(notification, user, amount, companyName);
+    sendPushNotification(user, notification, notificationsDataToSave);
   }
 };
 
@@ -66,7 +105,8 @@ export const sendNotificationOfBalanceThreshold = (user: IUserDocument) => {
     type: PushNotificationTypes.BALANCE_THRESHOLD,
 
   };
-  sendPushNotification(user, notification);
+  const notificationsDataToSave = createNotificationSchema(notification, user);
+  sendPushNotification(user, notification, notificationsDataToSave);
 };
 
 export const sendNotificationForReloadSuccess = (user: IUserDocument) => {
@@ -76,7 +116,8 @@ export const sendNotificationForReloadSuccess = (user: IUserDocument) => {
     type: PushNotificationTypes.RELOAD_SUCCESS,
 
   };
-  sendPushNotification(user, notification);
+  const notificationsDataToSave = createNotificationSchema(notification, user);
+  sendPushNotification(user, notification, notificationsDataToSave);
 };
 
 export const sendNotificationForSpendingOnDining = (user: IUserDocument) => {
@@ -86,7 +127,8 @@ export const sendNotificationForSpendingOnDining = (user: IUserDocument) => {
     type: PushNotificationTypes.TRANSACTION_OF_DINING,
 
   };
-  sendPushNotification(user, notification);
+  const notificationsDataToSave = createNotificationSchema(notification, user);
+  sendPushNotification(user, notification, notificationsDataToSave);
 };
 
 export const sendNotificationForSpendingOnGas = (user: IUserDocument) => {
@@ -96,7 +138,8 @@ export const sendNotificationForSpendingOnGas = (user: IUserDocument) => {
     type: PushNotificationTypes.TRANSACTION_OF_GAS,
 
   };
-  sendPushNotification(user, notification);
+  const notificationsDataToSave = createNotificationSchema(notification, user);
+  sendPushNotification(user, notification, notificationsDataToSave);
 };
 
 export const sendNotificationForCardTransition = (user: IUserDocument, state: String) => {
@@ -107,11 +150,12 @@ export const sendNotificationForCardTransition = (user: IUserDocument, state: St
       type: PushNotificationTypes.CARD_TRANSITION,
 
     };
-    sendPushNotification(user, notification);
+    const notificationsDataToSave = createNotificationSchema(notification, user);
+    sendPushNotification(user, notification, notificationsDataToSave);
   }
 };
 
-export const triggerPushNotification = (notificationType: string, user: IUserDocument, amount?: number, companyName?: string, cardState?: String) => {
+export const triggerPushNotification = (notificationType: string, user: IUserDocument, amount?: number, companyName?: string) => {
   switch (notificationType) {
     case PushNotificationTypes.EARNED_CASHBACK:
       sendNotificationOfEarnedReward(user, amount);
@@ -143,10 +187,6 @@ export const triggerPushNotification = (notificationType: string, user: IUserDoc
 
     case PushNotificationTypes.TRANSACTION_OF_GAS:
       sendNotificationForSpendingOnGas(user);
-      break;
-
-    case PushNotificationTypes.CARD_TRANSITION:
-      sendNotificationForCardTransition(user, cardState);
       break;
 
     default:

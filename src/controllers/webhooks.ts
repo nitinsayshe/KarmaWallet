@@ -399,12 +399,6 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!cards) {
       for (const card of cards) {
         await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
-        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
-
-        // Send push notification of card transition
-        if (user) {
-          triggerPushNotification(PushNotificationTypes.CARD_TRANSITION, user, undefined, undefined, card?.state);
-        }
       }
     }
 
@@ -467,11 +461,12 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
         // event for Funding GPA via Funding Source Program (Reward related transaction)
         if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
-          if (user && transaction?.gpa_order?.amount && transaction?.state === MarqetaWebhookConstants.COMPLETION) {
+          if (user && transaction?.gpa_order?.amount && transaction?.gpa_order?.state === MarqetaWebhookConstants.COMPLETION) {
             triggerPushNotification(PushNotificationTypes.EARNED_CASHBACK, user, transaction?.gpa_order?.amount);
             triggerPushNotification(PushNotificationTypes.REWARD_DEPOSIT, user, transaction?.gpa_order?.amount);
           }
         }
+        // Transactions
         if (transaction.type.includes(MarqetaWebhookConstants.PIN_DEBIT)) {
           // Send push notification of transaction
           const { code } = (transaction.response as any);

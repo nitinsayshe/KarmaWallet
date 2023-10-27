@@ -1,4 +1,6 @@
+import { INotificationDocument } from '../../models/notification';
 import { IUserDocument } from '../../models/user';
+import { saveNotification } from '../../services/notification';
 import { getShareableUser } from '../../services/user';
 import 'dotenv/config';
 
@@ -36,7 +38,7 @@ export interface IPushNotification {
   }
 
 }
-export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification) => {
+export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification, notificationDataToSave: INotificationDocument) => {
   // Get FCM token of the user
   const { integrations } = getShareableUser(user);
   const { fcm } = integrations;
@@ -59,4 +61,9 @@ export const sendPushNotification = (user: IUserDocument, notificationObject: IF
         console.log('Error in sending push notification: ', error);
       });
   });
+  try {
+    if (notificationDataToSave) { saveNotification(notificationDataToSave); }
+  } catch (error) {
+    console.log('Error in saving notification', error);
+  }
 };

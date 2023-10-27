@@ -32,6 +32,7 @@ export enum NotificationChannel {
 export type EarnedCashbackNotificationData = {
   name: string;
   companyName: string;
+  amount?:string
 };
 
 export type PayoutNotificationData = {

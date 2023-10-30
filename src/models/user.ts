@@ -96,7 +96,7 @@ export interface IMarqetaUserIntegrations {
 }
 
 export interface IFCMTokenIntegration {
-  token: String;
+  token: string;
   deviceId: String;
 }
 

@@ -171,12 +171,12 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
 const getExistingTransactionFromMarqetaTransacationToken = async (
   token: string,
   procesingTransactions: ITransactionDocument[] = [],
-): Promise<ITransactionDocument | null> => {
+): Promise<{ transaction: ITransactionDocument | null; inProcessingTransactions: boolean }> => {
   // see if we're pocessing it right now
   // it would have to be already mapped to a kw transaction at this point.
   const existingProcessingTransaction = procesingTransactions.find((t) => t?.integrations?.marqeta?.token === token);
   if (!!existingProcessingTransaction) {
-    return existingProcessingTransaction;
+    return { transaction: existingProcessingTransaction, inProcessingTransactions: true };
   }
   try {
     const existingTransaction = await MongooseTransactionModel.findOne({
@@ -185,11 +185,11 @@ const getExistingTransactionFromMarqetaTransacationToken = async (
     if (!existingTransaction?._id) {
       throw Error(`No transaction found with token: ${token}`);
     }
-    return existingTransaction;
+    return { transaction: existingProcessingTransaction, inProcessingTransactions: false };
   } catch (err) {
     console.error(err);
     console.error(`Error looking up transaction with marqeta token: ${token}}`);
-    return null;
+    return { transaction: null, inProcessingTransactions: false };
   }
 };
 
@@ -257,11 +257,14 @@ const getSubtypeAndTypeFromMarqetaTransaction = (
 
 const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   t: EnrichedMarqetaTransaction,
-  procesingTransactions: ITransactionDocument[] = [],
+  processingTransactions: ITransactionDocument[] = [],
 ): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
-  const existingTransaction = await getExistingTransactionFromMarqetaTransacationToken(lookupToken, procesingTransactions);
+  const { transaction: existingTransaction, inProcessingTransactions } = await getExistingTransactionFromMarqetaTransacationToken(
+    lookupToken,
+    processingTransactions,
+  );
   const isTypeThatTriggersNewTransactionCreation = !!Object.values(TriggerCreateTransactionTypeEnum)?.find(
     (type) => type === t.marqeta_transaction.type,
   );
@@ -282,6 +285,16 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
       existingTransaction.status = t.marqeta_transaction.state;
     }
     existingTransaction.amount = t.amount;
+
+    if (inProcessingTransactions) {
+      processingTransactions = processingTransactions.map((transaction) => {
+        if (transaction.integrations.marqeta.token === existingTransaction.integrations.marqeta.token) {
+          return existingTransaction;
+        }
+        return transaction;
+      });
+      return;
+    }
     return existingTransaction;
   }
 
@@ -324,14 +337,25 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     throw new CustomError(`Error looking up the card associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
   }
 
-  const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
+  const toDate = (date: string): Date | null => {
+    if (!date) return null;
+    try {
+      return new Date(date);
+    } catch (err) {
+      console.log(`Error parsing date: ${date}`);
+      return null;
+    }
+  };
 
+  const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
   newTransaction.amount = t.amount;
   newTransaction.status = t.marqeta_transaction.state;
   newTransaction.integrations.marqeta = t.marqeta_transaction;
   newTransaction.type = types.type;
   newTransaction.subType = types.subType;
-  newTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
+  newTransaction.date = toDate(t?.marqeta_transaction?.created_time)
+    || toDate(t?.marqeta_transaction?.local_transaction_date)
+    || toDate(t?.marqeta_transaction?.user_transaction_time);
 
   return newTransaction;
 };
@@ -376,7 +400,13 @@ export const mapMarqetaTransactionsToKarmaTransactions = async (
   // map matched transactions to db transactions
   const updatedOrNewTransactions: ITransactionDocument[] = [];
   for (let i = 0; i < allTransactions.length; i++) {
-    updatedOrNewTransactions.push(await getNewOrUpdatedTransactionFromMarqetaTransaction(allTransactions[i], updatedOrNewTransactions));
+    try {
+      const updatedTransaction = await getNewOrUpdatedTransactionFromMarqetaTransaction(allTransactions[i], updatedOrNewTransactions);
+      if (!!updatedTransaction) updatedOrNewTransactions.push(updatedTransaction);
+    } catch (err) {
+      console.error(`Error mapping marqeta transaction to karma transaction: ${JSON.stringify(allTransactions[i])}`);
+      console.error(err);
+    }
   }
 
   return updatedOrNewTransactions;

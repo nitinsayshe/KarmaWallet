@@ -21,3 +21,12 @@ export const getKarmaCardStatementPDF: IRequestHandler<KarmaCardStatementTypes.I
     error(req, res, asCustomError(err));
   }
 };
+
+export const getKarmaCardStatements: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const karmaCardStatements = await KarmaCardStatementService.getKarmaCardStatements(req);
+    api(req, res, karmaCardStatements);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

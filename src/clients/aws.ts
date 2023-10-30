@@ -143,7 +143,7 @@ export class AwsClient extends SdkClient {
         Key: key,
       };
 
-      const stream = await this._client.s3.getObject(params).createReadStream();
+      const stream = await this._client.s3.getObject(params).promise();
       return stream;
     } catch (err) {
       const error = asCustomError(err);

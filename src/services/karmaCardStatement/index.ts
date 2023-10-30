@@ -152,3 +152,16 @@ export const getKarmaCardStatementPDF = async (req: IRequest<IKarmaCardStatement
   const pdfStream = await awsClient.getS3ResourceStream(statement.pdf, 'karmacardstatements.karmawallet');
   return pdfStream;
 };
+
+export const getKarmaCardStatements = async (req: IRequest<{}, {}, {}>) => {
+  const { requestor } = req;
+  const userId = requestor._id;
+
+  if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+  const karmaCardStatements = await KarmaCardStatementModel.find({
+    userId,
+  });
+
+  console.log('///// these are the karma card statements');
+  return karmaCardStatements;
+};

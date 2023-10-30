@@ -3,6 +3,8 @@ import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
+export const { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } = process.env;
+
 export class ACHSource {
   private _marqetaClient: MarqetaClient;
 

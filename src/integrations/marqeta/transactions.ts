@@ -1,30 +1,50 @@
-import { Transaction } from 'plaid';
-import { ObjectId } from 'mongoose';
-import { parseInt } from 'lodash';
 import dayjs from 'dayjs';
-import { Transactions } from '../../clients/marqeta/transactions';
+import { parseInt } from 'lodash';
+import { ObjectId } from 'mongoose';
+import { Transaction } from 'plaid';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { Transactions } from '../../clients/marqeta/transactions';
+import {
+  TransactionModel,
+  TransactionModelStateEnum,
+  TransactionModelStateEnumValues,
+  TransactionModelTypeEnum,
+  TransactionModelTypeEnumValues,
+} from '../../clients/marqeta/types';
+import { ErrorTypes } from '../../lib/constants';
+import {
+  AdjustmentTransactionTypeEnum,
+  CreditTransactionTypeEnum,
+  DebitTransactionTypeEnum,
+  DepositTransactionTypeEnum,
+  TransactionCreditSubtypeEnum,
+  TransactionSubtypeEnumValues,
+  TransactionTypeEnum,
+  TransactionTypeEnumValues,
+  TriggerClearingTransactionTypeEnum,
+  TriggerCreateTransactionTypeEnum,
+  TriggerDeclinedTransactionTypeEnum,
+  TriggerPendingTransactionTypeEnum,
+} from '../../lib/constants/transaction';
+import CustomError from '../../lib/customError';
+import { saveDocuments } from '../../lib/model';
+import { CardModel } from '../../models/card';
+import { CompanyModel, ICompanyDocument } from '../../models/company';
+import { ISectorDocument, SectorModel } from '../../models/sector';
+import { ITransactionDocument, TransactionModel as MongooseTransactionModel } from '../../models/transaction';
+import { UserModel } from '../../models/user';
+import { matchTransactionCompanies } from '../../services/transaction';
+import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+import { IMatchedTransaction } from '../plaid/types';
 import {
   EnrichedMarqetaTransaction,
+  GpaOrderTagEnum,
   IMarqetaMakeTransaction,
   IMarqetaMakeTransactionAdvice,
   IMarqetaMakeTransactionClearing,
   ListTransactionsResponse,
 } from './types';
-
-import { TransactionModel } from '../../clients/marqeta/types';
-import { matchTransactionCompanies } from '../../services/transaction';
-import { ITransactionDocument, TransactionModel as MongooseTransactionModel } from '../../models/transaction';
-import { IMatchedTransaction } from '../plaid/types';
-import { ErrorTypes } from '../../lib/constants';
-import CustomError from '../../lib/customError';
-import { CompanyModel, ICompanyDocument } from '../../models/company';
-import { ISectorDocument, SectorModel } from '../../models/sector';
-import { IRef } from '../../types/model';
-import { UserModel } from '../../models/user';
-import { CardModel } from '../../models/card';
-import { saveDocuments } from '../../lib/model';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -58,9 +78,7 @@ export const listTransaction = async (
   return { data: userResponse };
 };
 
-export const mapMarqetaTransactionToPlaidTransaction = (
-  marqetaTransactions: TransactionModel[],
-): EnrichedMarqetaTransaction[] => {
+export const mapMarqetaTransactionToPlaidTransaction = (marqetaTransactions: TransactionModel[]): EnrichedMarqetaTransaction[] => {
   const mapped: (Transaction & { marqeta_transaction: TransactionModel })[] = marqetaTransactions
     ?.map(
       (t) => ({
@@ -100,9 +118,7 @@ const matchTransactionsToCompaniesByMCC = async (
     ...(
       await Promise.all(
         notMatched.map(async (t) => {
-          const company = await getCompanyByMCC(
-            parseInt((t as EnrichedMarqetaTransaction)?.marqeta_transaction?.card_acceptor?.mcc, 10),
-          );
+          const company = await getCompanyByMCC(parseInt((t as EnrichedMarqetaTransaction)?.marqeta_transaction?.card_acceptor?.mcc, 10));
           if (!company?._id) {
             return null;
           }
@@ -155,12 +171,12 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
 const getExistingTransactionFromMarqetaTransacationToken = async (
   token: string,
   procesingTransactions: ITransactionDocument[] = [],
-): Promise<ITransactionDocument | null> => {
+): Promise<{ transaction: ITransactionDocument | null; inProcessingTransactions: boolean }> => {
   // see if we're pocessing it right now
   // it would have to be already mapped to a kw transaction at this point.
   const existingProcessingTransaction = procesingTransactions.find((t) => t?.integrations?.marqeta?.token === token);
   if (!!existingProcessingTransaction) {
-    return existingProcessingTransaction;
+    return { transaction: existingProcessingTransaction, inProcessingTransactions: true };
   }
   try {
     const existingTransaction = await MongooseTransactionModel.findOne({
@@ -169,41 +185,116 @@ const getExistingTransactionFromMarqetaTransacationToken = async (
     if (!existingTransaction?._id) {
       throw Error(`No transaction found with token: ${token}`);
     }
-    return existingTransaction;
+    return { transaction: existingProcessingTransaction, inProcessingTransactions: false };
   } catch (err) {
     console.error(err);
     console.error(`Error looking up transaction with marqeta token: ${token}}`);
-    return null;
+    return { transaction: null, inProcessingTransactions: false };
+  }
+};
+
+// Mappings were worked on on the google doc:
+// https://docs.google.com/document/d/1IxIzh-6Bn_wFa7zoNKOQVbTqNbmR6KB78eaXzOM4fdM/edit
+const getTransactionTypeFromMarqetaTransactionType = (
+  marqetaTransactionType: TransactionModelTypeEnumValues,
+): TransactionTypeEnumValues | undefined => {
+  if (!!Object.values(DepositTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
+    return TransactionTypeEnum.Deposit;
+  }
+  if (!!Object.values(DebitTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
+    return TransactionTypeEnum.Debit;
+  }
+  if (!!Object.values(CreditTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
+    return TransactionTypeEnum.Credit;
+  }
+  if (!!Object.values(AdjustmentTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
+    return TransactionTypeEnum.Adjustment;
+  }
+  return undefined;
+};
+
+const getUpdatedTransactionStatusFromRelatedTransactionType = (type: TransactionModelTypeEnumValues): TransactionModelStateEnumValues => {
+  if (!!Object.values(TriggerClearingTransactionTypeEnum).find((t) => t === type)) {
+    return TransactionModelStateEnum.Cleared;
+  }
+  if (!!Object.values(TriggerPendingTransactionTypeEnum).find((t) => t === type)) {
+    return TransactionModelStateEnum.Pending;
+  }
+  if (!!Object.values(TriggerDeclinedTransactionTypeEnum).find((t) => t === type)) {
+    return TransactionModelStateEnum.Declined;
+  }
+  return undefined; // return TransactionModelStateEnum.Error instead?
+};
+
+const getSubtypeAndTypeFromMarqetaTransaction = (
+  t: TransactionModel,
+): { subType?: TransactionSubtypeEnumValues; type?: TransactionTypeEnumValues } => {
+  const type = getTransactionTypeFromMarqetaTransactionType(t.type);
+
+  if (type !== TransactionTypeEnum.Credit) {
+    // we only have subtypes for credit transactions right now
+    return { subType: undefined, type };
+  }
+
+  const isRefund = t.type === TransactionModelTypeEnum.Refund;
+  if (isRefund) {
+    return { subType: TransactionCreditSubtypeEnum.Refund, type };
+  }
+
+  const isGPAOrderWithTags = t.type === TransactionModelTypeEnum.GpaCredit && !!t.gpa_order.tags;
+  if (isGPAOrderWithTags) {
+    // seperate the coma seperated tags
+    const tags = t.gpa_order.tags.split(',');
+    // tags should only contain one of the following:
+    if (tags.includes(GpaOrderTagEnum.CashbackPayout)) {
+      return { subType: TransactionCreditSubtypeEnum.Cashback, type };
+    }
+    if (tags.includes(GpaOrderTagEnum.EmployerGifting)) {
+      return { subType: TransactionCreditSubtypeEnum.Employer, type };
+    }
   }
 };
 
 const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   t: EnrichedMarqetaTransaction,
-  procesingTransactions: ITransactionDocument[] = [],
+  processingTransactions: ITransactionDocument[] = [],
 ): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
-  const existingTransaction = await getExistingTransactionFromMarqetaTransacationToken(
+  const { transaction: existingTransaction, inProcessingTransactions } = await getExistingTransactionFromMarqetaTransacationToken(
     lookupToken,
-    procesingTransactions,
+    processingTransactions,
   );
-  if (!!existingTransaction) {
-    console.log('Found existing transaction!!!!!!!!!!!!!!!!!!!!');
+  const isTypeThatTriggersNewTransactionCreation = !!Object.values(TriggerCreateTransactionTypeEnum)?.find(
+    (type) => type === t.marqeta_transaction.type,
+  );
+  if (!!existingTransaction && !isTypeThatTriggersNewTransactionCreation) {
     console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
     const hasPrecedingRelatedTransactionToken = !!t?.marqeta_transaction?.preceding_related_transaction_token;
     if (hasPrecedingRelatedTransactionToken) {
+      const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type);
       existingTransaction.integrations.marqeta = {
         ...existingTransaction.integrations.marqeta,
         relatedTransactions: !!existingTransaction?.integrations?.marqeta?.relatedTransactions
           ? [...existingTransaction.integrations.marqeta.relatedTransactions, t.marqeta_transaction]
           : [t.marqeta_transaction],
       };
+      existingTransaction.status = updatedStatus || existingTransaction.status;
     } else {
       existingTransaction.integrations.marqeta = t.marqeta_transaction;
+      existingTransaction.status = t.marqeta_transaction.state;
     }
-    existingTransaction.status = t.marqeta_transaction.state;
     existingTransaction.amount = t.amount;
 
+    if (inProcessingTransactions) {
+      processingTransactions = processingTransactions.map((transaction) => {
+        if (transaction.integrations.marqeta.token === existingTransaction.integrations.marqeta.token) {
+          return existingTransaction;
+        }
+        return transaction;
+      });
+      return;
+    }
     return existingTransaction;
   }
 
@@ -212,13 +303,9 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   let company = null;
 
   if (!!(t as EnrichedMarqetaTransaction & { company: ObjectId }).company) {
-    ({ company, sector } = await getCompanyAndSectorFromMarqetaTransaction(
-      t as EnrichedMarqetaTransaction & { company: ObjectId },
-    ));
+    ({ company, sector } = await getCompanyAndSectorFromMarqetaTransaction(t as EnrichedMarqetaTransaction & { company: ObjectId }));
   } else {
-    sector = await getSectorFromMCC(
-      parseInt((t as EnrichedMarqetaTransaction).marqeta_transaction?.card_acceptor?.mcc, 10),
-    );
+    sector = await getSectorFromMCC(parseInt((t as EnrichedMarqetaTransaction).marqeta_transaction?.card_acceptor?.mcc, 10));
   }
 
   if (!!sector) newTransaction.sector = sector;
@@ -234,10 +321,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     newTransaction.user = user;
   } catch (err) {
     console.error(err);
-    throw new CustomError(
-      `Error looking up the user associated with this transaction: ${JSON.stringify(t)} `,
-      ErrorTypes.SERVER,
-    );
+    throw new CustomError(`Error looking up the user associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
   }
 
   try {
@@ -250,15 +334,29 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     newTransaction.card = card;
   } catch (err) {
     console.error(err);
-    throw new CustomError(
-      `Error looking up the card associated with this transaction: ${JSON.stringify(t)} `,
-      ErrorTypes.SERVER,
-    );
+    throw new CustomError(`Error looking up the card associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
   }
+
+  const toDate = (date: string): Date | null => {
+    if (!date) return null;
+    try {
+      return new Date(date);
+    } catch (err) {
+      console.log(`Error parsing date: ${date}`);
+      return null;
+    }
+  };
+
+  const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
   newTransaction.amount = t.amount;
   newTransaction.status = t.marqeta_transaction.state;
   newTransaction.integrations.marqeta = t.marqeta_transaction;
-  newTransaction.date = new Date(t?.marqeta_transaction?.local_transaction_date);
+  newTransaction.type = types.type;
+  newTransaction.subType = types.subType;
+  newTransaction.date = toDate(t?.marqeta_transaction?.created_time)
+    || toDate(t?.marqeta_transaction?.local_transaction_date)
+    || toDate(t?.marqeta_transaction?.user_transaction_time);
+
   return newTransaction;
 };
 
@@ -302,9 +400,13 @@ export const mapMarqetaTransactionsToKarmaTransactions = async (
   // map matched transactions to db transactions
   const updatedOrNewTransactions: ITransactionDocument[] = [];
   for (let i = 0; i < allTransactions.length; i++) {
-    updatedOrNewTransactions.push(
-      await getNewOrUpdatedTransactionFromMarqetaTransaction(allTransactions[i], updatedOrNewTransactions),
-    );
+    try {
+      const updatedTransaction = await getNewOrUpdatedTransactionFromMarqetaTransaction(allTransactions[i], updatedOrNewTransactions);
+      if (!!updatedTransaction) updatedOrNewTransactions.push(updatedTransaction);
+    } catch (err) {
+      console.error(`Error mapping marqeta transaction to karma transaction: ${JSON.stringify(allTransactions[i])}`);
+      console.error(err);
+    }
   }
 
   return updatedOrNewTransactions;

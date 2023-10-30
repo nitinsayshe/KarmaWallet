@@ -398,6 +398,13 @@ export const CardPersonalizationPersoTypeEnum = {
 export type CardPersonalizationPersoTypeEnumValues = typeof CardPersonalizationPersoTypeEnum[keyof typeof CardPersonalizationPersoTypeEnum];
 
 export const TransactionModelTypeEnum = {
+  AchCancel: 'ach.cancel',
+  AchPull: 'ach.pull',
+  AchPullPending: 'ach.pull.pending',
+  AchPullReturned: 'ach.pull.returned',
+  AchPush: 'ach.push',
+  AchPushPending: 'ach.push.pending',
+  AchPushReturned: 'ach.push.returned',
   GpaCredit: 'gpa.credit',
   GpaCreditPending: 'gpa.credit.pending',
   GpaCreditPendingReversal: 'gpa.credit.pending.reversal',
@@ -464,6 +471,7 @@ export const TransactionModelTypeEnum = {
   TransferProgram: 'transfer.program',
   AuthorizationQuasiCash: 'authorization.quasi.cash',
   AuthorizationClearingQuasiCash: 'authorization.clearing.quasi.cash',
+  AuthorizationClearingRepresentment: 'authorization.clearing.representment',
   AuthorizationIncremental: 'authorization.incremental',
   GpaCreditAuthorization: 'gpa.credit.authorization',
   GpaCreditAuthorizationReversal: 'gpa.credit.authorization.reversal',

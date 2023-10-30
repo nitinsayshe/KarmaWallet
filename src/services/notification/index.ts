@@ -194,7 +194,7 @@ const getUserById = async (id: Types.ObjectId): Promise<IUserDocument | null> =>
   }
 };
 
-const saveNotification = async (notification: INotificationDocument): Promise<INotificationDocument> => {
+export const saveNotification = async (notification: INotificationDocument): Promise<INotificationDocument> => {
   try {
     const savedNotification = await notification.save();
     if (!savedNotification || !savedNotification._id) {

@@ -5,6 +5,7 @@ import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as GPAService from '../../../integrations/marqeta/gpa';
 import { ErrorTypes } from '../../../lib/constants';
+import { sleep } from '../../../lib/misc';
 
 export const fundUserGPA: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = async (req, res) => {
   try {
@@ -15,13 +16,30 @@ export const fundUserGPA: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = asyn
     const requiredFields = ['amount', 'currencyCode', 'fundingSourceToken'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
     if (!isValid) {
-      output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
+      output.error(
+        req,
+        res,
+        new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG),
+      );
       return;
     }
     const data = await GPAService.createGPAorder(params);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
+  }
+};
+
+export const addFundsToGPAFromProgramFundingSource = async (payout: IMarqetaCreateGPAorder) => {
+  try {
+    const requiredFields = ['amount', 'currencyCode', 'fundingSourceToken'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, payout);
+    if (!isValid) {
+      throw new Error(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`);
+    }
+    return GPAService.createGPAorder(payout);
+  } catch (err) {
+    console.error(err);
   }
 };
 
@@ -32,5 +50,17 @@ export const getGPAbalance: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = as
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
+  }
+};
+
+// send each payouts with a delay of 1 second
+export const sendPayouts = async (payouts: IMarqetaCreateGPAorder[]) => {
+  for (let i = 0; i < payouts.length; i++) {
+    console.log(`sending payout: ${i} of ${payouts.length}`);
+    const marqetaResponse = await addFundsToGPAFromProgramFundingSource(payouts[i]);
+    if (!marqetaResponse) {
+      console.log(`failed to send payout: ${i} of ${payouts.length}`);
+    }
+    sleep(1000);
   }
 };

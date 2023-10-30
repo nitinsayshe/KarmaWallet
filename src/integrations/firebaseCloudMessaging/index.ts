@@ -1,4 +1,6 @@
+import { INotificationDocument } from '../../models/notification';
 import { IUserDocument } from '../../models/user';
+import { saveNotification } from '../../services/notification';
 import { getShareableUser } from '../../services/user';
 import 'dotenv/config';
 
@@ -26,20 +28,32 @@ admin.initializeApp({
 export interface IFCMNotification {
   title: string,
   body: string,
+  type?: string
 }
 export interface IPushNotification {
   notification: IFCMNotification,
   token: String,
+  data: {
+    type: string
+  }
+
 }
-export const sendPushNotification = (user: IUserDocument, notification: IFCMNotification) => {
+export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification, notificationDataToSave: INotificationDocument) => {
   // Get FCM token of the user
   const { integrations } = getShareableUser(user);
   const { fcm } = integrations;
+
   fcm.forEach(async (fcmObject) => {
     // Send the notification to devices targeted by its FCM token
     const pushNotification: IPushNotification = {
-      notification,
+      notification: {
+        title: notificationObject.title,
+        body: notificationObject.body,
+      },
       token: fcmObject.token,
+      data: {
+        type: notificationObject.type,
+      },
     };
 
     await admin.messaging().send(pushNotification)
@@ -47,4 +61,9 @@ export const sendPushNotification = (user: IUserDocument, notification: IFCMNoti
         console.log('Error in sending push notification: ', error);
       });
   });
+  try {
+    if (notificationDataToSave) { saveNotification(notificationDataToSave); }
+  } catch (error) {
+    console.log('Error in saving notification', error);
+  }
 };

@@ -22,11 +22,11 @@ export const serviceAccount = {
 // Initialize the Firebase Admin SDK (should be done before sending messages)
 try {
   admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount as any),
+    credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
     // Other Firebase configuration options here
   });
 } catch (error) {
-  console.log('Error in initializing firebase app');
+  console.log('Error in initializing firebase app', error);
 }
 
 export interface IFCMNotification {
@@ -36,7 +36,7 @@ export interface IFCMNotification {
 }
 export interface IPushNotification {
   notification: IFCMNotification,
-  token: String,
+  token: string,
   data: {
     type: string
   }

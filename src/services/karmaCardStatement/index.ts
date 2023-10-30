@@ -162,6 +162,12 @@ export const getKarmaCardStatements = async (req: IRequest<{}, {}, {}>) => {
     userId,
   });
 
-  console.log('///// these are the karma card statements');
+  karmaCardStatements.map(statement => ({
+    _id: statement._id,
+    startDate: statement.startDate,
+    endDate: statement.endDate,
+    pdf: statement.pdf,
+  }));
+
   return karmaCardStatements;
 };

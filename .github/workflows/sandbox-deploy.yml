@@ -95,6 +95,17 @@ jobs:
     - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.SANDBOX_MARQETA_WEBHOOK_ID}}' >> .env
     - run: echo 'MARQETA_WEBHOOK_PASSWORD=${{secrets.SANDBOX_MARQETA_WEBHOOK_PASSWORD}}' >> .env
     - run: echo 'MARQETA_BASE_URL=${{secrets.SANDBOX_MARQETA_BASE_URL}}' >> .env
+    - run: echo 'FIREBASE_TYPEL=${{secrets.SANDBOX_FIREBASE_TYPE}}' >> .env
+    - run: echo 'FIREBASE_PROJECT_ID=${{secrets.SANDBOX_FIREBASE_PROJECT_ID}}' >> .env
+    - run: echo 'FIREBASE_PRIVATE_KEY_ID=${{secrets.SANDBOX_FIREBASE_PRIVATE_KEY_ID}}' >> .env
+    - run: echo 'FIREBASE_PRIVATE_KEY=${{secrets.SANDBOX_FIREBASE_PRIVATE_KEY}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_EMAIL=${{secrets.FIREBASE_CLIENT_EMAIL}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_ID=${{secrets.SANDBOX_FIREBASE_CLIENT_ID}}' >> .env
+    - run: echo 'FIREBASE_AUTH_URI=${{secrets.SANDBOX_FIREBASE_AUTH_URI}}' >> .env
+    - run: echo 'FIREBASE_TOKEN_URI=${{secrets.SANDBOX_FIREBASE_TOKEN_URI}}' >> .env
+    - run: echo 'FIREBASE_AUTH_PROVIDER_X509_CERT_URL=${{secrets.SANDBOX_FIREBASE_AUTH_PROVIDER_X509_CERT_URL}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_X509_CERT_URL=${{secrets.SANDBOX_FIREBASE_CLIENT_X509_CERT_URL}}' >> .env
+    - run: echo 'FIREBASE_UNIVERSE_DOMAIN=${{secrets.SANDBOX_FIREBASE_UNIVERSE_DOMAIN}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

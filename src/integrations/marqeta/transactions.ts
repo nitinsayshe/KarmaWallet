@@ -21,7 +21,7 @@ import {
   TransactionSubtypeEnumValues,
   TransactionTypeEnum,
   TransactionTypeEnumValues,
-  TriggerClearingTransactionTypeEnum,
+  TriggerClearedTransactionTypeEnum,
   TriggerCreateTransactionTypeEnum,
   TriggerDeclinedTransactionTypeEnum,
   TriggerPendingTransactionTypeEnum,
@@ -214,7 +214,7 @@ const getTransactionTypeFromMarqetaTransactionType = (
 };
 
 const getUpdatedTransactionStatusFromRelatedTransactionType = (type: TransactionModelTypeEnumValues): TransactionModelStateEnumValues => {
-  if (!!Object.values(TriggerClearingTransactionTypeEnum).find((t) => t === type)) {
+  if (!!Object.values(TriggerClearedTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Cleared;
   }
   if (!!Object.values(TriggerPendingTransactionTypeEnum).find((t) => t === type)) {

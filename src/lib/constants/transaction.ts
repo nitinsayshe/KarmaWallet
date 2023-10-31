@@ -43,6 +43,7 @@ export const TriggerDeclinedTransactionTypeEnum = {
   GpaCreditAuthorizationReversal: TransactionModelTypeEnum.GpaCreditAuthorizationReversal,
   GpaCreditNetworkloadReversal: TransactionModelTypeEnum.GpaCreditNetworkloadReversal,
   GpaCreditPendingReversal: TransactionModelTypeEnum.GpaCreditPendingReversal,
+  GpaDebitPendingReversal: TransactionModelTypeEnum.GpaCreditPendingReversal,
   GpaCreditReversal: TransactionModelTypeEnum.GpaCreditReversal,
   GpaDebitReversal: TransactionModelTypeEnum.GpaDebitReversal,
   OriginalCreditAuthPlusCaptureReversal: TransactionModelTypeEnum.OriginalCreditAuthPlusCaptureReversal,
@@ -55,17 +56,20 @@ export const TriggerDeclinedTransactionTypeEnum = {
   PushtocardReversal: TransactionModelTypeEnum.PushtocardReversal,
   RefundAuthorizationReversal: TransactionModelTypeEnum.RefundAuthorizationReversal,
 } as const;
-export type TriggerDeclinedTransactionTypeEnumValues = (typeof TriggerDeclinedTransactionTypeEnum)[keyof typeof TriggerDeclinedTransactionTypeEnum];
+export type TriggerDeclinedTransactionTypeEnumValues =
+  (typeof TriggerDeclinedTransactionTypeEnum)[keyof typeof TriggerDeclinedTransactionTypeEnum];
 
 export const TriggerPendingTransactionTypeEnum = {
   DirectdepositCreditPending: TransactionModelTypeEnum.DirectdepositCreditPending,
   DirectdepositDebitPending: TransactionModelTypeEnum.DirectdepositDebitPending,
   FeeChargePending: TransactionModelTypeEnum.FeeChargePending,
   GpaCreditPending: TransactionModelTypeEnum.GpaCreditPending,
+  GpaDebitPending: TransactionModelTypeEnum.GpaDebitPending,
 } as const;
-export type TriggerPendingTransactionTypeEnumValues = (typeof TriggerPendingTransactionTypeEnum)[keyof typeof TriggerPendingTransactionTypeEnum];
+export type TriggerPendingTransactionTypeEnumValues =
+  (typeof TriggerPendingTransactionTypeEnum)[keyof typeof TriggerPendingTransactionTypeEnum];
 
-export const TriggerClearingTransactionTypeEnum = {
+export const TriggerClearedTransactionTypeEnum = {
   AuthorizationClearing: TransactionModelTypeEnum.AuthorizationClearing,
   AuthorizationClearingAtmWithdrawal: TransactionModelTypeEnum.AuthorizationClearingAtmWithdrawal,
   AuthorizationClearingCashback: TransactionModelTypeEnum.AuthorizationClearingCashback,
@@ -73,8 +77,10 @@ export const TriggerClearingTransactionTypeEnum = {
   AuthorizationClearingQuasiCash: TransactionModelTypeEnum.AuthorizationClearingQuasiCash,
   PindebitAuthorizationClearing: TransactionModelTypeEnum.PindebitAuthorizationClearing,
   RefundAuthorizationClearing: TransactionModelTypeEnum.RefundAuthorizationClearing,
+  PindebitChargebackCompleted: TransactionModelTypeEnum.PindebitChargebackCompleted,
 } as const;
-export type TriggerClearingTransactionTypeEnumValues = (typeof TriggerClearingTransactionTypeEnum)[keyof typeof TriggerClearingTransactionTypeEnum];
+export type TriggerClearingTransactionTypeEnumValues =
+  (typeof TriggerClearedTransactionTypeEnum)[keyof typeof TriggerClearedTransactionTypeEnum];
 
 export const AdjustmentTransactionTypeEnum = {
   AuthorizaitonClearingChargebackProvisionalDebit: TransactionModelTypeEnum.AuthorizationClearingChargebackProvisionalDebit,
@@ -86,6 +92,12 @@ export const AdjustmentTransactionTypeEnum = {
   AuthorizationClearingQuasiCash: TransactionModelTypeEnum.AuthorizationClearingQuasiCash,
   AuthorizationClearingRepresentment: TransactionModelTypeEnum.AuthorizationClearingRepresentment,
   PinDebitChargebackProvisionalCredit: TransactionModelTypeEnum.PindebitChargebackProvisionalCredit,
+  PindebitChargeback: TransactionModelTypeEnum.PindebitChargeback,
+  PindebitChargebackCompleted: TransactionModelTypeEnum.PindebitChargebackCompleted,
+  PindebitChargebackProvisionalCredit: TransactionModelTypeEnum.PindebitChargebackProvisionalCredit,
+  PindebitChargebackProvisionalDebit: TransactionModelTypeEnum.PindebitChargebackProvisionalDebit,
+  PindebitChargebackReversal: TransactionModelTypeEnum.PindebitChargebackReversal,
+  PindebitChargebackWriteoff: TransactionModelTypeEnum.PindebitChargebackWriteoff,
 };
 export type AdjustmentTransactionTypeEnumValues = (typeof AdjustmentTransactionTypeEnum)[keyof typeof AdjustmentTransactionTypeEnum];
 
@@ -103,12 +115,15 @@ export const CreditTransactionTypeEnum = {
   RefundAuthorization: TransactionModelTypeEnum.RefundAuthorization,
   RefundAuthorizationClearing: TransactionModelTypeEnum.RefundAuthorizationClearing,
   RefundAuthorizationReversal: TransactionModelTypeEnum.RefundAuthorizationReversal,
+  PindebitRefund: TransactionModelTypeEnum.PindebitRefund,
+  PindebitRefundReversal: TransactionModelTypeEnum.PindebitRefundReversal,
+  PindebitCashback: TransactionModelTypeEnum.PindebitCashback,
 } as const;
 export type CreditTransactionTypeEnumValues = (typeof CreditTransactionTypeEnum)[keyof typeof CreditTransactionTypeEnum];
 
 export const DebitTransactionTypeEnum = {
-  Authoriation: TransactionModelTypeEnum.RefundAuthorization,
-  AuthorizaitonClearingCashback: TransactionModelTypeEnum.AuthorizationClearingCashback,
+  Authorization: TransactionModelTypeEnum.Authorization,
+  AuthorizationClearingCashback: TransactionModelTypeEnum.AuthorizationClearingCashback,
   AuthorizationATMWithdrawal: TransactionModelTypeEnum.AuthorizationAtmWithdrawal,
   AuthorizationAdvice: TransactionModelTypeEnum.AuthorizationAdvice,
   AuthorizationCashback: TransactionModelTypeEnum.AuthorizationCashback,
@@ -120,6 +135,19 @@ export const DebitTransactionTypeEnum = {
   AuthorizationReversal: TransactionModelTypeEnum.AuthorizationReversal,
   AuthorizationReversalIssuerexpiration: TransactionModelTypeEnum.AuthorizationReversalIssuerexpiration,
   AuthorizationStandin: TransactionModelTypeEnum.AuthorizationStandin,
+  GpaDebit: TransactionModelTypeEnum.GpaDebit,
+  GpaDebitIssueroperator: TransactionModelTypeEnum.GpaDebitIssueroperator,
+  GpaDebitNetworkload: TransactionModelTypeEnum.GpaDebitNetworkload,
+  GpaDebitPending: TransactionModelTypeEnum.GpaDebitPending,
+  GpaDebitPendingReversal: TransactionModelTypeEnum.GpaDebitPendingReversal,
+  GpaDebitReversal: TransactionModelTypeEnum.GpaDebitReversal,
+  Pindebit: TransactionModelTypeEnum.Pindebit,
+  PindebitAtmWithdrawal: TransactionModelTypeEnum.PindebitAtmWithdrawal,
+  PindebitAuthorization: TransactionModelTypeEnum.PindebitAuthorization,
+  PindebitQuasicash: TransactionModelTypeEnum.PindebitQuasicash,
+  PindebitAuthorizationClearing: TransactionModelTypeEnum.PindebitAuthorizationClearing,
+  PindebitAuthorizationReversal: TransactionModelTypeEnum.PindebitAuthorizationReversal,
+  PindebitAuthorizationReversalIssuerexpiration: TransactionModelTypeEnum.PindebitAuthorizationReversalIssuerexpiration,
 } as const;
 export type DebitTransactionTypeEnumValues = (typeof DebitTransactionTypeEnum)[keyof typeof DebitTransactionTypeEnum];
 

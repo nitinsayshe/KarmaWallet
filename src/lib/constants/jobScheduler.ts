@@ -50,4 +50,5 @@ export enum JobNames {
   UpdateWildfireCommissions = 'update-wildfire-commissions',
   SyncActiveCampaign = 'sync-active-campaign',
   SendAccountCreationReminderEmail = 'send-account-creation-reminder-email',
+  GenerateKarmaCardStatements = 'generate-karma-card-statements',
 }

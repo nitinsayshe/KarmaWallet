@@ -89,7 +89,6 @@ export const AdjustmentTransactionTypeEnum = {
   AuthorizationClearingChargebackCompleted: TransactionModelTypeEnum.AuthorizationClearingChargebackCompleted,
   AuthorizationClearingChargebackProvisionalCredit: TransactionModelTypeEnum.AuthorizationClearingChargebackProvisionalCredit,
   AuthorizationClearingChargebackReversal: TransactionModelTypeEnum.AuthorizationClearingChargebackReversal,
-  AuthorizationClearingQuasiCash: TransactionModelTypeEnum.AuthorizationClearingQuasiCash,
   AuthorizationClearingRepresentment: TransactionModelTypeEnum.AuthorizationClearingRepresentment,
   PinDebitChargebackProvisionalCredit: TransactionModelTypeEnum.PindebitChargebackProvisionalCredit,
   PindebitChargeback: TransactionModelTypeEnum.PindebitChargeback,
@@ -177,6 +176,7 @@ export const TriggerCreateTransactionTypeEnum = {
   DirectDepositCreditPending: TransactionModelTypeEnum.DirectdepositCreditPending,
   Pindebit: TransactionModelTypeEnum.Pindebit,
   PindebitAuthorization: TransactionModelTypeEnum.PindebitAuthorization,
+  PindebitChargeback: TransactionModelTypeEnum.PindebitChargeback,
   RefundAuthorization: TransactionModelTypeEnum.RefundAuthorization,
 } as const;
 export type TriggerCreateTransactionTypeEnumValues =

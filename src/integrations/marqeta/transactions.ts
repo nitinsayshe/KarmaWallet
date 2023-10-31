@@ -176,6 +176,7 @@ const getExistingTransactionFromMarqetaTransacationToken = async (
   // it would have to be already mapped to a kw transaction at this point.
   const existingProcessingTransaction = procesingTransactions.find((t) => t?.integrations?.marqeta?.token === token);
   if (!!existingProcessingTransaction) {
+    console.log(`Found existing processing transaction with token in procesingTransactions: ${token}`);
     return { transaction: existingProcessingTransaction, inProcessingTransactions: true };
   }
   try {
@@ -185,6 +186,7 @@ const getExistingTransactionFromMarqetaTransacationToken = async (
     if (!existingTransaction?._id) {
       throw Error(`No transaction found with token: ${token}`);
     }
+    console.log(`Found existing processing transaction with token in db: ${token}`);
     return { transaction: existingProcessingTransaction, inProcessingTransactions: false };
   } catch (err) {
     console.error(err);
@@ -265,6 +267,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     lookupToken,
     processingTransactions,
   );
+  console.log('existingTransaction', JSON.stringify(existingTransaction));
   const isTypeThatTriggersNewTransactionCreation = !!Object.values(TriggerCreateTransactionTypeEnum)?.find(
     (type) => type === t.marqeta_transaction.type,
   );
@@ -402,7 +405,18 @@ export const mapMarqetaTransactionsToKarmaTransactions = async (
   for (let i = 0; i < allTransactions.length; i++) {
     try {
       const updatedTransaction = await getNewOrUpdatedTransactionFromMarqetaTransaction(allTransactions[i], updatedOrNewTransactions);
-      if (!!updatedTransaction) updatedOrNewTransactions.push(updatedTransaction);
+      if (!!updatedTransaction) {
+        if (!updatedOrNewTransactions.find((t) => t._id.toString() === updatedTransaction._id.toString())) {
+          updatedOrNewTransactions.push(updatedTransaction);
+        } else {
+          updatedOrNewTransactions.map((t) => {
+            if (t._id.toString() === updatedTransaction._id.toString()) {
+              return updatedTransaction;
+            }
+            return t;
+          });
+        }
+      }
     } catch (err) {
       console.error(`Error mapping marqeta transaction to karma transaction: ${JSON.stringify(allTransactions[i])}`);
       console.error(err);

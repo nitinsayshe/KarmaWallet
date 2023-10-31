@@ -422,6 +422,7 @@ export const getShareableTransaction = ({
   lastModified,
   integrations,
   type,
+  subType,
 }: ITransactionDocument) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name
     ? getShareableUser(user as IUserDocument)
@@ -451,6 +452,7 @@ export const getShareableTransaction = ({
     createdOn,
     lastModified,
     type,
+    subType,
     status,
   };
 

@@ -168,7 +168,7 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
   }
 };
 
-const getExistingTransactionFromMarqetaTransacationToken = async (
+const getExistingTransactionFromMarqetaTransactionToken = async (
   token: string,
   procesingTransactions: ITransactionDocument[] = [],
 ): Promise<{ transaction: ITransactionDocument | null; inProcessingTransactions: boolean }> => {
@@ -261,7 +261,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 ): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
-  const { transaction: existingTransaction, inProcessingTransactions } = await getExistingTransactionFromMarqetaTransacationToken(
+  const { transaction: existingTransaction, inProcessingTransactions } = await getExistingTransactionFromMarqetaTransactionToken(
     lookupToken,
     processingTransactions,
   );

@@ -8,11 +8,27 @@ import CustomError from '../../../lib/customError';
 import { IShareableKarmaCardStatement } from '../../../models/karmaCardStatement';
 import { ITransaction, TransactionModel } from '../../../models/transaction';
 import { UserModel } from '../../../models/user';
+import { TransactionSubtypeEnum, TransactionTypeEnum } from '../../../lib/constants/transaction';
 
 dayjs.extend(utc);
 
 export const getDescription = (transaction: ITransaction) => {
-  // const { type } = transaction;
+  const { type, subType } = transaction;
+
+  if (type === TransactionTypeEnum.Credit) {
+    if (subType === TransactionSubtypeEnum.Cashback) {
+      return 'Cashback';
+    }
+
+    if (subType === TransactionSubtypeEnum.Employer) {
+      return 'Employer Gift';
+    }
+
+    if (subType === TransactionSubtypeEnum.Refund) {
+      const merchantForRefund = transaction.integrations.marqeta.card_acceptor.name;
+      return `Refund from ${merchantForRefund}`;
+    }
+  }
   // will either get the bank info, subtype or merchant here
   console.log('//// update with new transaction code', transaction);
   return 'Bank of America';

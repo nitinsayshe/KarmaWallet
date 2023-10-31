@@ -12,26 +12,70 @@ import { TransactionSubtypeEnum, TransactionTypeEnum } from '../../../lib/consta
 
 dayjs.extend(utc);
 
-export const getDescription = (transaction: ITransaction) => {
+export const getTransactionData = (transaction: ITransaction) => {
   const { type, subType } = transaction;
 
+  const transactionData = {
+    amountPrefix: '',
+    descriptionText: '',
+  };
+
+  // Credit Transaction
   if (type === TransactionTypeEnum.Credit) {
+    transactionData.amountPrefix = '+';
+
     if (subType === TransactionSubtypeEnum.Cashback) {
-      return 'Cashback';
+      transactionData.descriptionText = 'Cashback';
     }
 
     if (subType === TransactionSubtypeEnum.Employer) {
-      return 'Employer Gift';
+      transactionData.descriptionText = 'Employer Gift';
     }
 
     if (subType === TransactionSubtypeEnum.Refund) {
       const merchantForRefund = transaction.integrations.marqeta.card_acceptor.name;
-      return `Refund from ${merchantForRefund}`;
+      transactionData.descriptionText = `Refund from ${merchantForRefund}`;
     }
   }
-  // will either get the bank info, subtype or merchant here
-  console.log('//// update with new transaction code', transaction);
-  return 'Bank of America';
+
+  // Debit Transaction
+  if (type === TransactionTypeEnum.Debit) {
+    transactionData.amountPrefix = '-';
+    const marqetaType = transaction.integrations.marqeta.type;
+
+    if (marqetaType.includes('pindebit.atm.withdrawal')) {
+      transactionData.descriptionText = 'ATM Withdrawal';
+    }
+
+    if (marqetaType.includes('pindebit.cashback')) {
+      // will there be a merchant here?
+      transactionData.descriptionText = 'PIN-Debit Cash Back';
+    }
+
+    if (marqetaType.includes('pindebit.quasi.cash')) {
+      // will there be a merchant here?
+      transactionData.descriptionText = 'PIN-Debit Transaction';
+    }
+
+    if (marqetaType.includes('authorization')) {
+      transactionData.descriptionText = transaction.integrations.marqeta.card_acceptor.name;
+    }
+  }
+
+  // Adjustment Transaction
+  if (type === TransactionTypeEnum.Adjustment) {
+    transactionData.amountPrefix = '+';
+    transactionData.descriptionText = 'Adjustment';
+  }
+
+  // Deposit Transaction
+
+  if (type === TransactionTypeEnum.Deposit) {
+    transactionData.amountPrefix = '+';
+    transactionData.descriptionText = 'Deposit';
+  }
+
+  return transactionData;
 };
 
 export const buildTransactionsTable = (transactions: ITransaction[]) => {
@@ -46,13 +90,14 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
     rows: transactions.map(t => {
       const { date, integrations, type, amount } = t;
       const balance = integrations.marqeta.gpa.available_balance;
+      const transactionData = getTransactionData(t);
 
       return [
         dayjs(date).format('MM/DD'),
         type || 'Debit',
-        `$${amount.toFixed(2)}`,
+        `${transactionData.amountPrefix}$${amount.toFixed(2)}`,
         `$${balance.toFixed(2)}`,
-        getDescription(t),
+        transactionData.descriptionText,
       ];
     }),
   };

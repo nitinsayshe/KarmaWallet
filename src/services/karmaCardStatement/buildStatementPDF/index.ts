@@ -69,7 +69,6 @@ export const getTransactionData = (transaction: ITransaction) => {
   }
 
   // Deposit Transaction
-
   if (type === TransactionTypeEnum.Deposit) {
     transactionData.amountPrefix = '+';
     transactionData.descriptionText = 'Deposit';

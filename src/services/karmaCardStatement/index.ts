@@ -34,6 +34,17 @@ export const getSumOfTransactionsByTransactionSubType = (transactionSubType: Tra
   return sum;
 };
 
+export const getEndBalance = (transaction: ITransaction) => {
+  if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
+    const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
+    const mostRecentTransaction = sortByNewestFirst[0];
+    return mostRecentTransaction.gpa.available_balance + mostRecentTransaction.gpa.impacted_amount;
+  }
+  return transaction.integrations.marqeta.gpa.available_balance + transaction.integrations.marqeta.gpa.impacted_amount;
+};
+
+export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.available_balance + transaction.integrations.marqeta.gpa.impacted_amount;
+
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;
   let endBalanceFromLastStatement = 0;
@@ -48,8 +59,8 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
 
   if (!!hasTransactions) {
     transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
-    endBalance = transactionsSortedByDate[transactionsSortedByDate.length - 1].integrations.marqeta.gpa.available_balance;
-    startBalance = transactionsSortedByDate[0].integrations.marqeta.gpa.available_balance;
+    endBalance = getEndBalance(transactionsSortedByDate[0]);
+    startBalance = getStartBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
     const debitsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Debit, transactionsSortedByDate);
     const depositsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Deposit, transactionsSortedByDate);
     const adjustmentsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Adjustment, transactionsSortedByDate);

@@ -15,7 +15,7 @@ export enum PushNotificationTypes {
   CARD_TRANSITION = 'CARD_TRANSITION'
 }
 
-export const createNotificationSchema = (notification: IFCMNotification, user: IUserDocument, amount?: number, companyName?: string): INotificationDocument => {
+export const createNotificationSchema = (notification: IFCMNotification, user: IUserDocument, amount?: number, companyName?: string, cardStatus?: string): INotificationDocument => {
   const notificationData = new NotificationModel({
     type: undefined,
     channel: NotificationChannel.Push,
@@ -37,6 +37,11 @@ export const createNotificationSchema = (notification: IFCMNotification, user: I
     notificationData.data = {
       name: user?.name,
       payoutAmount: String(amount),
+    };
+  } else if (notification.type === PushNotificationTypes.CARD_TRANSITION) {
+    notificationData.type = NotificationType.CardTransition;
+    notificationData.data = {
+      cardStatus,
     };
   } else {
     notificationData.type = NotificationType.Group;
@@ -142,20 +147,20 @@ export const sendNotificationForSpendingOnGas = (user: IUserDocument) => {
   sendPushNotification(user, notification, notificationsDataToSave);
 };
 
-export const sendNotificationForCardTransition = (user: IUserDocument, state: String) => {
-  if (state) {
+export const sendNotificationForCardTransition = (user: IUserDocument, cardStatus: string) => {
+  if (cardStatus) {
     const notification: IFCMNotification = {
       title: 'Security Alert!',
-      body: state === 'ACTIVE' ? 'You have successfully activated your card.' : 'You have successfully deactivated your card.',
+      body: cardStatus === 'ACTIVE' ? 'You have successfully activated your card.' : 'You have successfully deactivated your card.',
       type: PushNotificationTypes.CARD_TRANSITION,
 
     };
-    const notificationsDataToSave = createNotificationSchema(notification, user);
+    const notificationsDataToSave = createNotificationSchema(notification, user, undefined, undefined, cardStatus);
     sendPushNotification(user, notification, notificationsDataToSave);
   }
 };
 
-export const triggerPushNotification = (notificationType: string, user: IUserDocument, amount?: number, companyName?: string) => {
+export const triggerPushNotification = (notificationType: string, user: IUserDocument, amount?: number, companyName?: string, cardStatus?: string) => {
   switch (notificationType) {
     case PushNotificationTypes.EARNED_CASHBACK:
       sendNotificationOfEarnedReward(user, amount);
@@ -187,6 +192,11 @@ export const triggerPushNotification = (notificationType: string, user: IUserDoc
 
     case PushNotificationTypes.TRANSACTION_OF_GAS:
       sendNotificationForSpendingOnGas(user);
+      break;
+
+    // Card Transition notification is added for testing purpose only
+    case PushNotificationTypes.CARD_TRANSITION:
+      sendNotificationForCardTransition(user, cardStatus);
       break;
 
     default:

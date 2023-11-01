@@ -12,7 +12,9 @@ import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { IMarqetaCardProducts, IMarqetaUserState, ReasonCode } from './utils';
+import { IMarqetaUserState, ReasonCode } from './utils';
+
+export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
 export interface IKarmaCardRequestBody {
   address1: string;
@@ -93,8 +95,8 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
       marqetaUserResponse.status = IMarqetaUserState.active;
       [virtualCardResponse, physicalCardResponse] = await Promise.all([
-        await createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.virtualCard }),
-        await createCard({ userToken: marqetaUserResponse.token, cardProductToken: IMarqetaCardProducts.physicalCard }),
+        await createCard({ userToken: marqetaUserResponse.token, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN }),
+        await createCard({ userToken: marqetaUserResponse.token, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN }),
       ]);
     }
   }

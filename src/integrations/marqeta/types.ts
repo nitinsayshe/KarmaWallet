@@ -72,10 +72,15 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
   cardProductToken: string;
 }
 
+export interface IMarqetaLoadGpaFromProgramFundingSource {
+  userId: string;
+  amount: number;
+}
+
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   tags?: string; // comma separated list of tags
   amount: number;
-  fees: number;
+  fees?: number;
   currencyCode: string;
   fundingSourceToken: string;
 }
@@ -86,7 +91,7 @@ export const GpaOrderTagEnum = {
 } as const;
 export type GpaOrderTagEnumValues = (typeof GpaOrderTagEnum)[keyof typeof GpaOrderTagEnum];
 
-export interface IMarqetaProcessKyc extends IMarqetaUserToken {}
+export interface IMarqetaProcessKyc extends IMarqetaUserToken { }
 
 enum IMarqetaCardState {
   ACTIVE = 'ACTIVE',

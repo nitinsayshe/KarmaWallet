@@ -171,13 +171,13 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
 const getExistingTransactionFromMarqetaTransacationToken = async (
   token: string,
   procesingTransactions: ITransactionDocument[] = [],
-): Promise<{ transaction: ITransactionDocument | null; inProcessingTransactions: boolean }> => {
+): Promise<ITransactionDocument | null> => {
   // see if we're pocessing it right now
   // it would have to be already mapped to a kw transaction at this point.
   const existingProcessingTransaction = procesingTransactions.find((t) => t?.integrations?.marqeta?.token === token);
   if (!!existingProcessingTransaction) {
     console.log(`Found existing processing transaction with token in procesingTransactions: ${token}`);
-    return { transaction: existingProcessingTransaction, inProcessingTransactions: true };
+    return existingProcessingTransaction;
   }
   try {
     const existingTransaction = await MongooseTransactionModel.findOne({
@@ -186,12 +186,12 @@ const getExistingTransactionFromMarqetaTransacationToken = async (
     if (!existingTransaction?._id) {
       throw Error(`No transaction found with token: ${token}`);
     }
-    console.log(`Found existing processing transaction with token in db: ${token}`);
-    return { transaction: existingProcessingTransaction, inProcessingTransactions: false };
+    console.log(`Found existing processing transaction with token in db: ${existingTransaction}`);
+    return existingTransaction;
   } catch (err) {
     console.error(err);
     console.error(`Error looking up transaction with marqeta token: ${token}}`);
-    return { transaction: null, inProcessingTransactions: false };
+    return null;
   }
 };
 
@@ -263,7 +263,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 ): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
-  const { transaction: existingTransaction, inProcessingTransactions } = await getExistingTransactionFromMarqetaTransacationToken(
+  const existingTransaction = await getExistingTransactionFromMarqetaTransacationToken(
     lookupToken,
     processingTransactions,
   );
@@ -289,15 +289,6 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     }
     existingTransaction.amount = t.amount;
 
-    if (inProcessingTransactions) {
-      processingTransactions = processingTransactions.map((transaction) => {
-        if (transaction.integrations.marqeta.token === existingTransaction.integrations.marqeta.token) {
-          return existingTransaction;
-        }
-        return transaction;
-      });
-      return;
-    }
     return existingTransaction;
   }
 

@@ -6,11 +6,6 @@ export enum IMarqetaUserState {
   limited = 'LIMITED'
 }
 
-export enum IMarqetaCardProducts {
-  virtualCard = 'kw_virt_cp',
-  physicalCard = 'kw_phys_cp'
-}
-
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet card should arrive in 3-5 business days.',
   NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',

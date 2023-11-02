@@ -421,6 +421,8 @@ export const getShareableTransaction = ({
   createdOn,
   lastModified,
   integrations,
+  type,
+  subType,
 }: ITransactionDocument) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name
     ? getShareableUser(user as IUserDocument)
@@ -449,6 +451,8 @@ export const getShareableTransaction = ({
     reversed,
     createdOn,
     lastModified,
+    type,
+    subType,
     status,
   };
 
@@ -504,7 +508,7 @@ export const getShareableTransaction = ({
       settlementDate,
       currencyCode,
       merchantName: integrations?.marqeta?.card_acceptor?.name || null,
-      cardMask: integrations.marqeta.card.last_four,
+      cardMask: integrations.marqeta?.card?.last_four || null,
     };
 
     shareableTransaction.integrations = {

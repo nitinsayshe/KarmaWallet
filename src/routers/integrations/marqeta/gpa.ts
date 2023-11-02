@@ -5,7 +5,7 @@ import authenticate from '../../../middleware/authenticate';
 const router = Router();
 
 router.route('/addfund')
-  .post(authenticate, GPAController.fundUserGPA);
+  .post(GPAController.fundUserGPAFromProgramFundingSource);
 
 router.route('/balance')
   .get(authenticate, GPAController.getGPAbalance);

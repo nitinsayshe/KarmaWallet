@@ -135,4 +135,20 @@ export class AwsClient extends SdkClient {
       throw error;
     }
   };
+
+  getS3ResourceStream = async (key: string, bucket = process.env.S3_BUCKET) => {
+    try {
+      const params = {
+        Bucket: bucket,
+        Key: key,
+      };
+
+      const stream = await this._client.s3.getObject(params).promise();
+      return stream;
+    } catch (err) {
+      const error = asCustomError(err);
+      Logger.error(error);
+      throw error;
+    }
+  };
 }

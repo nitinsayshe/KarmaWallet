@@ -6,6 +6,7 @@ import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact } from '../../integrations/activecampaign';
+import { deleteKardUsersForUser } from '../../integrations/kard';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -34,12 +35,15 @@ import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscription
 import * as TokenService from '../token';
 import { validatePassword } from './utils/validate';
 import { resendEmailVerification } from './verification';
-import { deleteKardUser } from '../../integrations/kard';
 
 dayjs.extend(utc);
 
 export interface IVerifyTokenBody {
   token: string;
+}
+
+export interface IEmail {
+  email: string;
 }
 
 export interface ILoginData {
@@ -513,10 +517,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     // delete user from active campaign
     if (email) await deleteContact(email);
     await cancelUserSubscriptions(user._id.toString());
-
-    if (!!user?.integrations?.kard?.userId) {
-      await deleteKardUser(user as IUserDocument | Types.ObjectId);
-    }
+    await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
 
     await deleteUserData(user._id);
 
@@ -525,4 +526,11 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     throw asCustomError(err);
   }
   return { message: 'OK' };
+};
+
+export const checkIfEmailAlreadyInUse = async (email: string) => {
+  email = email?.toLowerCase();
+  const user = await UserModel.findOne({ 'emails.email': email });
+  if (!!user) throw new CustomError(`Email: ${email} already belongs to a user.`, ErrorTypes.CONFLICT);
+  return true;
 };

@@ -50,7 +50,8 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.UpdateRareProjectAverage, null, { jobId: `${JobNames.UpdateRareProjectAverage}-daily`, repeat: { cron: '0 17 * * *' } });
     this.createJob(JobNames.UserMonthlyImpactReport, { generateFullHistory: false }, { jobId: `${JobNames.UserMonthlyImpactReport}-monthly`, repeat: { cron: '0 3 1 * *' } });
-    this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 0 */6 * * *' } });
+    this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
+    this.createJob(JobNames.UpdateKardMerchantsAndData, null, { jobId: `${JobNames.UpdateKardMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
     // TODO: verify dates of Wildfire payment to Karma, adjust corn job accordingly
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
     this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 *' } });
@@ -61,14 +62,12 @@ export class _MainBullClient extends _BullClient {
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION }, { jobId: `${JobNames.SyncActiveCampaign}-article-recommendation`, repeat: { cron: '0 2 * * 1' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.UNLINKED_AND_REMOVED_ACCOUNTS }, { jobId: `${JobNames.SyncActiveCampaign}-unlinked-and-removed-accounts`, repeat: { cron: '0 4 9 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.CASHBACK_SIMULATION }, { jobId: `${JobNames.SyncActiveCampaign}-cashback-simulation`, repeat: { cron: '0 4 1 * *' } });
-      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.CASHBACK_SIMULATION }, { jobId: `${JobNames.SyncActiveCampaign}-cashback-simulation-weekly`, repeat: { cron: '0 4 * * MON' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.SPENDING_ANALYSIS }, { jobId: `${JobNames.SyncActiveCampaign}-spending-analysis`, repeat: { cron: '0 4 28 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.DAILY }, { jobId: `${JobNames.SyncActiveCampaign}-daily`, repeat: { cron: '0 7 * * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.WEEKLY }, { jobId: `${JobNames.SyncActiveCampaign}-weekly`, repeat: { cron: '0 7 * * 0' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 7 1 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
-      this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-daily`, repeat: { cron: '0 2 * * *' } });
 
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,

@@ -82,7 +82,7 @@ jobs:
     - run: echo 'ENCRYPTION_SECRET_KEY=${{secrets.STAGING_ENCRYPTION_SECRET_KEY}}' >> .env
     - run: echo 'ENCRYPTION_SECRET_INITIALIZATION_VECTOR=${{secrets.STAGING_ENCRYPTION_INITIALIZATION_VECTOR}}' >> .env
     - run: echo 'ENCRYPTION_METHOD=${{secrets.STAGING_ENCRYPTION_METHOD}}' >> .env
-    - run: echo 'KARD_KARD_COGNITO_URL=${{secrets.STAGING_KARD_COGNITO_URL}}' >> .env
+    - run: echo 'KARD_COGNITO_URL=${{secrets.STAGING_KARD_COGNITO_URL}}' >> .env
     - run: echo 'KARD_CLIENT_HASH=${{secrets.STAGING_KARD_CLIENT_HASH}}' >> .env
     - run: echo 'KARD_API_URL=${{secrets.STAGING_KARD_API_URL}}' >> .env
     - run: echo 'KARD_WEBHOOK_KEY=${{secrets.STAGING_KARD_WEBHOOK_KEY}}' >> .env
@@ -97,5 +97,5 @@ jobs:
     - run: echo 'MARQETA_WEBHOOK_PASSWORD=${{secrets.PRODUCTION_MARQETA_WEBHOOK_PASSWORD}}' >> .env
     - run: echo 'MARQETA_BASE_URL=https://sandbox-api.marqeta.com/v3/' >> .env
     - run: npm i
-    - run: pm2 restart all
+    - run: pm2 restart all --update-env
 

@@ -120,7 +120,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
       await ac.importContacts(contacts);
     }
 
-    sleep(msDelayBetweenBatches);
+    await sleep(msDelayBetweenBatches);
 
     hasNextPage = userBatch?.hasNextPage || false;
     page++;
@@ -274,7 +274,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
   });
 
   const maxBatchSize = 100;
-  const msBetweenBatches = 2000;
+  const msBetweenBatches = 1500;
   let firstItemInCurrentBatch = 0;
   let lastItemInCurrentBatch = userLists.length > maxBatchSize ? maxBatchSize - 1 : userLists.length - 1;
   let batchSize = userLists.length > maxBatchSize ? maxBatchSize : userLists.length;
@@ -298,7 +298,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
       )),
     );
 
-    sleep(msBetweenBatches);
+    await sleep(msBetweenBatches);
 
     batchSize = lastItemInCurrentBatch + maxBatchSize >= userLists.length
       ? userLists.length - lastItemInCurrentBatch
@@ -707,7 +707,7 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
-  const msDelayBetweenBatches = 1500;
+  const msDelayBetweenBatches = 2000;
   const batchLimit = 10;
   const emailSchema = z.string().email();
 
@@ -717,28 +717,40 @@ export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClien
   let page = 1;
   let hasNextPage = true;
   while (hasNextPage) {
-    const userBatch = await UserModel.paginate({
-      page,
-      limit: batchLimit,
-    });
+    try {
+      console.log(`fetching page ${page} of users`);
+      const userBatch = await UserModel.paginate(
+        {},
+        {
+          page,
+          limit: batchLimit,
+        },
+      );
 
-    console.log(`Working on batch ${page} of ${userBatch.totalPages}`);
-    await Promise.all(
-      userBatch.docs.map(async (user) => {
-        const email = user?.emails?.find((e) => e.primary)?.email;
-        const validationResult = emailSchema.safeParse(email);
-        if (!(validationResult as SafeParseError<string>)?.error) {
-          return null;
-        }
-        await removeDuplicateContactAutomaitons(email);
-      }),
-    );
-    console.log(`Processed ${userBatch.docs.length} contacts to ActiveCampaign`);
+      console.log(`Working on batch ${page} of ${userBatch.totalPages}`);
+      await Promise.all(
+        userBatch.docs.map(async (user) => {
+          const email = user?.emails?.find((e) => e.primary)?.email;
+          const validationResult = emailSchema.safeParse(email);
+          if (!(validationResult as SafeParseError<string>)?.error) {
+            return null;
+          }
+          await removeDuplicateContactAutomaitons(email);
+        }),
+      );
+      console.log(`Processed ${userBatch.docs.length} contacts`);
+      console.log('users:');
+      console.log(JSON.stringify(userBatch, null, 2));
 
-    sleep(msDelayBetweenBatches);
+      await sleep(msDelayBetweenBatches);
 
-    hasNextPage = userBatch?.hasNextPage || false;
-    page++;
+      hasNextPage = userBatch?.hasNextPage || false;
+      page = userBatch?.nextPage;
+    } catch (e) {
+      console.log(e);
+      hasNextPage = false;
+      continue;
+    }
   }
 };
 

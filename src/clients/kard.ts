@@ -1,5 +1,5 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
-import { createHmac } from 'crypto';
+import crypto, { createHmac } from 'crypto';
 import { StateAbbreviation } from '../lib/constants';
 import { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
@@ -43,7 +43,7 @@ export type Transaction = {
   description: string; // merchant name
   description2?: string;
   coreProviderId?: string; // name of processor
-  msc?: string; // merchant category code
+  mcc?: string; // merchant category code
   transactionDate?: string; // timestamp required for REVERSED, DECLINED, RETURNED status - do not include if settled
   authorizationDate?: string; // timestamp required for APPROVED status
   settledDate?: string; // timestamp required for SETTLED status
@@ -228,7 +228,7 @@ export const verifyWebhookSignature = (body: EarnedRewardWebhookBody, signature:
     const stringified = JSON.stringify(body);
 
     const hash = createHmac('sha256', KARD_WEBHOOK_KEY).update(stringified).digest('base64');
-    if (hash === signature) {
+    if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
       return null;
     }
 

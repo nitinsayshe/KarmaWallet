@@ -26,6 +26,7 @@ export interface IKardOffer {
   minTransactionAmount?: number;
   maxTransactionAmount?: number;
 }
+
 export interface IWildfireDomain {
   Domain: string;
   ID: string;
@@ -84,6 +85,7 @@ export interface IShareableMerchant {
   _id: ObjectId;
   name: string;
   integrations: IMerchantIntegrations;
+  karmaCollectiveMember?: boolean;
 }
 
 export interface IMerchant extends IShareableMerchant {
@@ -99,6 +101,7 @@ export interface IMerchantDocument extends IMerchant, Document {
 
 const merchant = new Schema({
   name: { type: String },
+  karmaCollectiveMember: { type: Boolean },
   integrations: {
     wildfire: {
       type: {

@@ -39,11 +39,6 @@ export interface IActiveCampaignUserIntegration {
   latestSync: Date;
 }
 
-export interface IKardIntegration {
-  userId: string;
-  dateAccountCreated: Date;
-}
-
 export interface IUrlParam {
   key: string;
   value: string;
@@ -69,7 +64,6 @@ export interface IUserIntegrations {
   rare?: IRareUserIntegration;
   paypal?: IPaypalUserIntegration;
   activecampaign?: IActiveCampaignUserIntegration;
-  kard?: IKardIntegration;
   shareasale?: IShareASale;
   referrals?: IReferrals;
   promos?: IRef<ObjectId, IPromo | IPromoDocument>[];
@@ -91,6 +85,7 @@ export interface IUser extends IShareableUser {
   password: string;
   lastModified: Date;
   integrations?: IUserIntegrations;
+  isTestIdentity?: boolean;
   articles?: {
     queued?: {
       date: Date;
@@ -121,6 +116,7 @@ const userSchema = new Schema({
   password: { type: String, required: true },
   dateJoined: { type: Date, default: () => getUtcDate() },
   zipcode: { type: String },
+  isTestIdentity: { type: Boolean },
   role: {
     type: String,
     default: 'none',
@@ -162,12 +158,6 @@ const userSchema = new Schema({
     activecampaign: {
       type: {
         latestSyncDate: { type: Date },
-      },
-    },
-    kard: {
-      type: {
-        userId: { type: String },
-        dateAccountCreated: { type: Date },
       },
     },
     shareasale: {

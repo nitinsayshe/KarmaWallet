@@ -100,7 +100,7 @@ export const getCompanyByMCC = async (mcc: number): Promise<ICompanyDocument> =>
     }
     return company;
   } catch (err) {
-    console.error(err);
+    console.log(err);
     return null;
   }
 };
@@ -140,14 +140,13 @@ const getCompanyAndSectorFromMarqetaTransaction = async (
     const companyId = t.company;
     const company = await CompanyModel.findById(companyId);
     if (!company?._id) {
-      console.error(`No company with id ${companyId} found`);
-      return { company: null, sector: null };
+      throw new Error(`No company with id ${companyId} found`);
     }
     const sector = company.sectors.find((s) => s.primary)?.sector as IRef<ObjectId, ISectorDocument>;
     return { company, sector };
   } catch (err) {
-    console.error(`Error getting company from transaction match: ${JSON.stringify(t)} `);
-    console.error(err);
+    console.log(`Error getting company from transaction match: ${JSON.stringify(t)} `);
+    console.log(err);
     return { company: null, sector: null };
   }
 };
@@ -157,13 +156,12 @@ const getSectorFromMCC = async (mcc: number): Promise<IRef<ObjectId, ISectorDocu
   try {
     const sector = await SectorModel.findOne({ mccs: mcc });
     if (!sector?._id) {
-      console.error(`No sector with mcc ${mcc} found`);
-      return null;
+      throw new Error(`No sector with mcc ${mcc} found`);
     }
     return sector;
   } catch (err) {
-    console.error(`Error getting sector from mcc: ${mcc} `);
-    console.error(err);
+    console.log(`Error getting sector from mcc: ${mcc} `);
+    console.log(err);
     return null;
   }
 };
@@ -189,8 +187,8 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
     console.log(`Found existing processing transaction with token in db: ${existingTransaction}`);
     return existingTransaction;
   } catch (err) {
-    console.error(err);
-    console.error(`Error looking up transaction with marqeta token: ${token}}`);
+    console.log(`Error looking up transaction with marqeta token: ${token}}`);
+    console.log(err);
     return null;
   }
 };
@@ -257,6 +255,21 @@ const getSubtypeAndTypeFromMarqetaTransaction = (
   }
 };
 
+const toDate = (date: string): Date | null => {
+  if (!date) return null;
+  try {
+    return new Date(date);
+  } catch (err) {
+    console.log(`Couldn't parse date: ${date}`);
+    return null;
+  }
+};
+
+const getDateFromMarqetaTransaction = (marqetaTransaction: TransactionModel): Date | null => toDate(marqetaTransaction?.created_time)
+  || toDate(marqetaTransaction?.local_transaction_date)
+  || toDate(marqetaTransaction?.user_transaction_time)
+  || null;
+
 const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   t: EnrichedMarqetaTransaction,
   processingTransactions: ITransactionDocument[] = [],
@@ -272,7 +285,6 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     (type) => type === t.marqeta_transaction.type,
   );
   if (!!existingTransaction && !isTypeThatTriggersNewTransactionCreation) {
-    console.log(`Updating existing transaciton: ${JSON.stringify(existingTransaction)}`);
     const hasPrecedingRelatedTransactionToken = !!t?.marqeta_transaction?.preceding_related_transaction_token;
     if (hasPrecedingRelatedTransactionToken) {
       const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type);
@@ -331,25 +343,13 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     throw new CustomError(`Error looking up the card associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
   }
 
-  const toDate = (date: string): Date | null => {
-    if (!date) return null;
-    try {
-      return new Date(date);
-    } catch (err) {
-      console.log(`Error parsing date: ${date}`);
-      return null;
-    }
-  };
-
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
-  newTransaction.amount = t.amount;
-  newTransaction.status = t.marqeta_transaction.state;
+  newTransaction.amount = t?.amount;
+  newTransaction.status = t.marqeta_transaction?.state;
   newTransaction.integrations.marqeta = t.marqeta_transaction;
-  newTransaction.type = types.type;
-  newTransaction.subType = types.subType;
-  newTransaction.date = toDate(t?.marqeta_transaction?.created_time)
-    || toDate(t?.marqeta_transaction?.local_transaction_date)
-    || toDate(t?.marqeta_transaction?.user_transaction_time);
+  newTransaction.type = types?.type;
+  newTransaction.subType = types?.subType;
+  newTransaction.date = getDateFromMarqetaTransaction(t.marqeta_transaction);
 
   return newTransaction;
 };

@@ -46,6 +46,19 @@ export const resendEmailVerification = async (req: IRequest<{}, {}, Partial<IEma
   return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
 };
 
+export const verifyBiometric = async (email: string, biometricSignature: string, biometricKey: any) => {
+  try {
+    // Create a verifier using the public key
+    const verifier = crypto.createVerify('RSA-SHA256');
+    verifier.update(email);
+    // Verify the signature
+    const isValid = verifier.verify(biometricKey, biometricSignature, 'base64');
+    return isValid;
+  } catch (err) {
+    return false;
+  }
+};
+
 export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
   const { tokenValue } = req.body;
@@ -58,19 +71,6 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
   // TODO: update to verified when support for owner approval is added.
   await UserGroupModel.updateMany({ status: UserGroupStatus.Unverified, user: requestor, email }, { status: UserGroupStatus.Verified });
   return { email };
-};
-
-export const verifyBiometric = async (email:string, biometricSignature:string, biometricKey:any) => {
-  try {
-    // Create a verifier using the public key
-    const verifier = crypto.createVerify('RSA-SHA256');
-    verifier.update(email);
-    // Verify the signature
-    const isValid = verifier.verify(biometricKey, biometricSignature, 'base64');
-    return isValid;
-  } catch (err) {
-    return false;
-  }
 };
 
 // provides endpoint for UI to check if an email already exists on a user

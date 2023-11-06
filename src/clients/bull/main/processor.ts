@@ -28,6 +28,7 @@ import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayo
 import * as GenerateAdminSummaryReport from '../../../jobs/generateAdminSummaryReport';
 import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
 import * as SyncActiveCampaign from '../../../jobs/syncActiveCampaign';
+import * as GenerateKarmaCardStatements from '../../../jobs/generateKarmaCardStatements';
 import { INextJob } from '../base';
 import { globalPlaidTransactionMapping } from '../../../services/scripts/global_plaid_transaction_mapping';
 
@@ -159,6 +160,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateKardMerchantsAndData:
       result = await UpdateKardMerchantsAndData.exec();
+      break;
+    case JobNames.GenerateKarmaCardStatements:
+      result = await GenerateKarmaCardStatements.exec();
       break;
     case JobNames.GenerateCommissionPayouts:
       result = await GenerateCommissionPayouts.exec();

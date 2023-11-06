@@ -276,7 +276,7 @@ export const updateWildfireMerchants = async () => {
       },
     );
     if (existingMerchant) {
-      console.log('[+] updated existing merchant domain for ', existingMerchant.name);
+      console.log('[+] NEW: updated existing merchant domain for ', existingMerchant.name);
       count += 1;
     }
   }

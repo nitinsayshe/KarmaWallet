@@ -399,6 +399,10 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!cards) {
       for (const card of cards) {
         await CardModel.findOneAndUpdate({ 'integrations.marqeta.card_token': card?.card_token }, { 'integrations.marqeta.state': card?.state }, { new: true });
+        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
+        if (user) {
+          triggerPushNotification(PushNotificationTypes.CARD_TRANSITION, user, undefined, undefined, card?.state.toString());
+        }
       }
     }
 

@@ -14,6 +14,8 @@ export enum NotificationType {
   Group = 'transaction',
   EarnedCashback = 'earnedCashback',
   Payout = 'payout',
+  // Card Transition notification is added for testing purpose only
+  CardTransition = 'cardTransition'
 }
 export enum NotificationStatus {
   /* if queuing Notifications for future dates:
@@ -32,13 +34,18 @@ export enum NotificationChannel {
 export type EarnedCashbackNotificationData = {
   name: string;
   companyName: string;
-  amount?:string
+  amount?: string
 };
 
 export type PayoutNotificationData = {
   name: string;
   payoutAmount: string;
 };
+
+// Card Transition notification is added for testing purpose only
+export type CardTransitionNotificationData = {
+  cardStatus: string
+}
 
 export interface IShareableNotification {
   createdOn: Date;
@@ -52,7 +59,7 @@ export interface INotification extends IShareableNotification {
   type: NotificationType;
   user: IRef<ObjectId, IUserDocument>;
   resource: IRef<ObjectId, Document>;
-  data: EarnedCashbackNotificationData | PayoutNotificationData;
+  data: EarnedCashbackNotificationData | PayoutNotificationData | CardTransitionNotificationData;
 }
 
 export type INotificationModel = IModel<INotification>;

@@ -256,6 +256,8 @@ export const updateWildfireMerchants = async () => {
   const res = await wildfireClient.getActiveDomains();
   const newActiveDomains: any[] = res.data;
   const lastModifiedDate = new Date();
+  const currentMerchants = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
+  let removedCount = 0;
 
   let count = 0;
   // caching date for cleanup purposes
@@ -264,31 +266,34 @@ export const updateWildfireMerchants = async () => {
     return;
   }
 
-  for (const domain of newActiveDomains) {
-    const existingMerchant = await MerchantModel.findOneAndUpdate(
-      {
-        'integrations.wildfire.merchantId': domain.Merchant.ID,
-        'integrations.wildfire.domains.0.ID': domain.ID,
-      },
-      {
-        'integrations.wildfire.domains.0': domain,
-        lastModified: lastModifiedDate,
-      },
-    );
-    if (existingMerchant) {
-      console.log('[+] NEW: updated existing merchant domain for ', existingMerchant.name);
-      count += 1;
+  for (const merchant of currentMerchants) {
+    const { merchantId } = merchant.integrations.wildfire;
+    const domainId = merchant.integrations.wildfire.domains[0].ID;
+
+    if (!merchantId) continue;
+    const merchantDomain = newActiveDomains.find((d) => d.Merchant.ID === merchantId && d.ID === domainId);
+
+    if (!merchantDomain) {
+      merchant.lastModified = lastModifiedDate;
+      merchant.integrations.wildfire.domains[0].Merchant.MaxRate = null;
+      const updatedMerchant = await merchant.save();
+      if (!!updatedMerchant) {
+        console.log('[+] NEW: removed merchant max rate for ', merchant.name);
+        removedCount += 1;
+      }
+    } else {
+      merchant.integrations.wildfire.domains[0] = merchantDomain;
+      merchant.lastModified = lastModifiedDate;
+      const updatedMerchant = await merchant.save();
+      if (!!updatedMerchant) {
+        console.log('[+] NEW: updated existing merchant domain for ', merchant.name);
+        count += 1;
+      }
     }
   }
 
   console.log(`[+] updated ${count} merchants`);
-  // after the newDomains loop, delete all the wildfire merchantRates last modified before the current date (since once we just updated should have been updated on current date)
-  const merchantsWithoutActiveDomains = await MerchantModel.updateMany(
-    { lastModified: { $ne: lastModifiedDate }, 'integrations.wildfire': { $exists: true } },
-    { 'integrations.wildfire.domains.0.Merchant.MaxRate': null },
-  );
-
-  console.log(`[-] ${merchantsWithoutActiveDomains?.modifiedCount} merchant max rates removed`);
+  console.log(`[+] removed ${removedCount} merchants`);
 };
 
 export const updateWildfireMerchantRates = async () => {
@@ -297,17 +302,47 @@ export const updateWildfireMerchantRates = async () => {
   const res = await wildfireClient.getMerchantRates();
   const newRates: { [key: string]: { ID: number; Name: string; Kind: string; Amount: string; Currency?: string }[] } = res.data;
   // caching date for cleanup purposes
-  const lastModifiedDate = new Date().toISOString();
+  const lastModifiedDate = new Date();
   let count = 0;
 
   for (const merchant of merchants) {
     const { merchantId } = merchant.integrations.wildfire;
     if (!merchantId) continue;
+    const currentMerchantRates = await MerchantRateModel.find({ 'integrations.wildfire.merchantId': merchantId });
     const newRatesForMerchant = newRates[merchantId?.toString()];
 
-    if (newRatesForMerchant) {
-      try {
-        for (const rate of newRatesForMerchant) {
+    // If there are no current rates, delete all rates for the merchant and continue
+    if (!newRatesForMerchant) {
+      console.log('[-] no new rates found for merchant', merchantId);
+      await MerchantRateModel.deleteMany({ 'integrations.wildfire.merchantId': merchantId });
+      continue;
+    }
+
+    for (const currentRate of currentMerchantRates) {
+      if (!!newRatesForMerchant.find((r) => r.ID === currentRate.integrations.wildfire.ID)) continue;
+      await currentRate.delete();
+      console.log('[+] deleted merchant rate for ', merchant.name);
+    }
+
+    // If there are active rates, then we need to either update an existing rate or create a new one, then delete any rates that are no longer active
+    try {
+      for (const rate of newRatesForMerchant) {
+        const existingMatchingMerchantRate = currentMerchantRates.find(r => r.integrations.wildfire.ID === rate.ID);
+        // update the existing merchant rate if it exists with the same ID
+        if (!!existingMatchingMerchantRate) {
+          existingMatchingMerchantRate.integrations.wildfire = {
+            merchantId,
+            ID: rate.ID,
+            Name: rate.Name,
+            Kind: rate.Kind,
+            Amount: parseFloat(rate.Amount),
+            Currency: rate.Currency,
+          };
+          existingMatchingMerchantRate.lastModified = lastModifiedDate;
+          const updatedRate = await existingMatchingMerchantRate.save();
+          console.log(`[+] updated merchant rate for ${merchant.name}`);
+          if (updatedRate) count += 1;
+        } else {
           const merchantRate = await MerchantRateModel.create({
             merchant: merchant._id,
             integrations: {
@@ -323,25 +358,14 @@ export const updateWildfireMerchantRates = async () => {
             lastModified: lastModifiedDate,
           });
 
+          console.log('[+] created new merchant rate for ', merchant.name);
           if (merchantRate) count += 1;
         }
-      } catch (err: any) {
-        await MerchantRateModel.deleteMany({
-          'integrations.wildfire.merchantId': merchantId,
-          lastModified: lastModifiedDate,
-        });
-
-        console.log('Error updating merchant rates for merchant', merchantId, err);
-        return;
       }
-      // iterate over newRatesForMerchant and upsert a new merchantRate in the merchantRates collection (create it if it does not exist, if it does exist update i)
+    } catch (err: any) {
+      console.log('Error updating merchant rates for merchant', merchantId, err);
+      return;
     }
-
-    // after the newMerchantsRate loop, delete all the merchantRates last modified before the current date
-    await MerchantRateModel.deleteMany({
-      'integrations.wildfire.merchantId': merchantId,
-      lastModified: { $lt: lastModifiedDate },
-    });
   }
 
   console.log(`[+] ${count} Rates Upserted`);

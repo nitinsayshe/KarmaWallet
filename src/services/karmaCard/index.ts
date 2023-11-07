@@ -242,7 +242,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
     const applyResponse = userObject?.integrations?.marqeta;
     return applyResponse;
-    // determine the appropriate next steps for getting the user to update their password and login to their profile, maybe an email so that we can also verify their email while we're at it?
   }
 };
 

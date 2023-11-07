@@ -4,4 +4,4 @@ export const supportPhoneNumber = '1-866-304-4030';
 
 export const initiateTransferStatement = 'I authorize Pathward, N.A. to electronically debit my account (and, if necessary, electronically credit my account to correct erroneous debits) for a single transaction.';
 
-export const issuerCashbackStatement = 'This optional offer is not a Pathward, N.A. product or service nor does Pathward, N.A. endorse this offer.';
+export const issuerCashbackStatement = 'This optional offer is not a Pathward® product or service nor does Pathward® endorse this offer.';

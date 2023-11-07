@@ -25,3 +25,12 @@ export const getKarmaCardApplications: IRequestHandler<{}, {}, {}> = async (req,
     error(req, res, asCustomError(err));
   }
 };
+
+export const getKarmaCardLegalText: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const legalText = await KarmaCardService.getKarmaCardLegalText();
+    api(req, res, legalText);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

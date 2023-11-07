@@ -38,12 +38,12 @@ export const getEndBalance = (transaction: ITransaction) => {
   if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
     const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
     const mostRecentTransaction = sortByNewestFirst[0];
-    return mostRecentTransaction.gpa.available_balance + mostRecentTransaction.gpa.impacted_amount;
+    return mostRecentTransaction.gpa.ledger_balance;
   }
-  return transaction.integrations.marqeta.gpa.available_balance + transaction.integrations.marqeta.gpa.impacted_amount;
+  return transaction.integrations.marqeta.gpa.ledger_balance;
 };
 
-export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.available_balance + transaction.integrations.marqeta.gpa.impacted_amount;
+export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.ledger_balance;
 
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;

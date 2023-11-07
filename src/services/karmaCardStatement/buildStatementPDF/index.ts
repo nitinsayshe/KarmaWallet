@@ -49,12 +49,14 @@ export const getTransactionData = (transaction: ITransaction) => {
 
     if (marqetaType.includes('pindebit.cashback')) {
       // will there be a merchant here?
-      transactionData.descriptionText = 'PIN-Debit Cash Back';
+      const merchant = transaction.integrations.marqeta.card_acceptor.name;
+      transactionData.descriptionText = `${merchant} POS Cashback`;
     }
 
     if (marqetaType.includes('pindebit.quasi.cash')) {
       // will there be a merchant here?
-      transactionData.descriptionText = 'PIN-Debit Transaction';
+      const merchant = transaction.integrations.marqeta.card_acceptor.name;
+      transactionData.descriptionText = `${merchant} POS Quasi Cash`;
     }
 
     if (marqetaType.includes('authorization')) {

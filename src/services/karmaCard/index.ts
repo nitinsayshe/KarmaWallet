@@ -13,6 +13,7 @@ import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
 import { IMarqetaUserState, ReasonCode } from './utils';
+import { issuerStatement, supportPhoneNumber, initiateTransferStatement, issuerCashbackStatement } from './constants/marqetaLegal';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -244,3 +245,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     // determine the appropriate next steps for getting the user to update their password and login to their profile, maybe an email so that we can also verify their email while we're at it?
   }
 };
+
+export const getKarmaCardLegalText = async () => ({
+  issuerStatement,
+  supportPhoneNumber,
+  initiateTransferStatement,
+  issuerCashbackStatement,
+});

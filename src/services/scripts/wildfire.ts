@@ -319,6 +319,7 @@ export const updateWildfireMerchantRates = async () => {
     if (!newRatesForMerchant) {
       console.log('[-] no new rates found for merchant', merchantId);
       await MerchantRateModel.deleteMany({ 'integrations.wildfire.merchantId': merchantId });
+      console.log(`[+] deleted all merchant rates for ${merchant.name}`);
       continue;
     }
 

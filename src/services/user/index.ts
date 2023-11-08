@@ -190,20 +190,37 @@ export const register = async (req: IRequest, { password, name, token, promo, vi
 
 export const addFCMAndDeviceInfo = async (user: IUserDocument, fcmToken: string, deviceInfo: IDeviceInfo) => {
   // Add FCM token and device info of the user
-  const { deviceId } = deviceInfo;
-  if (fcmToken && deviceId) {
-    const { fcm } = user.integrations;
-    const existingDeviceIndex = fcm.findIndex((item) => item.deviceId === deviceId);
+  try {
+    const { deviceId } = deviceInfo;
+    if (fcmToken && deviceId) {
+      // Check if the same FCM token is mapped with different user, if it is, make the token of that user NULL
+      const userWithSameToken = await UserModel.findOne(
+        { 'integrations.fcm.token': fcmToken },
+      );
+      if (userWithSameToken && userWithSameToken?._id.toString() !== user?._id.toString()) {
+        userWithSameToken.integrations.fcm.forEach((item) => {
+          if (item.token === fcmToken) {
+            item.token = null;
+          }
+        });
+        await userWithSameToken.save();
+      }
+      // Store the FCM token in current user's repo
+      const { fcm } = user.integrations;
+      const existingDeviceIndex = fcm.findIndex((item) => item.deviceId === deviceId);
 
-    if (existingDeviceIndex !== -1) {
-      // Device already exists, update the token
-      user.integrations.fcm[existingDeviceIndex].token = fcmToken;
-    } else {
-      // Device doesn't exist, add a new entry
-      user.integrations.fcm.push({ token: fcmToken, deviceId });
-      user.deviceInfo.push(deviceInfo);
+      if (existingDeviceIndex !== -1) {
+        // Device already exists, update the token
+        user.integrations.fcm[existingDeviceIndex].token = fcmToken;
+      } else {
+        // Device doesn't exist, add a new entry
+        user.integrations.fcm.push({ token: fcmToken, deviceId });
+        user.deviceInfo.push(deviceInfo);
+      }
+      await user.save();
     }
-    await user.save();
+  } catch (error) {
+    console.log('Error in storing FCM token', error);
   }
 };
 
@@ -237,7 +254,7 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
 
   if (fcmToken && deviceInfo) {
-    addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
+    await addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
   }
   return { user, authKey };
 };

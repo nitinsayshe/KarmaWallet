@@ -44,31 +44,38 @@ export interface IPushNotification {
 }
 export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification, notificationDataToSave: INotificationDocument) => {
   // Get FCM token of the user
-  const { integrations } = getShareableUser(user);
-  const { fcm } = integrations;
-  let errorInSendingMessage;
-  fcm.forEach(async (fcmObject) => {
-    // Send the notification to devices targeted by its FCM token
-    const pushNotification: IPushNotification = {
-      notification: {
-        title: notificationObject.title,
-        body: notificationObject.body,
-      },
-      token: fcmObject.token,
-      data: {
-        type: notificationObject.type,
-      },
-    };
-
-    await admin.messaging().send(pushNotification as any)
-      .catch((error: any) => {
-        errorInSendingMessage = error;
-        console.log('Error in sending push notification: ', error);
-      });
-  });
   try {
-    if (!errorInSendingMessage && notificationDataToSave) { saveNotification(notificationDataToSave); }
+    const { integrations } = getShareableUser(user);
+    const { fcm } = integrations;
+    // Filter out the fcm array having non null token
+    const filteredFCM = fcm.filter(item => item.token !== null);
+    let errorInSendingMessage;
+    filteredFCM.forEach(async (fcmObject) => {
+      // Send the notification to devices targeted by its FCM token
+      const pushNotification: IPushNotification = {
+        notification: {
+          title: notificationObject.title,
+          body: notificationObject.body,
+        },
+        token: fcmObject.token,
+        data: {
+          type: notificationObject.type,
+        },
+      };
+
+      await admin.messaging().send(pushNotification as any)
+        .catch((error: any) => {
+          errorInSendingMessage = error;
+          console.log('Error in sending push notification: ', error);
+        });
+    });
+
+    try {
+      if (!errorInSendingMessage && notificationDataToSave) { saveNotification(notificationDataToSave); }
+    } catch (error) {
+      console.log('Error in saving notification', error);
+    }
   } catch (error) {
-    console.log('Error in saving notification', error);
+    console.log('Error in sending notification', error);
   }
 };

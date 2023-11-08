@@ -198,6 +198,7 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
 const getTransactionTypeFromMarqetaTransactionType = (
   marqetaTransactionType: TransactionModelTypeEnumValues,
 ): TransactionTypeEnumValues | undefined => {
+  console.log('[+] Mapping Marqeta Transaction', marqetaTransactionType);
   if (!!Object.values(DepositTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
     return TransactionTypeEnum.Deposit;
   }

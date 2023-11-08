@@ -52,6 +52,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.UserMonthlyImpactReport, { generateFullHistory: false }, { jobId: `${JobNames.UserMonthlyImpactReport}-monthly`, repeat: { cron: '0 3 1 * *' } });
     this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
     this.createJob(JobNames.UpdateKardMerchantsAndData, null, { jobId: `${JobNames.UpdateKardMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
+    this.createJob(JobNames.GenerateUserImpactTotals, null, { jobId: `${JobNames.GenerateUserImpactTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     // TODO: verify dates of Wildfire payment to Karma, adjust corn job accordingly
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
     this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 *' } });

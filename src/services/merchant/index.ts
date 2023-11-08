@@ -74,7 +74,6 @@ export const getShareableMerchant = ({
   let maxRateType: MerchantRateType;
   let _integrations = {};
   if (integrations?.wildfire) {
-    console.log('///// should be getting max rate info for a wildfire merchant');
     const amount = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Amount;
     const kind = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind;
     // the cut that we are passing on to end user is 75%
@@ -83,7 +82,6 @@ export const getShareableMerchant = ({
     maxAmount = descriptions.maxAmount;
     maxRateType = getMerchantRateTypeFromString(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind);
     maxDescription = descriptions.maxDescription;
-    console.log('///// this is the max description', maxDescription);
     name = integrations?.wildfire.Name;
     _integrations = {
       wildfire: getShareableIntegrationFromWildfireIntegration(integrations.wildfire),

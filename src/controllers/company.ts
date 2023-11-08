@@ -132,7 +132,7 @@ export const getFeaturedCashbackCompanies: IRequestHandler = async (req, res) =>
       ...companies,
       docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),
     };
-    output.api(req, res, !!companies.docs.length ? companies : sharableCompanies);
+    output.api(req, res, !companies.docs.length ? companies : sharableCompanies);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

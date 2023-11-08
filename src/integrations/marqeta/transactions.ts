@@ -198,6 +198,7 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
 const getTransactionTypeFromMarqetaTransactionType = (
   marqetaTransactionType: TransactionModelTypeEnumValues,
 ): TransactionTypeEnumValues | undefined => {
+  console.log('[+] Mapping Marqeta Transaction', marqetaTransactionType);
   if (!!Object.values(DepositTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
     return TransactionTypeEnum.Deposit;
   }
@@ -230,18 +231,14 @@ const getSubtypeAndTypeFromMarqetaTransaction = (
   t: TransactionModel,
 ): { subType?: TransactionSubtypeEnumValues; type?: TransactionTypeEnumValues } => {
   const type = getTransactionTypeFromMarqetaTransactionType(t.type);
-
-  if (type !== TransactionTypeEnum.Credit) {
-    // we only have subtypes for credit transactions right now
-    return { subType: undefined, type };
-  }
-
   const isRefund = t.type === TransactionModelTypeEnum.Refund;
+  const isGPAOrderWithTags = t.type === TransactionModelTypeEnum.GpaCredit && !!t.gpa_order.tags;
+  const isGPAOrderWithoutTags = t.type === TransactionModelTypeEnum.GpaCredit && !t.gpa_order.tags;
+
   if (isRefund) {
     return { subType: TransactionCreditSubtypeEnum.Refund, type };
   }
 
-  const isGPAOrderWithTags = t.type === TransactionModelTypeEnum.GpaCredit && !!t.gpa_order.tags;
   if (isGPAOrderWithTags) {
     // seperate the coma seperated tags
     const tags = t.gpa_order.tags.split(',');
@@ -252,6 +249,15 @@ const getSubtypeAndTypeFromMarqetaTransaction = (
     if (tags.includes(GpaOrderTagEnum.EmployerGifting)) {
       return { subType: TransactionCreditSubtypeEnum.Employer, type };
     }
+  }
+  // this is a catch for now since we don't have tags on all of our gpa order transactions
+  if (isGPAOrderWithoutTags) {
+    return { subType: TransactionCreditSubtypeEnum.Cashback, type };
+  }
+
+  if (type !== TransactionTypeEnum.Credit) {
+    // we only have subtypes for credit transactions right now
+    return { subType: undefined, type };
   }
 };
 

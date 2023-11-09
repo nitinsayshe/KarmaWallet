@@ -7,7 +7,7 @@ export enum IMarqetaUserState {
 }
 
 enum ResponseMessages {
-  APPROVED = 'Your Karma Wallet card should arrive in 3-5 business days.',
+  APPROVED = 'Your Karma Wallet card will be mailed to your address within 5-7 business days.',
   NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',
   ADDRESS_ISSUE = 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
   DATE_OF_BIRTH_ISSUE = 'Your application is pending due to an invalid or mismatched date of birth.',

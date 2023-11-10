@@ -230,23 +230,22 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
-  if (password) {
-    const passwordMatch = await argon2.verify(user.password, password);
-    if (!passwordMatch) {
-      throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
-    }
-  }
 
   if (biometricSignature) {
     const { identifierKey } = req;
     const { biometrics } = user.integrations;
-
     // get the publicKey to verify the signature
     const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
     const isVerified = await verifyBiometric(email, biometricSignature, biometricKey);
-
     if (!isVerified) {
       throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
+    }
+  }
+
+  if (!biometricSignature) {
+    const passwordMatch = await argon2.verify(user.password, password);
+    if (!passwordMatch) {
+      throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
     }
   }
   const authKey = await Session.createSession(user._id.toString());

@@ -240,14 +240,13 @@ export const login = async (req: IRequest, { email, password, biometricSignature
     if (!isVerified) {
       throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
     }
-  }
-
-  if (!biometricSignature) {
+  } else {
     const passwordMatch = await argon2.verify(user.password, password);
     if (!passwordMatch) {
       throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
     }
   }
+
   const authKey = await Session.createSession(user._id.toString());
 
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);

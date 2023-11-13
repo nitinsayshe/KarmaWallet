@@ -17,7 +17,7 @@ import transaction from './transaction';
 import bannerRouter from './banner';
 import articleRouter from './article';
 import utilitiesRouter from './utilities';
-import notificationRouter from './notification';
+import userNotificationRouter from './user_notification';
 
 const adminRouter = Router();
 
@@ -39,6 +39,6 @@ adminRouter.use('/transaction', transaction);
 adminRouter.use('/banner', bannerRouter);
 adminRouter.use('/article', articleRouter);
 adminRouter.use('/utilities', utilitiesRouter);
-adminRouter.use('/notification', notificationRouter);
+adminRouter.use('/user-notification', userNotificationRouter);
 
 export default (app: Express) => app.use('/admin', adminRouter);

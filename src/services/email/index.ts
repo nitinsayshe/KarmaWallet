@@ -76,11 +76,14 @@ export interface IEmailJobData {
   domain?: string;
   name?: string;
   style?: string;
+  templateStyle?: string;
+  footerStyle?: string;
   token?: string;
   isSuccess?: boolean;
   passwordResetLink?: string;
   amount?: string;
 }
+
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
   data: Partial<IEmailJobData>;
@@ -88,6 +91,7 @@ export interface IBuildTemplateParams {
   stylePath?: string;
 
 }
+
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
 }
@@ -101,17 +105,48 @@ const defaultEmailJobOptions = {
   },
 };
 
-export const buildTemplate = ({ templateName, data, templatePath, stylePath }: IBuildTemplateParams) => {
-  const _templatePath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
-  const _stylePath = stylePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
-  if (!fs.existsSync(_templatePath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
-  const templateString = fs.readFileSync(_templatePath, 'utf8');
+export const buildTemplate = ({ templateName, data, templatePath }: IBuildTemplateParams) => {
+  // Add Template Content and Styles for this particular email
+  const _bodyPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
+  const _templateStylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
+  if (!fs.existsSync(_bodyPath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
+  const bodyString = fs.readFileSync(_bodyPath, 'utf8');
+  Handlebars.registerPartial('body', bodyString);
+
+  if (fs.existsSync(_templateStylePath)) {
+    const rawCss = fs.readFileSync(_templateStylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.templateStyle = styleTemplate;
+  }
+
+  // Add shared Footer Content and Styles
+  const _footerPath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'template.hbs');
+  const _footerStylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'style.hbs');
+  const footerString = fs.readFileSync(_footerPath, 'utf8');
+  Handlebars.registerPartial('footer', footerString);
+
+  if (fs.existsSync(_footerStylePath)) {
+    const rawCss = fs.readFileSync(_footerStylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.footerStyle = styleTemplate;
+  }
+
+  // Add shared Base Email and Styles
+  const _stylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'style.hbs');
+  const _baseEmailPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', 'baseEmail.hbs');
+  if (!fs.existsSync(_baseEmailPath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
+  const templateString = fs.readFileSync(_baseEmailPath, 'utf8');
+
   if (fs.existsSync(_stylePath)) {
     const rawCss = fs.readFileSync(_stylePath, 'utf8');
     const styleTemplateRaw = Handlebars.compile(rawCss);
     const styleTemplate = styleTemplateRaw({ colors });
     data.style = styleTemplate;
   }
+
+  // Compile and return template
   const template = Handlebars.compile(templateString);
   return template(data);
 };

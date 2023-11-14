@@ -74,10 +74,10 @@ export interface IEmailJobData {
   companyName?: string;
   verificationLink?: string;
   domain?: string;
+  currentYear?: string;
   name?: string;
   style?: string;
   templateStyle?: string;
-  footerStyle?: string;
   token?: string;
   isSuccess?: boolean;
   passwordResetLink?: string;
@@ -122,16 +122,9 @@ export const buildTemplate = ({ templateName, data, templatePath }: IBuildTempla
 
   // Add shared Footer Content and Styles
   const _footerPath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'template.hbs');
-  const _footerStylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'style.hbs');
+  if (!fs.existsSync(_footerPath)) throw new CustomError('Template not found for footer', ErrorTypes.INVALID_ARG);
   const footerString = fs.readFileSync(_footerPath, 'utf8');
   Handlebars.registerPartial('footer', footerString);
-
-  if (fs.existsSync(_footerStylePath)) {
-    const rawCss = fs.readFileSync(_footerStylePath, 'utf8');
-    const styleTemplateRaw = Handlebars.compile(rawCss);
-    const styleTemplate = styleTemplateRaw({ colors });
-    data.footerStyle = styleTemplate;
-  }
 
   // Add shared Base Email and Styles
   const _stylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'style.hbs');
@@ -148,6 +141,7 @@ export const buildTemplate = ({ templateName, data, templatePath }: IBuildTempla
 
   // Compile and return template
   const template = Handlebars.compile(templateString);
+  data.currentYear = dayjs().year().toString();
   return template(data);
 };
 

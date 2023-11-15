@@ -1,5 +1,5 @@
 import { NotificationChannelEnum, NotificationChannelEnumValue, NotificationTypeEnumValue } from '../../lib/constants/notification';
-import { INotificationDocument, IShareableNotification, NotificationModel } from '../../models/notificaiton';
+import { INotificationDocument, IShareableNotification, NotificationModel } from '../../models/notification';
 import { IUserDocument } from '../../models/user';
 import { NotificationChannelEffects, NotificationEffectsFunctions } from './effects';
 

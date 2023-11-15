@@ -1,5 +1,5 @@
 import { NotificationChannelEnum, NotificationEffectsEnum, NotificationTypeEnum, NotificationTypeEnumValue } from '../../lib/constants/notification';
-import { INotificationDocument, NotificationModel } from '../../models/notificaiton';
+import { INotificationDocument, NotificationModel } from '../../models/notification';
 
 const template: { [key in NotificationTypeEnumValue]: Partial<INotificationDocument> } = {
   [NotificationTypeEnum.Group]: {

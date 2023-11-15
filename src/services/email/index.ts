@@ -255,26 +255,6 @@ export const sendAccountCreationReminderEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-// Welcome Flow: No Group
-export const sendWelcomeEmail = async ({
-  user,
-  name,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IEmailTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.Welcome;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
-  const subject = `Welcome to your Karma Wallet, ${name} 💚`;
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
 // Welcome Flow: User Joined Group w/ Donation Matching
 export const sendWelcomeGroupEmail = async ({
   user,

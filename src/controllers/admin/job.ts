@@ -21,15 +21,6 @@ export const sendEmailVerification: IRequestHandler<{}, {}, JobService.ISendVeri
   }
 };
 
-export const sendWelcomeEmail: IRequestHandler<{}, {}, JobService.ISendEmailParams> = async (req, res) => {
-  try {
-    const message = await JobService.sendWelcomeEmail(req);
-    output.api(req, res, message);
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
 export const createJob: IRequestHandler<{}, {}, JobService.ICreateJobParams> = (req, res) => {
   try {
     const message = JobService.createJob(req);

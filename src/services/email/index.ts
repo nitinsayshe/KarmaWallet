@@ -62,25 +62,29 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
 //   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
 
 export interface IEmailJobData {
-  template: string;
-  user?: Types.ObjectId | string;
-  visitor?: IVisitorDocument | Types.ObjectId | string;
-  subject: string;
-  senderEmail: string;
+  amount?: string;
+  companyName?: string;
+  currentYear?: string;
+  domain?: string;
+  emailTemplateConfig?: IEmailTemplateConfig;
+  footerStyle?: string;
+  groupName?: string;
+  isSuccess?: boolean;
+  name?: string;
+  passwordResetLink?: string;
   recipientEmail: string;
   replyToAddresses: string[];
-  emailTemplateConfig?: IEmailTemplateConfig;
-  groupName?: string;
-  companyName?: string;
-  verificationLink?: string;
-  domain?: string;
-  name?: string;
+  senderEmail: string;
   style?: string;
+  subject: string;
+  template: string;
+  templateStyle?: string;
   token?: string;
-  isSuccess?: boolean;
-  passwordResetLink?: string;
-  amount?: string;
+  user?: Types.ObjectId | string;
+  verificationLink?: string;
+  visitor?: IVisitorDocument | Types.ObjectId | string;
 }
+
 export interface IBuildTemplateParams {
   templateName: EmailTemplateKeys;
   data: Partial<IEmailJobData>;
@@ -88,6 +92,7 @@ export interface IBuildTemplateParams {
   stylePath?: string;
 
 }
+
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
 }
@@ -101,18 +106,52 @@ const defaultEmailJobOptions = {
   },
 };
 
-export const buildTemplate = ({ templateName, data, templatePath, stylePath }: IBuildTemplateParams) => {
-  const _templatePath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
-  const _stylePath = stylePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
-  if (!fs.existsSync(_templatePath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
-  const templateString = fs.readFileSync(_templatePath, 'utf8');
+export const buildTemplate = ({ templateName, data, templatePath }: IBuildTemplateParams) => {
+  // Add Template Content and Styles for this particular email
+  const _bodyPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
+  const _templateStylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
+  if (!fs.existsSync(_bodyPath)) throw new CustomError('Template not found for email', ErrorTypes.INVALID_ARG);
+  const bodyString = fs.readFileSync(_bodyPath, 'utf8');
+  Handlebars.registerPartial('body', bodyString);
+
+  if (fs.existsSync(_templateStylePath)) {
+    const rawCss = fs.readFileSync(_templateStylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.templateStyle = styleTemplate;
+  }
+
+  // Add shared Footer Content and Styles
+  const _footerPath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'template.hbs');
+  const _footerStylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'style.hbs');
+  if (!fs.existsSync(_footerPath)) throw new CustomError('Footer file not found', ErrorTypes.INVALID_ARG);
+  if (!fs.existsSync(_footerStylePath)) throw new CustomError('Footer style file not found', ErrorTypes.INVALID_ARG);
+  const footerString = fs.readFileSync(_footerPath, 'utf8');
+  Handlebars.registerPartial('footer', footerString);
+
+  if (fs.existsSync(_footerStylePath)) {
+    const rawCss = fs.readFileSync(_footerStylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.footerStyle = styleTemplate;
+  }
+
+  // Add shared Base Email and Styles
+  const _stylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'style.hbs');
+  const _baseEmailPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', 'baseEmail.hbs');
+  if (!fs.existsSync(_baseEmailPath)) throw new CustomError('Base email file not found', ErrorTypes.INVALID_ARG);
+  const templateString = fs.readFileSync(_baseEmailPath, 'utf8');
+
   if (fs.existsSync(_stylePath)) {
     const rawCss = fs.readFileSync(_stylePath, 'utf8');
     const styleTemplateRaw = Handlebars.compile(rawCss);
     const styleTemplate = styleTemplateRaw({ colors });
     data.style = styleTemplate;
   }
+
+  // Compile and return template
   const template = Handlebars.compile(templateString);
+  data.currentYear = dayjs().year().toString();
   return template(data);
 };
 
@@ -216,26 +255,6 @@ export const sendAccountCreationReminderEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-// Welcome Flow: No Group
-export const sendWelcomeEmail = async ({
-  user,
-  name,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IEmailTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.Welcome;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
-  const subject = `Welcome to your Karma Wallet, ${name} 💚`;
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
 // Welcome Flow: User Joined Group w/ Donation Matching
 export const sendWelcomeGroupEmail = async ({
   user,
@@ -257,50 +276,6 @@ export const sendWelcomeGroupEmail = async ({
   });
   const subject = `Welcome to your Karma Wallet, ${name} 💚`;
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, groupName };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-// Welcome Flow: Credit Card Not Linked
-export const sendWelcomeCC1Email = async ({
-  user,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IEmailTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
-  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain } });
-  // TODO: Update Subject
-  const subject = 'Make the Most of your Karma Wallet 💜';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-// Welcome Flow: Credit Card Not Linked - User Joined Group w/ Donation Matching
-export const sendWelcomeCCG1Email = async ({
-  user,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  groupName,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IWelcomeGroupTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCCG1;
-  const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  // override to share welcomeCC1 template and styles
-  const template = buildTemplate({
-    templateName: EmailTemplateConfigs.WelcomeCC1.name,
-    data: { domain, groupName },
-  });
-  const subject = 'Make the Most of your Karma Wallet 💜';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

@@ -280,50 +280,6 @@ export const sendWelcomeGroupEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-// Welcome Flow: Credit Card Not Linked
-export const sendWelcomeCC1Email = async ({
-  user,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IEmailTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
-  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain } });
-  // TODO: Update Subject
-  const subject = 'Make the Most of your Karma Wallet 💜';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-// Welcome Flow: Credit Card Not Linked - User Joined Group w/ Donation Matching
-export const sendWelcomeCCG1Email = async ({
-  user,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  groupName,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IWelcomeGroupTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCCG1;
-  const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  // override to share welcomeCC1 template and styles
-  const template = buildTemplate({
-    templateName: EmailTemplateConfigs.WelcomeCC1.name,
-    data: { domain, groupName },
-  });
-  const subject = 'Make the Most of your Karma Wallet 💜';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
 export const sendTransactionsProcessedEmail = async ({
   user,
   recipientEmail,

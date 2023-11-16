@@ -45,12 +45,6 @@ export const sendEmailVerification = async (req: IRequest<{}, {}, ISendVerificat
   return 'Job added to queue';
 };
 
-export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) => {
-  const { name, domain, recipientEmail, user } = req.body;
-  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail, user: new Types.ObjectId(user) });
-  return 'Job added to queue';
-};
-
 export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailService.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
 
 export const createJob = (req: IRequest<{}, {}, ICreateJobParams>) => {

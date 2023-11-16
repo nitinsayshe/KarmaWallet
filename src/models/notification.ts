@@ -1,65 +1,33 @@
-import { Schema, model, Document, PaginateModel, ObjectId } from 'mongoose';
-import { IModel, IRef } from '../types/model';
+import { ObjectId, Schema, model, Document, Model } from 'mongoose';
+import {
+  NotificationChannelEnumValue,
+  NotificationTypeEnumValue,
+  NotificationTypeEnum,
+  NotificationChannelEnum,
+  NotificationEffectsEnum,
+  NotificationEffectsEnumValue,
+} from '../lib/constants/notification';
 import { getUtcDate } from '../lib/date';
-import { IUserDocument } from './user';
-
-export enum NotificationResourceType {
-  Group = 'group',
-  Transaction = 'transaction',
-  CommissionPayout = 'commissionPayout',
-}
-
-export enum NotificationType {
-  Marketing = 'marketing',
-  Group = 'transaction',
-  EarnedCashback = 'earnedCashback',
-  Payout = 'payout',
-  // Card Transition notification is added for testing purpose only
-  CardTransition = 'cardTransition'
-}
-export enum NotificationStatus {
-  /* if queuing Notifications for future dates:
-   * Queued = 'queued', */
-  Unread = 'unread',
-  Read = 'read',
-  Deleted = 'deleted',
-}
-
-export enum NotificationChannel {
-  Email = 'email',
-  Push = 'push',
-  None = 'none'
-}
-
-export type EarnedCashbackNotificationData = {
-  name: string;
-  companyName: string;
-  amount?: string
-};
-
-export type PayoutNotificationData = {
-  name: string;
-  payoutAmount: string;
-};
+import { IModel } from '../types/model';
 
 // Card Transition notification is added for testing purpose only
 export type CardTransitionNotificationData = {
-  cardStatus: string
-}
+  cardStatus: string;
+};
 
 export interface IShareableNotification {
-  createdOn: Date;
-  body: string;
   _id: ObjectId;
+  createdOn: Date;
+  lastModified: Date;
 }
 
+// `channels`: possible channels this notification can be sent through
+// `type`: unique name for this notification
+// `effects`: all effects that could be triggered for this notification
 export interface INotification extends IShareableNotification {
-  lastModified: Date;
-  status: NotificationStatus;
-  type: NotificationType;
-  user: IRef<ObjectId, IUserDocument>;
-  resource: IRef<ObjectId, Document>;
-  data: EarnedCashbackNotificationData | PayoutNotificationData | CardTransitionNotificationData;
+  channels: NotificationChannelEnumValue[];
+  type: NotificationTypeEnumValue;
+  effects: NotificationEffectsEnumValue[];
 }
 
 export type INotificationModel = IModel<INotification>;
@@ -69,39 +37,14 @@ export interface INotificationDocument extends INotification, Document {
 }
 
 const notification = new Schema({
-  type: {
+  type: { required: true, unique: true, type: String, enum: Object.values(NotificationTypeEnum) },
+  channels: {
     required: true,
-    type: String,
-    enum: Object.values(NotificationType),
+    type: [Object.values(NotificationChannelEnum)],
   },
-  body: { type: String },
-  channel: {
-    type: String,
-    enum: Object.values(NotificationChannel),
-  },
-  status: {
-    required: true,
-    type: String,
-    enum: Object.values(NotificationStatus),
-  },
-  user: {
-    type: Schema.Types.ObjectId,
-    ref: 'user',
-  },
-  resource: {
-    type: Schema.Types.ObjectId,
-    refPath: 'resourceType',
-  },
-  resourceType: {
-    type: String,
-    enum: Object.values(NotificationResourceType),
-  },
-  data: { type: Schema.Types.Mixed },
+  effects: { type: [Object.values(NotificationEffectsEnum)] },
   createdOn: { required: true, type: Date, default: () => getUtcDate().toDate() },
   lastModified: { required: true, type: Date, default: () => getUtcDate().toDate() },
 });
 
-export const NotificationModel = model<INotificationDocument, PaginateModel<INotification>>(
-  'notification',
-  notification,
-);
+export const NotificationModel = model<INotificationDocument, Model<INotification>>('notification', notification);

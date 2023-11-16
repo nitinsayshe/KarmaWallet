@@ -28,6 +28,8 @@ import * as output from '../services/output';
 import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import { PushNotificationTypes, triggerPushNotification } from '../integrations/firebaseCloudMessaging/fcmEvents';
+import { createChargebackNotificaiontsFromType, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
+import { ChargebackTransition } from '../integrations/marqeta/types';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -159,6 +161,7 @@ interface IMarqetaBankTransferTransitionEvent {
 interface IMarqetaWebhookBody {
   cards: IMarqetaWebhookCardsEvent[];
   cardactions: IMarqetaCardActionEvent[];
+  chargebacktransitions: ChargebackTransition[];
   usertransitions: IMarqetaUserTransitionsEvent[];
   banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
   transactions: TransactionModel[];
@@ -393,7 +396,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, usertransitions, banktransfertransitions, transactions } = req.body;
+    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
@@ -497,11 +500,11 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!transactions) {
       await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
     }
-    output.api(
-      req,
-      res,
-      { message: 'Marqeta webhook processed successfully.' },
-    );
+    if (!!chargebacktransitions) {
+      const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
+      await createChargebackNotificaiontsFromType(savedChargebacks);
+    }
+    output.api(req, res, { message: 'Marqeta webhook processed successfully.' });
   } catch (err) {
     error(req, res, asCustomError(err));
   }

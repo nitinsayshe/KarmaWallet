@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
-import { TransactionModel } from '../../clients/marqeta/types';
+import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
+import { ChargebackTypeEnumValues } from '../../lib/constants';
 
 interface Identification {
   type: string;
@@ -496,6 +497,19 @@ export const WebhookEventTypeEnum = {
   Transaction: 'transaction',
 } as const;
 export type WebhookEventTypeEnumValues = (typeof WebhookEventTypeEnum)[keyof typeof WebhookEventTypeEnum];
+
+export type ChargebackTransition = {
+  token: string;
+  state: ChargebackResponseStateEnumValues;
+  previous_state: ChargebackResponseStateEnumValues;
+  channel: ChargebackResponseChannelEnumValues;
+  chargeback_token: string;
+  reason: string;
+  transaction_token: string;
+  created_time: Date;
+  last_modified_time: Date;
+  type: ChargebackTypeEnumValues;
+};
 
 export type PaginatedMarqetaResponse<DataType> = {
   count: number;

@@ -16,6 +16,7 @@ export interface IACHTransferEmailData {
   accountMask: string;
   accountType: string;
   date: string;
+  name?: string;
 }
 
 interface IEmailTemplateParams {

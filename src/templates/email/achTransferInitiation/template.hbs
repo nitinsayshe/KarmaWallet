@@ -3,10 +3,31 @@
   <p class="body-text">
     Your ACH funds transfer request has been initiated! Here are the details:
   </p>
-  <div class="cta-container">
-    <a class="cta-link" href="{{passwordResetLink}}">Change Password</a>
+  <div class="summary-container">
+    <div class="summary-row">
+      <span class="bold">From:</span>
+      <span class="uppercase">{{accountType}} {{accountMask}}</span>
+    </div>
+    <div class="summary-row">
+      <span class="bold">Frequency:</span>
+      <span>One-time</span>
+    </div>
+    <div class="summary-row">
+      <span class="bold">Initiation Date:</span>
+      <span>{{date}}</span>
+    </div>
+    <div class="summary-row">
+      <span class="bold">Amount:</span>
+      <span>{{amount}}</span>
+    </div>
   </div>
-  <p class="support-text">
-    For support, contact Karma Wallet at support@theimpactkarma.com {{amount}}, {{date}}, {{accountMask}}, {{accountType}}
-  </p>  
+  <div class="authorization-container">
+    <p>Here's your ACH authorization, for your records:</p>
+    <p class="italic">I authorize Pathward, N.A. to electronically debit my account (and, if necessary, electronically credit my account to correct erroneous debits) for a single transaction.</p>
+  </div>
+  <div class="signature-container">
+    <p>If your have any questions, please reach out to <a id="support-link" href="mailto:support@theimpactkarma.com" target="_blank">support@theimpactkarma.com</a></p>
+    <p>Best,</p>
+    <p>The Karma Wallet Team</p>
+  </div>
 </div>

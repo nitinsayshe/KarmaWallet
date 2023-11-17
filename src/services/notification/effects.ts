@@ -61,7 +61,7 @@ export const handleSendPayoutIssuedEmailEffect = async <DataType>(user: IUserDoc
 
 export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IACHTransferEmailData;
-  const { date, amount, accountMask, accountType } = d;
+  const { date, amount, accountMask, accountType, name } = d;
   if (!d) throw new Error('Invalid ach initiation notification data');
   try {
     await sendACHInitiationEmail({
@@ -70,6 +70,7 @@ export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDo
       accountMask,
       accountType,
       date,
+      name,
     });
   } catch (err) {
     console.error(err);

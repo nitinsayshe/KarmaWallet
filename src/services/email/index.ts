@@ -364,6 +364,7 @@ export const sendACHInitiationEmail = async ({
   accountMask,
   accountType,
   date,
+  name,
 }: IACHTransferEmailData) => {
   const emailTemplateConfig = EmailTemplateConfigs.ACHTransferInitiation;
   const subject = 'An ACH Transfer Has Been Initiated';
@@ -371,14 +372,14 @@ export const sendACHInitiationEmail = async ({
   const replyToAddresses = [EmailAddresses.ReplyTo];
   const recipientEmail = user.emails.find(e => !!e.primary)?.email;
 
-  const { isValid, missingFields } = verifyRequiredFields(['amount', 'accountMask', 'accountType', 'date'], { amount, accountMask, accountType, date });
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'accountMask', 'accountType', 'date', 'name'], { amount, accountMask, accountType, date, name });
 
   if (!isValid) {
     throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   }
   const template = buildTemplate({
     templateName: emailTemplateConfig.name,
-    data: { amount, accountMask, accountType, date },
+    data: { amount, accountMask, accountType, date, name },
   });
 
   const jobData: IEmailJobData = {
@@ -393,6 +394,7 @@ export const sendACHInitiationEmail = async ({
     accountMask,
     accountType,
     date,
+    name,
   };
 
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);

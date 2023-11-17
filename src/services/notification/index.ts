@@ -9,7 +9,7 @@ export const getShareableNotification = (notification: INotificationDocument): I
   lastModified: notification?.lastModified,
 }) as IShareableNotification;
 
-export const executeUserNotificationEffects = async <DataType>(
+export const executeUserNotificationEffects = async <NotificationDataType>(
   userNotification: IUserNotificationDocument,
   user: IUserDocument,
 ): Promise<void> => {
@@ -32,7 +32,7 @@ export const executeUserNotificationEffects = async <DataType>(
       throw new Error(`No notification effects found for type ${type} and channel ${channel}`);
     }
     // execute the effect
-    await Promise.all(effectsFunctions?.map(async (effect) => effect<DataType>(user, data as unknown as DataType)));
+    await Promise.all(effectsFunctions?.map(async (effect) => effect<NotificationDataType>(user, data as unknown as NotificationDataType)));
   } catch (err) {
     console.error(`Error executing notification effects: ${err}`);
   }

@@ -39,6 +39,7 @@ npm run dockerTest
 
 Note: Many tests are currently skipped. Usually, this is to avoid hitting external APIs. We can enable these tests as we move to mocking these services.
 
+
 ## Adding an Email 
 
 - Create a new folder in `src/templates/email` with at least one file for the  html. 

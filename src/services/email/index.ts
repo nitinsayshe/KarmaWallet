@@ -8,7 +8,7 @@ import utc from 'dayjs/plugin/utc';
 import { EmailBullClient } from '../../clients/bull/email';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { EmailAddresses, ErrorTypes } from '../../lib/constants';
-import CustomError from '../../lib/customError';
+import CustomError, { asCustomError } from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
@@ -16,7 +16,7 @@ import { EmailTemplateKeys, EmailTemplateConfigs, IEmailTemplateConfig } from '.
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
 import { IVisitorDocument } from '../../models/visitor';
-import { IUserDocument } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -398,11 +398,11 @@ export const sendCashbackPayoutEmail = async ({
   amount,
   sendEmail = true,
 }: Partial<IEmailVerificationTemplateParams>) => {
+  const subject = 'Your Karma Cash has been deposited!';
   const emailTemplateConfig = EmailTemplateConfigs.CashbackPayoutNotification;
   const { isValid, missingFields } = verifyRequiredFields(['amount', 'domain', 'recipientEmail', 'name'], { amount, domain, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, amount } } as IBuildTemplateParams);
-  const subject = 'Casback rewards have been dispersed!';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -461,4 +461,26 @@ export const sendDeleteAccountRequestEmail = async ({
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, deleteReason, deleteAccountRequestId, userEmail };
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const testCashbackPayoutEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendCashbackPayoutEmail({
+      user: user._id,
+      recipientEmail: email,
+      name: user.name,
+      amount: '10.44',
+    });
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

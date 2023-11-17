@@ -29,10 +29,6 @@ interface ICreateSentEmailParams {
   visitor?: Types.ObjectId;
 }
 
-export interface ITestEmailParams {
-  userId: string;
-}
-
 interface IEmailTemplateParams {
   user?: Types.ObjectId;
   name: string;

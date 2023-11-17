@@ -18,6 +18,7 @@ import bannerRouter from './banner';
 import articleRouter from './article';
 import utilitiesRouter from './utilities';
 import userNotificationRouter from './user_notification';
+import emailTesting from './emailTesting';
 
 const adminRouter = Router();
 
@@ -40,5 +41,6 @@ adminRouter.use('/banner', bannerRouter);
 adminRouter.use('/article', articleRouter);
 adminRouter.use('/utilities', utilitiesRouter);
 adminRouter.use('/user-notification', userNotificationRouter);
+adminRouter.use('/email-testing', emailTesting);
 
 export default (app: Express) => app.use('/admin', adminRouter);

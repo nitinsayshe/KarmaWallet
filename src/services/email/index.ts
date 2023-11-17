@@ -379,7 +379,7 @@ export const createSentEmailDocument = async ({ user, key, email, visitor }: ICr
 // for internal use only - used to generate HTML for dev purposes
 export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<IPopulateEmailTemplateRequest>>) => buildTemplate({ templateName: req?.body?.template, data: req.body });
 
-export const testCashbackDepositedEmail = async (req: IRequest<{}, {}, {}>) => {
+export const testCashbackPayoutEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);

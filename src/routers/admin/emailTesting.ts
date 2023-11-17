@@ -6,11 +6,11 @@ import protectedRequirements from '../../middleware/protected';
 
 const router = Router();
 
-router.route('/cashback-payout-notification')
+router.route('/cashback-payout-email')
   .post(
     authenticate,
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
-    AdminEmailTestingController.testCashbackDepositedEmail,
+    AdminEmailTestingController.testCashbackPayoutEmail,
   );
 
 export default router;

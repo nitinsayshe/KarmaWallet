@@ -34,6 +34,7 @@ import {
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
+import { IACHTransferEmailData } from '../email/types';
 
 export type CreateNotificationRequest<T = undefined> = {
   type: NotificationTypeEnumValue;
@@ -383,5 +384,31 @@ export const createPayoutUserNotificationFromCommissionPayout = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating payout notification: ${e}`);
+  }
+};
+
+export const createACHInitiationUserNotification = async (
+  transferData: IACHTransferEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user, amount, accountMask, accountType, date } = transferData;
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ACHTransferInitiation,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH initiation notification: ${e}`);
   }
 };

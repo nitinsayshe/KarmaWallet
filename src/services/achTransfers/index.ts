@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { createACHBankTransfer, mapACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
@@ -8,6 +10,9 @@ import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
+import { createACHInitiationUserNotification } from '../user_notification';
+
+dayjs.extend(utc);
 
 export interface IACHTransferParams {
   achTransferId: string;
@@ -109,6 +114,7 @@ export const updateACHTransfer = async (req: IRequest<IACHTransferParams, {}, IM
 
 export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
   const { body } = req;
+  const { amount, fundingSourceToken } = body;
   const { _id } = req.requestor;
   const requiredFields = ['amount', 'type', 'fundingSourceToken'];
   const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
@@ -123,5 +129,19 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   const { data } = achTransferData;
   const savedACHTransfer = await mapACHBankTransfer(_id, data);
   if (!savedACHTransfer) throw new CustomError('Unable to create ACH transfer entry.', ErrorTypes.GEN);
+  const transferBankData = await ACHFundingSourceModel.findOne({
+    token: fundingSourceToken,
+  });
+
+  /// create a user notifiction, also need to create a notification for this type in general
+
+  await createACHInitiationUserNotification({
+    user: req.requestor,
+    amount,
+    accountMask: transferBankData.account_suffix.toString(),
+    accountType: transferBankData.account_type.toString(),
+    date: dayjs(data.created_time).utc().format('MMMM DD, YYYY'),
+  });
+
   return getShareableACHTransfer(savedACHTransfer);
 };

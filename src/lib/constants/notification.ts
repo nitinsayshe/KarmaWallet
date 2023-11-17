@@ -7,6 +7,7 @@ export const NotificationChannelEnum = {
 export type NotificationChannelEnumValue = (typeof NotificationChannelEnum)[keyof typeof NotificationChannelEnum];
 
 export const NotificationTypeEnum = {
+  ACHTransferInitiation: 'achTransferInitiation',
   BalanceThreshold: 'balanceThreshold',
   CardTransition: 'cardTransition',
   DiningTransaction: 'diningTransaction',
@@ -25,11 +26,13 @@ export const NotificationEffectsEnum = {
   SendEarnedCashbackEmail: 'SendEarnedCashbackEmail',
   SendPayoutIssuedEmail: 'SendPayoutIssuedEmail',
   SendPushNotification: 'SendPushNotification',
+  SendACHInitiationEmail: 'SendACHInitiationEmail',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 
 export enum PushNotificationTypes {
   BALANCE_THRESHOLD = 'BALANCE_THRESHOLD',
+  ACH_TRANSFER_INITIATION = 'ACH_TRANSFER_INITIATION',
   CARD_TRANSITION = 'CARD_TRANSITION',
   EARNED_CASHBACK = 'EARNED_CASHBACK',
   FUNDS_AVAILABLE = 'FUNDS_AVAILABLE',

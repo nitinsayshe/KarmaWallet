@@ -37,10 +37,12 @@ export const listACHFundingSourcesForUser = async (userId: string, params?: any)
 // store ACH bank transfer  to karma DB
 export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
   const { token } = ACHBankTransferData;
-  const ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
+  let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
   if (!ACHBankTranfer) {
-    await ACHTransferModel.create({ userId, ...ACHBankTransferData });
+    ACHBankTranfer = await ACHTransferModel.create({ userId, ...ACHBankTransferData });
   }
+
+  return ACHBankTranfer;
 };
 
 export const createAchFundingSource = async (userId: string, data: IMarqetaACHPlaidFundingSource, accessToken: string) => {

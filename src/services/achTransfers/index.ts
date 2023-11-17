@@ -1,6 +1,7 @@
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { ACHTransferTransitionStatusEnum, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
+import { createACHBankTransfer, mapACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
+import { ACHTransferTransitionStatusEnum, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
@@ -104,4 +105,23 @@ export const updateACHTransfer = async (req: IRequest<IACHTransferParams, {}, IM
   const updatedTransfer = await achFundingSource.updateACHBankTransfer(data);
   if (!updatedTransfer) throw new CustomError('Unable to update ACH transfer.', ErrorTypes.GEN);
   return updatedTransfer;
+};
+
+export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
+  const { body } = req;
+  const { _id } = req.requestor;
+  const requiredFields = ['amount', 'type', 'fundingSourceToken'];
+  const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+  if (!isValid) {
+    throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
+  }
+
+  if (!_id) throw new CustomError('User id required.', ErrorTypes.GEN);
+  const { isError, message } = await validateCreateACHBankTransferRequest({ userId: _id, ...body });
+  if (isError) throw new CustomError(message, ErrorTypes.INVALID_ARG);
+  const achTransferData = await createACHBankTransfer(req);
+  const { data } = achTransferData;
+  const savedACHTransfer = await mapACHBankTransfer(_id, data);
+  if (!savedACHTransfer) throw new CustomError('Unable to create ACH transfer entry.', ErrorTypes.GEN);
+  return getShareableACHTransfer(savedACHTransfer);
 };

@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransferRequestFields, IACHBankTransfer, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHTransferTypes, ListACHFundingSourcesForUserResponse, PaginatedMarqetaResponse, ListACHBankTransfersResponse, ACHTransferModel as ACHTransferModelType } from './types';
+import { IACHBankTransferRequestFields, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHTransferTypes, ListACHFundingSourcesForUserResponse, PaginatedMarqetaResponse, ListACHBankTransfersResponse, ACHTransferModel as ACHTransferModelType } from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
@@ -32,17 +32,6 @@ export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: 
 export const listACHFundingSourcesForUser = async (userId: string, params?: any): Promise<ListACHFundingSourcesForUserResponse> => {
   const sources = await achFundingSource.listACHFundingSourceForUser(userId, params);
   return { data: sources };
-};
-
-// store ACH bank transfer  to karma DB
-export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
-  const { token } = ACHBankTransferData;
-  let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
-  if (!ACHBankTranfer) {
-    ACHBankTranfer = await ACHTransferModel.create({ userId, ...ACHBankTransferData });
-  }
-
-  return ACHBankTranfer;
 };
 
 export const createAchFundingSource = async (userId: string, data: IMarqetaACHPlaidFundingSource, accessToken: string) => {

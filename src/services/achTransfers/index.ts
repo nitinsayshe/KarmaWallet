@@ -2,8 +2,8 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { createACHBankTransfer, mapACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
-import { ACHTransferTransitionStatusEnum, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
+import { createACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
+import { ACHTransferTransitionStatusEnum, IACHBankTransfer, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
@@ -17,6 +17,17 @@ dayjs.extend(utc);
 export interface IACHTransferParams {
   achTransferId: string;
 }
+
+// store ACH bank transfer  to karma DB
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
+  const { token } = ACHBankTransferData;
+  let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
+  if (!ACHBankTranfer) {
+    ACHBankTranfer = await ACHTransferModel.create({ userId, ...ACHBankTransferData });
+  }
+
+  return ACHBankTranfer;
+};
 
 export const getShareableACHTransfer = async (transfer: IACHTransfer) => {
   const fundingSource = await ACHFundingSourceModel.findOne({
@@ -125,16 +136,17 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   if (!_id) throw new CustomError('User id required.', ErrorTypes.GEN);
   const { isError, message } = await validateCreateACHBankTransferRequest({ userId: _id, ...body });
   if (isError) throw new CustomError(message, ErrorTypes.INVALID_ARG);
+  // Create ACH transfer in marqeta
   const achTransferData = await createACHBankTransfer(req);
+  if (!achTransferData) throw new CustomError('Unable to create ACH transfer.', ErrorTypes.GEN);
   const { data } = achTransferData;
+  // Store ACH transfer in karma database
   const savedACHTransfer = await mapACHBankTransfer(_id, data);
-  if (!savedACHTransfer) throw new CustomError('Unable to create ACH transfer entry.', ErrorTypes.GEN);
+  if (!savedACHTransfer) throw new CustomError('Error saving the ACH Transfer to the database.', ErrorTypes.GEN);
   const transferBankData = await ACHFundingSourceModel.findOne({
     token: fundingSourceToken,
   });
-
-  /// create a user notifiction, also need to create a notification for this type in general
-
+  // Create user notification
   await createACHInitiationUserNotification({
     user: req.requestor,
     amount,

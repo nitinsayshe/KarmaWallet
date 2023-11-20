@@ -3,7 +3,7 @@ import utc from 'dayjs/plugin/utc';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
-import { IACHBankTransferRequestFields, IACHBankTransferModelQuery, IACHBankTransferQuery, IACHFundingSource, IACHFundingSourceModelQuery, IACHFundingSourceQuery, IACHTransferValidationQuery, IMACHTransferStatus, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaACHPlaidFundingSource, IMarqetaACHTransferType, IACHTransferTypes, ListACHFundingSourcesForUserResponse, PaginatedMarqetaResponse, ListACHBankTransfersResponse, ACHTransferModel as ACHTransferModelType } from './types';
+import * as ACHTransferTypes from './types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
@@ -18,7 +18,7 @@ const marqetaClient = new MarqetaClient();
 const achFundingSource = new ACHSource(marqetaClient);
 
 // store funding source of user to karma DB
-export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: IACHFundingSource) => {
+export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: ACHTransferTypes.IACHFundingSource) => {
   const { token } = ACHFundingSourceData;
   const ACHFundingSource = await ACHFundingSourceModel.findOne({ userId, token });
   if (!ACHFundingSource) {
@@ -29,12 +29,12 @@ export const mapACHFundingSource = async (userId: string, ACHFundingSourceData: 
 };
 
 // list user's funding sources
-export const listACHFundingSourcesForUser = async (userId: string, params?: any): Promise<ListACHFundingSourcesForUserResponse> => {
+export const listACHFundingSourcesForUser = async (userId: string, params?: any): Promise<ACHTransferTypes.ListACHFundingSourcesForUserResponse> => {
   const sources = await achFundingSource.listACHFundingSourceForUser(userId, params);
   return { data: sources };
 };
 
-export const createAchFundingSource = async (userId: string, data: IMarqetaACHPlaidFundingSource, accessToken: string) => {
+export const createAchFundingSource = async (userId: string, data: ACHTransferTypes.IMarqetaACHPlaidFundingSource, accessToken: string) => {
   const userResponse = await achFundingSource.createAchFundingSource(data);
   // map the created Ach Funding Source to DB
   await mapACHFundingSource(userId, { accessToken, ...userResponse });
@@ -50,15 +50,15 @@ export const updateACHFundingSource = async (userId: string, accessToken: string
   return { data: userResponse };
 };
 
-export const createACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
+export const createACHBankTransfer = async (req: IRequest<{}, {}, ACHTransferTypes.IMarqetaACHBankTransfer>) => {
   const params = req.body;
   const userResponse = await achFundingSource.createACHBankTransfer(params);
   return { data: userResponse };
 };
 
-export const listACHBankTransfer = async (req: IRequest<{}, { userToken: string, fundingSourceToken: string }, {}>): Promise<ListACHBankTransfersResponse> => {
+export const listACHBankTransfer = async (req: IRequest<{}, { userToken: string, fundingSourceToken: string }, {}>): Promise<ACHTransferTypes.ListACHBankTransfersResponse> => {
   const params = req.query;
-  const response: PaginatedMarqetaResponse<ACHTransferModelType[]> = await achFundingSource.listACHBankTransfer(params);
+  const response: ACHTransferTypes.PaginatedMarqetaResponse<ACHTransferTypes.ACHTransferModel[]> = await achFundingSource.listACHBankTransfer(params);
   return { data: response };
 };
 
@@ -67,16 +67,16 @@ export const getACHBankTransfer = async (achToken: string) => {
   return { data: userResponse };
 };
 
-export const createACHBankTransferTransition = async (req: IRequest<{}, {}, IMarqetaACHBankTransferTransition>) => {
+export const createACHBankTransferTransition = async (req: IRequest<{}, {}, ACHTransferTypes.IMarqetaACHBankTransferTransition>) => {
   const params = req.body;
   const userResponse = await achFundingSource.createACHBankTransferTransition(params);
   return { data: userResponse };
 };
 
-export const getLocalACHFundingSource = async (req: IRequest<{}, IACHFundingSourceQuery, {}>) => {
+export const getLocalACHFundingSource = async (req: IRequest<{}, ACHTransferTypes.IACHFundingSourceQuery, {}>) => {
   const { userId, fundingSourceToken, userToken, fromDate, toDate } = req.query;
 
-  const query: IACHFundingSourceModelQuery = { userId, active: true };
+  const query: ACHTransferTypes.IACHFundingSourceModelQuery = { userId, active: true };
 
   if (fundingSourceToken) query.token = fundingSourceToken;
   if (userToken) query.user_token = userToken;
@@ -91,10 +91,10 @@ export const getLocalACHFundingSource = async (req: IRequest<{}, IACHFundingSour
   return { data: ACHFundingSources };
 };
 
-export const getLocalACHBankTransfer = async (req: IRequest<{}, IACHBankTransferQuery, {}>) => {
+export const getLocalACHBankTransfer = async (req: IRequest<{}, ACHTransferTypes.IACHBankTransferQuery, {}>) => {
   const { userId, bankTransferToken, fundingSourceToken, type, status, fromDate, toDate } = req.query;
 
-  const query: IACHBankTransferModelQuery = { userId };
+  const query: ACHTransferTypes.IACHBankTransferModelQuery = { userId };
 
   if (bankTransferToken) query.token = bankTransferToken;
   if (fundingSourceToken) query.fundingSourceToken = fundingSourceToken;
@@ -111,7 +111,7 @@ export const getLocalACHBankTransfer = async (req: IRequest<{}, IACHBankTransfer
   return { data: ACHBankTransfers };
 };
 
-export const validateACHTransferLimit = async (query: IACHTransferValidationQuery) => {
+export const validateACHTransferLimit = async (query: ACHTransferTypes.IACHTransferValidationQuery) => {
   const { userId, fundingSourceToken, type, statusArray, fromDate, toDate, limit, amount } = query;
   const result = await ACHTransferModel.aggregate([
     {
@@ -140,10 +140,10 @@ export const validateACHTransferLimit = async (query: IACHTransferValidationQuer
   return false;
 };
 
-export const validateCreateACHBankTransferRequest = async (query: IACHBankTransferRequestFields): Promise<{ isError: Boolean, message: string }> => {
+export const validateCreateACHBankTransferRequest = async (query: ACHTransferTypes.IACHBankTransferRequestFields): Promise<{ isError: Boolean, message: string }> => {
   const { fundingSourceToken, type, amount, userId } = query;
 
-  const isTypeValid = Object.values(IMarqetaACHTransferType).includes(type.toUpperCase() as IMarqetaACHTransferType);
+  const isTypeValid = Object.values(ACHTransferTypes.IMarqetaACHTransferType).includes(type.toUpperCase() as ACHTransferTypes.IMarqetaACHTransferType);
   if (!isTypeValid) return { isError: true, message: 'please provide correct type value' };
 
   if (+amount > perTransferLimit) return { isError: true, message: `Invalid Amount. Amount must be less than or equal to ${perTransferLimit} per transfer` };
@@ -160,7 +160,7 @@ export const validateCreateACHBankTransferRequest = async (query: IACHBankTransf
     limit: dailyACHTransferLimit,
     type,
     amount: +amount,
-    statusArray: [IMACHTransferStatus.PENDING],
+    statusArray: [ACHTransferTypes.IMACHTransferStatus.PENDING],
   };
 
   const isValidDailyLimit = await validateACHTransferLimit(dailyLimitBody);
@@ -175,7 +175,7 @@ export const validateCreateACHBankTransferRequest = async (query: IACHBankTransf
     limit: monthlyACHTransferLimit,
     type,
     amount: +amount,
-    statusArray: [IMACHTransferStatus.PENDING, IMACHTransferStatus.PROCESSING, IMACHTransferStatus.SUBMITTED, IMACHTransferStatus.COMPLETED],
+    statusArray: [ACHTransferTypes.IMACHTransferStatus.PENDING, ACHTransferTypes.IMACHTransferStatus.PROCESSING, ACHTransferTypes.IMACHTransferStatus.SUBMITTED, ACHTransferTypes.IMACHTransferStatus.COMPLETED],
   };
 
   const isValidMonthlyLimit = await validateACHTransferLimit(monthlyLimitBody);
@@ -184,7 +184,7 @@ export const validateCreateACHBankTransferRequest = async (query: IACHBankTransf
   return { isError: false, message: 'All request fields are Valid' };
 };
 
-export const validateGetACHFundingSourceRequest = async (query: IACHFundingSourceQuery): Promise<{ isError: Boolean, message: string }> => {
+export const validateGetACHFundingSourceRequest = async (query: ACHTransferTypes.IACHFundingSourceQuery): Promise<{ isError: Boolean, message: string }> => {
   const { fromDate, toDate } = query;
 
   if ((fromDate && toDate) && !(DATE_REGEX.test(fromDate.toString()) && DATE_REGEX.test(toDate.toString()))) {
@@ -198,15 +198,15 @@ export const validateGetACHFundingSourceRequest = async (query: IACHFundingSourc
   return { isError: false, message: 'All request fields are valid' };
 };
 
-export const validateGetLocalACHBankTransferRequest = async (query: IACHBankTransferQuery): Promise<{ isError: Boolean, message: string }> => {
+export const validateGetLocalACHBankTransferRequest = async (query: ACHTransferTypes.IACHBankTransferQuery): Promise<{ isError: Boolean, message: string }> => {
   const { status, type, fromDate, toDate } = query;
   if (status) {
-    const isStatusValid: Boolean = Object.values(IMACHTransferStatus).includes(status);
+    const isStatusValid: Boolean = Object.values(ACHTransferTypes.IMACHTransferStatus).includes(status);
     if (!isStatusValid) return { isError: true, message: 'Please provide correct status value' };
   }
 
   if (type) {
-    const isTypeValid: Boolean = Object.values(IACHTransferTypes).includes(type);
+    const isTypeValid: Boolean = Object.values(ACHTransferTypes.IACHTransferTypes).includes(type);
     if (!isTypeValid) return { isError: true, message: 'Please provide correct type value' };
   }
 

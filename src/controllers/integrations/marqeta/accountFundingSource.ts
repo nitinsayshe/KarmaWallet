@@ -42,15 +42,12 @@ export const createACHBankTransferTransition: IRequestHandler<{}, {}, IMarqetaAC
 };
 
 // Function to retrieve ACH funding source data that is mapped in the ImpactKarma database
-export const getLocalACHFundingSource : IRequestHandler<{}, IACHFundingSourceQuery, {}> = async (req, res) => {
+export const getLocalACHFundingSource: IRequestHandler<{}, IACHFundingSourceQuery, {}> = async (req, res) => {
   try {
     const { _id: userId } = req.requestor;
     req.query.userId = userId;
-
     const { isError, message } = await ACHFundingSourceService.validateGetACHFundingSourceRequest({ userId, ...req.query });
-
     if (isError) return output.error(req, res, new CustomError(message, ErrorTypes.INVALID_ARG));
-
     const { data } = await ACHFundingSourceService.getLocalACHFundingSource(req);
     output.api(req, res, data);
   } catch (err) {
@@ -59,15 +56,12 @@ export const getLocalACHFundingSource : IRequestHandler<{}, IACHFundingSourceQue
 };
 
 // Function to retrieve ACH transfer data that is mapped in the ImpactKarma database
-export const getLocalACHBankTransfer : IRequestHandler<{}, IACHBankTransferQuery, {}> = async (req, res) => {
+export const getLocalACHBankTransfer: IRequestHandler<{}, IACHBankTransferQuery, {}> = async (req, res) => {
   try {
     const { _id: userId } = req.requestor;
     req.query.userId = userId;
-
     const { isError, message } = await ACHFundingSourceService.validateGetLocalACHBankTransferRequest({ userId, ...req.query });
-
     if (isError) return output.error(req, res, new CustomError(message, ErrorTypes.INVALID_ARG));
-
     const { data } = await ACHFundingSourceService.getLocalACHBankTransfer(req);
     output.api(req, res, data);
   } catch (err) {

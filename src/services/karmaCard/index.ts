@@ -300,3 +300,15 @@ export const updateKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
     throw asCustomError(err);
   }
 };
+
+export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextRequestParams, {}, {}>) => {
+  try {
+    const legalText = await KarmaCardLegalModel.findOne({ _id: req.params.legalTextId });
+    if (!legalText) throw new CustomError(`Legal text with id "${req.params.legalTextId}" not found`, ErrorTypes.NOT_FOUND);
+
+    const legalTextDeleted = await legalText.remove();
+    return legalTextDeleted;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};

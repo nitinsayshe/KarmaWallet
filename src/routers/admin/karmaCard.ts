@@ -20,4 +20,11 @@ router.put(
   KarmaCardController.updateKarmaCardLegalText,
 );
 
+router.delete(
+  '/legal-text/:legalTextId',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  KarmaCardController.deleteKarmaCardLegalText,
+);
+
 export default router;

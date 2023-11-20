@@ -20,3 +20,12 @@ export const updateKarmaCardLegalText: IRequestHandler<KarmaCardService.IUpdateL
     error(req, res, asCustomError(err));
   }
 };
+
+export const deleteKarmaCardLegalText: IRequestHandler<KarmaCardService.IUpdateLegalTextRequestParams, {}, KarmaCardService.INewLegalTextRequestBody> = async (req, res) => {
+  try {
+    const legalText = await KarmaCardService.deleteKarmaCardLegalText(req);
+    api(req, res, legalText);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

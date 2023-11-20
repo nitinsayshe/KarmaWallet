@@ -19,6 +19,7 @@ import articleRouter from './article';
 import utilitiesRouter from './utilities';
 import notificationRouter from './notification';
 import faqRouter from './faq';
+import karmaCardRouter from './karmaCard';
 
 const adminRouter = Router();
 
@@ -42,5 +43,6 @@ adminRouter.use('/article', articleRouter);
 adminRouter.use('/utilities', utilitiesRouter);
 adminRouter.use('/notification', notificationRouter);
 adminRouter.use('/faq', faqRouter);
+adminRouter.use('/karma-card', karmaCardRouter);
 
 export default (app: Express) => app.use('/admin', adminRouter);

@@ -21,7 +21,81 @@ registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
 
-registerHandlebarsOperators(Handlebars);
+interface ICreateSentEmailParams {
+  key: EmailTemplateKeys;
+  email: string;
+  user?: Types.ObjectId;
+  visitor?: Types.ObjectId;
+}
+
+interface IEmailTemplateParams {
+  user?: Types.ObjectId;
+  name: string;
+  amount?: string;
+  recipientEmail: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
+  domain?: string;
+  sendEmail?: boolean;
+}
+
+interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
+  groupName: string;
+}
+
+interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
+  token: string;
+  groupName?: string;
+  visitor?: IVisitorDocument;
+  companyName?: string;
+  amount?: string;
+}
+
+interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
+  groupName: string;
+}
+
+export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplateParams {
+  template: EmailTemplateKeys;
+}
+
+//   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+
+export interface IEmailJobData {
+  amount?: string;
+  companyName?: string;
+  currentYear?: string;
+  domain?: string;
+  emailTemplateConfig?: IEmailTemplateConfig;
+  footerStyle?: string;
+  groupName?: string;
+  isSuccess?: boolean;
+  name?: string;
+  passwordResetLink?: string;
+  recipientEmail: string;
+  replyToAddresses: string[];
+  senderEmail: string;
+  style?: string;
+  subject: string;
+  template: string;
+  templateStyle?: string;
+  token?: string;
+  user?: Types.ObjectId | string;
+  verificationLink?: string;
+  visitor?: IVisitorDocument | Types.ObjectId | string;
+}
+
+export interface IBuildTemplateParams {
+  templateName: EmailTemplateKeys;
+  data: Partial<IEmailJobData>;
+  templatePath?: string;
+  stylePath?: string;
+
+}
+
+export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
+  isSuccess: boolean;
+}
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {

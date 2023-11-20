@@ -15,7 +15,7 @@ import { CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constant
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
-import { sleep } from '../../lib/misc';
+import { floorToPercision, sleep } from '../../lib/misc';
 import { CardModel, ICard, ICardDocument, IKardIntegration } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ITransaction } from '../../models/transaction';
@@ -47,10 +47,7 @@ export const getCardInfo = (card: ICardDocument): CardInfo => {
   };
 };
 
-export const registerCardInKardRewards = async (
-  kardUserId: string,
-  card: ICardDocument,
-): Promise<AddCardToUserResponse> => {
+export const registerCardInKardRewards = async (kardUserId: string, card: ICardDocument): Promise<AddCardToUserResponse> => {
   try {
     const kard = new KardClient();
     const cardInfo = getCardInfo(card);
@@ -64,10 +61,7 @@ export const registerCardInKardRewards = async (
   }
 };
 
-export const addKardIntegrationToCard = async (
-  card: ICardDocument,
-  integration: IKardIntegration,
-): Promise<ICardDocument> => {
+export const addKardIntegrationToCard = async (card: ICardDocument, integration: IKardIntegration): Promise<ICardDocument> => {
   try {
     if (!card.integrations) {
       card.integrations = {};
@@ -122,10 +116,7 @@ export const createKardUserFromUser = async (
   }
 };
 
-export const createKardUserAndAddIntegrations = async (
-  user: IUserDocument,
-  card: ICardDocument,
-): Promise<ICardDocument> => {
+export const createKardUserAndAddIntegrations = async (user: IUserDocument, card: ICardDocument): Promise<ICardDocument> => {
   const kardIntegrationData = await createKardUserFromUser(user, card);
   if (!!kardIntegrationData.error || !kardIntegrationData.integration) {
     throw kardIntegrationData.error || new CustomError('Error creating kard user', ErrorTypes.SERVER);
@@ -224,13 +215,13 @@ const sendTransactionsInBatches = async (
     try {
       const batch = batches[i];
       const req: QueueTransactionsRequest = batch.map((t): Transaction => {
-        const description = `Transaction with ${
-          (t.company as ICompanyDocument)?.companyName
-        } on ${t.date.toISOString()} for ${t.amount * CentsInUSD} USD cents`;
+        const description = `Transaction with ${(t.company as ICompanyDocument)?.companyName} on ${t.date.toISOString()} for ${
+          t.amount * CentsInUSD
+        } USD cents`;
         return {
           transactionId: t.integrations?.kard?.id,
           referringPartnerUserId: card?.integrations?.kard?.userId,
-          amount: t.amount * CentsInUSD,
+          amount: floorToPercision(t.amount * CentsInUSD, 0),
           status: t?.integrations?.kard?.status,
           currency: t?.integrations?.plaid?.iso_currency_code,
           description,
@@ -243,10 +234,7 @@ const sendTransactionsInBatches = async (
         };
       });
 
-      console.log(
-        `Kard API Request ${i} of ${batches.length}: queueing transactions for processing: `,
-        JSON.stringify(req),
-      );
+      console.log(`Kard API Request ${i} of ${batches.length}: queueing transactions for processing: `, JSON.stringify(req));
       responses.push(await kc.queueTransactionsForProcessing(req));
       sleep(QueueTransactionBackoffMs);
     } catch (err) {

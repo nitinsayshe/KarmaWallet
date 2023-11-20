@@ -14,7 +14,7 @@ import * as UserService from '../user';
 import * as VisitorService from '../visitor';
 import { IMarqetaUserState, ReasonCode } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
-import CustomError from '../../lib/customError';
+import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
@@ -36,6 +36,9 @@ export interface IKarmaCardRequestBody {
 export interface INewLegalTextRequestBody {
   text: string;
   name: string;
+}
+export interface IUpdateLegalTextRequestParams {
+  legalTextId: string;
 }
 
 export const getShareableKarmaCardApplication = ({
@@ -252,18 +255,48 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   }
 };
 
-export const getKarmaCardLegalText = async () => {
+export const getKarmaCardLegalText = async (_req: IRequest) => {
   const legalTexts = await KarmaCardLegalModel.find();
-
-  if (legalTexts.length === 0) throw new CustomError('There are no legal texts available', ErrorTypes.NOT_FOUND);
-
+  if (!legalTexts.length) throw new CustomError('There are no legal texts available', ErrorTypes.NOT_FOUND);
   return legalTexts;
 };
 
-export const createKarmaCardLegalText = async (legalTextData: INewLegalTextRequestBody) => {
-  const newLegalText = await KarmaCardLegalModel.create(legalTextData);
+export const createKarmaCardLegalText = async (req: IRequest<{}, {}, INewLegalTextRequestBody>) => {
+  const { text, name } = req.body;
 
-  if (!newLegalText) throw new CustomError('There was an error creating the legal text', ErrorTypes.SERVER);
+  if (!text) throw new CustomError('Text is required.', ErrorTypes.INVALID_ARG);
+  if (!name) throw new CustomError('Name is required.', ErrorTypes.INVALID_ARG);
 
-  return 200;
+  try {
+    const legalText = new KarmaCardLegalModel({
+      text,
+      name,
+    });
+
+    legalText.save();
+    return legalText;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const updateKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextRequestParams, {}, INewLegalTextRequestBody>) => {
+  const { text, name } = req.body;
+
+  if (!text) throw new CustomError('Text is required.', ErrorTypes.INVALID_ARG);
+  if (!name) throw new CustomError('Name is required.', ErrorTypes.INVALID_ARG);
+
+  try {
+    const legalText = await KarmaCardLegalModel.findOne({ _id: req.params.legalTextId });
+    if (!legalText) throw new CustomError(`Legal text with id "${req.params.legalTextId}" not found`, ErrorTypes.NOT_FOUND);
+
+    legalText.text = text;
+    legalText.name = name;
+    legalText.lastModified = new Date();
+
+    legalText.save();
+    return legalText;
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

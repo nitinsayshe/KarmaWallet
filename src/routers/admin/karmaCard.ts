@@ -6,13 +6,6 @@ import * as KarmaCardController from '../../controllers/admin/karmaCard';
 
 const router = Router();
 
-router.get(
-  '/legal-text',
-  authenticate,
-  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
-  KarmaCardController.getKarmaCardLegalText,
-);
-
 router.post(
   '/legal-text',
   authenticate,
@@ -20,11 +13,11 @@ router.post(
   KarmaCardController.createKarmaCardLegalText,
 );
 
-// router.put(
-//   '/:legalTextId',
-//   authenticate,
-//   protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
-//   ArticleController.updateKarmaCardLegalText,
-// );
+router.put(
+  '/legal-text/:legalTextId',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  KarmaCardController.updateKarmaCardLegalText,
+);
 
 export default router;

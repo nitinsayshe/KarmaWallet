@@ -28,12 +28,7 @@ export const roundToPercision = (value: number, precision: number) => {
   return Math.round(value * multiplier) / multiplier;
 };
 
-export const generateRandomPasswordString = (length: number) => {
-  const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let password = '';
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-
-  return `K4-${password}!`;
+export const floorToPercision = (value: number, precision: number) => {
+  const multiplier = 10 ** (precision || 0);
+  return Math.floor(value * multiplier) / multiplier;
 };

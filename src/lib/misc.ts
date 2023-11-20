@@ -27,3 +27,8 @@ export const roundToPercision = (value: number, precision: number) => {
   const multiplier = 10 ** (precision || 0);
   return Math.round(value * multiplier) / multiplier;
 };
+
+export const floorToPercision = (value: number, precision: number) => {
+  const multiplier = 10 ** (precision || 0);
+  return Math.floor(value * multiplier) / multiplier;
+};

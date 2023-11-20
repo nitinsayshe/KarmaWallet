@@ -11,10 +11,10 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
-import { EmailTemplateConfigs } from '../../lib/constants/email';
+import { EmailTemplateConfigs, EmailTemplateTypes } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams } from './types';
+import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IDisputeEmailData } from './types';
 import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
@@ -32,13 +32,20 @@ const defaultEmailJobOptions = {
   },
 };
 
-export const buildTemplate = ({ templateName, data, templatePath }: IBuildTemplateParams) => {
+export const buildTemplate = ({ templateName, data, templatePath, templateType }: IBuildTemplateParams) => {
   // Add Template Content and Styles for this particular email
   const _bodyPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
   const _templateStylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
   if (!fs.existsSync(_bodyPath)) throw new CustomError('Template not found for email', ErrorTypes.INVALID_ARG);
   const bodyString = fs.readFileSync(_bodyPath, 'utf8');
   Handlebars.registerPartial('body', bodyString);
+
+  if (templateType === EmailTemplateTypes.Dispute) {
+    const _disputesSignatureTemplatePath = path.join(__dirname, '..', '..', 'templates', 'email', 'shareableTemplates', 'disputeSignature', 'template.hbs');
+    if (!fs.existsSync(_disputesSignatureTemplatePath)) throw new CustomError('Dispute signature template not found', ErrorTypes.INVALID_ARG);
+    const disputeString = fs.readFileSync(_disputesSignatureTemplatePath, 'utf8');
+    Handlebars.registerPartial('disputeSignature', disputeString);
+  }
 
   if (fs.existsSync(_templateStylePath)) {
     const rawCss = fs.readFileSync(_templateStylePath, 'utf8');
@@ -48,8 +55,8 @@ export const buildTemplate = ({ templateName, data, templatePath }: IBuildTempla
   }
 
   // Add shared Footer Content and Styles
-  const _footerPath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'template.hbs');
-  const _footerStylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'footer', 'style.hbs');
+  const _footerPath = path.join(__dirname, '..', '..', 'templates', 'email', 'shareableTemplates', 'footer', 'template.hbs');
+  const _footerStylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'shareableTemplates', 'footer', 'style.hbs');
   if (!fs.existsSync(_footerPath)) throw new CustomError('Footer file not found', ErrorTypes.INVALID_ARG);
   if (!fs.existsSync(_footerStylePath)) throw new CustomError('Footer style file not found', ErrorTypes.INVALID_ARG);
   const footerString = fs.readFileSync(_footerPath, 'utf8');
@@ -439,6 +446,55 @@ export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
       accountMask: '1234',
       accountType: 'Checking',
       date: '12/14/2023',
+      name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const sendNoChargebackRightsEmail = async ({
+  user,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  companyName,
+  amount,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const recipientEmail = user.emails.find(e => !!e.primary)?.email;
+  const subject = 'Your Karma Wallet Card Dispute Has Been Denied';
+  const emailTemplateConfig = EmailTemplateConfigs.NoChargebackRights;
+
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'companyName', 'amount'], { domain, recipientEmail, name, companyName, amount });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: EmailTemplateTypes.Dispute,
+    data: { amount, companyName, name },
+  });
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const testNoChargebackRightsEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendNoChargebackRightsEmail({
+      user: req.requestor,
+      amount: '1032.00',
+      companyName: 'Amazon Web Services',
       name: user.name,
     });
 

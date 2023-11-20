@@ -8,8 +8,8 @@ import {
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
-import { IACHTransferEmailData } from '../email/types';
+import { sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail, sendNoChargebackRightsEmail } from '../email';
+import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -78,6 +78,23 @@ export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDo
   }
 };
 
+export const handleSendNoChargebackRightsEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IDisputeEmailData;
+  const { amount, companyName, name } = d;
+  if (!d) throw new Error('Invalid no chargeback rights notification data');
+  try {
+    await sendNoChargebackRightsEmail({
+      user,
+      amount,
+      companyName,
+      name,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending no chargeback rights email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -85,6 +102,7 @@ export const NotificationEffectsFunctions: {
   SendPayoutIssuedEmail: handleSendPayoutIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
+  SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {

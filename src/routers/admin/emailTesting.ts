@@ -19,4 +19,12 @@ router.route('/ach-initiation-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testACHInitiationEmail,
   );
+
+router.route('/no-chargeback-rights-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testNoChargebackRightsEmail,
+  );
+
 export default router;

@@ -15,6 +15,7 @@ export enum EmailTemplateKeys {
   CashbackPayoutNotification = 'cashbackPayoutNotification',
   SupportTicket = 'supportTicket',
   AccountDeleteRequest = 'accountDeleteRequest',
+  ACHTransferInitiation = 'achTransferInitiation',
 }
 
 export enum EmailTemplateTypes {
@@ -27,6 +28,7 @@ export enum EmailTemplateTypes {
   CashbackNotificaiton = 'cashbackNotification',
   SupportTicket = 'supportTicket',
   AccountDeleteRequest = 'accountDeleteRequest',
+  ACHTransferInitiation = 'achTransferInitiation',
 }
 
 export interface IEmailTemplateConfig {
@@ -35,6 +37,10 @@ export interface IEmailTemplateConfig {
 }
 
 export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
+  ACHTransferInitiation: {
+    name: EmailTemplateKeys.ACHTransferInitiation,
+    type: EmailTemplateTypes.ACHTransferInitiation,
+  },
   PasswordReset: {
     name: EmailTemplateKeys.PasswordReset,
     type: EmailTemplateTypes.Essential,

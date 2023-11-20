@@ -145,10 +145,11 @@ export enum IMarqetaACHTransferType {
   PUSH = 'PUSH',
   PULL = 'PULL',
 }
+
 export interface IMarqetaACHBankTransfer {
   amount: string;
-  fundingSourceToken: string;
   type: IMarqetaACHTransferType;
+  fundingSourceToken: string;
 }
 
 export interface IMarqetaACHBankTransferTransition {
@@ -526,5 +527,4 @@ export type ListTransactionsResponse = { data: PaginatedMarqetaResponse<Transact
 export type ListACHFundingSourcesForUserResponse = { data: PaginatedMarqetaResponse<IACHFundingSource[]> };
 export type ListACHBankTransfersResponse = { data: PaginatedMarqetaResponse<ACHTransferModel[]> };
 export type ListWebhooksResponse = { data: PaginatedMarqetaResponse<WebhookWithModifiedAndCreatedDates[]> };
-
 export type EnrichedMarqetaTransaction = Transaction & { marqeta_transaction: TransactionModel };

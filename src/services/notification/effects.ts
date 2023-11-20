@@ -8,7 +8,8 @@ import {
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
+import { sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
+import { IACHTransferEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -58,16 +59,40 @@ export const handleSendPayoutIssuedEmailEffect = async <DataType>(user: IUserDoc
   }
 };
 
+export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IACHTransferEmailData;
+  const { date, amount, accountMask, accountType, name } = d;
+  if (!d) throw new Error('Invalid ach initiation notification data');
+  try {
+    await sendACHInitiationEmail({
+      user,
+      amount,
+      accountMask,
+      accountType,
+      date,
+      name,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending ach initiation email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
   SendEarnedCashbackEmail: handleSendEarnedCashBackEmailEffect,
   SendPayoutIssuedEmail: handleSendPayoutIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
+  SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {
-  [NotificationChannelEnum.Email]: [NotificationEffectsEnum.SendEarnedCashbackEmail, NotificationEffectsEnum.SendPayoutIssuedEmail],
+  [NotificationChannelEnum.Email]: [
+    NotificationEffectsEnum.SendEarnedCashbackEmail,
+    NotificationEffectsEnum.SendPayoutIssuedEmail,
+    NotificationEffectsEnum.SendACHInitiationEmail,
+  ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,
   ],

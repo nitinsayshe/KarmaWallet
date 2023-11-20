@@ -1,16 +1,33 @@
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { ACHTransferTransitionStatusEnum, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
+import { createACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
+import { ACHTransferTransitionStatusEnum, IACHBankTransfer, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
+import { createACHInitiationUserNotification } from '../user_notification';
+
+dayjs.extend(utc);
 
 export interface IACHTransferParams {
   achTransferId: string;
 }
+
+// store ACH bank transfer  to karma DB
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
+  const { token } = ACHBankTransferData;
+  let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
+  if (!ACHBankTranfer) {
+    ACHBankTranfer = await ACHTransferModel.create({ userId, ...ACHBankTransferData });
+  }
+
+  return ACHBankTranfer;
+};
 
 export const getShareableACHTransfer = async (transfer: IACHTransfer) => {
   const fundingSource = await ACHFundingSourceModel.findOne({
@@ -104,4 +121,39 @@ export const updateACHTransfer = async (req: IRequest<IACHTransferParams, {}, IM
   const updatedTransfer = await achFundingSource.updateACHBankTransfer(data);
   if (!updatedTransfer) throw new CustomError('Unable to update ACH transfer.', ErrorTypes.GEN);
   return updatedTransfer;
+};
+
+export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
+  const { body } = req;
+  const { amount, fundingSourceToken } = body;
+  const { _id } = req.requestor;
+  const requiredFields = ['amount', 'type', 'fundingSourceToken'];
+  const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+  if (!isValid) {
+    throw new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG);
+  }
+
+  if (!_id) throw new CustomError('User id required.', ErrorTypes.GEN);
+  const { isError, message } = await validateCreateACHBankTransferRequest({ userId: _id, ...body });
+  if (isError) throw new CustomError(message, ErrorTypes.INVALID_ARG);
+  // Create ACH transfer in marqeta
+  const achTransferData = await createACHBankTransfer(req);
+  if (!achTransferData) throw new CustomError('Unable to create ACH transfer.', ErrorTypes.GEN);
+  const { data } = achTransferData;
+  // Store ACH transfer in karma database
+  const savedACHTransfer = await mapACHBankTransfer(_id, data);
+  if (!savedACHTransfer) throw new CustomError('Error saving the ACH Transfer to the database.', ErrorTypes.GEN);
+  const transferBankData = await ACHFundingSourceModel.findOne({
+    token: fundingSourceToken,
+  });
+  // Create user notification
+  await createACHInitiationUserNotification({
+    user: req.requestor,
+    amount,
+    accountMask: transferBankData.account_suffix.toString(),
+    accountType: transferBankData.account_type.toString(),
+    date: dayjs(data.created_time).utc().format('MMMM DD, YYYY'),
+  });
+
+  return getShareableACHTransfer(savedACHTransfer);
 };

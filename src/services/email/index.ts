@@ -2,7 +2,6 @@
 import Handlebars from 'handlebars';
 import path from 'path';
 import fs from 'fs';
-import { Types } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { EmailBullClient } from '../../clients/bull/email';
@@ -12,118 +11,17 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
-import { EmailTemplateKeys, EmailTemplateConfigs, IEmailTemplateConfig } from '../../lib/constants/email';
+import { EmailTemplateConfigs } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IVisitorDocument } from '../../models/visitor';
-import { IUserDocument, UserModel } from '../../models/user';
+import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams } from './types';
+import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
 
-interface ICreateSentEmailParams {
-  key: EmailTemplateKeys;
-  email: string;
-  user?: Types.ObjectId;
-  visitor?: Types.ObjectId;
-}
-
-interface IEmailTemplateParams {
-  user?: Types.ObjectId;
-  name: string;
-  amount?: string;
-  recipientEmail: string;
-  senderEmail?: string;
-  replyToAddresses?: string[];
-  domain?: string;
-  sendEmail?: boolean;
-}
-
-interface IDeleteAccountRequestVerificationTemplateParams {
-  domain?: string;
-  user: IUserDocument;
-  deleteReason: string;
-  deleteAccountRequestId: string;
-  recipientEmail?: string;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-  message?: string;
-}
-
-interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
-  groupName: string;
-}
-
-interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
-  token: string;
-  groupName?: string;
-  visitor?: IVisitorDocument;
-  companyName?: string;
-  amount?: string;
-}
-
-interface ISupportEmailVerificationTemplateParams {
-  domain?: string;
-  message: string;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-  user: IUserDocument;
-  supportTicketId: string;
-  recipientEmail?: string;
-}
-
-interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
-  groupName: string;
-}
-
-export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplateParams {
-  template: EmailTemplateKeys;
-}
-
-//   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-
-export interface IEmailJobData {
-  amount?: string;
-  companyName?: string;
-  currentYear?: string;
-  domain?: string;
-  emailTemplateConfig?: IEmailTemplateConfig;
-  footerStyle?: string;
-  groupName?: string;
-  isSuccess?: boolean;
-  name?: string;
-  passwordResetLink?: string;
-  recipientEmail: string;
-  replyToAddresses: string[];
-  senderEmail: string;
-  style?: string;
-  subject: string;
-  template: string;
-  templateStyle?: string;
-  token?: string;
-  message?: string;
-  supportTicketId?: string;
-  userId?: string;
-  userEmail?: string;
-  deleteAccountRequestId?: string;
-  deleteReason?: string;
-  user?: Types.ObjectId | string;
-  verificationLink?: string;
-  visitor?: IVisitorDocument | Types.ObjectId | string;
-}
-
-export interface IBuildTemplateParams {
-  templateName: EmailTemplateKeys;
-  data: Partial<IEmailJobData>;
-  templatePath?: string;
-  stylePath?: string;
-
-}
-
-export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
-  isSuccess: boolean;
-}
+registerHandlebarsOperators(Handlebars);
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
@@ -463,6 +361,49 @@ export const sendDeleteAccountRequestEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+export const sendACHInitiationEmail = async ({
+  user,
+  amount,
+  accountMask,
+  accountType,
+  date,
+  name,
+}: IACHTransferEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ACHTransferInitiation;
+  const subject = 'An ACH Transfer Has Been Initiated';
+  const senderEmail = EmailAddresses.NoReply;
+  const replyToAddresses = [EmailAddresses.ReplyTo];
+  const recipientEmail = user.emails.find(e => !!e.primary)?.email;
+
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'accountMask', 'accountType', 'date', 'name'], { amount, accountMask, accountType, date, name });
+
+  if (!isValid) {
+    throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  }
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { amount, accountMask, accountType, date, name },
+  });
+
+  const jobData: IEmailJobData = {
+    template,
+    recipientEmail,
+    subject,
+    senderEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user: user._id,
+    amount,
+    accountMask,
+    accountType,
+    date,
+    name,
+  };
+
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const testCashbackPayoutEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
@@ -477,6 +418,30 @@ export const testCashbackPayoutEmail = async (req: IRequest<{}, {}, {}>) => {
       name: user.name,
       amount: '10.44',
     });
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendACHInitiationEmail({
+      user: req.requestor,
+      amount: '100.00',
+      accountMask: '1234',
+      accountType: 'Checking',
+      date: '12/14/2023',
+      name: user.name,
+    });
+
     if (!!emailResponse) {
       return 'Email sent successfully';
     }

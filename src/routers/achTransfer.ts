@@ -13,4 +13,7 @@ router.route('/pending')
 router.route('/update/:achTransferId')
   .post(authenticate, AchTransferController.updateACHBankTransfer);
 
+router.route('/create')
+  .post(authenticate, AchTransferController.initiateACHBankTransfer);
+
 export default (app: Express) => app.use('/ach-transfer', router);

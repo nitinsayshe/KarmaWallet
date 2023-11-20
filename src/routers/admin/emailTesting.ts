@@ -13,4 +13,10 @@ router.route('/cashback-payout-email')
     AdminEmailTestingController.testCashbackPayoutEmail,
   );
 
+router.route('/ach-initiation-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testACHInitiationEmail,
+  );
 export default router;

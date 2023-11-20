@@ -5,8 +5,17 @@ import { asCustomError } from '../../lib/customError';
 
 export const testCashbackPayoutEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const promo = await EmailService.testCashbackPayoutEmail(req);
-    output.api(req, res, promo);
+    const email = await EmailService.testCashbackPayoutEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testACHInitiationEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailService.testACHInitiationEmail(req);
+    output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

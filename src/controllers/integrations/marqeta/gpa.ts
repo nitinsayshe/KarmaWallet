@@ -16,7 +16,7 @@ export const fundUserGPAFromProgramFundingSource: IRequestHandler<{}, {}, IMarqe
       output.error(req, res, new CustomError(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`, ErrorTypes.INVALID_ARG));
       return;
     }
-    const { user: data } = await GPAService.fundUserGPAFromProgramFundingSource(body);
+    const { data } = await GPAService.fundUserGPAFromProgramFundingSource(body);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -39,7 +39,17 @@ export const addFundsToGPAFromProgramFundingSource = async (payout: IMarqetaCrea
 export const getGPAbalance: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = async (req, res) => {
   try {
     const { userToken } = req.requestor.integrations.marqeta;
-    const { user: data } = await GPAService.getGPABalance(userToken);
+    const { data } = await GPAService.getGPABalance(userToken);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+// get the program funding balance
+export const getProgramFundingBalance: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const { data } = await GPAService.getProgramFundingBalance();
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

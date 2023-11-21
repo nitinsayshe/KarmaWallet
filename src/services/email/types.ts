@@ -56,6 +56,10 @@ export interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
   groupName: string;
 }
 
+export interface IKarmacardWelcomeTemplateParams extends IEmailTemplateParams {
+  newUser: boolean;
+}
+
 export interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
   groupName?: string;
@@ -98,6 +102,7 @@ export interface IEmailJobData {
   isSuccess?: boolean;
   message?: string;
   name?: string;
+  newUser?: boolean;
   passwordResetLink?: string;
   recipientEmail: string;
   replyToAddresses: string[];

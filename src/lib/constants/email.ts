@@ -17,6 +17,7 @@ export enum EmailTemplateKeys {
   WelcomeCC1 = 'welcomeCC1',
   WelcomeCCG1 = 'welcomeCCG1',
   WelcomeGroup = 'welcomeGroup',
+  KarmaCardWelcome = 'karmaCardWelcome',
 }
 
 export enum EmailTemplateTypes {
@@ -107,6 +108,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   AccountDeleteRequest: {
     name: EmailTemplateKeys.AccountDeleteRequest,
     type: EmailTemplateTypes.AccountDeleteRequest,
+  },
+  KarmaCardWelcome: {
+    name: EmailTemplateKeys.KarmaCardWelcome,
+    type: EmailTemplateTypes.Essential,
   },
 };
 

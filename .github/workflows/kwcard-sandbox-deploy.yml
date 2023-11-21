@@ -1,0 +1,113 @@
+# This workflow will do a clean install of node dependencies, cache/restore them, and build the source code
+
+name: Sandbox Deployment
+
+on:
+  push:
+    branches: [ sandbox ]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'The branch to use'     
+        default: 'sandbox'
+
+jobs:
+  build:
+    runs-on: [self-hosted, kwcard-sandbox]
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        ref: 'sandbox'
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v2
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: echo 'PUBLIC_TOKEN=${{secrets.PRODUCTION_PUBLIC_TOKEN}}' >> .env
+    - run: echo 'NODE_ENV=production' >> .env
+    - run: echo 'PORT=8011' >> .env
+    - run: echo 'FRONTEND_DOMAIN=https://karmawallet.io' >> .env
+    - run: echo 'APP_USER_ID=62432346ac79b66d7aeefef0' >> .env
+    - run: echo 'DB_USER=${{secrets.PRODUCTION_DB_USER}}' >> .env
+    - run: echo 'DB_NAME=${{secrets.PRODUCTION_DB_NAME}}' >> .env
+    - run: echo 'DB_URL=${{secrets.PRODUCTION_DB_URL}}:27112' >> .env
+    - run: echo 'DB_PASS=${{secrets.PRODUCTION_DB_PASS}}' >> .env
+    - run: echo 'REDIS_USER=${{secrets.PRODUCTION_REDIS_USER}}' >> .env
+    - run: echo 'REDIS_PASS=${{secrets.PRODUCTION_REDIS_PASS}}' >> .env
+    - run: echo 'REDIS_URL=${{secrets.PRODUCTION_DB_URL}}' >> .env
+    - run: echo 'REDIS_PORT=5468' >> .env
+    - run: echo 'AWS_ACCESS_KEY_ID=${{secrets.PRODUCTION_AWS_ACCESS_KEY_ID}}' >> .env
+    - run: echo 'AWS_SECRET_ACCESS_KEY=${{secrets.PRODUCTION_AWS_SECRET_ACCESS_KEY}}' >> .env
+    - run: echo 'S3_BUCKET=cdn.karmawallet.io' >> .env
+    - run: echo 'PLAID_CLIENT_ID=${{secrets.PRODUCTION_PLAID_CLIENT_ID}}' >> .env
+    - run: echo 'PLAID_SECRET=${{secrets.PRODUCTION_PLAID_SECRET}}' >> .env
+    - run: echo 'PLAID_ENV=${{secrets.PRODUCTION_PLAID_ENV}}' >> .env
+    - run: echo 'PLAID_WEBHOOK_URI=https://backend.karmawallet.io/webhook/plaid' >> .env
+    - run: echo 'PLAID_REDIRECT_URI=https://karmawallet.io/account' >> .env
+    - run: echo 'PLAID_PRODUCTS=transactions' >> .env
+    - run: echo 'MAILCHIMP_KEY=' >> .env
+    - run: echo 'MAILCHIMP_SERVER=' >> .env
+    - run: echo 'RARE_API_KEY=${{ secrets.PRODUCTION_RARE_API_KEY }}' >> .env
+    - run: echo 'RARE_ENV=prod' >> .env
+    - run: echo 'KW_API_PUBLIC_TOKEN=${{secrets.PRODUCTION_KW_API_PUBLIC_TOKEN}}' >> .env
+    - run: echo 'KW_API_URL=${{secrets.PRODUCTION_KW_API_URL}}' >> .env
+    - run: echo 'KW_ENV=prod' >> .env
+    - run: echo 'BETSI_ENV=lilbetsi' >> .env
+    - run: echo 'GOOGLE_CLIENT_EMAIL=${{secrets.GOOGLE_CLIENT_EMAIL}}' >> .env
+    - run: echo 'GOOGLE_CLIENT_PRIVATE_KEY=${{secrets.GOOGLE_CLIENT_PRIVATE_KEY}}' >> .env
+    - run: echo 'WILDFIRE_ADMIN_APP_KEY=${{secrets.WILDFIRE_ADMIN_APP_KEY}}' >> .env
+    - run: echo 'WILDFIRE_ADMIN_APP_ID=140' >> .env
+    - run: echo 'WILDFIRE_CLIENT_APP_KEY=${{secrets.WILDFIRE_CLIENT_APP_KEY}}' >> .env
+    - run: echo 'WILDFIRE_CLIENT_APP_ID=141' >> .env
+    - run: echo 'WILDFIRE_DEVICE_ID=16513502' >> .env
+    - run: echo 'WILDFIRE_DEVICE_KEY=${{secrets.WILDFIRE_DEVICE_KEY}}' >> .env
+    - run: echo 'WILDFIRE_DEVICE_TOKEN=${{secrets.WILDFIRE_DEVICE_TOKEN}}' >> .env
+    - run: echo 'WIDLFIRE_DEVICE_UUID=${{secrets.WIDLFIRE_DEVICE_UUID}}' >> .env
+    - run: echo 'WILDFIRE_CALLBACK_KEY=${{secrets.WILDFIRE_CALLBACK_KEY}}' >> .env
+    - run: echo 'PAYPAL_CLIENT_ID=${{secrets.LIVE_PAYPAL_CLIENT_ID}}' >> .env
+    - run: echo 'PAYPAL_WEBHOOK_ID=${{secrets.LIVE_PAYPAL_WEBHOOK_ID}}' >> .env
+    - run: echo 'PAYPAL_MODE=live' >> .env
+    - run: echo 'PAYPAL_CLIENT_SECRET=${{secrets.LIVE_PAYPAL_CLIENT_SECRET}}' >> .env     
+    - run: echo 'ACTIVECAMPAIGN_API_URL=${{secrets.ACTIVECAMPAIGN_API_URL}}' >> .env
+    - run: echo 'ACTIVECAMPAIGN_API_KEY=${{secrets.ACTIVECAMPAIGN_API_KEY}}' >> .env
+    - run: echo 'HUBSPOT_URL=${{secrets.HUBSPOT_URL}}' >> .env
+    - run: echo 'HUBSPOT_APP_TOKEN=${{secrets.HUBSPOT_APP_TOKEN}}' >> .env
+    - run: echo 'OPENAI_ORG=${{secrets.OPENAI_ORG}}' >> .env
+    - run: echo 'OPENAI_SECRET=${{secrets.OPENAI_SECRET}}' >> .env
+    - run: echo 'ENCRYPTION_SECRET_KEY=${{secrets.PRODUCTION_ENCRYPTION_SECRET_KEY}}' >> .env
+    - run: echo 'ENCRYPTION_SECRET_INITIALIZATION_VECTOR=${{secrets.PRODUCTION_ENCRYPTION_INITIALIZATION_VECTOR}}' >> .env
+    - run: echo 'ENCRYPTION_METHOD=${{secrets.PRODUCTION_ENCRYPTION_METHOD}}' >> .env
+    - run: echo 'KARD_COGNITO_URL=${{secrets.PRODUCTION_KARD_COGNITO_URL}}' >> .env
+    - run: echo 'KARD_CLIENT_HASH=${{secrets.PRODUCTION_KARD_CLIENT_HASH}}' >> .env
+    - run: echo 'KARD_API_URL=${{secrets.PRODUCTION_KARD_API_URL}}' >> .env
+    - run: echo 'KARD_WEBHOOK_KEY=${{secrets.PRODUCTION_KARD_WEBHOOK_KEY}}' >> .env
+    - run: echo 'KARD_INSTORE_REWARD_ID=${{secrets.PRODUCTION_KARD_INSTORE_REWARD_ID}}' >> .env
+    - run: echo 'KARD_ONLINE_REWARD_ID=${{secrets.PRODUCTION_KARD_ONLINE_REWARD_ID}}' >> .env
+    - run: echo 'KARD_ISSUER_NAME=${{secrets.PRODUCTION_KARD_ISSUER_NAME}}' >> .env
+    - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.PRODUCTION_KARD_TRANSACTION_ID_ROOT}}' >> .env
+    - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.PRODUCTION_MARQETA_APPLICATION_TOKEN}}' >> .env
+    - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.PRODUCTION_MARQETA_ACCESS_TOKEN}}' >> .env
+    - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.PRODUCTION_MARQETA_WEBHOOK_ID}}' >> .env
+    - run: echo 'MARQETA_WEBHOOK_PASSWORD=${{secrets.PRODUCTION_MARQETA_WEBHOOK_PASSWORD}}' >> .env
+    - run: echo 'MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN=${{secrets.MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN}}' >> .env
+    - run: echo 'MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN=${{secrets.MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN}}' >> .env
+    - run: echo 'MARQETA_BASE_URL=${{secrets.PRODUCTION_MARQETA_BASE_URL}}' >> .env
+    - run: echo 'MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN=${{secrets.MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN}}' >> .env
+    - run: echo 'FIREBASE_TYPEL=${{secrets.SANDBOX_FIREBASE_TYPE}}' >> .env
+    - run: echo 'FIREBASE_PROJECT_ID=${{secrets.SANDBOX_FIREBASE_PROJECT_ID}}' >> .env
+    - run: echo 'FIREBASE_PRIVATE_KEY_ID=${{secrets.SANDBOX_FIREBASE_PRIVATE_KEY_ID}}' >> .env
+    - run: echo 'FIREBASE_PRIVATE_KEY=${{secrets.SANDBOX_FIREBASE_PRIVATE_KEY}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_EMAIL=${{secrets.SANDBOX_FIREBASE_CLIENT_EMAIL}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_ID=${{secrets.SANDBOX_FIREBASE_CLIENT_ID}}' >> .env
+    - run: echo 'FIREBASE_AUTH_URI=${{secrets.SANDBOX_FIREBASE_AUTH_URI}}' >> .env
+    - run: echo 'FIREBASE_TOKEN_URI=${{secrets.SANDBOX_FIREBASE_TOKEN_URI}}' >> .env
+    - run: echo 'FIREBASE_AUTH_PROVIDER_X509_CERT_URL=${{secrets.SANDBOX_FIREBASE_AUTH_PROVIDER_X509_CERT_URL}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_X509_CERT_URL=${{secrets.SANDBOX_FIREBASE_CLIENT_X509_CERT_URL}}' >> .env
+    - run: echo 'FIREBASE_UNIVERSE_DOMAIN=${{secrets.SANDBOX_FIREBASE_UNIVERSE_DOMAIN}}' >> .env
+    - run: npm i
+    - run: pm2 restart all --update-env

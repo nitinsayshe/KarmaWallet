@@ -74,8 +74,8 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
 }
 
 export interface IMarqetaLoadGpaFromProgramFundingSource {
-  userId: string;
   amount: number;
+  userId?: ObjectId;
 }
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {

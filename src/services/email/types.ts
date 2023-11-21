@@ -19,7 +19,7 @@ export interface IACHTransferEmailData {
   name?: string;
 }
 
-interface IEmailTemplateParams {
+export interface IEmailTemplateParams {
   user?: Types.ObjectId;
   name: string;
   amount?: string;
@@ -43,6 +43,10 @@ export interface IDeleteAccountRequestVerificationTemplateParams {
 
 export interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
   groupName: string;
+}
+
+export interface IKarmacardWelcomeTemplateParams extends IEmailTemplateParams {
+  newUser: boolean;
 }
 
 export interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
@@ -87,6 +91,7 @@ export interface IEmailJobData {
   isSuccess?: boolean;
   message?: string;
   name?: string;
+  newUser?: boolean;
   passwordResetLink?: string;
   recipientEmail: string;
   replyToAddresses: string[];

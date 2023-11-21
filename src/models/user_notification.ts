@@ -38,10 +38,16 @@ export interface IPayoutNotificationData extends UserNotificationData {
   payoutAmount: string;
 }
 
+export interface IKarmaCardWelcomeData extends UserNotificationData {
+  name: string;
+  newUser: boolean;
+}
+
 export type NotificationData =
   | IEarnedCashbackNotificationData
   | IPayoutNotificationData
   | IPushNotificationData
+  | IKarmaCardWelcomeData
 
 export interface IShareableUserNotification {
   createdOn: Date;

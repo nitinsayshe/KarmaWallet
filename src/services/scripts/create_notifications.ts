@@ -52,6 +52,11 @@
 //     channels: [NotificationChannelEnum.Push],
 //     effects: [NotificationEffectsEnum.SendPushNotification],
 //   },
+//   [NotificationTypeEnum.KarmaCardWelcome]: {
+//     type: NotificationTypeEnum.KarmaCardWelcome,
+//     channels: [NotificationChannelEnum.Email],
+//     effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
+//   },
 // };
 
 // export const createNotifications = async () => {

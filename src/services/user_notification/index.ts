@@ -31,6 +31,7 @@ import {
   IUserNotificationDocument,
   IPushNotificationData,
   UserNotificationModel,
+  IKarmaCardWelcomeData,
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
@@ -384,6 +385,29 @@ export const createPayoutUserNotificationFromCommissionPayout = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating payout notification: ${e}`);
+  }
+};
+
+export const createKarmaCardWelcomeUserNotification = async (
+  user: IUserDocument,
+  newUser: boolean,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.KarmaCardWelcome,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          newUser,
+        },
+      } as CreateNotificationRequest<IKarmaCardWelcomeData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IKarmaCardWelcomeData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating karma card welcome notification: ${e}`);
   }
 };
 

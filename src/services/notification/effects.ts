@@ -5,10 +5,11 @@ import CustomError from '../../lib/customError';
 import { IUserDocument } from '../../models/user';
 import {
   IEarnedCashbackNotificationData,
+  IKarmaCardWelcomeData,
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
+import { SendKarmaCardWelcomeEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
 import { IACHTransferEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -78,6 +79,23 @@ export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDo
   }
 };
 
+export const handleSendKarmaCardWelcomeEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IKarmaCardWelcomeData;
+  const { newUser, name } = d;
+  if (!d) throw new Error('Invalid karma card welcome data');
+  try {
+    await SendKarmaCardWelcomeEmail({
+      user: user._id,
+      name,
+      newUser,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending karma card welcome email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -85,6 +103,7 @@ export const NotificationEffectsFunctions: {
   SendPayoutIssuedEmail: handleSendPayoutIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
+  SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -92,6 +111,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendEarnedCashbackEmail,
     NotificationEffectsEnum.SendPayoutIssuedEmail,
     NotificationEffectsEnum.SendACHInitiationEmail,
+    NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

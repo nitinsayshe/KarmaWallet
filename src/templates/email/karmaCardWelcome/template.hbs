@@ -1,0 +1,36 @@
+<div class="card">
+  <p class="salutation-text">{{name}}, Good news! Your Karma Wallet Card is on the way.</p>
+  <p class="body-text">It should arrive in 5-7 business days. Once it arrives, you can start your sustainability journey.</p>
+  {{#if newUser}}
+    <div class="step">
+      <span class="bold">Step 1:</span>
+      <span>Finish Setting up your Karma Wallet account. You should have received an email entitled "Change Your Karma Wallet Password". Follow the instructions on this email to change your Karma Wallet account password.</span>
+    </div>
+    <div class="step">
+      <span class="bold">Step 2:</span>
+      <span>Download the Karma Wallet app to activate your card and set up your PIN.</span>
+    </div>
+    <div class="step">
+      <span class="bold">Step 3:</span>
+      <span>Load your Karma Wallet Card to start shopping sustainably and earning Karma Cash.</span>
+    </div>
+    <div class="step">
+      <span class="bold">Step 4:</span>
+      <span>Make us better by sharing ideas and questions through the in-app customer support form.</span>
+    </div>
+   {{else}}
+    <div class="step">
+      <span class="bold">Step 1:</span>
+      <span>Download the Karma Wallet app to activate your card and set up your PIN.</span>
+    </div>
+    <div class="step">
+      <span class="bold">Step 2:</span>
+      <span>Load your Karma Wallet Card to start shopping sustainably and earning Karma Cash.</span>
+    </div>
+    <div class="step">
+      <span class="bold">Step 3:</span>
+      <span>Make us better by sharing ideas and questions through the in-app customer support form.</span>
+    </div>
+  {{/if}}
+  <p class="support-text">#LiveYourValues</p>
+</div>

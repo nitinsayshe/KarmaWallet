@@ -20,6 +20,13 @@ router.route('/ach-initiation-email')
     AdminEmailTestingController.testACHInitiationEmail,
   );
 
+router.route('/karma-card-welcome-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testKarmaCardWelcomeEmail,
+  );
+
 router.route('/change-password-email')
   .post(
     authenticate,

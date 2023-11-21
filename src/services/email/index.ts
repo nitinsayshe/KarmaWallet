@@ -21,8 +21,6 @@ registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
 
-registerHandlebarsOperators(Handlebars);
-
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
   attempts: 3,

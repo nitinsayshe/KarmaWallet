@@ -9,8 +9,7 @@ import { ErrorTypes } from '../../../lib/constants';
 
 export const fundUserGPAFromProgramFundingSource: IRequestHandler<{}, {}, IMarqetaLoadGpaFromProgramFundingSource> = async (req, res) => {
   try {
-    const { amount } = req.body;
-    const userId = req.requestor._id;
+    const { amount, userId } = req.body;
     if (!amount) {
       throw new CustomError('Invalid input. Body requires the following fields: amount.', ErrorTypes.INVALID_ARG);
     }

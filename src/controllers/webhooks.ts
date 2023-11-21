@@ -400,11 +400,13 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       for (const card of cards) {
         await CardModel.findOneAndUpdate(
           { 'integrations.marqeta.card_token': card?.card_token },
-          { $set: {
-            'integrations.marqeta.state': card?.state,
-            ...(card?.state?.toUpperCase() === 'SUSPENDED' ? { status: 'removed' } : {}),
-            ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
-          } },
+          {
+            $set: {
+              'integrations.marqeta.state': card?.state,
+              ...(card?.state?.toUpperCase() === 'SUSPENDED' ? { status: 'removed' } : {}),
+              ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
+            },
+          },
           { new: true },
         );
         const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });

@@ -21,8 +21,6 @@ registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
 
-registerHandlebarsOperators(Handlebars);
-
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
   attempts: 3,
@@ -485,6 +483,28 @@ export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
       name: user.name,
       newUser: true, // toggle to send corresponding email
       recipientEmail: email,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendChangePasswordEmail({
+      user: req.requestor._id,
+      recipientEmail: email,
+      name: user.name,
+      token: '1234',
     });
 
     if (!!emailResponse) {

@@ -281,17 +281,15 @@ export const createKarmaCardLegalText = async (req: IRequest<{}, {}, INewLegalTe
 };
 
 export const updateKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextRequestParams, {}, INewLegalTextRequestBody>) => {
-  const { text, name } = req.body;
+  const { text } = req.body;
 
   if (!text) throw new CustomError('Text is required.', ErrorTypes.INVALID_ARG);
-  if (!name) throw new CustomError('Name is required.', ErrorTypes.INVALID_ARG);
 
   try {
     const legalText = await KarmaCardLegalModel.findOne({ _id: req.params.legalTextId });
     if (!legalText) throw new CustomError(`Legal text with id "${req.params.legalTextId}" not found`, ErrorTypes.NOT_FOUND);
 
     legalText.text = text;
-    legalText.name = name;
     legalText.lastModified = new Date();
 
     legalText.save();

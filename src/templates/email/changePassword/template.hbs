@@ -1,28 +1,12 @@
-<!DOCTYPE html>
-<html>
 
-<head>
-  {{{style}}}
-</head>
-
-<body>
-  <div class="email-wrapper">
-    <div class="email-container">
-      <img class="brand" src="https://cdn.karmawallet.io/uploads/U1T7Ka5_kt-kw-dark-logo.png" alt="Karma Wallet Logo" />
-      <p class="email-body">Hi {{name}},</p>
-        <p class="email-body">Welcome to Karma Wallet! To log into your account please click the link below and change your password.</p>
+    <div class="card">
+      <p class="salutation-text">Hi {{name}},</p>
+        <p class="body-text">Welcome to Karma Wallet! To log into your account please click the link below and change your password.</p>
       <div class="cta-container">
         <a class="cta-link" href="{{passwordResetLink}}">Change Password</a>
       </div>
-      <p class="email-body">
+      <p class="body-text">
         If clicking the button above doesn't work, please copy and paste <a href="{{passwordResetLink}}">{{passwordResetLink}}</a> in a new browser window instead.
       </p>  
     </div>
-    <div class="link-container">
-      <p class="link-first"><a href="https://karmawallet.io">Karma Wallet</a> | <a href="https://karmawallet.io/privacy">Privacy Policy</a></p>
-      <p class="link-second"><a href="mailto:info@karmawallet.io">info@karmawallet.io</a></p>
-    </div>
   </div>
-</body>
-
-</html>

@@ -447,3 +447,25 @@ export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
     throw asCustomError(err);
   }
 };
+
+export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendChangePasswordEmail({
+      user: req.requestor._id,
+      recipientEmail: email,
+      name: user.name,
+      token: '1234',
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};

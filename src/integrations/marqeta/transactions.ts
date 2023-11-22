@@ -22,7 +22,6 @@ import {
   TransactionTypeEnum,
   TransactionTypeEnumValues,
   TriggerClearedTransactionTypeEnum,
-  TriggerCreateTransactionTypeEnum,
   TriggerDeclinedTransactionTypeEnum,
   TriggerPendingTransactionTypeEnum,
 } from '../../lib/constants/transaction';
@@ -109,10 +108,10 @@ const matchTransactionsToCompaniesByMCC = async (
   matched: (EnrichedMarqetaTransaction & IMatchedTransaction)[],
   notMatched: EnrichedMarqetaTransaction[],
 ): Promise<{
-    matched: (EnrichedMarqetaTransaction & IMatchedTransaction
-    )[];
-    notMatched: EnrichedMarqetaTransaction[];
-  }> => {
+  matched: (EnrichedMarqetaTransaction & IMatchedTransaction
+  )[];
+  notMatched: EnrichedMarqetaTransaction[];
+}> => {
   matched = [
     ...matched,
     ...(
@@ -218,7 +217,14 @@ const getTransactionTypeFromMarqetaTransactionType = (
   return undefined;
 };
 
-const getUpdatedTransactionStatusFromRelatedTransactionType = (type: TransactionModelTypeEnumValues): TransactionModelStateEnumValues => {
+const getUpdatedTransactionStatusFromRelatedTransactionType = (
+  type: TransactionModelTypeEnumValues,
+  state: TransactionModelStateEnumValues,
+): TransactionModelStateEnumValues => {
+  if (!!Object.values(TransactionModelStateEnum).includes(state)) {
+    return state;
+  }
+
   if (!!Object.values(TriggerClearedTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Cleared;
   }
@@ -288,18 +294,22 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
   const existingTransaction = await getExistingTransactionFromMarqetaTransactionToken(lookupToken, processingTransactions);
   console.log('existingTransaction', JSON.stringify(existingTransaction));
-  const isTypeThatTriggersNewTransactionCreation = !!Object.values(TriggerCreateTransactionTypeEnum)?.find(
-    (type) => type === t.marqeta_transaction.type,
-  );
-  if (!!existingTransaction && !isTypeThatTriggersNewTransactionCreation) {
+  if (!!existingTransaction) {
     const hasPrecedingRelatedTransactionToken = !!t?.marqeta_transaction?.preceding_related_transaction_token;
     if (hasPrecedingRelatedTransactionToken) {
-      const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type);
+      const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type, t.marqeta_transaction?.state);
+
+      let relatedTransactions = existingTransaction?.integrations?.marqeta?.relatedTransactions;
+      const currentTransactionIsInRelatedTransactions = !!relatedTransactions?.find(
+        (relatedTransaction) => relatedTransaction.token === t.marqeta_transaction.token,
+      );
+      if (!currentTransactionIsInRelatedTransactions) {
+        relatedTransactions = !!relatedTransactions ? [...relatedTransactions, t.marqeta_transaction] : [t.marqeta_transaction];
+      }
+
       existingTransaction.integrations.marqeta = {
         ...existingTransaction.integrations.marqeta,
-        relatedTransactions: !!existingTransaction?.integrations?.marqeta?.relatedTransactions
-          ? [...existingTransaction.integrations.marqeta.relatedTransactions, t.marqeta_transaction]
-          : [t.marqeta_transaction],
+        relatedTransactions,
       };
       existingTransaction.status = updatedStatus || existingTransaction.status;
     } else {

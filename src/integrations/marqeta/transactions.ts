@@ -179,7 +179,15 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
   }
   try {
     const existingTransaction = await MongooseTransactionModel.findOne({
-      $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': token }],
+      $or: [
+        { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': token }] },
+        {
+          $and: [
+            { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+            { 'integrations.marqeta.relatedTransactions.token': token },
+          ],
+        },
+      ],
     });
     if (!existingTransaction?._id) {
       throw Error(`No transaction found with token: ${token}`);
@@ -281,10 +289,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 ): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
-  const existingTransaction = await getExistingTransactionFromMarqetaTransactionToken(
-    lookupToken,
-    processingTransactions,
-  );
+  const existingTransaction = await getExistingTransactionFromMarqetaTransactionToken(lookupToken, processingTransactions);
   console.log('existingTransaction', JSON.stringify(existingTransaction));
   const isTypeThatTriggersNewTransactionCreation = !!Object.values(TriggerCreateTransactionTypeEnum)?.find(
     (type) => type === t.marqeta_transaction.type,

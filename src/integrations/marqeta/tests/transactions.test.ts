@@ -13,7 +13,7 @@ import {
   createSomeSectors,
   createSomeUsers,
 } from '../../../lib/testingUtils';
-import { ICardDocument, MarqetaCardFulfillmentStatus } from '../../../models/card';
+import { ICardDocument, MarqetaCardFulfillmentStatus, MarqetaCardState } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
 import { IMarqetaUserState } from '../../../services/karmaCard/utils';
@@ -121,7 +121,7 @@ describe('tests marqeta integration transaction logic', () => {
               expr_month: 1,
               expr_year: 2029,
               created_time: getUtcDate().toDate(),
-              state: 'ACTIVE',
+              state: MarqetaCardState.ACTIVE,
               pin_is_set: true,
               instrument_type: 'VIRTUAL_PAN',
               barcode: 'barcode',

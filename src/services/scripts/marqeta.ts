@@ -7,6 +7,8 @@ import { IRequest } from '../../types/request';
 import { UserModel } from '../../models/user';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../clients/marqeta/transactions';
+import { Card } from '../../clients/marqeta/card';
+import { mapMarqetaCardtoCard } from '../card';
 
 export const getMarqetaTransactions = async () => {
   let transactions: TransactionModel[] = [];
@@ -45,7 +47,16 @@ export const getTransactionsForUser = async (userId: string) => {
   const marqetaClient = await new MarqetaClient();
   const transactionClient = await new Transactions(marqetaClient);
   const transactions = await transactionClient.listTransactionsForUser(userToken);
-  console.log('/////// Transactions for user', transactions);
   const mappedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions.data);
-  console.log('//////// Mapped transactions', mappedTransactions);
 };
+
+export const getCardsFromMarqeta = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  const { userToken } = user.integrations.marqeta;
+  const marqetaClient = await new MarqetaClient();
+  const cardClient = await new Card(marqetaClient);
+  const usersCards = await cardClient.listCards(userToken);
+  for (const card of usersCards.data) {
+    await mapMarqetaCardtoCard(userId, card)
+  }
+}

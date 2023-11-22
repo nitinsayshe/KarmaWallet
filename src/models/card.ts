@@ -39,6 +39,15 @@ export enum MarqetaCardFulfillmentStatus {
   'DIGITALLY_PRESENTED' = 'DIGITALLY_PRESENTED',
 }
 
+export enum MarqetaCardState {
+  'ACTIVE' = 'ACTIVE',
+  'SUSPENDED' = 'SUSPENDED',
+  'TERMINATED' = 'TERMINATED',
+  'UNSUPPORTED' = 'UNSUPPORTED',
+  'UNACTIVATED' = 'UNACTIVATED',
+  'LIMITED' = 'LIMITED'
+}
+
 export interface IMarqetaCardIntegration {
   token?: string;
   expiration_time: Date;
@@ -51,7 +60,7 @@ export interface IMarqetaCardIntegration {
   expr_year: number;
   created_time: Date;
   pin_is_set: boolean;
-  state: string;
+  state: MarqetaCardState;
   instrument_type: string;
   barcode: string;
   fulfillment_status: MarqetaCardFulfillmentStatus;

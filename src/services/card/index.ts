@@ -9,7 +9,7 @@ import { CardStatus, ErrorTypes, IMapMarqetaCard, KardEnrollmentStatus } from '.
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
-import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration, MarqetaCardState } from '../../models/card';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
@@ -337,6 +337,10 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
+
+  if (cardData.state === MarqetaCardState.TERMINATED) {
+    card.status = CardStatus.Removed;
+  }
 
   // Save the updated card document
   await card.save();

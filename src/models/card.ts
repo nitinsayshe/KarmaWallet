@@ -29,6 +29,16 @@ export interface IKardIntegration {
   enrollmentStatus: KardEnrollmentStatus;
 }
 
+export enum MarqetaCardFulfillmentStatus {
+  'ISSUED' = 'ISSUED',
+  'ORDERED' = 'ORDERED',
+  'REORDERED' = 'REORDERED',
+  'REJECTED' = 'REJECTED',
+  'SHIPPED' = 'SHIPPED',
+  'DELIVERED' = 'DELIVERED',
+  'DIGITALLY_PRESENTED' = 'DIGITALLY_PRESENTED',
+}
+
 export interface IMarqetaCardIntegration {
   token?: string;
   expiration_time: Date;
@@ -44,6 +54,7 @@ export interface IMarqetaCardIntegration {
   state: string;
   instrument_type: string;
   barcode: string;
+  fulfillment_status: MarqetaCardFulfillmentStatus;
 }
 
 export interface ICardIntegrations {
@@ -143,6 +154,7 @@ const cardSchema = new Schema({
         barcode: { type: String },
         created_time: { type: Date },
         instrument_type: { type: String },
+        fullfillment_status: { type: String, enum: Object.values(MarqetaCardFulfillmentStatus) },
       },
     },
   },

@@ -13,7 +13,7 @@ import {
   createSomeSectors,
   createSomeUsers,
 } from '../../../lib/testingUtils';
-import { ICardDocument } from '../../../models/card';
+import { ICardDocument, MarqetaCardFulfillmentStatus } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
 import { IMarqetaUserState } from '../../../services/karmaCard/utils';
@@ -115,6 +115,7 @@ describe('tests marqeta integration transaction logic', () => {
               expiration_time: dayjs(getUtcDate().toDate()).add(1, 'year').toDate(),
               card_token: testMarqetaCardtoken,
               card_product_token: 'card_product_token',
+              fulfillment_status: MarqetaCardFulfillmentStatus.DIGITALLY_PRESENTED,
               pan: '4111111111111111',
               last_four: '1111',
               expr_month: 1,

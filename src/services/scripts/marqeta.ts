@@ -46,6 +46,6 @@ export const getTransactionsForUser = async (userId: string) => {
   const transactionClient = await new Transactions(marqetaClient);
   const transactions = await transactionClient.listTransactionsForUser(userToken);
   console.log('/////// Transactions for user', transactions);
-  const mappedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+  const mappedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions.data);
   console.log('//////// Mapped transactions', mappedTransactions);
 };

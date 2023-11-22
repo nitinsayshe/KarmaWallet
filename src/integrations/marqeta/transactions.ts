@@ -172,11 +172,6 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
 ): Promise<ITransactionDocument | null> => {
   // see if we're pocessing it right now
   // it would have to be already mapped to a kw transaction at this point.
-  const existingProcessingTransaction = procesingTransactions.find((t) => t?.integrations?.marqeta?.token === token);
-  if (!!existingProcessingTransaction) {
-    console.log(`Found existing processing transaction with token in procesingTransactions: ${token}`);
-    return existingProcessingTransaction;
-  }
   try {
     const existingTransaction = await MongooseTransactionModel.findOne({
       $or: [
@@ -189,11 +184,13 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
         },
       ],
     });
-    if (!existingTransaction?._id) {
-      throw Error(`No transaction found with token: ${token}`);
+
+    const existingProcessingTransaction = procesingTransactions?.find((t) => t?.integrations?.marqeta?.token === token);
+    if (!!existingTransaction?._id || !!existingProcessingTransaction) {
+      const transaction = existingTransaction?._id || existingProcessingTransaction;
+      console.log(`Found existing processing transaction with token in db: ${transaction}`);
+      return transaction;
     }
-    console.log(`Found existing processing transaction with token in db: ${existingTransaction}`);
-    return existingTransaction;
   } catch (err) {
     console.log(`Error looking up transaction with marqeta token: ${token}}`);
     console.log(err);

@@ -17,6 +17,7 @@ export enum EmailTemplateKeys {
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
   KarmaCardWelcome = 'karmaCardWelcome',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
 }
 
 export enum EmailTemplateTypes {
@@ -30,6 +31,7 @@ export enum EmailTemplateTypes {
   SupportTicket = 'supportTicket',
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
 }
 
 export interface IEmailTemplateConfig {
@@ -106,6 +108,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardWelcome: {
     name: EmailTemplateKeys.KarmaCardWelcome,
     type: EmailTemplateTypes.Essential,
+  },
+  BankLinkedConfirmation: {
+    name: EmailTemplateKeys.BankLinkedConfirmation,
+    type: EmailTemplateTypes.BankLinkedConfirmation,
   },
 };
 

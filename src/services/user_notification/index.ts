@@ -32,6 +32,7 @@ import {
   IPushNotificationData,
   UserNotificationModel,
   IKarmaCardWelcomeData,
+  IBankLinkedConfirmationEmailData,
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
@@ -434,5 +435,30 @@ export const createACHInitiationUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating ACH initiation notification: ${e}`);
+  }
+};
+
+export const createBankLinkedConfirmationNotification = async (
+  user: IUserDocument,
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.BankLinkedConfirmation,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          instituteName,
+          lastDigitsOfBankAccountNumber,
+        },
+      } as CreateNotificationRequest<IBankLinkedConfirmationEmailData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IBankLinkedConfirmationEmailData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating bank linked confirmation notification: ${e}`);
   }
 };

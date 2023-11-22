@@ -43,6 +43,12 @@ export interface IKarmaCardWelcomeData extends UserNotificationData {
   newUser: boolean;
 }
 
+export interface IBankLinkedConfirmationEmailData extends UserNotificationData {
+  name: string;
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string
+}
+
 export type NotificationData =
   | IEarnedCashbackNotificationData
   | IPayoutNotificationData

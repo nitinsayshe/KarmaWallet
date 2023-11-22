@@ -14,7 +14,7 @@ import { SentEmailModel } from '../../models/sentEmail';
 import { EmailTemplateConfigs } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams } from './types';
+import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams, IBankLinkedConfirmationEmailTemplate } from './types';
 import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
@@ -513,4 +513,25 @@ export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const sendBankLinkedConfirmationEmail = async ({
+  user,
+  recipientEmail,
+  instituteName,
+  lastDigitsOfBankAccountNumber,
+  name,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IBankLinkedConfirmationEmailTemplate) => {
+  const emailTemplateConfig = EmailTemplateConfigs.BankLinkedConfirmation;
+  const { isValid, missingFields } = verifyRequiredFields(['recipientEmail', 'name', 'instituteName', 'lastDigitsOfBankAccountNumber'], { recipientEmail, name, instituteName, lastDigitsOfBankAccountNumber });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, instituteName, lastDigitsOfBankAccountNumber } });
+  console.log('This is template: ', template);
+  const subject = 'Your Bank Account is Successfully Linked';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, name, instituteName, lastDigitsOfBankAccountNumber };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };

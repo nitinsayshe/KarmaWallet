@@ -4,13 +4,14 @@ import { NotificationChannelEnum, NotificationEffectsEnum, NotificationEffectsEn
 import CustomError from '../../lib/customError';
 import { IUserDocument } from '../../models/user';
 import {
+  ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   IEarnedCashbackNotificationData,
   IKarmaCardWelcomeData,
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, SendKarmaCardWelcomeEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
-import { SendKarmaCardWelcomeEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail, sendNoChargebackRightsEmail } from '../email';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -53,6 +54,27 @@ export const handleSendPayoutIssuedEmailEffect = async <DataType>(user: IUserDoc
       recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
       name: d?.name,
       amount: d?.payoutAmount,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending payout email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect = async <DataType>(
+  user: IUserDocument,
+  data: DataType,
+): Promise<void> => {
+  const d = data as unknown as ICaseWonProvisionalCreditAlreadyIssuedNotificationData;
+  if (!d) throw new Error('Invalid case won provisional creadit already issued notification data');
+  try {
+    await sendCaseWonProvisionalCreditAlreadyIssuedEmail({
+      user: user._id,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+      name: d?.name,
+      amount: d?.amount,
+      merchantName: d?.merchantName,
+      submittedClaimDate: d?.submittedClaimDate,
     });
   } catch (err) {
     console.error(err);
@@ -118,6 +140,7 @@ export const NotificationEffectsFunctions: {
 } = {
   SendEarnedCashbackEmail: handleSendEarnedCashBackEmailEffect,
   SendPayoutIssuedEmail: handleSendPayoutIssuedEmailEffect,
+  SendCaseWonProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
@@ -130,6 +153,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendPayoutIssuedEmail,
     NotificationEffectsEnum.SendACHInitiationEmail,
     NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
+    NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

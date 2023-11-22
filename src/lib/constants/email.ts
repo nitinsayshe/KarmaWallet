@@ -16,6 +16,7 @@ export enum EmailTemplateKeys {
   Welcome = 'welcome',
   WelcomeCC1 = 'welcomeCC1',
   WelcomeCCG1 = 'welcomeCCG1',
+  CaseWonProvisionalCreditAlreadyIssued = 'caseWonProvisionalCreditAlreadyIssued',
   WelcomeGroup = 'welcomeGroup',
   KarmaCardWelcome = 'karmaCardWelcome',
 }
@@ -100,6 +101,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   CashbackPayoutNotification: {
     name: EmailTemplateKeys.CashbackPayoutNotification,
     type: EmailTemplateTypes.CashbackNotificaiton,
+  },
+  CaseWonProvisionalCreditAlreadyIssued: {
+    name: EmailTemplateKeys.CaseWonProvisionalCreditAlreadyIssued,
+    type: EmailTemplateTypes.Dispute,
   },
   SupportTicket: {
     name: EmailTemplateKeys.SupportTicket,

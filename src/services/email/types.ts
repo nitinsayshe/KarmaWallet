@@ -66,6 +66,8 @@ export interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   visitor?: IVisitorDocument;
   companyName?: string;
   amount?: string;
+  merchantName?: string;
+  submittedClaimDate?: string;
 }
 
 export interface ISupportEmailVerificationTemplateParams {

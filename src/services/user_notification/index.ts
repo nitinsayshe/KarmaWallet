@@ -18,6 +18,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors, getZodEnumScemaFromTypescriptEnum } from '../../lib/validation';
+import { IChargebackDocument } from '../../models/chargeback';
 import { CommissionPayoutModel, ICommissionPayoutDocument } from '../../models/commissionPayout';
 import { CommissionModel, ICommissionDocument } from '../../models/commissions';
 import { ICompanyDocument } from '../../models/company';
@@ -31,12 +32,12 @@ import {
   IUserNotificationDocument,
   IPushNotificationData,
   UserNotificationModel,
+  ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   IKarmaCardWelcomeData,
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
 import { IACHTransferEmailData } from '../email/types';
-import { IChargebackDocument } from '../../models/chargeback';
 
 export type CreateNotificationRequest<T = undefined> = {
   type: NotificationTypeEnumValue;
@@ -382,6 +383,50 @@ export const createPayoutUserNotificationFromCommissionPayout = async (
           payoutAmount: `${commissionPayout.amount}`,
         },
       } as CreateNotificationRequest<IPayoutNotificationData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating payout notification: ${e}`);
+  }
+};
+
+export const createProvisionalCreditPermanentNotification = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    // use aggreagte pipeline to include the whole user document
+    const transaction = (await TransactionModel.aggregate()
+      .match({
+        'integrations.marqeta.token': chargebackTransition.integrations.marqeta.transaction_token,
+      })
+      .lookup({
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      })
+      .unwind({
+        path: '$user',
+      })) as unknown as ITransactionDocument & { user: IUserDocument };
+
+    if (!transaction || !transaction?.user?._id) {
+      throw Error(`Error creating notificaiton for chargeback transition: ${chargebackTransition}`);
+    }
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseWonProvisionalCreditAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: transaction?.user?.id?.toString(),
+        data: {
+          name: transaction?.user?.name,
+          submittedClaimDate: `${chargebackTransition.integrations.marqeta.created_time}`,
+          amount: `${transaction.amount}`,
+          chargebackToken: chargebackTransition.integrations.marqeta.token,
+          merchantName: transaction?.integrations?.marqeta?.card_acceptor?.name || transaction?.integrations?.marqeta?.merchant?.name,
+        },
+      } as CreateNotificationRequest<ICaseWonProvisionalCreditAlreadyIssuedNotificationData>,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
     return createUserNotification(mockRequest);
   } catch (e) {

@@ -14,14 +14,12 @@ import { SentEmailModel } from '../../models/sentEmail';
 import { EmailTemplateConfigs } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams } from './types';
+import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams } from './types';
 import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
-
-registerHandlebarsOperators(Handlebars);
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
@@ -306,6 +304,27 @@ export const sendCashbackPayoutEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+// Welcome email when karma card is approved
+export const SendKarmaCardWelcomeEmail = async ({
+  name,
+  user,
+  newUser,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IKarmacardWelcomeTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardWelcome;
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'newUser'], { domain, recipientEmail, name, newUser });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, newUser } });
+  const subject = 'Your Karma Wallet Card is on the way...';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const createSentEmailDocument = async ({ user, key, email, visitor }: ICreateSentEmailParams) => {
   if ((!user && !visitor) || !key || !email) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   const sentEmailDocument = new SentEmailModel({
@@ -440,6 +459,52 @@ export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
       accountType: 'Checking',
       date: '12/14/2023',
       name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await SendKarmaCardWelcomeEmail({
+      user: user._id,
+      name: user.name,
+      newUser: true, // toggle to send corresponding email
+      recipientEmail: email,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendChangePasswordEmail({
+      user: req.requestor._id,
+      recipientEmail: email,
+      name: user.name,
+      token: '1234',
     });
 
     if (!!emailResponse) {

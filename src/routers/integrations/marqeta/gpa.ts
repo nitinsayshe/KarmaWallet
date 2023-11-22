@@ -10,4 +10,7 @@ router.route('/addfund')
 router.route('/balance')
   .get(authenticate, GPAController.getGPAbalance);
 
+router.route('/program-balance')
+  .get(GPAController.getProgramFundingBalance);
+
 export default router;

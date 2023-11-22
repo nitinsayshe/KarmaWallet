@@ -15,6 +15,7 @@ export const NotificationTypeEnum = {
   FundsAvailable: 'fundsAvailable',
   GasTransaction: 'gasTransaction',
   Group: 'group',
+  KarmaCardWelcome: 'karmaCardWelcome',
   Marketing: 'marketing',
   Payout: 'payout',
   ReloadSuccess: 'reloadSuccess',
@@ -27,6 +28,7 @@ export const NotificationEffectsEnum = {
   SendPayoutIssuedEmail: 'SendPayoutIssuedEmail',
   SendPushNotification: 'SendPushNotification',
   SendACHInitiationEmail: 'SendACHInitiationEmail',
+  SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 

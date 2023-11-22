@@ -5,6 +5,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { saveDocuments } from '../../lib/model';
 import { IChargebackDocument, ChargebackModel } from '../../models/chargeback';
+import { createNoChargebackRightsUserNotification } from '../user_notification';
 
 export const createChargeback = async (chargeback: Partial<IChargebackDocument>): Promise<IChargebackDocument> => {
   try {
@@ -153,7 +154,7 @@ export const mapAndSaveMarqetaChargebackTransitionsToChargebacks = async (
 };
 
 // This is a placeholder for adding logic that handles the dispute macros
-export const createChargebackNotificaiontsFromType = async (chargebackTransitions: IChargebackDocument[]): Promise<void> => {
+export const createChargebackNotificationsFromType = async (chargebackTransitions: IChargebackDocument[]): Promise<void> => {
   await Promise.all(
     chargebackTransitions.map(async (c) => {
       try {
@@ -173,6 +174,7 @@ export const createChargebackNotificaiontsFromType = async (chargebackTransition
           case ChargebackTypeEnum.CASE_LOST:
             break;
           case ChargebackTypeEnum.NETWORK_REJECTED:
+            createNoChargebackRightsUserNotification(c);
             break;
           case ChargebackTypeEnum.WRITTEN_OFF_ISSUER:
             break;

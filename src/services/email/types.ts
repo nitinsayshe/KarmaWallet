@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { EmailTemplateKeys, IEmailTemplateConfig } from '../../lib/constants/email';
+import { EmailTemplateKeys, EmailTemplateTypes, IEmailTemplateConfig } from '../../lib/constants/email';
 import { IUserDocument } from '../../models/user';
 import { IVisitorDocument } from '../../models/visitor';
 
@@ -19,15 +19,26 @@ export interface IACHTransferEmailData {
   name?: string;
 }
 
-export interface IEmailTemplateParams {
-  user?: Types.ObjectId;
-  name: string;
-  amount?: string;
-  recipientEmail: string;
-  senderEmail?: string;
-  replyToAddresses?: string[];
+interface IBaseEmailParams {
   domain?: string;
+  recipientEmail?: string;
+  replyToAddresses?: string[];
+  senderEmail?: string;
   sendEmail?: boolean;
+  name: string;
+}
+
+interface IEmailTemplateParams extends IBaseEmailParams {
+  user?: Types.ObjectId;
+  amount?: string;
+}
+
+export interface IDisputeEmailData extends IBaseEmailParams {
+  user: IUserDocument;
+  amount?: string;
+  companyName?: string;
+  date?: string;
+  name: string;
 }
 
 export interface IDeleteAccountRequestVerificationTemplateParams {
@@ -114,6 +125,7 @@ export interface IBuildTemplateParams {
   data: Partial<IEmailJobData>;
   templatePath?: string;
   stylePath?: string;
+  templateType?: EmailTemplateTypes;
 }
 
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {

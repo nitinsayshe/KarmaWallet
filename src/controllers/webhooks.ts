@@ -29,7 +29,7 @@ import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
-import { createChargebackNotificaiontsFromType, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
+import { createChargebackNotificationsFromType, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { ChargebackTransition } from '../integrations/marqeta/types';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
@@ -562,7 +562,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     if (!!chargebacktransitions) {
       const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
-      await createChargebackNotificaiontsFromType(savedChargebacks);
+      await createChargebackNotificationsFromType(savedChargebacks);
     }
     output.api(req, res, { message: 'Marqeta webhook processed successfully.' });
   } catch (err) {

@@ -36,6 +36,7 @@ import {
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
 import { IACHTransferEmailData } from '../email/types';
+import { IChargebackDocument } from '../../models/chargeback';
 
 export type CreateNotificationRequest<T = undefined> = {
   type: NotificationTypeEnumValue;
@@ -416,6 +417,7 @@ export const createACHInitiationUserNotification = async (
 ): Promise<IUserNotificationDocument | void> => {
   try {
     const { user, amount, accountMask, accountType, date } = transferData;
+
     const mockRequest = {
       body: {
         type: NotificationTypeEnum.ACHTransferInitiation,
@@ -431,6 +433,41 @@ export const createACHInitiationUserNotification = async (
         },
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH initiation notification: ${e}`);
+  }
+};
+
+export const createNoChargebackRightsUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const merchantName = transaction.integrations.marqeta.card_acceptor.name;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.NoChargebackRights,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          merchantName,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating ACH initiation notification: ${e}`);

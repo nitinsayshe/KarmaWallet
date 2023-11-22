@@ -20,6 +20,13 @@ router.route('/ach-initiation-email')
     AdminEmailTestingController.testACHInitiationEmail,
   );
 
+router.route('/no-chargeback-rights-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testNoChargebackRightsEmail,
+  );
+
 router.route('/karma-card-welcome-email')
   .post(
     authenticate,

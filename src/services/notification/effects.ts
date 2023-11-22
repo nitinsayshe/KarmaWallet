@@ -9,8 +9,8 @@ import {
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { SendKarmaCardWelcomeEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
-import { IACHTransferEmailData } from '../email/types';
+import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
+import { SendKarmaCardWelcomeEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail, sendNoChargebackRightsEmail } from '../email';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -79,6 +79,23 @@ export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDo
   }
 };
 
+export const handleSendNoChargebackRightsEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IDisputeEmailData;
+  const { amount, companyName, name } = d;
+  if (!d) throw new Error('Invalid no chargeback rights notification data');
+  try {
+    await sendNoChargebackRightsEmail({
+      user,
+      amount,
+      companyName,
+      name,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending no chargeback rights email', ErrorTypes.SERVER);
+  }
+};
+
 export const handleSendKarmaCardWelcomeEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IKarmaCardWelcomeData;
   const { newUser, name } = d;
@@ -103,6 +120,7 @@ export const NotificationEffectsFunctions: {
   SendPayoutIssuedEmail: handleSendPayoutIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
+  SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
 } as const;
 

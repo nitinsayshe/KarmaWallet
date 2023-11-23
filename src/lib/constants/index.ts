@@ -343,14 +343,15 @@ export const TransactionIntegrationTypesEnum = {
 export type TransactionIntegrationTypesEnumValues = (typeof TransactionIntegrationTypesEnum)[keyof typeof TransactionIntegrationTypesEnum];
 
 export const ChargebackTypeEnum = {
+  ARBITRATION: 'arbitration',
+  CASE_LOST: 'case.lost',
+  CASE_WON: 'case.won',
   INITIATED: 'initiated',
-  REPRESENTMENT: 'representment',
+  NETWORK_REJECTED: 'network.rejected',
   PREARBITRATION: 'prearbitration',
   PREARBITRATION_RESPONDED: 'prearbitration.responded',
-  ARBITRATION: 'arbitration',
-  CASE_WON: 'case.won',
-  CASE_LOST: 'case.lost',
-  NETWORK_REJECTED: 'network.rejected',
+  REGULATION_PROVISIONAL_CREDIT_PERMANENT: 'regulation.provisional.credit.permanent',
+  REPRESENTMENT: 'representment',
   WRITTEN_OFF_ISSUER: 'written.off.issuer',
   WRITTEN_OFF_PROGRAM: 'written.off.program',
 } as const;

@@ -9,7 +9,7 @@ import { CardStatus, ErrorTypes, IMapMarqetaCard, KardEnrollmentStatus } from '.
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
-import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration, MarqetaCardState } from '../../models/card';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
@@ -303,7 +303,8 @@ export const unenrollFromKardRewards = async (
 };
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
-  const { user_token, token: card_token, expiration_time, last_four, pan } = cardData;
+  const { user_token, token: card_token, expiration_time, last_four, pan, fulfillment_status } = cardData;
+  console.log('////// this is the fulfillment status', cardData)
 
   // Find the existing card document with Marqeta integration
   let card = await CardModel.findOne({
@@ -328,6 +329,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     ...cardData,
     card_token,
     expr_month: month,
+    fulfillment_status,
     expr_year: year,
     last_four: encrypt(last_four),
     pan: encrypt(pan),
@@ -336,6 +338,10 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
+
+  if (cardData.state === MarqetaCardState.TERMINATED) {
+    card.status = CardStatus.Removed;
+  }
 
   // Save the updated card document
   await card.save();

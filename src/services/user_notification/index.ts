@@ -18,6 +18,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors, getZodEnumScemaFromTypescriptEnum } from '../../lib/validation';
+import { IChargebackDocument } from '../../models/chargeback';
 import { CommissionPayoutModel, ICommissionPayoutDocument } from '../../models/commissionPayout';
 import { CommissionModel, ICommissionDocument } from '../../models/commissions';
 import { ICompanyDocument } from '../../models/company';
@@ -31,6 +32,7 @@ import {
   IUserNotificationDocument,
   IPushNotificationData,
   UserNotificationModel,
+  ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   IKarmaCardWelcomeData,
   IBankLinkedConfirmationEmailData,
 } from '../../models/user_notification';
@@ -389,6 +391,50 @@ export const createPayoutUserNotificationFromCommissionPayout = async (
   }
 };
 
+export const createProvisionalCreditPermanentNotification = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    // use aggreagte pipeline to include the whole user document
+    const transaction = (await TransactionModel.aggregate()
+      .match({
+        'integrations.marqeta.token': chargebackTransition.integrations.marqeta.transaction_token,
+      })
+      .lookup({
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      })
+      .unwind({
+        path: '$user',
+      })) as unknown as ITransactionDocument & { user: IUserDocument };
+
+    if (!transaction || !transaction?.user?._id) {
+      throw Error(`Error creating notificaiton for chargeback transition: ${chargebackTransition}`);
+    }
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseWonProvisionalCreditAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: transaction?.user?.id?.toString(),
+        data: {
+          name: transaction?.user?.name,
+          submittedClaimDate: `${chargebackTransition.integrations.marqeta.created_time}`,
+          amount: `${transaction.amount}`,
+          chargebackToken: chargebackTransition.integrations.marqeta.token,
+          merchantName: transaction?.integrations?.marqeta?.card_acceptor?.name || transaction?.integrations?.marqeta?.merchant?.name,
+        },
+      } as CreateNotificationRequest<ICaseWonProvisionalCreditAlreadyIssuedNotificationData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating payout notification: ${e}`);
+  }
+};
+
 export const createKarmaCardWelcomeUserNotification = async (
   user: IUserDocument,
   newUser: boolean,
@@ -417,6 +463,7 @@ export const createACHInitiationUserNotification = async (
 ): Promise<IUserNotificationDocument | void> => {
   try {
     const { user, amount, accountMask, accountType, date } = transferData;
+
     const mockRequest = {
       body: {
         type: NotificationTypeEnum.ACHTransferInitiation,
@@ -432,6 +479,41 @@ export const createACHInitiationUserNotification = async (
         },
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH initiation notification: ${e}`);
+  }
+};
+
+export const createNoChargebackRightsUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const merchantName = transaction.integrations.marqeta.card_acceptor.name;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.NoChargebackRights,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          merchantName,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating ACH initiation notification: ${e}`);

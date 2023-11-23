@@ -5,6 +5,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { saveDocuments } from '../../lib/model';
 import { IChargebackDocument, ChargebackModel } from '../../models/chargeback';
+import { createNoChargebackRightsUserNotification, createProvisionalCreditPermanentNotification } from '../user_notification';
 
 export const createChargeback = async (chargeback: Partial<IChargebackDocument>): Promise<IChargebackDocument> => {
   try {
@@ -152,8 +153,17 @@ export const mapAndSaveMarqetaChargebackTransitionsToChargebacks = async (
   return saveDocuments(chargebacksToSave) as unknown as IChargebackDocument[];
 };
 
+const handleRegulationProvisionalCreditPermanent = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<void> => {
+  if (chargebackTransition.integrations.marqeta.type !== 'regulation.provisional.credit.permanent') {
+    return;
+  }
+  await createProvisionalCreditPermanentNotification(chargebackTransition);
+};
+
 // This is a placeholder for adding logic that handles the dispute macros
-export const createChargebackNotificaiontsFromType = async (chargebackTransitions: IChargebackDocument[]): Promise<void> => {
+export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocument[]): Promise<void> => {
   await Promise.all(
     chargebackTransitions.map(async (c) => {
       try {
@@ -173,10 +183,14 @@ export const createChargebackNotificaiontsFromType = async (chargebackTransition
           case ChargebackTypeEnum.CASE_LOST:
             break;
           case ChargebackTypeEnum.NETWORK_REJECTED:
+            await createNoChargebackRightsUserNotification(c);
             break;
           case ChargebackTypeEnum.WRITTEN_OFF_ISSUER:
             break;
           case ChargebackTypeEnum.WRITTEN_OFF_PROGRAM:
+            break;
+          case ChargebackTypeEnum.REGULATION_PROVISIONAL_CREDIT_PERMANENT:
+            await handleRegulationProvisionalCreditPermanent(c);
             break;
           default:
             console.log(`No notification created for chargeback transition with type: ${c?.integrations?.marqeta?.type}`);

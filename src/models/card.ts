@@ -29,6 +29,25 @@ export interface IKardIntegration {
   enrollmentStatus: KardEnrollmentStatus;
 }
 
+export enum MarqetaCardFulfillmentStatus {
+  'ISSUED' = 'ISSUED',
+  'ORDERED' = 'ORDERED',
+  'REORDERED' = 'REORDERED',
+  'REJECTED' = 'REJECTED',
+  'SHIPPED' = 'SHIPPED',
+  'DELIVERED' = 'DELIVERED',
+  'DIGITALLY_PRESENTED' = 'DIGITALLY_PRESENTED',
+}
+
+export enum MarqetaCardState {
+  'ACTIVE' = 'ACTIVE',
+  'SUSPENDED' = 'SUSPENDED',
+  'TERMINATED' = 'TERMINATED',
+  'UNSUPPORTED' = 'UNSUPPORTED',
+  'UNACTIVATED' = 'UNACTIVATED',
+  'LIMITED' = 'LIMITED'
+}
+
 export interface IMarqetaCardIntegration {
   token?: string;
   expiration_time: Date;
@@ -41,9 +60,10 @@ export interface IMarqetaCardIntegration {
   expr_year: number;
   created_time: Date;
   pin_is_set: boolean;
-  state: string;
+  state: MarqetaCardState;
   instrument_type: string;
   barcode: string;
+  fulfillment_status: MarqetaCardFulfillmentStatus;
 }
 
 export interface ICardIntegrations {
@@ -129,22 +149,7 @@ const cardSchema = new Schema({
         },
       },
     },
-    marqeta: {
-      type: {
-        user_token: { type: String },
-        card_token: { type: String },
-        card_product_token: { type: String },
-        last_four: { type: String },
-        pan: { type: String },
-        expr_month: { type: Number },
-        expr_year: { type: Number },
-        pin_is_set: { type: Boolean },
-        state: { type: String },
-        barcode: { type: String },
-        created_time: { type: Date },
-        instrument_type: { type: String },
-      },
-    },
+    marqeta: Schema.Types.Mixed,
   },
   initialTransactionsProcessing: { type: Boolean },
   createdOn: { type: Date, default: () => getUtcDate().toDate() },

@@ -29,7 +29,7 @@ import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
-import { createChargebackNotificaiontsFromType, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
+import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { ChargebackTransition } from '../integrations/marqeta/types';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
@@ -166,6 +166,7 @@ interface IMarqetaWebhookBody {
   usertransitions: IMarqetaUserTransitionsEvent[];
   banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
   transactions: TransactionModel[];
+  cardtransitions: IMarqetaWebhookCardsEvent[];
 }
 
 interface IMarqetaWebhookHeader {
@@ -393,7 +394,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
+    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions, cardtransitions } = req.body;
 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
@@ -420,6 +421,22 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
             title: 'Security Alert!',
           });
         }
+      }
+    }
+
+    if (!!cardtransitions) {
+      for (const card of cardtransitions) {
+        await CardModel.findOneAndUpdate(
+          { 'integrations.marqeta.card_token': card?.card_token },
+          {
+            $set: {
+              'integrations.marqeta.state': card?.state,
+              'integrations.marqeta.fulfillment_status': card?.fulfillment_status,
+              ...(card?.state?.toUpperCase() === 'SUSPENDED' ? { status: 'removed' } : {}),
+              ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
+            },
+          },
+        );
       }
     }
 
@@ -562,8 +579,9 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     if (!!chargebacktransitions) {
       const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
-      await createChargebackNotificaiontsFromType(savedChargebacks);
+      await handleDisputeMacros(savedChargebacks);
     }
+
     output.api(req, res, { message: 'Marqeta webhook processed successfully.' });
   } catch (err) {
     error(req, res, asCustomError(err));

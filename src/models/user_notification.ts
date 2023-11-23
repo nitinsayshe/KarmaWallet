@@ -32,6 +32,13 @@ export interface IEarnedCashbackNotificationData extends UserNotificationData {
   name: string;
   companyName: string;
 }
+export interface ICaseWonProvisionalCreditAlreadyIssuedNotificationData extends UserNotificationData {
+  name: string;
+  amount: string;
+  submittedClaimDate: string;// MM/DD/YYYY
+  merchantName: string;
+  chargebackToken: string;
+}
 
 export interface IPayoutNotificationData extends UserNotificationData {
   name: string;

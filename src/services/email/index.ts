@@ -698,11 +698,28 @@ export const sendBankLinkedConfirmationEmail = async ({
   sendEmail = true,
 }: IBankLinkedConfirmationEmailTemplate) => {
   const emailTemplateConfig = EmailTemplateConfigs.BankLinkedConfirmation;
-  const { isValid, missingFields } = verifyRequiredFields(['recipientEmail', 'name', 'instituteName', 'lastDigitsOfBankAccountNumber'], { recipientEmail, name, instituteName, lastDigitsOfBankAccountNumber });
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['recipientEmail', 'name', 'instituteName', 'lastDigitsOfBankAccountNumber'],
+    { recipientEmail, name, instituteName, lastDigitsOfBankAccountNumber },
+  );
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, instituteName, lastDigitsOfBankAccountNumber } });
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { name, instituteName, lastDigitsOfBankAccountNumber },
+  });
   const subject = 'Your Bank Account is Successfully Linked';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, name, instituteName, lastDigitsOfBankAccountNumber };
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user,
+    name,
+    instituteName,
+    lastDigitsOfBankAccountNumber,
+  };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -716,7 +733,15 @@ export const testBankLinkedConfirmationEmail = async (req: IRequest<{}, {}, {}>)
     if (!user?.name) throw new CustomError(`No name found for user ${user}.`, ErrorTypes.NOT_FOUND);
     const instituteName = 'Test Bank';
     const lastDigitsOfBankAccountNumber = '5555';
-    const emailResponse = await sendBankLinkedConfirmationEmail({ user: req.requestor._id, recipientEmail: email, instituteName, lastDigitsOfBankAccountNumber, name: user?.name });
+    const emailResponse = await sendBankLinkedConfirmationEmail(
+      {
+        user: req.requestor._id,
+        recipientEmail: email,
+        instituteName,
+        lastDigitsOfBankAccountNumber,
+        name: user?.name,
+      },
+    );
 
     if (!!emailResponse) {
       return 'Email sent successfully';

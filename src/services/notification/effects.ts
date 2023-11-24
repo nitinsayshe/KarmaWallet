@@ -11,10 +11,8 @@ import {
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, SendKarmaCardWelcomeEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, SendKarmaCardWelcomeEmail, sendBankLinkedConfirmationEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
-import { SendKarmaCardWelcomeEmail, sendACHInitiationEmail, sendBankLinkedConfirmationEmail, sendCashbackPayoutEmail, sendEarnedCashbackRewardEmail } from '../email';
-import { IACHTransferEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -148,9 +146,7 @@ export const handleSendBankLinkedConfirmationEmailEffect = async <DataType>(user
       name,
       instituteName,
       lastDigitsOfBankAccountNumber,
-      // recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
-      recipientEmail: 'atulgade09@gmail.com',
-
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
     });
   } catch (err) {
     console.error(err);

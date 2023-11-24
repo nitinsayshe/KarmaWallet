@@ -25,6 +25,7 @@ export enum EmailTemplateKeys {
 export enum EmailTemplateTypes {
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
   CashbackNotificaiton = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
@@ -34,9 +35,6 @@ export enum EmailTemplateTypes {
   Password = 'password',
   SupportTicket = 'supportTicket',
   Verification = 'verification',
-  AccountDeleteRequest = 'accountDeleteRequest',
-  ACHTransferInitiation = 'achTransferInitiation',
-  BankLinkedConfirmation = 'bankLinkedConfirmation',
 }
 
 export interface IEmailTemplateConfig {

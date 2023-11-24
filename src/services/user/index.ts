@@ -39,7 +39,6 @@ import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
-import { createBankLinkedConfirmationNotification } from '../user_notification';
 
 dayjs.extend(utc);
 
@@ -251,10 +250,6 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   const authKey = await Session.createSession(user._id.toString());
 
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
-  console.log('-------------------Sending Email-------------------');
-  await createBankLinkedConfirmationNotification(user, 'Testing Intitution', 'jhejkefj');
-  console.log('-------------------Sent Email-------------------');
-
   if (fcmToken && deviceInfo) {
     await addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
   }

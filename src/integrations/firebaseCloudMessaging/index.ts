@@ -1,9 +1,7 @@
-import admin from 'firebase-admin';
-import { INotificationDocument } from '../../models/notification';
-import { IUserDocument } from '../../models/user';
-import { saveNotification } from '../../services/notification';
-import { getShareableUser } from '../../services/user';
 import 'dotenv/config';
+import admin from 'firebase-admin';
+import { IUserDocument } from '../../models/user';
+import { IFCMNotification, IPushNotification } from './types';
 
 export const serviceAccount = {
   type: process.env.FIREBASE_TYPE,
@@ -28,28 +26,16 @@ try {
 } catch (error) {
   console.log('Error in initializing firebase app', error);
 }
-
-export interface IFCMNotification {
-  title: string,
-  body: string,
-  type?: string
-}
-export interface IPushNotification {
-  notification: IFCMNotification,
-  token: string,
-  data: {
-    type: string
-  }
-
-}
-export const sendPushNotification = (user: IUserDocument, notificationObject: IFCMNotification, notificationDataToSave: INotificationDocument) => {
+export const sendPushNotification = async (
+  user: IUserDocument,
+  notificationObject: IFCMNotification,
+) => {
   // Get FCM token of the user
   try {
-    const { integrations } = getShareableUser(user);
+    const { integrations } = user;
     const { fcm } = integrations;
     // Filter out the fcm array having non null token
-    const filteredFCM = fcm.filter(item => item.token !== null);
-    let errorInSendingMessage;
+    const filteredFCM = fcm.filter((item) => item.token !== null);
     filteredFCM.forEach(async (fcmObject) => {
       // Send the notification to devices targeted by its FCM token
       const pushNotification: IPushNotification = {
@@ -63,18 +49,8 @@ export const sendPushNotification = (user: IUserDocument, notificationObject: IF
         },
       };
 
-      await admin.messaging().send(pushNotification as any)
-        .catch((error: any) => {
-          errorInSendingMessage = error;
-          console.log('Error in sending push notification: ', error);
-        });
+      await admin.messaging().send(pushNotification as any);
     });
-
-    try {
-      if (!errorInSendingMessage && notificationDataToSave) { saveNotification(notificationDataToSave); }
-    } catch (error) {
-      console.log('Error in saving notification', error);
-    }
   } catch (error) {
     console.log('Error in sending notification', error);
   }

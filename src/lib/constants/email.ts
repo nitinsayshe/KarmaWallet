@@ -1,32 +1,38 @@
 // values for EmailTemplates should map to the directory names in /src/templates/email/
 export enum EmailTemplateKeys {
-  CreateAccountEmailVerification = 'createAccountEmailVerification',
+  AccountDeleteRequest = 'accountDeleteRequest',
+  ACHTransferInitiation = 'achTransferInitiation',
+  CashbackPayoutNotification = 'cashbackPayoutNotification',
+  ChangePassword = 'changePassword',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
-  GroupVerification = 'groupVerification',
+  CreateAccountEmailVerification = 'createAccountEmailVerification',
+  EarnedCashbackNotification = 'earnedCashbackNotification',
   EmailVerification = 'emailVerification',
+  GroupVerification = 'groupVerification',
+  NoChargebackRights = 'noChargebackRights',
+  PasswordReset = 'passwordReset',
+  SupportTicket = 'supportTicket',
+  TransactionsProcessed = 'transactionsProcessed',
   Welcome = 'welcome',
-  WelcomeGroup = 'welcomeGroup',
   WelcomeCC1 = 'welcomeCC1',
   WelcomeCCG1 = 'welcomeCCG1',
-  TransactionsProcessed = 'transactionsProcessed',
-  PasswordReset = 'passwordReset',
-  ChangePassword = 'changePassword',
-  EarnedCashbackNotification = 'earnedCashbackNotification',
-  CashbackPayoutNotification = 'cashbackPayoutNotification',
-  SupportTicket = 'supportTicket',
-  AccountDeleteRequest = 'accountDeleteRequest',
+  CaseWonProvisionalCreditAlreadyIssued = 'caseWonProvisionalCreditAlreadyIssued',
+  WelcomeGroup = 'welcomeGroup',
+  KarmaCardWelcome = 'karmaCardWelcome',
 }
 
 export enum EmailTemplateTypes {
+  AccountDeleteRequest = 'accountDeleteRequest',
+  ACHTransferInitiation = 'achTransferInitiation',
+  CashbackNotificaiton = 'cashbackNotification',
+  CreateAccountEmailReminder = 'createAccountEmailReminder',
+  CreateAccountVerification = 'createAccountVerification',
+  Dispute = 'dispute',
+  Essential = 'essential',
   Marketing = 'marketing',
   Password = 'password',
-  Verification = 'verification',
-  CreateAccountVerification = 'createAccountVerification',
-  CreateAccountEmailReminder = 'createAccountEmailReminder',
-  Essential = 'essential',
-  CashbackNotificaiton = 'cashbackNotification',
   SupportTicket = 'supportTicket',
-  AccountDeleteRequest = 'accountDeleteRequest',
+  Verification = 'verification',
 }
 
 export interface IEmailTemplateConfig {
@@ -35,6 +41,14 @@ export interface IEmailTemplateConfig {
 }
 
 export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
+  ACHTransferInitiation: {
+    name: EmailTemplateKeys.ACHTransferInitiation,
+    type: EmailTemplateTypes.ACHTransferInitiation,
+  },
+  NoChargebackRights: {
+    name: EmailTemplateKeys.NoChargebackRights,
+    type: EmailTemplateTypes.Dispute,
+  },
   PasswordReset: {
     name: EmailTemplateKeys.PasswordReset,
     type: EmailTemplateTypes.Essential,
@@ -88,6 +102,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
     name: EmailTemplateKeys.CashbackPayoutNotification,
     type: EmailTemplateTypes.CashbackNotificaiton,
   },
+  CaseWonProvisionalCreditAlreadyIssued: {
+    name: EmailTemplateKeys.CaseWonProvisionalCreditAlreadyIssued,
+    type: EmailTemplateTypes.Dispute,
+  },
   SupportTicket: {
     name: EmailTemplateKeys.SupportTicket,
     type: EmailTemplateTypes.SupportTicket,
@@ -95,6 +113,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   AccountDeleteRequest: {
     name: EmailTemplateKeys.AccountDeleteRequest,
     type: EmailTemplateTypes.AccountDeleteRequest,
+  },
+  KarmaCardWelcome: {
+    name: EmailTemplateKeys.KarmaCardWelcome,
+    type: EmailTemplateTypes.Essential,
   },
 };
 

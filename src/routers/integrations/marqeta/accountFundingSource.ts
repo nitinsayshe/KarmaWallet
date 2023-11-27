@@ -4,9 +4,6 @@ import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
-router.route('/banktransfer')
-  .post(authenticate, ACHFundingSourceController.createACHBankTransfer);
-
 router.route('/banktransfer/:achToken')
   .get(ACHFundingSourceController.getACHBankTransfer);
 

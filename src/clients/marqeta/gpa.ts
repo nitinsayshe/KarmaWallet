@@ -31,4 +31,15 @@ export class GPA {
       throw asCustomError(err);
     }
   }
+
+  // get reserve account balances (Program Funding Source Balance)
+  async getProgramFundingBalance() {
+    try {
+      const { data } = await this._marqetaClient._client.get('/programreserve/balances');
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
 }

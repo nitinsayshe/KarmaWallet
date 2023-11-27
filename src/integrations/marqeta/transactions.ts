@@ -22,7 +22,6 @@ import {
   TransactionTypeEnum,
   TransactionTypeEnumValues,
   TriggerClearedTransactionTypeEnum,
-  TriggerCreateTransactionTypeEnum,
   TriggerDeclinedTransactionTypeEnum,
   TriggerPendingTransactionTypeEnum,
 } from '../../lib/constants/transaction';
@@ -109,10 +108,10 @@ const matchTransactionsToCompaniesByMCC = async (
   matched: (EnrichedMarqetaTransaction & IMatchedTransaction)[],
   notMatched: EnrichedMarqetaTransaction[],
 ): Promise<{
-    matched: (EnrichedMarqetaTransaction & IMatchedTransaction
-    )[];
-    notMatched: EnrichedMarqetaTransaction[];
-  }> => {
+  matched: (EnrichedMarqetaTransaction & IMatchedTransaction
+  )[];
+  notMatched: EnrichedMarqetaTransaction[];
+}> => {
   matched = [
     ...matched,
     ...(
@@ -172,20 +171,25 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
 ): Promise<ITransactionDocument | null> => {
   // see if we're pocessing it right now
   // it would have to be already mapped to a kw transaction at this point.
-  const existingProcessingTransaction = procesingTransactions.find((t) => t?.integrations?.marqeta?.token === token);
-  if (!!existingProcessingTransaction) {
-    console.log(`Found existing processing transaction with token in procesingTransactions: ${token}`);
-    return existingProcessingTransaction;
-  }
   try {
     const existingTransaction = await MongooseTransactionModel.findOne({
-      $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': token }],
+      $or: [
+        { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': token }] },
+        {
+          $and: [
+            { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+            { 'integrations.marqeta.relatedTransactions.token': token },
+          ],
+        },
+      ],
     });
-    if (!existingTransaction?._id) {
-      throw Error(`No transaction found with token: ${token}`);
+
+    const existingProcessingTransaction = procesingTransactions?.find((t) => t?.integrations?.marqeta?.token === token);
+    if (!!existingTransaction?._id || !!existingProcessingTransaction) {
+      const transaction = existingTransaction?._id || existingProcessingTransaction;
+      console.log(`Found existing processing transaction with token in db: ${transaction}`);
+      return transaction;
     }
-    console.log(`Found existing processing transaction with token in db: ${existingTransaction}`);
-    return existingTransaction;
   } catch (err) {
     console.log(`Error looking up transaction with marqeta token: ${token}}`);
     console.log(err);
@@ -213,7 +217,14 @@ const getTransactionTypeFromMarqetaTransactionType = (
   return undefined;
 };
 
-const getUpdatedTransactionStatusFromRelatedTransactionType = (type: TransactionModelTypeEnumValues): TransactionModelStateEnumValues => {
+const getUpdatedTransactionStatusFromRelatedTransactionType = (
+  type: TransactionModelTypeEnumValues,
+  state: TransactionModelStateEnumValues,
+): TransactionModelStateEnumValues => {
+  if (!!Object.values(TransactionModelStateEnum).includes(state)) {
+    return state;
+  }
+
   if (!!Object.values(TriggerClearedTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Cleared;
   }
@@ -281,23 +292,24 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 ): Promise<ITransactionDocument> => {
   // check if this transaction already exists in the db
   const lookupToken = t?.marqeta_transaction?.preceding_related_transaction_token || t?.marqeta_transaction?.token;
-  const existingTransaction = await getExistingTransactionFromMarqetaTransactionToken(
-    lookupToken,
-    processingTransactions,
-  );
+  const existingTransaction = await getExistingTransactionFromMarqetaTransactionToken(lookupToken, processingTransactions);
   console.log('existingTransaction', JSON.stringify(existingTransaction));
-  const isTypeThatTriggersNewTransactionCreation = !!Object.values(TriggerCreateTransactionTypeEnum)?.find(
-    (type) => type === t.marqeta_transaction.type,
-  );
-  if (!!existingTransaction && !isTypeThatTriggersNewTransactionCreation) {
+  if (!!existingTransaction) {
     const hasPrecedingRelatedTransactionToken = !!t?.marqeta_transaction?.preceding_related_transaction_token;
     if (hasPrecedingRelatedTransactionToken) {
-      const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type);
+      const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type, t.marqeta_transaction?.state);
+
+      let relatedTransactions = existingTransaction?.integrations?.marqeta?.relatedTransactions;
+      const currentTransactionIsInRelatedTransactions = !!relatedTransactions?.find(
+        (relatedTransaction) => relatedTransaction.token === t.marqeta_transaction.token,
+      );
+      if (!currentTransactionIsInRelatedTransactions) {
+        relatedTransactions = !!relatedTransactions ? [...relatedTransactions, t.marqeta_transaction] : [t.marqeta_transaction];
+      }
+
       existingTransaction.integrations.marqeta = {
         ...existingTransaction.integrations.marqeta,
-        relatedTransactions: !!existingTransaction?.integrations?.marqeta?.relatedTransactions
-          ? [...existingTransaction.integrations.marqeta.relatedTransactions, t.marqeta_transaction]
-          : [t.marqeta_transaction],
+        relatedTransactions,
       };
       existingTransaction.status = updatedStatus || existingTransaction.status;
     } else {

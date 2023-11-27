@@ -54,4 +54,15 @@ export class Transactions {
       throw asCustomError(err);
     }
   }
+
+  // list transactions for single user
+  async listTransactionsForUser(userToken: string) {
+    try {
+      const { data } = await this._marqetaClient._client.get(`transactions?user_token=${userToken}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
 }

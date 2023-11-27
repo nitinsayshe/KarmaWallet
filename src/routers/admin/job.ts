@@ -12,9 +12,6 @@ router.route('/group-verification-email')
 router.route('/email-verification')
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendEmailVerification);
 
-router.route('/welcome-email')
-  .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.sendWelcomeEmail);
-
 router.route('/')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.logJobs)
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin] }), JobController.createJob);

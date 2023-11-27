@@ -87,7 +87,7 @@ export enum UnsdgNames {
   Planet = 'Planet',
 }
 
-export enum BankConnectionStatus{
+export enum BankConnectionStatus {
   Linked = 'linked',
   Unlinked = 'unlinked',
   Error = 'error',
@@ -340,4 +340,19 @@ export const TransactionIntegrationTypesEnum = {
   Rare: 'rare',
   Kard: 'kard',
 } as const;
-export type TransactionIntegrationTypesEnumValues = typeof TransactionIntegrationTypesEnum[keyof typeof TransactionIntegrationTypesEnum];
+export type TransactionIntegrationTypesEnumValues = (typeof TransactionIntegrationTypesEnum)[keyof typeof TransactionIntegrationTypesEnum];
+
+export const ChargebackTypeEnum = {
+  ARBITRATION: 'arbitration',
+  CASE_LOST: 'case.lost',
+  CASE_WON: 'case.won',
+  INITIATED: 'initiated',
+  NETWORK_REJECTED: 'network.rejected',
+  PREARBITRATION: 'prearbitration',
+  PREARBITRATION_RESPONDED: 'prearbitration.responded',
+  REGULATION_PROVISIONAL_CREDIT_PERMANENT: 'regulation.provisional.credit.permanent',
+  REPRESENTMENT: 'representment',
+  WRITTEN_OFF_ISSUER: 'written.off.issuer',
+  WRITTEN_OFF_PROGRAM: 'written.off.program',
+} as const;
+export type ChargebackTypeEnumValues = (typeof ChargebackTypeEnum)[keyof typeof ChargebackTypeEnum];

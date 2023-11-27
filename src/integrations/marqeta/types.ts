@@ -1,6 +1,7 @@
 import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
-import { TransactionModel } from '../../clients/marqeta/types';
+import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
+import { ChargebackTypeEnumValues } from '../../lib/constants';
 
 interface Identification {
   type: string;
@@ -73,8 +74,8 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
 }
 
 export interface IMarqetaLoadGpaFromProgramFundingSource {
-  userId: string;
   amount: number;
+  userId: string;
 }
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
@@ -144,10 +145,11 @@ export enum IMarqetaACHTransferType {
   PUSH = 'PUSH',
   PULL = 'PULL',
 }
+
 export interface IMarqetaACHBankTransfer {
   amount: string;
-  fundingSourceToken: string;
   type: IMarqetaACHTransferType;
+  fundingSourceToken: string;
 }
 
 export interface IMarqetaACHBankTransferTransition {
@@ -497,6 +499,19 @@ export const WebhookEventTypeEnum = {
 } as const;
 export type WebhookEventTypeEnumValues = (typeof WebhookEventTypeEnum)[keyof typeof WebhookEventTypeEnum];
 
+export type ChargebackTransition = {
+  token: string;
+  state: ChargebackResponseStateEnumValues;
+  previous_state: ChargebackResponseStateEnumValues;
+  channel: ChargebackResponseChannelEnumValues;
+  chargeback_token: string;
+  reason: string;
+  transaction_token: string;
+  created_time: Date;
+  last_modified_time: Date;
+  type: ChargebackTypeEnumValues;
+};
+
 export type PaginatedMarqetaResponse<DataType> = {
   count: number;
   start_index: number;
@@ -512,5 +527,4 @@ export type ListTransactionsResponse = { data: PaginatedMarqetaResponse<Transact
 export type ListACHFundingSourcesForUserResponse = { data: PaginatedMarqetaResponse<IACHFundingSource[]> };
 export type ListACHBankTransfersResponse = { data: PaginatedMarqetaResponse<ACHTransferModel[]> };
 export type ListWebhooksResponse = { data: PaginatedMarqetaResponse<WebhookWithModifiedAndCreatedDates[]> };
-
 export type EnrichedMarqetaTransaction = Transaction & { marqeta_transaction: TransactionModel };

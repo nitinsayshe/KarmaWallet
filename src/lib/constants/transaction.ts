@@ -168,16 +168,3 @@ export const DepositTransactionTypeEnum = {
   DirectdepositDebitReversal: TransactionModelTypeEnum.DirectdepositDebitReversal,
 } as const;
 export type DepositTransactionTypeEnumValues = (typeof DepositTransactionTypeEnum)[keyof typeof DepositTransactionTypeEnum];
-
-export const TriggerCreateTransactionTypeEnum = {
-  Authorization: TransactionModelTypeEnum.Authorization,
-  AuthorizationClearingChargeback: TransactionModelTypeEnum.AuthorizationClearingChargeback,
-  AuthorizationQuasiCash: TransactionModelTypeEnum.AuthorizationQuasiCash,
-  DirectDepositCreditPending: TransactionModelTypeEnum.DirectdepositCreditPending,
-  Pindebit: TransactionModelTypeEnum.Pindebit,
-  PindebitAuthorization: TransactionModelTypeEnum.PindebitAuthorization,
-  PindebitChargeback: TransactionModelTypeEnum.PindebitChargeback,
-  RefundAuthorization: TransactionModelTypeEnum.RefundAuthorization,
-} as const;
-export type TriggerCreateTransactionTypeEnumValues =
-  (typeof TriggerCreateTransactionTypeEnum)[keyof typeof TriggerCreateTransactionTypeEnum];

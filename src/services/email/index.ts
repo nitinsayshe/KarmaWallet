@@ -2,124 +2,24 @@
 import Handlebars from 'handlebars';
 import path from 'path';
 import fs from 'fs';
-import { Types } from 'mongoose';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { EmailBullClient } from '../../clients/bull/email';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { EmailAddresses, ErrorTypes } from '../../lib/constants';
-import CustomError from '../../lib/customError';
+import CustomError, { asCustomError } from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
-import { EmailTemplateKeys, EmailTemplateConfigs, IEmailTemplateConfig } from '../../lib/constants/email';
+import { EmailTemplateConfigs, EmailTemplateTypes } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IVisitorDocument } from '../../models/visitor';
-import { IUserDocument } from '../../models/user';
+import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IDisputeEmailData, IKarmacardWelcomeTemplateParams } from './types';
+import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
 
 dayjs.extend(utc);
-
-interface ICreateSentEmailParams {
-  key: EmailTemplateKeys;
-  email: string;
-  user?: Types.ObjectId;
-  visitor?: Types.ObjectId;
-}
-
-interface IEmailTemplateParams {
-  user?: Types.ObjectId;
-  name: string;
-  amount?: string;
-  recipientEmail: string;
-  senderEmail?: string;
-  replyToAddresses?: string[];
-  domain?: string;
-  sendEmail?: boolean;
-}
-
-interface IDeleteAccountRequestVerificationTemplateParams {
-  domain?: string;
-  user: IUserDocument;
-  deleteReason: string;
-  deleteAccountRequestId: string;
-  recipientEmail?: string;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-  message?: string;
-}
-
-interface IWelcomeGroupTemplateParams extends IEmailTemplateParams {
-  groupName: string;
-}
-
-interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
-  token: string;
-  groupName?: string;
-  visitor?: IVisitorDocument;
-  companyName?: string;
-  amount?: string;
-}
-
-interface ISupportEmailVerificationTemplateParams {
-  domain?: string;
-  message: string;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-  user: IUserDocument;
-  supportTicketId: string;
-  recipientEmail?: string;
-}
-
-interface IGroupVerificationTemplateParams extends IEmailVerificationTemplateParams {
-  groupName: string;
-}
-
-export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplateParams {
-  template: EmailTemplateKeys;
-}
-
-//   const jobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-
-export interface IEmailJobData {
-  template: string;
-  user?: Types.ObjectId | string;
-  visitor?: IVisitorDocument | Types.ObjectId | string;
-  subject: string;
-  senderEmail: string;
-  recipientEmail: string;
-  replyToAddresses: string[];
-  emailTemplateConfig?: IEmailTemplateConfig;
-  groupName?: string;
-  companyName?: string;
-  verificationLink?: string;
-  domain?: string;
-  name?: string;
-  style?: string;
-  token?: string;
-  isSuccess?: boolean;
-  passwordResetLink?: string;
-  amount?: string;
-  message?: string;
-  supportTicketId?: string;
-  userId?: string;
-  userEmail?: string;
-  deleteAccountRequestId?: string;
-  deleteReason?: string;
-}
-
-export interface IBuildTemplateParams {
-  templateName: EmailTemplateKeys;
-  data: Partial<IEmailJobData>;
-  templatePath?: string;
-  stylePath?: string;
-
-}
-export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
-  isSuccess: boolean;
-}
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
@@ -130,18 +30,59 @@ const defaultEmailJobOptions = {
   },
 };
 
-export const buildTemplate = ({ templateName, data, templatePath, stylePath }: IBuildTemplateParams) => {
-  const _templatePath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
-  const _stylePath = stylePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
-  if (!fs.existsSync(_templatePath)) throw new CustomError('Template not found', ErrorTypes.INVALID_ARG);
-  const templateString = fs.readFileSync(_templatePath, 'utf8');
+export const buildTemplate = ({ templateName, data, templatePath, templateType }: IBuildTemplateParams) => {
+  // Add Template Content and Styles for this particular email
+  const _bodyPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
+  const _templateStylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
+  if (!fs.existsSync(_bodyPath)) throw new CustomError('Template not found for email', ErrorTypes.INVALID_ARG);
+  const bodyString = fs.readFileSync(_bodyPath, 'utf8');
+  Handlebars.registerPartial('body', bodyString);
+
+  if (templateType === EmailTemplateTypes.Dispute) {
+    const _disputesSignatureTemplatePath = path.join(__dirname, '..', '..', 'templates', 'email', 'shareableTemplates', 'disputeSignature', 'template.hbs');
+    if (!fs.existsSync(_disputesSignatureTemplatePath)) throw new CustomError('Dispute signature template not found', ErrorTypes.INVALID_ARG);
+    const disputeString = fs.readFileSync(_disputesSignatureTemplatePath, 'utf8');
+    Handlebars.registerPartial('disputeSignature', disputeString);
+  }
+
+  if (fs.existsSync(_templateStylePath)) {
+    const rawCss = fs.readFileSync(_templateStylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.templateStyle = styleTemplate;
+  }
+
+  // Add shared Footer Content and Styles
+  const _footerPath = path.join(__dirname, '..', '..', 'templates', 'email', 'shareableTemplates', 'footer', 'template.hbs');
+  const _footerStylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'shareableTemplates', 'footer', 'style.hbs');
+  if (!fs.existsSync(_footerPath)) throw new CustomError('Footer file not found', ErrorTypes.INVALID_ARG);
+  if (!fs.existsSync(_footerStylePath)) throw new CustomError('Footer style file not found', ErrorTypes.INVALID_ARG);
+  const footerString = fs.readFileSync(_footerPath, 'utf8');
+  Handlebars.registerPartial('footer', footerString);
+
+  if (fs.existsSync(_footerStylePath)) {
+    const rawCss = fs.readFileSync(_footerStylePath, 'utf8');
+    const styleTemplateRaw = Handlebars.compile(rawCss);
+    const styleTemplate = styleTemplateRaw({ colors });
+    data.footerStyle = styleTemplate;
+  }
+
+  // Add shared Base Email and Styles
+  const _stylePath = path.join(__dirname, '..', '..', 'templates', 'email', 'style.hbs');
+  const _baseEmailPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', 'baseEmail.hbs');
+  if (!fs.existsSync(_baseEmailPath)) throw new CustomError('Base email file not found', ErrorTypes.INVALID_ARG);
+  const templateString = fs.readFileSync(_baseEmailPath, 'utf8');
+
   if (fs.existsSync(_stylePath)) {
     const rawCss = fs.readFileSync(_stylePath, 'utf8');
     const styleTemplateRaw = Handlebars.compile(rawCss);
     const styleTemplate = styleTemplateRaw({ colors });
     data.style = styleTemplate;
   }
+
+  // Compile and return template
   const template = Handlebars.compile(templateString);
+  data.currentYear = dayjs().year().toString();
   return template(data);
 };
 
@@ -157,7 +98,11 @@ export const sendGroupVerificationEmail = async ({
   sendEmail = true,
 }: IGroupVerificationTemplateParams) => {
   const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'groupName', 'recipientEmail'], {
-    name, domain, token, groupName, recipientEmail,
+    name,
+    domain,
+    token,
+    groupName,
+    recipientEmail,
   });
   const emailTemplateConfig = EmailTemplateConfigs.GroupVerification;
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
@@ -185,7 +130,12 @@ export const sendEmailVerification = async ({
   sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.EmailVerification;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
+    name,
+    domain,
+    token,
+    recipientEmail,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}/account?emailVerification=${token}`;
@@ -209,9 +159,14 @@ export const sendAccountCreationVerificationEmail = async ({
   sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.CreateAccountEmailVerification;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
+    name,
+    domain,
+    token,
+    recipientEmail,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const urlParamsString = visitor.integrations.urlParams.map(param => `${param.key}=${param.value}`).join('&');
+  const urlParamsString = visitor.integrations.urlParams.map((param) => `${param.key}=${param.value}`).join('&');
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}?verifyaccount=${token}${!!urlParamsString ? `&${urlParamsString}` : ''}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
@@ -237,7 +192,16 @@ export const sendChangePasswordEmail = async ({
   const passwordResetLink = `${domain}/?createpassword=${token}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
   const subject = 'Change Your Karma Wallet Password';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user,
+    passwordResetLink,
+  };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -254,34 +218,19 @@ export const sendAccountCreationReminderEmail = async ({
   sendEmail = true,
 }: IEmailVerificationTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.CreateAccountEmailReminder;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], { name, domain, token, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
+    name,
+    domain,
+    token,
+    recipientEmail,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const params = visitor.integrations.urlParams.filter(p => p.key !== 'createaccount');
-  const urlParamsString = params.map(param => `${param.key}=${param.value}`).join('&');
+  const params = visitor.integrations.urlParams.filter((p) => p.key !== 'createaccount');
+  const urlParamsString = params.map((param) => `${param.key}=${param.value}`).join('&');
   const verificationLink = `${domain}?verifyaccount=${token}${!!urlParamsString ? `&${urlParamsString}` : ''}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
   const subject = 'Finish Creating Your Karma Wallet Account';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, visitor };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-// Welcome Flow: No Group
-export const sendWelcomeEmail = async ({
-  user,
-  name,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IEmailTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.Welcome;
-  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'recipientEmail'], { name, domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } });
-  const subject = `Welcome to your Karma Wallet, ${name} 💚`;
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -311,50 +260,6 @@ export const sendWelcomeGroupEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-// Welcome Flow: Credit Card Not Linked
-export const sendWelcomeCC1Email = async ({
-  user,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IEmailTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCC1;
-  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail'], { domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain } });
-  // TODO: Update Subject
-  const subject = 'Make the Most of your Karma Wallet 💜';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-// Welcome Flow: Credit Card Not Linked - User Joined Group w/ Donation Matching
-export const sendWelcomeCCG1Email = async ({
-  user,
-  domain = process.env.FRONTEND_DOMAIN,
-  recipientEmail,
-  groupName,
-  senderEmail = EmailAddresses.NoReply,
-  replyToAddresses = [EmailAddresses.ReplyTo],
-  sendEmail = true,
-}: IWelcomeGroupTemplateParams) => {
-  const emailTemplateConfig = EmailTemplateConfigs.WelcomeCCG1;
-  const { isValid, missingFields } = verifyRequiredFields(['groupName', 'domain', 'recipientEmail'], { groupName, domain, recipientEmail });
-  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  // override to share welcomeCC1 template and styles
-  const template = buildTemplate({
-    templateName: EmailTemplateConfigs.WelcomeCC1.name,
-    data: { domain, groupName },
-  });
-  const subject = 'Make the Most of your Karma Wallet 💜';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, groupName, user };
-  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
-  return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
 export const sendTransactionsProcessedEmail = async ({
   user,
   recipientEmail,
@@ -370,7 +275,17 @@ export const sendTransactionsProcessedEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { domain, name, isSuccess } });
   const subject = 'Your Karma Wallet Impact';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, isSuccess, name };
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user,
+    isSuccess,
+    name,
+  };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -383,14 +298,29 @@ export const sendPasswordResetEmail = async ({
   domain = process.env.FRONTEND_DOMAIN,
   token,
   name,
-  sendEmail = true }: IEmailVerificationTemplateParams) => {
+  sendEmail = true,
+}: IEmailVerificationTemplateParams) => {
   const emailTemplateConfig = EmailTemplateConfigs.PasswordReset;
-  const { isValid, missingFields } = verifyRequiredFields(['token', 'domain', 'recipientEmail', 'name'], { token, domain, recipientEmail, name });
+  const { isValid, missingFields } = verifyRequiredFields(['token', 'domain', 'recipientEmail', 'name'], {
+    token,
+    domain,
+    recipientEmail,
+    name,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const passwordResetLink = `${domain}/?createpassword=${token}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, passwordResetLink } });
   const subject = 'Reset your Karma Wallet Password';
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user, passwordResetLink };
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user,
+    passwordResetLink,
+  };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -403,9 +333,15 @@ export const sendEarnedCashbackRewardEmail = async ({
   domain = process.env.FRONTEND_DOMAIN,
   companyName,
   name,
-  sendEmail = true }: Partial<IEmailVerificationTemplateParams>) => {
+  sendEmail = true,
+}: Partial<IEmailVerificationTemplateParams>) => {
   const emailTemplateConfig = EmailTemplateConfigs.EarnedCashbackReward;
-  const { isValid, missingFields } = verifyRequiredFields(['companyName', 'domain', 'recipientEmail', 'name'], { companyName, domain, recipientEmail, name });
+  const { isValid, missingFields } = verifyRequiredFields(['companyName', 'domain', 'recipientEmail', 'name'], {
+    companyName,
+    domain,
+    recipientEmail,
+    name,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, companyName } });
   const subject = 'Great job! You earned a cashback reward.';
@@ -413,7 +349,33 @@ export const sendEarnedCashbackRewardEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
-
+export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  merchantName,
+  submittedClaimDate,
+  sendEmail = true,
+}: Partial<IEmailVerificationTemplateParams>) => {
+  const subject = 'Your case has been won!';
+  const emailTemplateConfig = EmailTemplateConfigs.CaseWonProvisionalCreditAlreadyIssued;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['amount', 'domain', 'recipientEmail', 'name', 'merchantName', 'submittedClaimDate'],
+    { amount, domain, recipientEmail, name, merchantName, submittedClaimDate },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { name, domain, amount, merchantName, submittedClaimDate },
+  } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
 export const sendCashbackPayoutEmail = async ({
   user,
   recipientEmail,
@@ -424,11 +386,37 @@ export const sendCashbackPayoutEmail = async ({
   amount,
   sendEmail = true,
 }: Partial<IEmailVerificationTemplateParams>) => {
+  const subject = 'Your Karma Cash has been deposited!';
   const emailTemplateConfig = EmailTemplateConfigs.CashbackPayoutNotification;
-  const { isValid, missingFields } = verifyRequiredFields(['amount', 'domain', 'recipientEmail', 'name'], { amount, domain, recipientEmail, name });
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'domain', 'recipientEmail', 'name'], {
+    amount,
+    domain,
+    recipientEmail,
+    name,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, amount } } as IBuildTemplateParams);
-  const subject = 'Casback rewards have been dispersed!';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+// Welcome email when karma card is approved
+export const SendKarmaCardWelcomeEmail = async ({
+  name,
+  user,
+  newUser,
+  domain = process.env.FRONTEND_DOMAIN,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IKarmacardWelcomeTemplateParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardWelcome;
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'newUser'], { domain, recipientEmail, name, newUser });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, newUser } });
+  const subject = 'Your Karma Wallet Card is on the way...';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -457,14 +445,25 @@ export const sendSupportTicketEmailToSupport = async ({
   message,
   supportTicketId,
 }: ISupportEmailVerificationTemplateParams) => {
-  const userEmail = user.emails.find(e => !!e.primary).email;
+  const userEmail = user.emails.find((e) => !!e.primary).email;
   const { name, _id } = user;
   const emailTemplateConfig = EmailTemplateConfigs.SupportTicket;
   const { isValid, missingFields } = verifyRequiredFields(['user', 'message', 'supportTicketId'], { user, message, supportTicketId });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { message, userEmail, name } });
   const subject = `New Support Ticket: ${supportTicketId}`;
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, message, supportTicketId, userEmail };
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user: _id,
+    message,
+    supportTicketId,
+    userEmail,
+  };
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -477,14 +476,213 @@ export const sendDeleteAccountRequestEmail = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IDeleteAccountRequestVerificationTemplateParams) => {
-  const userEmail = user.emails.find(e => !!e.primary)?.email;
+  const userEmail = user.emails.find((e) => !!e.primary)?.email;
   const { name, _id } = user;
   const emailTemplateConfig = EmailTemplateConfigs.AccountDeleteRequest;
-  const { isValid, missingFields } = verifyRequiredFields(['user', 'deleteReason', 'deleteAccountRequestId'], { user, deleteReason, deleteAccountRequestId });
+  const { isValid, missingFields } = verifyRequiredFields(['user', 'deleteReason', 'deleteAccountRequestId'], {
+    user,
+    deleteReason,
+    deleteAccountRequestId,
+  });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { deleteReason, userEmail, name } });
   const subject = `New Delete Account Request: ${deleteAccountRequestId}`;
-  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: _id, deleteReason, deleteAccountRequestId, userEmail };
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user: _id,
+    deleteReason,
+    deleteAccountRequestId,
+    userEmail,
+  };
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendACHInitiationEmail = async ({
+  user,
+  amount,
+  accountMask,
+  accountType,
+  date,
+  name,
+}: IACHTransferEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ACHTransferInitiation;
+  const subject = 'An ACH Transfer Has Been Initiated';
+  const senderEmail = EmailAddresses.NoReply;
+  const replyToAddresses = [EmailAddresses.ReplyTo];
+  const recipientEmail = user.emails.find(e => !!e.primary)?.email;
+
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'accountMask', 'accountType', 'date', 'name'], { amount, accountMask, accountType, date, name });
+
+  if (!isValid) {
+    throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  }
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { amount, accountMask, accountType, date, name },
+  });
+
+  const jobData: IEmailJobData = {
+    template,
+    recipientEmail,
+    subject,
+    senderEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user: user._id,
+    amount,
+    accountMask,
+    accountType,
+    date,
+    name,
+  };
+
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const testCashbackPayoutEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find((e) => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendCashbackPayoutEmail({
+      user: user._id,
+      recipientEmail: email,
+      name: user.name,
+      amount: '10.44',
+    });
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendACHInitiationEmail({
+      user: req.requestor,
+      amount: '100.00',
+      accountMask: '1234',
+      accountType: 'Checking',
+      date: '12/14/2023',
+      name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const sendNoChargebackRightsEmail = async ({
+  user,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  companyName,
+  amount,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const recipientEmail = user.emails.find(e => !!e.primary)?.email;
+  const subject = 'Your Karma Wallet Card Dispute Has Been Denied';
+  const emailTemplateConfig = EmailTemplateConfigs.NoChargebackRights;
+
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'companyName', 'amount'], { domain, recipientEmail, name, companyName, amount });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: EmailTemplateTypes.Dispute,
+    data: { amount, companyName, name },
+  });
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const testNoChargebackRightsEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendNoChargebackRightsEmail({
+      user: req.requestor,
+      amount: '1032.00',
+      companyName: 'Amazon Web Services',
+      name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await SendKarmaCardWelcomeEmail({
+      user: user._id,
+      name: user.name,
+      newUser: true, // toggle to send corresponding email
+      recipientEmail: email,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendChangePasswordEmail({
+      user: req.requestor._id,
+      recipientEmail: email,
+      name: user.name,
+      token: '1234',
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };

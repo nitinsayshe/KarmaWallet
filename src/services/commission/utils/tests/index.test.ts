@@ -11,6 +11,8 @@ import {
 } from '../../../../clients/kard';
 import { MongoClient } from '../../../../clients/mongo';
 import { CardStatus, KardEnrollmentStatus } from '../../../../lib/constants';
+import { NotificationTypeEnum } from '../../../../lib/constants/notification';
+import { UserNotificationStatusEnum } from '../../../../lib/constants/user_notification';
 import { getUtcDate } from '../../../../lib/date';
 import { cleanUpDocuments } from '../../../../lib/model';
 import { getRandomInt } from '../../../../lib/number';
@@ -26,10 +28,10 @@ import { ICardDocument } from '../../../../models/card';
 import { ICommissionDocument } from '../../../../models/commissions';
 import { ICompanyDocument } from '../../../../models/company';
 import { IMerchantDocument } from '../../../../models/merchant';
-import { INotificationDocument, NotificationStatus, NotificationType } from '../../../../models/notification';
 import { ITransactionDocument } from '../../../../models/transaction';
 import { IUserDocument, UserEmailStatus } from '../../../../models/user';
-import { createEarnedCashbackNotificationFromCommission } from '../../../notification';
+import { IUserNotificationDocument } from '../../../../models/user_notification';
+import { createEarnedCashbackUserNotificationFromCommission } from '../../../user_notification';
 
 describe('tests commission utils logic', () => {
   let testUserWithLinkedCard: IUserDocument;
@@ -177,19 +179,19 @@ describe('tests commission utils logic', () => {
   });
 
   it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
-    const earnedRewardNotification = await createEarnedCashbackNotificationFromCommission(testCommission, true);
+    const earnedRewardNotification = await createEarnedCashbackUserNotificationFromCommission(testCommission, true);
     expect(earnedRewardNotification).toBeDefined();
     expect(earnedRewardNotification).not.toBeNull();
-    const n = earnedRewardNotification as INotificationDocument;
+    const n = earnedRewardNotification as IUserNotificationDocument;
     expect((n.user as IUserDocument)._id.toString()).toBe((testCommission.user as IUserDocument)._id.toString());
-    expect(n.type).toBe(NotificationType.EarnedCashback);
-    expect(n.status).toBe(NotificationStatus.Unread);
+    expect(n.type).toBe(NotificationTypeEnum.EarnedCashback);
+    expect(n.status).toBe(UserNotificationStatusEnum.Unread);
     expect(n.data).toBeDefined();
     expect(n.data).not.toBeNull();
     expect(n.data).toHaveProperty('name');
     expect(n.data).toHaveProperty('companyName');
-    expect(n.body).toBeDefined();
-    expect(n.body).not.toBeNull();
+    expect(n.data.body).toBeDefined();
+    expect(n.data.body).not.toBeNull();
     await n.remove();
   });
 

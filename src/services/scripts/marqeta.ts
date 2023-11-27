@@ -1,9 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import { TransactionModel } from '../../clients/marqeta/types';
-import { listTransaction } from '../../integrations/marqeta/transactions';
+import { listTransaction, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../../integrations/marqeta/transactions';
 import { sleep } from '../../lib/misc';
 import { IRequest } from '../../types/request';
+import { UserModel } from '../../models/user';
+import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { Transactions } from '../../clients/marqeta/transactions';
+import { Card } from '../../clients/marqeta/card';
+import { mapMarqetaCardtoCard } from '../card';
 
 export const getMarqetaTransactions = async () => {
   let transactions: TransactionModel[] = [];
@@ -35,3 +40,23 @@ export const getMarqetaTransactions = async () => {
 
   fs.writeFileSync(path.resolve(__dirname, './.tmp/marqeta-transactions.json'), JSON.stringify(transactions));
 };
+
+export const getTransactionsForUser = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  const { userToken } = user.integrations.marqeta;
+  const marqetaClient = await new MarqetaClient();
+  const transactionClient = await new Transactions(marqetaClient);
+  const transactions = await transactionClient.listTransactionsForUser(userToken);
+  const mappedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions.data);
+};
+
+export const getCardsFromMarqeta = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  const { userToken } = user.integrations.marqeta;
+  const marqetaClient = await new MarqetaClient();
+  const cardClient = await new Card(marqetaClient);
+  const usersCards = await cardClient.listCards(userToken);
+  for (const card of usersCards.data) {
+    await mapMarqetaCardtoCard(userId, card)
+  }
+}

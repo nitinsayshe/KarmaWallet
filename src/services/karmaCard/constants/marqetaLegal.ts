@@ -1,4 +1,4 @@
-export const issuerStatement = 'The Karma Wallet Visa® Prepaid Card is issued by Pathward®, N.A., Member FDIC, pursuant to a license from Visa U.S.A. Inc. The Karma Wallet Visa Prepaid Card is powered by Marqeta. The Karma Wallet Visa Prepaid Card can be used everywhere Visa debit cards are accepted.';
+export const issuerStatement = 'The Karma Wallet Visa® Prepaid Card is issued by Pathward, N.A., Member FDIC, pursuant to a license from Visa U.S.A. Inc. The Karma Wallet Visa Prepaid Card is powered by Marqeta. The Karma Wallet Visa Prepaid Card can be used everywhere Visa debit cards are accepted.';
 
 export const supportPhoneNumber = '1-866-304-4030';
 

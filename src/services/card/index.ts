@@ -9,13 +9,14 @@ import { CardStatus, ErrorTypes, IMapMarqetaCard, KardEnrollmentStatus } from '.
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
-import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration, MarqetaCardState } from '../../models/card';
+import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
+import { MarqetaCardState } from '../../lib/constants/card';
 
 dayjs.extend(utc);
 
@@ -304,7 +305,6 @@ export const unenrollFromKardRewards = async (
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
   const { user_token, token: card_token, expiration_time, last_four, pan, fulfillment_status } = cardData;
-  console.log('////// this is the fulfillment status', cardData)
 
   // Find the existing card document with Marqeta integration
   let card = await CardModel.findOne({

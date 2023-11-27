@@ -3,6 +3,7 @@ import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
+import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../lib/constants/card';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -27,25 +28,6 @@ export interface IKardIntegration {
   createdOn: Date;
   userId: string;
   enrollmentStatus: KardEnrollmentStatus;
-}
-
-export enum MarqetaCardFulfillmentStatus {
-  'ISSUED' = 'ISSUED',
-  'ORDERED' = 'ORDERED',
-  'REORDERED' = 'REORDERED',
-  'REJECTED' = 'REJECTED',
-  'SHIPPED' = 'SHIPPED',
-  'DELIVERED' = 'DELIVERED',
-  'DIGITALLY_PRESENTED' = 'DIGITALLY_PRESENTED',
-}
-
-export enum MarqetaCardState {
-  'ACTIVE' = 'ACTIVE',
-  'SUSPENDED' = 'SUSPENDED',
-  'TERMINATED' = 'TERMINATED',
-  'UNSUPPORTED' = 'UNSUPPORTED',
-  'UNACTIVATED' = 'UNACTIVATED',
-  'LIMITED' = 'LIMITED'
 }
 
 export interface IMarqetaCardIntegration {

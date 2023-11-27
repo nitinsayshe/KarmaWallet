@@ -9,21 +9,21 @@ const router = Router();
 router.post(
   '/legal-text',
   authenticate,
-  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
   KarmaCardController.createKarmaCardLegalText,
 );
 
 router.put(
   '/legal-text/:legalTextId',
   authenticate,
-  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
   KarmaCardController.updateKarmaCardLegalText,
 );
 
 router.delete(
   '/legal-text/:legalTextId',
   authenticate,
-  protectedRequirements({ roles: [UserRoles.Member, UserRoles.Admin, UserRoles.SuperAdmin] }),
+  protectedRequirements({ roles: [UserRoles.SuperAdmin] }),
   KarmaCardController.deleteKarmaCardLegalText,
 );
 

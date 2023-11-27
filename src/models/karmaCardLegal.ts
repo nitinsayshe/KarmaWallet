@@ -26,7 +26,7 @@ const karmaCardLegalSchema = new Schema({
   createdOn: { type: Date, required: true, default: () => getUtcDate() },
   lastModified: { type: Date, required: true, default: () => getUtcDate() },
   text: { type: String, required: true },
-  name: { type: String },
+  name: { type: String, required: true },
 });
 
 export const KarmaCardLegalModel = model<IKarmaCardLegalDocument, Model<IKarmaCardLegal>>('karma_card_legal', karmaCardLegalSchema);

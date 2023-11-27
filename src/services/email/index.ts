@@ -349,6 +349,38 @@ export const sendEarnedCashbackRewardEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
+export const sendCaseLostProvisionalCreditAlreadyIssuedEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  reversalDate,
+  date,
+  companyName,
+  reason,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const subject = 'Case Lost - Provisional Credit Will Be Reversed';
+  const emailTemplateConfig = EmailTemplateConfigs.CaseLostProvisionalCreditAlreadyIssued;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['amount', 'domain', 'recipientEmail', 'name', 'amount', 'date', 'reversalDate', 'companyName', 'reason'],
+    { amount, domain, recipientEmail, name, date, reversalDate, companyName, reason },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
+    data: { name, domain, amount, companyName, reversalDate, date, reason },
+  } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   user,
   recipientEmail,
@@ -376,6 +408,7 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
 export const sendCashbackPayoutEmail = async ({
   user,
   recipientEmail,
@@ -677,6 +710,36 @@ export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
       recipientEmail: email,
       name: user.name,
       token: '1234',
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testCaseLostProvisionalCreditIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+    const date = dayjs().format('MM/DD/YYYY');
+    const date5DaysInFuture = dayjs().add(5, 'day').format('MM/DD/YYYY');
+
+    const emailResponse = await sendCaseLostProvisionalCreditAlreadyIssuedEmail({
+      user: req.requestor,
+      name: user.name,
+      companyName: 'Nike',
+      amount: '138.53',
+      date,
+      reversalDate: date5DaysInFuture,
+      reason: 'Product not received',
+      recipientEmail: email,
     });
 
     if (!!emailResponse) {

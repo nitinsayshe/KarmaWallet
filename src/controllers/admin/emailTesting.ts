@@ -47,3 +47,12 @@ export const testChangePasswordEmail: IRequestHandler<{}, {}, {}> = async (req, 
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const testCaseLostProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailService.testCaseLostProvisionalCreditIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

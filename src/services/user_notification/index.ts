@@ -1,5 +1,7 @@
 import { isValidObjectId, Types } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { ErrorTypes } from '../../lib/constants';
 import {
   NotificationChannelEnum,
@@ -38,6 +40,8 @@ import {
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
 import { IACHTransferEmailData } from '../email/types';
+
+dayjs.extend(utc);
 
 export type CreateNotificationRequest<T = undefined> = {
   type: NotificationTypeEnumValue;
@@ -509,6 +513,45 @@ export const createNoChargebackRightsUserNotification = async (
           name: user.name,
           amount: `$${transaction.amount}`,
           merchantName,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH initiation notification: ${e}`);
+  }
+};
+
+export const createCaseLostProvisionalCreditIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const companyName = transaction.integrations.marqeta.card_acceptor.name;
+    const reversalDate = dayjs(transaction.date).utc().add(5, 'days').format('MM/DD/YYYY');
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.NoChargebackRights,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          companyName,
+          date: dayjs(transaction.date).utc().format('MM/DD/YYYY'),
+          reversalDate,
+          reason: chargebackDocument.integrations.marqeta.reason,
         },
       } as unknown as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;

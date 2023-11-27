@@ -4,13 +4,14 @@ import { NotificationChannelEnum, NotificationEffectsEnum, NotificationEffectsEn
 import CustomError from '../../lib/customError';
 import { IUserDocument } from '../../models/user';
 import {
+  ICaseLostProvisionalCreditIssuedData,
   ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   IEarnedCashbackNotificationData,
   IKarmaCardWelcomeData,
   IPayoutNotificationData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, SendKarmaCardWelcomeEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, SendKarmaCardWelcomeEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -135,6 +136,28 @@ export const handleSendKarmaCardWelcomeEmailEffect = async <DataType>(user: IUse
   }
 };
 
+export const handleSendCaseLostProvisionalCreditAlreadyIssuedEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as ICaseLostProvisionalCreditIssuedData;
+  const { amount, date, name, reversalDate, companyName, reason } = d;
+  if (!d) throw new Error('Invalid case lost provisional credit issued data');
+
+  try {
+    await sendCaseLostProvisionalCreditAlreadyIssuedEmail({
+      user,
+      name,
+      amount,
+      date,
+      reversalDate,
+      reason,
+      companyName,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending case lost provisional credit issued email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -145,6 +168,7 @@ export const NotificationEffectsFunctions: {
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
+  SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {

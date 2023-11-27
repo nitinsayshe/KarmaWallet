@@ -35,10 +35,11 @@ interface IEmailTemplateParams extends IBaseEmailParams {
 
 export interface IDisputeEmailData extends IBaseEmailParams {
   user: IUserDocument;
+  reason?: string;
   amount?: string;
   companyName?: string;
   date?: string;
-  name: string;
+  reversalDate?: string;
 }
 
 export interface IDeleteAccountRequestVerificationTemplateParams {
@@ -95,8 +96,10 @@ export interface IEmailJobData {
   companyName?: string;
   currentYear?: string;
   date?: string;
+  reversalDate?: string;
   deleteAccountRequestId?: string;
   deleteReason?: string;
+  reason?: string;
   domain?: string;
   emailTemplateConfig?: IEmailTemplateConfig;
   footerStyle?: string;

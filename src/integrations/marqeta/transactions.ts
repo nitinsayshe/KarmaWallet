@@ -108,10 +108,10 @@ const matchTransactionsToCompaniesByMCC = async (
   matched: (EnrichedMarqetaTransaction & IMatchedTransaction)[],
   notMatched: EnrichedMarqetaTransaction[],
 ): Promise<{
-  matched: (EnrichedMarqetaTransaction & IMatchedTransaction
-  )[];
-  notMatched: EnrichedMarqetaTransaction[];
-}> => {
+    matched: (EnrichedMarqetaTransaction & IMatchedTransaction
+    )[];
+    notMatched: EnrichedMarqetaTransaction[];
+  }> => {
   matched = [
     ...matched,
     ...(
@@ -185,11 +185,15 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
     });
 
     const existingProcessingTransaction = procesingTransactions?.find((t) => t?.integrations?.marqeta?.token === token);
-    if (!!existingTransaction?._id || !!existingProcessingTransaction) {
-      const transaction = existingTransaction?._id || existingProcessingTransaction;
-      console.log(`Found existing processing transaction with token in db: ${transaction}`);
-      return transaction;
+
+    const transaction = existingTransaction?.integrations?.marqeta ? existingTransaction : existingProcessingTransaction;
+
+    if (!transaction?.integrations?.marqeta) {
+      throw new Error(`No transaction found with marqeta token: ${token}`);
     }
+
+    console.log(`Found existing processing transaction with token: ${transaction}`);
+    return transaction;
   } catch (err) {
     console.log(`Error looking up transaction with marqeta token: ${token}}`);
     console.log(err);
@@ -363,7 +367,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
   newTransaction.amount = t?.amount;
   newTransaction.status = t.marqeta_transaction?.state;
-  newTransaction.integrations.marqeta = t.marqeta_transaction;
+  newTransaction.integrations = { marqeta: t.marqeta_transaction };
   newTransaction.type = types?.type;
   newTransaction.subType = types?.subType;
   newTransaction.date = getDateFromMarqetaTransaction(t.marqeta_transaction);

@@ -40,4 +40,11 @@ router.route('/change-password-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testChangePasswordEmail,
   );
+
+router.route('/provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testProvisionalCreditIssuedEmail,
+  );
 export default router;

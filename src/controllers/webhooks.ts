@@ -31,6 +31,7 @@ import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { ChargebackTransition } from '../integrations/marqeta/types';
+import { handleTransactionDisputeMacro } from '../services/transaction';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -574,7 +575,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       }
     }
     if (!!transactions) {
-      await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+      const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+      await handleTransactionDisputeMacro(savedTransactions);
     }
 
     if (!!chargebacktransitions) {

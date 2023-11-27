@@ -19,6 +19,7 @@ export enum EmailTemplateKeys {
   CaseWonProvisionalCreditAlreadyIssued = 'caseWonProvisionalCreditAlreadyIssued',
   WelcomeGroup = 'welcomeGroup',
   KarmaCardWelcome = 'karmaCardWelcome',
+  ProvisionalCreditIssued = 'provisionalCreditIssued',
 }
 
 export enum EmailTemplateTypes {
@@ -117,6 +118,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardWelcome: {
     name: EmailTemplateKeys.KarmaCardWelcome,
     type: EmailTemplateTypes.Essential,
+  },
+  ProvisionalCreditIssued: {
+    name: EmailTemplateKeys.ProvisionalCreditIssued,
+    type: EmailTemplateTypes.Dispute,
   },
 };
 

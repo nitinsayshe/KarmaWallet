@@ -146,7 +146,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       // if user is already having a marqeta aka Karma wallet card
       const applyResponse = {
         kycResult: {
-          status: IMarqetaKycState.success,
+          status: IMarqetaKycState.failure,
           codes: [ReasonCode.Already_Registered],
         },
       };

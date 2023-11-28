@@ -9,9 +9,10 @@ import {
   IEarnedCashbackNotificationData,
   IKarmaCardWelcomeData,
   IPayoutNotificationData,
+  IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, SendKarmaCardWelcomeEmail, sendBankLinkedConfirmationEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -124,7 +125,7 @@ export const handleSendKarmaCardWelcomeEmailEffect = async <DataType>(user: IUse
   const { newUser, name } = d;
   if (!d) throw new Error('Invalid karma card welcome data');
   try {
-    await SendKarmaCardWelcomeEmail({
+    await sendKarmaCardWelcomeEmail({
       user: user._id,
       name,
       newUser,
@@ -133,6 +134,22 @@ export const handleSendKarmaCardWelcomeEmailEffect = async <DataType>(user: IUse
   } catch (err) {
     console.error(err);
     throw new CustomError('Error sending karma card welcome email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleSendProvisionalCreditIssuedEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IProvisialCreditIssuedData;
+  if (!d) throw new Error('Invalid payout notification data');
+  try {
+    await sendProvisionalCreditIssuedEmail({
+      user: user._id,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+      name: d?.name,
+      amount: d?.amount,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending payout email', ErrorTypes.SERVER);
   }
 };
 
@@ -164,6 +181,7 @@ export const NotificationEffectsFunctions: {
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
+  SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,
   SendBankLinkedConfirmationEmail: handleSendBankLinkedConfirmationEmailEffect,
 
 } as const;
@@ -176,6 +194,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
     NotificationEffectsEnum.SendBankLinkedConfirmationEmail,
     NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
+    NotificationEffectsEnum.SendProvisionalCreditIssuedEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

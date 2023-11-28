@@ -1,5 +1,6 @@
 import { isValidObjectId, Types } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
+import dayjs from 'dayjs';
 import { ErrorTypes } from '../../lib/constants';
 import {
   NotificationChannelEnum,
@@ -517,6 +518,33 @@ export const createNoChargebackRightsUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating ACH initiation notification: ${e}`);
+  }
+};
+
+export const createProvisionalCreditIssuedUserNotification = async (
+  transaction: ITransactionDocument,
+): Promise<IUserNotificationDocument | void> => {
+  const user = await UserModel.findById(transaction.user);
+  if (!user) throw new CustomError(`User not found for transaction: ${transaction._id}`);
+  const todayDate = dayjs().utc().format('MM/DD/YYYY');
+
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ProvisionalCreditIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user._id.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          date: todayDate,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating Provisional Credit Issued notification: ${e}`);
   }
 };
 

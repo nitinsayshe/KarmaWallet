@@ -16,7 +16,7 @@ import {
   UserRoles,
 } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
-import { sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import { AdjustmentTransactionTypeEnum, sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors } from '../../lib/validation';
@@ -882,4 +882,28 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
     carbonEmissionsMetricTonnes,
     transaction: getShareableTransaction(matchedTransaction),
   };
+};
+
+// This is a placeholder for adding logic that handles the dispute macros
+export const handleTransactionDisputeMacro = async (transactions: ITransactionDocument[]): Promise<void> => {
+  await Promise.all(
+    transactions.map(async (c) => {
+      try {
+        switch (c?.integrations?.marqeta?.type) {
+          case AdjustmentTransactionTypeEnum.AuthorizationClearingChargebackProvisionalCredit:
+            // call function
+            break;
+          case AdjustmentTransactionTypeEnum.PindebitChargebackProvisionalCredit:
+            // call function
+            break;
+          default:
+            console.log(`No notification created for transaction with type: ${c?.integrations?.marqeta?.type}`);
+        }
+      } catch (err) {
+        console.error(`Error creating notification from transaction transition: ${JSON.stringify(c)}`);
+        console.error(err);
+        return null;
+      }
+    }),
+  );
 };

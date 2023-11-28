@@ -41,6 +41,13 @@ router.route('/change-password-email')
     AdminEmailTestingController.testChangePasswordEmail,
   );
 
+router.route('/provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testProvisionalCreditIssuedEmail,
+  );
+
 router.route('/bank-linked-confirmation')
   .post(
     authenticate,

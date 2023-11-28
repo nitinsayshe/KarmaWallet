@@ -1,8 +1,12 @@
-import { sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendChangePasswordEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail } from '.';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+import { sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendChangePasswordEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { UserModel } from '../../models/user';
 import { IRequest } from '../../types/request';
+
+dayjs.extend(utc);
 
 export const testNoChargebackRightsEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
@@ -158,6 +162,63 @@ export const testBankLinkedConfirmationEmail = async (req: IRequest<{}, {}, {}>)
         name: user?.name,
       },
     );
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testCaseLostProvisionalCreditIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+    const date = dayjs().format('MM/DD/YYYY');
+    const date5DaysInFuture = dayjs().add(5, 'day').format('MM/DD/YYYY');
+
+    const emailResponse = await sendCaseLostProvisionalCreditAlreadyIssuedEmail({
+      user: req.requestor,
+      name: user.name,
+      companyName: 'Nike',
+      amount: '138.53',
+      date,
+      reversalDate: date5DaysInFuture,
+      reason: 'Product not received',
+      recipientEmail: email,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testCaseWonProvisionalCreditIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendCaseWonProvisionalCreditAlreadyIssuedEmail({
+      user: _id,
+      name: user.name,
+      companyName: 'Nike',
+      amount: '138.53',
+      merchantName: 'Nike',
+      submittedClaimDate: '12/03/23',
+      recipientEmail: email,
+    });
 
     if (!!emailResponse) {
       return 'Email sent successfully';

@@ -65,3 +65,21 @@ export const testBankLinkedConfirmationEmail: IRequestHandler<{}, {}, {}> = asyn
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const testCaseLostProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testCaseLostProvisionalCreditIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testCaseWonProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testCaseWonProvisionalCreditIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

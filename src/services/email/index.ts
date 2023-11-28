@@ -3,7 +3,7 @@ import Handlebars from 'handlebars';
 import path from 'path';
 import fs from 'fs';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+
 import { EmailBullClient } from '../../clients/bull/email';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { EmailAddresses, ErrorTypes } from '../../lib/constants';
@@ -17,8 +17,6 @@ import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperato
 import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams, IBankLinkedConfirmationEmailTemplate, IDisputeEmailData } from './types';
 
 registerHandlebarsOperators(Handlebars);
-
-dayjs.extend(utc);
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
@@ -348,6 +346,38 @@ export const sendEarnedCashbackRewardEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
+export const sendCaseLostProvisionalCreditAlreadyIssuedEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  reversalDate,
+  date,
+  companyName,
+  reason,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const subject = 'Case Lost - Provisional Credit Will Be Reversed';
+  const emailTemplateConfig = EmailTemplateConfigs.CaseLostProvisionalCreditAlreadyIssued;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['amount', 'domain', 'recipientEmail', 'name', 'amount', 'date', 'reversalDate', 'companyName', 'reason'],
+    { amount, domain, recipientEmail, name, date, reversalDate, companyName, reason },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
+    data: { name, domain, amount, companyName, reversalDate, date, reason },
+  } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   user,
   recipientEmail,
@@ -360,7 +390,7 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   submittedClaimDate,
   sendEmail = true,
 }: Partial<IEmailVerificationTemplateParams>) => {
-  const subject = 'Your case has been won!';
+  const subject = 'Your dispute case has been won!';
   const emailTemplateConfig = EmailTemplateConfigs.CaseWonProvisionalCreditAlreadyIssued;
   const { isValid, missingFields } = verifyRequiredFields(
     ['amount', 'domain', 'recipientEmail', 'name', 'merchantName', 'submittedClaimDate'],
@@ -369,12 +399,14 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({
     templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
     data: { name, domain, amount, merchantName, submittedClaimDate },
   } as IBuildTemplateParams);
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
 export const sendCashbackPayoutEmail = async ({
   user,
   recipientEmail,

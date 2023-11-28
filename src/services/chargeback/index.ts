@@ -192,6 +192,10 @@ export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocu
           case ChargebackTypeEnum.REGULATION_PROVISIONAL_CREDIT_PERMANENT:
             await handleRegulationProvisionalCreditPermanent(c);
             break;
+          case ChargebackTypeEnum.REGULATION_CASE_LOST_ACTION_REQUIRED:
+            break;
+          case ChargebackTypeEnum.CASE_LOST_ACTION_REQUIRED:
+            break;
           default:
             console.log(`No notification created for chargeback transition with type: ${c?.integrations?.marqeta?.type}`);
         }

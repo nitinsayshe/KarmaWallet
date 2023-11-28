@@ -71,7 +71,7 @@ class User {
           userToken: user.integrations.marqeta.userToken,
           partnerAccountLinkReferenceToken: account.processorToken,
           partner: 'PLAID',
-        }, plaidItem.access_token);
+        }, plaidItem.access_token, plaidItem?.institution?.name);
 
         // add fundingSourceToken to plaidItem
         plaidItem.fundingSourceToken = data.token;

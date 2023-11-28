@@ -120,6 +120,8 @@ export interface IEmailJobData {
   userId?: string;
   verificationLink?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
+  instituteName?: string;
+  lastDigitsOfBankAccountNumber?: string;
 }
 
 export interface IBuildTemplateParams {
@@ -132,4 +134,9 @@ export interface IBuildTemplateParams {
 
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
+}
+
+export interface IBankLinkedConfirmationEmailTemplate extends IEmailTemplateParams {
+  instituteName: string;
+  lastDigitsOfBankAccountNumber: string
 }

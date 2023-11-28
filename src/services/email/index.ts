@@ -14,7 +14,7 @@ import { SentEmailModel } from '../../models/sentEmail';
 import { EmailTemplateConfigs, EmailTemplateTypes } from '../../lib/constants/email';
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IDisputeEmailData, IKarmacardWelcomeTemplateParams } from './types';
+import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams, IBankLinkedConfirmationEmailTemplate, IDisputeEmailData } from './types';
 import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
@@ -678,6 +678,70 @@ export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
       name: user.name,
       token: '1234',
     });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const sendBankLinkedConfirmationEmail = async ({
+  user,
+  recipientEmail,
+  instituteName,
+  lastDigitsOfBankAccountNumber,
+  name,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+}: IBankLinkedConfirmationEmailTemplate) => {
+  const emailTemplateConfig = EmailTemplateConfigs.BankLinkedConfirmation;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['recipientEmail', 'name', 'instituteName', 'lastDigitsOfBankAccountNumber'],
+    { recipientEmail, name, instituteName, lastDigitsOfBankAccountNumber },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { name, instituteName, lastDigitsOfBankAccountNumber },
+  });
+  const subject = 'Your Bank Account is Successfully Linked';
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user,
+    name,
+    instituteName,
+    lastDigitsOfBankAccountNumber,
+  };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const testBankLinkedConfirmationEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    if (!user?.name) throw new CustomError(`No name found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const instituteName = 'Test Bank';
+    const lastDigitsOfBankAccountNumber = '5555';
+    const emailResponse = await sendBankLinkedConfirmationEmail(
+      {
+        user: req.requestor._id,
+        recipientEmail: email,
+        instituteName,
+        lastDigitsOfBankAccountNumber,
+        name: user?.name,
+      },
+    );
 
     if (!!emailResponse) {
       return 'Email sent successfully';

@@ -21,6 +21,7 @@ export const NotificationTypeEnum = {
   Payout: 'payout',
   ReloadSuccess: 'reloadSuccess',
   TransactionComplete: 'transactionComplete',
+  BankLinkedConfirmation: 'bankLinkedConfirmation',
   NoChargebackRights: 'noChargebackRights',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
@@ -33,6 +34,7 @@ export const NotificationEffectsEnum = {
   SendACHInitiationEmail: 'SendACHInitiationEmail',
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
+  SendBankLinkedConfirmationEmail: 'SendBankLinkedConfirmationEmail',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 

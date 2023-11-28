@@ -19,11 +19,13 @@ export enum EmailTemplateKeys {
   CaseWonProvisionalCreditAlreadyIssued = 'caseWonProvisionalCreditAlreadyIssued',
   WelcomeGroup = 'welcomeGroup',
   KarmaCardWelcome = 'karmaCardWelcome',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
 }
 
 export enum EmailTemplateTypes {
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
   CashbackNotificaiton = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
@@ -117,6 +119,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardWelcome: {
     name: EmailTemplateKeys.KarmaCardWelcome,
     type: EmailTemplateTypes.Essential,
+  },
+  BankLinkedConfirmation: {
+    name: EmailTemplateKeys.BankLinkedConfirmation,
+    type: EmailTemplateTypes.BankLinkedConfirmation,
   },
 };
 

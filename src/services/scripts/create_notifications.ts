@@ -70,10 +70,15 @@ const template: { [key:string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendProvisionalCreditIssuedEmail],
   // },
-  [NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued]: {
-    type: NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued,
+  // [NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued]: {
+  //   type: NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail],
+  // },
+  [NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued]: {
+    type: NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued,
     channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail],
+    effects: [NotificationEffectsEnum.SendDisputeReceivedNoProvisionalCreditIssuedEmail],
   },
 };
 

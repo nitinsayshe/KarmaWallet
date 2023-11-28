@@ -92,3 +92,12 @@ export const testCaseWonProvisionalCreditNotAlreadyIssuedEmail: IRequestHandler<
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const testDisputeReceivedNoProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testDisputeReceivedNoProvisionalCreditIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

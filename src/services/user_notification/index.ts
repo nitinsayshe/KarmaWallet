@@ -53,6 +53,23 @@ export type CreateNotificationRequest<T = undefined> = {
   data?: T;
 };
 
+export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
+  const existingTransaction = await TransactionModel.findOne({
+    $or: [
+      { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': c.integrations.marqeta.transaction_token }] },
+      {
+        $and: [
+          { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+          { 'integrations.marqeta.relatedTransactions.token': c.integrations.marqeta.transaction_token },
+        ],
+      },
+    ],
+  });
+
+  if (!!existingTransaction) return existingTransaction;
+  return null;
+};
+
 export const getShareableUserNotification = (notification: IUserNotificationDocument): IShareableUserNotification => ({
   _id: notification._id,
   createdOn: notification.createdOn,
@@ -497,7 +514,7 @@ export const createNoChargebackRightsUserNotification = async (
     if (!transactionToken) {
       throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
     }
-    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
     if (!transaction) {
       throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
     }
@@ -532,7 +549,7 @@ export const createCaseLostProvisionalCreditIssuedUserNotification = async (
     if (!transactionToken) {
       throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
     }
-    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
     if (!transaction) {
       throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
     }
@@ -623,7 +640,7 @@ export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = as
     if (!transactionToken) {
       throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
     }
-    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
     if (!transaction) {
       throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
     }
@@ -650,5 +667,37 @@ export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = as
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating case won provisional credit not already issued notification: ${e}`);
+  }
+};
+
+export const createDisputeReceivedNoProvisionalCreditIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const { name } = user;
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating dispute received no provisional credit issued: ${e}`);
   }
 };

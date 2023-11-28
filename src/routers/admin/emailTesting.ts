@@ -47,4 +47,25 @@ router.route('/case-lost-provisional-credit-issued-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testCaseLostProvisionalCreditIssuedEmail,
   );
+
+router.route('/provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testProvisionalCreditIssuedEmail,
+  );
+
+router.route('/bank-linked-confirmation')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testBankLinkedConfirmationEmail,
+  );
+
+router.route('/case-won-provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseWonProvisionalCreditIssuedEmail,
+  );
 export default router;

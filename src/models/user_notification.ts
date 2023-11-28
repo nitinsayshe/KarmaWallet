@@ -59,6 +59,18 @@ export interface ICaseLostProvisionalCreditIssuedData extends UserNotificationDa
   reason: string;
 }
 
+export interface IProvisialCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+}
+
+export interface IBankLinkedConfirmationEmailData extends UserNotificationData {
+  name: string;
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string
+}
+
 export type NotificationData =
   | IEarnedCashbackNotificationData
   | IPayoutNotificationData

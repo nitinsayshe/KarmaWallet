@@ -65,6 +65,11 @@ const template: { [key:string]: Partial<INotificationDocument> } = {
     channels: [NotificationChannelEnum.Email],
     effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail],
   },
+  [NotificationTypeEnum.ProvisionalCreditIssued]: {
+    type: NotificationTypeEnum.ProvisionalCreditIssued,
+    channels: [NotificationChannelEnum.Email],
+    effects: [NotificationEffectsEnum.SendProvisionalCreditIssuedEmail],
+  },
 };
 
 export const createNotifications = async () => {

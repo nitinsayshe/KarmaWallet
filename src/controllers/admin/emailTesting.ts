@@ -1,11 +1,11 @@
 import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
-import * as EmailService from '../../services/email';
+import * as EmailTestingService from '../../services/email/test_emails';
 import { asCustomError } from '../../lib/customError';
 
 export const testCashbackPayoutEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailService.testCashbackPayoutEmail(req);
+    const email = await EmailTestingService.testCashbackPayoutEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -14,7 +14,7 @@ export const testCashbackPayoutEmail: IRequestHandler<{}, {}, {}> = async (req, 
 
 export const testACHInitiationEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailService.testACHInitiationEmail(req);
+    const email = await EmailTestingService.testACHInitiationEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -23,7 +23,7 @@ export const testACHInitiationEmail: IRequestHandler<{}, {}, {}> = async (req, r
 
 export const testNoChargebackRightsEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailService.testNoChargebackRightsEmail(req);
+    const email = await EmailTestingService.testNoChargebackRightsEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -32,7 +32,7 @@ export const testNoChargebackRightsEmail: IRequestHandler<{}, {}, {}> = async (r
 
 export const testKarmaCardWelcomeEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailService.testKarmaCardWelcomeEmail(req);
+    const email = await EmailTestingService.testKarmaCardWelcomeEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -41,7 +41,25 @@ export const testKarmaCardWelcomeEmail: IRequestHandler<{}, {}, {}> = async (req
 
 export const testChangePasswordEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailService.testChangePasswordEmail(req);
+    const email = await EmailTestingService.testChangePasswordEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testProvisionalCreditIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testBankLinkedConfirmationEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testBankLinkedConfirmationEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -50,7 +68,16 @@ export const testChangePasswordEmail: IRequestHandler<{}, {}, {}> = async (req, 
 
 export const testCaseLostProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailService.testCaseLostProvisionalCreditIssuedEmail(req);
+    const email = await EmailTestingService.testCaseLostProvisionalCreditIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testCaseWonProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testCaseWonProvisionalCreditIssuedEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));

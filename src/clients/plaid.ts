@@ -193,6 +193,7 @@ export class PlaidClient extends SdkClient {
         const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
         const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };
         await plaidUserInstance.addBanks(data, processorTokens);
+
         return {
           message: 'Processor token successfully generated',
           itemId,

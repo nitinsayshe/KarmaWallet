@@ -28,7 +28,7 @@ export const getKarmaCardApplications: IRequestHandler<{}, {}, {}> = async (req,
 
 export const getKarmaCardLegalText: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const legalText = await KarmaCardService.getKarmaCardLegalText();
+    const legalText = await KarmaCardService.getKarmaCardLegalText(req);
     api(req, res, legalText);
   } catch (err) {
     error(req, res, asCustomError(err));

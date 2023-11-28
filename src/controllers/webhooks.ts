@@ -31,6 +31,7 @@ import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { ChargebackTransition } from '../integrations/marqeta/types';
+import { handleTransactionDisputeMacro } from '../services/transaction';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -394,7 +395,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions, cardtransitions } = req.body;
+    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
@@ -403,40 +404,29 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           { 'integrations.marqeta.card_token': card?.card_token },
           {
             $set: {
-              'integrations.marqeta.state': card?.state,
-              ...(card?.state?.toUpperCase() === 'SUSPENDED' ? { status: 'removed' } : {}),
+              'integrations.marqeta': card,
+              ...((card?.state?.toUpperCase() === 'SUSPENDED' || card?.state?.toUpperCase() === 'TERMINATED') ? { status: 'removed' } : {}),
               ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
             },
           },
           { new: true },
         );
-        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
-        if (user) {
+        // Adding in a state check for now, but this needs to be removed and updated to be more specific
+        // 1) There are other states besides active that would not mean that the user has deactivated their card
+        // 2) Am I write in assuming this should be sent when a card is unlocked or locked? Or is this when they activate a card?
+        // 3) Either way, we need to more appropriately handle the different states here queuing off of the webhook type (reference cardtransition types)
+        if (card.type.includes('state')) {
+          const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
+          if (!user) throw new CustomError(`User with marqeta user token of ${card?.user_token} not found`, ErrorTypes.NOT_FOUND);
           await createPushUserNotificationFromUserAndPushData(user, {
             pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
             body:
-              card?.state.toString() === 'ACTIVE'
-                ? 'You have successfully activated your card.'
-                : 'You have successfully deactivated your card.',
+                card?.state.toString() === 'ACTIVE'
+                  ? 'You have successfully activated your card.'
+                  : 'You have successfully deactivated your card.',
             title: 'Security Alert!',
           });
         }
-      }
-    }
-
-    if (!!cardtransitions) {
-      for (const card of cardtransitions) {
-        await CardModel.findOneAndUpdate(
-          { 'integrations.marqeta.card_token': card?.card_token },
-          {
-            $set: {
-              'integrations.marqeta.state': card?.state,
-              'integrations.marqeta.fulfillment_status': card?.fulfillment_status,
-              ...(card?.state?.toUpperCase() === 'SUSPENDED' ? { status: 'removed' } : {}),
-              ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
-            },
-          },
-        );
       }
     }
 
@@ -574,7 +564,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       }
     }
     if (!!transactions) {
-      await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+      const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+      await handleTransactionDisputeMacro(savedTransactions);
     }
 
     if (!!chargebacktransitions) {

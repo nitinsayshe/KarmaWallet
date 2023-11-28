@@ -8,6 +8,8 @@ import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
 import { DATE_REGEX } from '../../lib/constants/regex';
+import { UserModel } from '../../models/user';
+import { createBankLinkedConfirmationNotification } from '../../services/user_notification';
 
 dayjs.extend(utc);
 
@@ -34,10 +36,19 @@ export const listACHFundingSourcesForUser = async (userId: string, params?: any)
   return { data: sources };
 };
 
-export const createAchFundingSource = async (userId: string, data: ACHTransferTypes.IMarqetaACHPlaidFundingSource, accessToken: string) => {
+export const createAchFundingSource = async (userId: string, data: ACHTransferTypes.IMarqetaACHPlaidFundingSource, accessToken: string, institutionName: string) => {
   const userResponse = await achFundingSource.createAchFundingSource(data);
   // map the created Ach Funding Source to DB
   await mapACHFundingSource(userId, { accessToken, ...userResponse });
+  // initiate email notification for bank linked confirmation
+  try {
+    const user = await UserModel.findById(userId);
+    if (!!user) {
+      await createBankLinkedConfirmationNotification(user, institutionName, userResponse?.account_suffix);
+    }
+  } catch (error) {
+    console.log('Error in initializing bank linking notification email', error);
+  }
   return { data: userResponse };
 };
 

@@ -49,23 +49,23 @@ import {
 const marqetaClient = new MarqetaClient();
 
 // Instantiate the GPA class
-const transactions = new Transactions(marqetaClient);
+const transactionsClient = new Transactions(marqetaClient);
 
 export const makeTransaction = async (req: IRequest<{}, {}, IMarqetaMakeTransaction>) => {
   const params = req.body;
-  const userResponse = await transactions.makeTransaction(params);
+  const userResponse = await transactionsClient.makeTransaction(params);
   return { data: userResponse };
 };
 
 export const makeTransactionAdvice = async (req: IRequest<{}, {}, IMarqetaMakeTransactionAdvice>) => {
   const params = req.body;
-  const userResponse = await transactions.makeTransactionAdvice(params);
+  const userResponse = await transactionsClient.makeTransactionAdvice(params);
   return { data: userResponse };
 };
 
 export const makeTransactionClearing = async (req: IRequest<{}, {}, IMarqetaMakeTransactionClearing>) => {
   const params = req.body;
-  const userResponse = await transactions.makeTransactionClearing(params);
+  const userResponse = await transactionsClient.makeTransactionClearing(params);
   return { data: userResponse };
 };
 
@@ -73,7 +73,7 @@ export const listTransaction = async (
   req: IRequest<{}, { userToken: string; cardToken: string }, {}>,
 ): Promise<ListTransactionsResponse> => {
   const params = req.query;
-  const userResponse = await transactions.listTransaction(params);
+  const userResponse = await transactionsClient.listTransaction(params);
   return { data: userResponse };
 };
 
@@ -108,10 +108,10 @@ const matchTransactionsToCompaniesByMCC = async (
   matched: (EnrichedMarqetaTransaction & IMatchedTransaction)[],
   notMatched: EnrichedMarqetaTransaction[],
 ): Promise<{
-  matched: (EnrichedMarqetaTransaction & IMatchedTransaction
-  )[];
-  notMatched: EnrichedMarqetaTransaction[];
-}> => {
+    matched: (EnrichedMarqetaTransaction & IMatchedTransaction
+    )[];
+    notMatched: EnrichedMarqetaTransaction[];
+  }> => {
   matched = [
     ...matched,
     ...(
@@ -185,11 +185,15 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
     });
 
     const existingProcessingTransaction = procesingTransactions?.find((t) => t?.integrations?.marqeta?.token === token);
-    if (!!existingTransaction?._id || !!existingProcessingTransaction) {
-      const transaction = existingTransaction?._id || existingProcessingTransaction;
-      console.log(`Found existing processing transaction with token in db: ${transaction}`);
-      return transaction;
+
+    const transaction = existingTransaction?.integrations?.marqeta ? existingTransaction : existingProcessingTransaction;
+
+    if (!transaction?.integrations?.marqeta) {
+      throw new Error(`No transaction found with marqeta token: ${token}`);
     }
+
+    console.log(`Found existing processing transaction with token: ${transaction}`);
+    return transaction;
   } catch (err) {
     console.log(`Error looking up transaction with marqeta token: ${token}}`);
     console.log(err);
@@ -363,7 +367,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
   newTransaction.amount = t?.amount;
   newTransaction.status = t.marqeta_transaction?.state;
-  newTransaction.integrations.marqeta = t.marqeta_transaction;
+  newTransaction.integrations = { marqeta: t.marqeta_transaction };
   newTransaction.type = types?.type;
   newTransaction.subType = types?.subType;
   newTransaction.date = getDateFromMarqetaTransaction(t.marqeta_transaction);

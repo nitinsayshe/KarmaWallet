@@ -7,13 +7,14 @@ import {
   IBankLinkedConfirmationEmailData,
   ICaseLostProvisionalCreditIssuedData,
   ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
+  ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData,
   IEarnedCashbackNotificationData,
   IKarmaCardWelcomeData,
   IPayoutNotificationData,
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -193,6 +194,25 @@ export const handleSendBankLinkedConfirmationEmailEffect = async <DataType>(user
   }
 };
 
+export const handleCaseWonProvisionalCreditNotAlreadyIssuedEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData;
+  const { amount, companyName, name, date } = d;
+  if (!d) throw new Error('Invalid case won provisional credit not already issued data');
+  try {
+    await sendCaseWonProvisionalCreditNotAlreadyIssuedEmail({
+      user: user._id,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+      name,
+      amount,
+      companyName,
+      date,
+    });
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending case won provisional credit not already issued email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -206,7 +226,7 @@ export const NotificationEffectsFunctions: {
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,
   SendBankLinkedConfirmationEmail: handleSendBankLinkedConfirmationEmailEffect,
-
+  SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: handleCaseWonProvisionalCreditNotAlreadyIssuedEffect,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -218,6 +238,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendBankLinkedConfirmationEmail,
     NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
     NotificationEffectsEnum.SendProvisionalCreditIssuedEmail,
+    NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

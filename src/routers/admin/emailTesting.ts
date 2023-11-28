@@ -73,6 +73,14 @@ router.route('/case-won-provisional-credit-issued-email')
   .post(
     authenticate,
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
-    AdminEmailTestingController.testCaseWonProvisionalCreditIssuedEmail,
+    AdminEmailTestingController.testCaseWonProvisionalCreditAlreadyIssuedEmail,
   );
+
+router.route('/case-won-provisional-credit-not-already-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseWonProvisionalCreditNotAlreadyIssuedEmail,
+  );
+
 export default router;

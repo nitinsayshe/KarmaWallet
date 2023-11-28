@@ -10,6 +10,7 @@ import {
   sendBankLinkedConfirmationEmail,
   sendCaseLostProvisionalCreditAlreadyIssuedEmail,
   sendCaseWonProvisionalCreditAlreadyIssuedEmail,
+  sendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
 } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -209,7 +210,7 @@ export const testCaseLostProvisionalCreditIssuedEmail = async (req: IRequest<{},
   }
 };
 
-export const testCaseWonProvisionalCreditIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
@@ -236,22 +237,24 @@ export const testCaseWonProvisionalCreditIssuedEmail = async (req: IRequest<{}, 
   }
 };
 
-export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+export const testCaseWonProvisionalCreditNotAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
     const user = await UserModel.findById(_id);
     if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find((e) => !!e.primary);
+    const { email } = user.emails.find(e => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
-    const emailResponse = await sendCaseWonProvisionalCreditAlreadyIssuedEmail({
-      user: user._id,
-      recipientEmail: email,
+
+    const emailResponse = await sendCaseWonProvisionalCreditNotAlreadyIssuedEmail({
+      user: _id,
       name: user.name,
-      amount: '10.44',
-      merchantName: 'Amazon',
-      submittedClaimDate: dayjs().format('MM/DD/YYYY'),
+      companyName: 'Nike',
+      amount: '138.53',
+      date: '12/03/23',
+      recipientEmail: email,
     });
+
     if (!!emailResponse) {
       return 'Email sent successfully';
     }

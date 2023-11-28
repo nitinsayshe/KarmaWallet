@@ -21,15 +21,6 @@ export const testACHInitiationEmail: IRequestHandler<{}, {}, {}> = async (req, r
   }
 };
 
-export const testCaseWonProvisionalCreditAlreadyIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
-  try {
-    const email = await EmailTestingService.testCaseWonProvisionalCreditAlreadyIssuedEmail(req);
-    output.api(req, res, email);
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
 export const testNoChargebackRightsEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const email = await EmailTestingService.testNoChargebackRightsEmail(req);
@@ -84,9 +75,18 @@ export const testCaseLostProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {
   }
 };
 
-export const testCaseWonProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const testCaseWonProvisionalCreditAlreadyIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
-    const email = await EmailTestingService.testCaseWonProvisionalCreditIssuedEmail(req);
+    const email = await EmailTestingService.testCaseWonProvisionalCreditAlreadyIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testCaseWonProvisionalCreditNotAlreadyIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testCaseWonProvisionalCreditNotAlreadyIssuedEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));

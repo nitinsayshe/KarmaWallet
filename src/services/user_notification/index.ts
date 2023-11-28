@@ -520,7 +520,7 @@ export const createNoChargebackRightsUserNotification = async (
 
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating ACH initiation notification: ${e}`);
+    console.log(`Error creating no chargeback rights user notification: ${e}`);
   }
 };
 
@@ -542,7 +542,7 @@ export const createCaseLostProvisionalCreditIssuedUserNotification = async (
 
     const mockRequest = {
       body: {
-        type: NotificationTypeEnum.NoChargebackRights,
+        type: NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued,
         status: UserNotificationStatusEnum.Unread,
         channel: NotificationChannelEnum.Email,
         user: user?._id?.toString(),
@@ -559,7 +559,7 @@ export const createCaseLostProvisionalCreditIssuedUserNotification = async (
 
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating ACH initiation notification: ${e}`);
+    console.log(`Error creating case lost provisional credit issued notification: ${e}`);
   }
 };
 
@@ -612,5 +612,43 @@ export const createBankLinkedConfirmationNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating bank linked confirmation notification: ${e}`);
+  }
+};
+
+export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const { name } = user;
+    const companyName = transaction.integrations.marqeta.card_acceptor.name;
+    const { date, amount } = transaction;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name,
+          amount,
+          companyName,
+          date,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating case won provisional credit not already issued notification: ${e}`);
   }
 };

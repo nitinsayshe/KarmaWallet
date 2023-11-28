@@ -32,6 +32,7 @@ export interface IEarnedCashbackNotificationData extends UserNotificationData {
   name: string;
   companyName: string;
 }
+
 export interface ICaseWonProvisionalCreditAlreadyIssuedNotificationData extends UserNotificationData {
   name: string;
   amount: string;
@@ -57,6 +58,13 @@ export interface ICaseLostProvisionalCreditIssuedData extends UserNotificationDa
   reversalDate: string;
   companyName: string;
   reason: string;
+}
+
+export interface ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData extends UserNotificationData {
+  name: string;
+  amount: string;
+  companyName: string;
+  date: string;
 }
 
 export interface IProvisialCreditIssuedData extends UserNotificationData {

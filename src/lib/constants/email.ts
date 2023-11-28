@@ -22,6 +22,7 @@ export enum EmailTemplateKeys {
   CaseLostProvisionalCreditAlreadyIssued = 'caseLostProvisionalCreditAlreadyIssued',
   ProvisionalCreditIssued = 'provisionalCreditIssued',
   BankLinkedConfirmation = 'bankLinkedConfirmation',
+  CaseWonProvisionalCreditNotAlreadyIssued = 'caseWonProvisionalCreditNotAlreadyIssued',
 }
 
 export enum EmailTemplateTypes {
@@ -108,6 +109,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   },
   CaseWonProvisionalCreditAlreadyIssued: {
     name: EmailTemplateKeys.CaseWonProvisionalCreditAlreadyIssued,
+    type: EmailTemplateTypes.Dispute,
+  },
+  CaseWonProvisionalCreditNotAlreadyIssued: {
+    name: EmailTemplateKeys.CaseWonProvisionalCreditNotAlreadyIssued,
     type: EmailTemplateTypes.Dispute,
   },
   SupportTicket: {

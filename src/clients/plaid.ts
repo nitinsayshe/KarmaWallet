@@ -19,8 +19,6 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
 import { SdkClient } from './sdkClient';
-import { UserModel } from '../models/user';
-import { createBankLinkedConfirmationNotification } from '../services/user_notification';
 
 dayjs.extend(utc);
 
@@ -195,19 +193,6 @@ export class PlaidClient extends SdkClient {
         const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
         const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };
         await plaidUserInstance.addBanks(data, processorTokens);
-        try {
-          const user = await UserModel.findById(userId);
-          if (!!user && !!accounts) {
-            const PlaidAccountAllowList = [AccountSubtype.Savings, AccountSubtype.Checking];
-            for (const account of accounts) {
-              if (!!PlaidAccountAllowList.includes(account.subtype as AccountSubtype)) {
-                await createBankLinkedConfirmationNotification(user, data?.institution?.name, account.mask);
-              }
-            }
-          }
-        } catch (error) {
-          console.log('Error in initializing bank linking notification email', error);
-        }
 
         return {
           message: 'Processor token successfully generated',

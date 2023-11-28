@@ -3,11 +3,11 @@ import Handlebars from 'handlebars';
 import path from 'path';
 import fs from 'fs';
 import dayjs from 'dayjs';
-import utc from 'dayjs/plugin/utc';
+
 import { EmailBullClient } from '../../clients/bull/email';
 import { JobNames } from '../../lib/constants/jobScheduler';
 import { EmailAddresses, ErrorTypes } from '../../lib/constants';
-import CustomError, { asCustomError } from '../../lib/customError';
+import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
 import { SentEmailModel } from '../../models/sentEmail';
@@ -15,11 +15,8 @@ import { EmailTemplateConfigs, EmailTemplateTypes } from '../../lib/constants/em
 import { IRequest } from '../../types/request';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
 import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams, IBankLinkedConfirmationEmailTemplate, IDisputeEmailData } from './types';
-import { UserModel } from '../../models/user';
 
 registerHandlebarsOperators(Handlebars);
-
-dayjs.extend(utc);
 
 // tries 3 times, after 4 sec, 16 sec, and 64 sec
 const defaultEmailJobOptions = {
@@ -349,6 +346,38 @@ export const sendEarnedCashbackRewardEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
+export const sendCaseLostProvisionalCreditAlreadyIssuedEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  reversalDate,
+  date,
+  companyName,
+  reason,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const subject = 'Case Lost - Provisional Credit Will Be Reversed';
+  const emailTemplateConfig = EmailTemplateConfigs.CaseLostProvisionalCreditAlreadyIssued;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['amount', 'domain', 'recipientEmail', 'name', 'amount', 'date', 'reversalDate', 'companyName', 'reason'],
+    { amount, domain, recipientEmail, name, date, reversalDate, companyName, reason },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
+    data: { name, domain, amount, companyName, reversalDate, date, reason },
+  } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   user,
   recipientEmail,
@@ -361,7 +390,7 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   submittedClaimDate,
   sendEmail = true,
 }: Partial<IEmailVerificationTemplateParams>) => {
-  const subject = 'Your case has been won!';
+  const subject = 'Your dispute case has been won!';
   const emailTemplateConfig = EmailTemplateConfigs.CaseWonProvisionalCreditAlreadyIssued;
   const { isValid, missingFields } = verifyRequiredFields(
     ['amount', 'domain', 'recipientEmail', 'name', 'merchantName', 'submittedClaimDate'],
@@ -370,6 +399,7 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({
     templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
     data: { name, domain, amount, merchantName, submittedClaimDate },
     templateType: EmailTemplateTypes.Dispute,
   } as IBuildTemplateParams);
@@ -377,6 +407,7 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
 export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
@@ -400,6 +431,7 @@ export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IReque
     throw asCustomError(err);
   }
 };
+
 export const sendCashbackPayoutEmail = async ({
   user,
   recipientEmail,
@@ -426,7 +458,7 @@ export const sendCashbackPayoutEmail = async ({
 };
 
 // Welcome email when karma card is approved
-export const SendKarmaCardWelcomeEmail = async ({
+export const sendKarmaCardWelcomeEmail = async ({
   name,
   user,
   newUser,
@@ -570,52 +602,6 @@ export const sendACHInitiationEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-export const testCashbackPayoutEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const { _id } = req.requestor;
-    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const user = await UserModel.findById(_id);
-    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find((e) => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
-    const emailResponse = await sendCashbackPayoutEmail({
-      user: user._id,
-      recipientEmail: email,
-      name: user.name,
-      amount: '10.44',
-    });
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const user = req.requestor;
-    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
-
-    const emailResponse = await sendACHInitiationEmail({
-      user: req.requestor,
-      amount: '100.00',
-      accountMask: '1234',
-      accountType: 'Checking',
-      date: '12/14/2023',
-      name: user.name,
-    });
-
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
 export const sendNoChargebackRightsEmail = async ({
   user,
   senderEmail = EmailAddresses.NoReply,
@@ -643,72 +629,32 @@ export const sendNoChargebackRightsEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-export const testNoChargebackRightsEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const user = req.requestor;
-    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+export const sendProvisionalCreditIssuedEmail = async ({
+  user,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  date,
+  amount,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const recipientEmail = user.emails.find(e => !!e.primary)?.email;
+  const subject = 'Karma Wallet Dispute Created and Provisional Credit Issued';
+  const emailTemplateConfig = EmailTemplateConfigs.ProvisionalCreditIssued;
 
-    const emailResponse = await sendNoChargebackRightsEmail({
-      user: req.requestor,
-      amount: '1032.00',
-      companyName: 'Amazon Web Services',
-      name: user.name,
-    });
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'date', 'amount'], { domain, recipientEmail, name, date, amount });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
 
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: EmailTemplateTypes.Dispute,
+    data: { amount, date, name },
+  });
 
-export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const { _id } = req.requestor;
-    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const user = await UserModel.findById(_id);
-    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find(e => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
-
-    const emailResponse = await SendKarmaCardWelcomeEmail({
-      user: user._id,
-      name: user.name,
-      newUser: true, // toggle to send corresponding email
-      recipientEmail: email,
-    });
-
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const user = req.requestor;
-    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
-
-    const emailResponse = await sendChangePasswordEmail({
-      user: req.requestor._id,
-      recipientEmail: email,
-      name: user.name,
-      token: '1234',
-    });
-
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
 export const sendBankLinkedConfirmationEmail = async ({
@@ -746,31 +692,4 @@ export const sendBankLinkedConfirmationEmail = async ({
   };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-export const testBankLinkedConfirmationEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const user = req.requestor;
-    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
-    if (!user?.name) throw new CustomError(`No name found for user ${user}.`, ErrorTypes.NOT_FOUND);
-    const instituteName = 'Test Bank';
-    const lastDigitsOfBankAccountNumber = '5555';
-    const emailResponse = await sendBankLinkedConfirmationEmail(
-      {
-        user: req.requestor._id,
-        recipientEmail: email,
-        instituteName,
-        lastDigitsOfBankAccountNumber,
-        name: user?.name,
-      },
-    );
-
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
 };

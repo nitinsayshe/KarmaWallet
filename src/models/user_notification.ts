@@ -50,6 +50,21 @@ export interface IKarmaCardWelcomeData extends UserNotificationData {
   newUser: boolean;
 }
 
+export interface ICaseLostProvisionalCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+  reversalDate: string;
+  companyName: string;
+  reason: string;
+}
+
+export interface IProvisialCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+}
+
 export interface IBankLinkedConfirmationEmailData extends UserNotificationData {
   name: string;
   instituteName: string,

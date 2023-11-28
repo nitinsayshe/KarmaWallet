@@ -13,7 +13,7 @@ import {
   createSomeSectors,
   createSomeUsers,
 } from '../../../lib/testingUtils';
-import { ICardDocument, MarqetaCardFulfillmentStatus, MarqetaCardState } from '../../../models/card';
+import { ICardDocument } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
 import { IMarqetaUserState } from '../../../services/karmaCard/utils';
@@ -22,6 +22,7 @@ import { TransactionModel } from '../../../clients/marqeta/types';
 import { ISectorDocument } from '../../../models/sector';
 import { cleanUpDocuments } from '../../../lib/model';
 import { mapMarqetaTransactionsToKarmaTransactions } from '../transactions';
+import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../../../lib/constants/card';
 
 // Thest values should match up with the request in ./data/testMarqetaTransaction.json
 const mccToMatch = 9999;

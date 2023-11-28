@@ -1,6 +1,17 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendChangePasswordEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail } from '.';
+import {
+  sendNoChargebackRightsEmail,
+  sendKarmaCardWelcomeEmail,
+  sendChangePasswordEmail,
+  sendACHInitiationEmail,
+  sendCashbackPayoutEmail,
+  sendProvisionalCreditIssuedEmail,
+  sendBankLinkedConfirmationEmail,
+  sendCaseLostProvisionalCreditAlreadyIssuedEmail,
+  sendCaseWonProvisionalCreditAlreadyIssuedEmail,
+  sendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
+} from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { UserModel } from '../../models/user';
@@ -12,7 +23,7 @@ export const testNoChargebackRightsEmail = async (req: IRequest<{}, {}, {}>) => 
   try {
     const user = req.requestor;
     if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendNoChargebackRightsEmail({
@@ -36,7 +47,7 @@ export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
     const user = await UserModel.findById(_id);
     if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendKarmaCardWelcomeEmail({
@@ -58,7 +69,7 @@ export const testChangePasswordEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const user = req.requestor;
     if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendChangePasswordEmail({
@@ -80,7 +91,7 @@ export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const user = req.requestor;
     if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendACHInitiationEmail({
@@ -148,20 +159,18 @@ export const testBankLinkedConfirmationEmail = async (req: IRequest<{}, {}, {}>)
   try {
     const user = req.requestor;
     if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
     if (!user?.name) throw new CustomError(`No name found for user ${user}.`, ErrorTypes.NOT_FOUND);
     const instituteName = 'Test Bank';
     const lastDigitsOfBankAccountNumber = '5555';
-    const emailResponse = await sendBankLinkedConfirmationEmail(
-      {
-        user: req.requestor._id,
-        recipientEmail: email,
-        instituteName,
-        lastDigitsOfBankAccountNumber,
-        name: user?.name,
-      },
-    );
+    const emailResponse = await sendBankLinkedConfirmationEmail({
+      user: req.requestor._id,
+      recipientEmail: email,
+      instituteName,
+      lastDigitsOfBankAccountNumber,
+      name: user?.name,
+    });
 
     if (!!emailResponse) {
       return 'Email sent successfully';
@@ -177,7 +186,7 @@ export const testCaseLostProvisionalCreditIssuedEmail = async (req: IRequest<{},
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
     const user = await UserModel.findById(_id);
     if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
     const date = dayjs().format('MM/DD/YYYY');
     const date5DaysInFuture = dayjs().add(5, 'day').format('MM/DD/YYYY');
@@ -201,13 +210,13 @@ export const testCaseLostProvisionalCreditIssuedEmail = async (req: IRequest<{},
   }
 };
 
-export const testCaseWonProvisionalCreditIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
     const user = await UserModel.findById(_id);
     if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find(e => !!e.primary);
+    const { email } = user.emails.find((e) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendCaseWonProvisionalCreditAlreadyIssuedEmail({

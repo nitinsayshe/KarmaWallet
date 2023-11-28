@@ -1,20 +1,19 @@
 /* eslint-disable prefer-rest-params */
+import dayjs from 'dayjs';
+import fs from 'fs';
 import Handlebars from 'handlebars';
 import path from 'path';
-import fs from 'fs';
-import dayjs from 'dayjs';
-
 import { EmailBullClient } from '../../clients/bull/email';
-import { JobNames } from '../../lib/constants/jobScheduler';
-import { EmailAddresses, ErrorTypes } from '../../lib/constants';
-import CustomError from '../../lib/customError';
-import { verifyRequiredFields } from '../../lib/requestData';
 import { colors } from '../../lib/colors';
-import { SentEmailModel } from '../../models/sentEmail';
+import { EmailAddresses, ErrorTypes } from '../../lib/constants';
 import { EmailTemplateConfigs, EmailTemplateTypes } from '../../lib/constants/email';
-import { IRequest } from '../../types/request';
+import { JobNames } from '../../lib/constants/jobScheduler';
+import CustomError from '../../lib/customError';
 import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperators';
-import { IBuildTemplateParams, IGroupVerificationTemplateParams, IEmailJobData, IEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ISendTransactionsProcessedEmailParams, IPopulateEmailTemplateRequest, ISupportEmailVerificationTemplateParams, IDeleteAccountRequestVerificationTemplateParams, IACHTransferEmailData, ICreateSentEmailParams, IKarmacardWelcomeTemplateParams, IBankLinkedConfirmationEmailTemplate, IDisputeEmailData } from './types';
+import { verifyRequiredFields } from '../../lib/requestData';
+import { SentEmailModel } from '../../models/sentEmail';
+import { IRequest } from '../../types/request';
+import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IGroupVerificationTemplateParams, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -401,35 +400,10 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
     templateName: emailTemplateConfig.name,
     templateType: emailTemplateConfig.type,
     data: { name, domain, amount, merchantName, submittedClaimDate },
-    templateType: EmailTemplateTypes.Dispute,
   } as IBuildTemplateParams);
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
-};
-
-export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const { _id } = req.requestor;
-    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const user = await UserModel.findById(_id);
-    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find((e) => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
-    const emailResponse = await sendCaseWonProvisionalCreditAlreadyIssuedEmail({
-      user: user._id,
-      recipientEmail: email,
-      name: user.name,
-      amount: '10.44',
-      merchantName: 'Amazon',
-      submittedClaimDate: dayjs().format('MM/DD/YYYY'),
-    });
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
 };
 
 export const sendCashbackPayoutEmail = async ({

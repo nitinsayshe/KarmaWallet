@@ -60,15 +60,20 @@ const template: { [key:string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail],
   // },
-  [NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued]: {
-    type: NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued,
+  // [NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued]: {
+  //   type: NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail],
+  // },
+  // [NotificationTypeEnum.ProvisionalCreditIssued]: {
+  //   type: NotificationTypeEnum.ProvisionalCreditIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendProvisionalCreditIssuedEmail],
+  // },
+  [NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued]: {
+    type: NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued,
     channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail],
-  },
-  [NotificationTypeEnum.ProvisionalCreditIssued]: {
-    type: NotificationTypeEnum.ProvisionalCreditIssued,
-    channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendProvisionalCreditIssuedEmail],
+    effects: [NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail],
   },
 };
 

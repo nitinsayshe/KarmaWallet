@@ -668,3 +668,32 @@ export const sendBankLinkedConfirmationEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
+export const sendCaseWonProvisionalCreditNotAlreadyIssuedEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  date,
+  companyName,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const subject = 'Case Won - Credit Issued to your Karma Wallet Card';
+  const emailTemplateConfig = EmailTemplateConfigs.CaseWonProvisionalCreditNotAlreadyIssued;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['amount', 'domain', 'recipientEmail', 'name', 'amount', 'date', 'companyName'],
+    { amount, domain, recipientEmail, name, date, companyName },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
+    data: { name, domain, amount, companyName, date },
+  } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};

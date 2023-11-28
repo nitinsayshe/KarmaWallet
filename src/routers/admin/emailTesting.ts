@@ -20,6 +20,13 @@ router.route('/ach-initiation-email')
     AdminEmailTestingController.testACHInitiationEmail,
   );
 
+router.route('/case-won-provisional-credit-already-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseWonProvisionalCreditAlreadyIssuedEmail,
+  );
+
 router.route('/no-chargeback-rights-email')
   .post(
     authenticate,

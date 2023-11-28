@@ -371,10 +371,34 @@ export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   const template = buildTemplate({
     templateName: emailTemplateConfig.name,
     data: { name, domain, amount, merchantName, submittedClaimDate },
+    templateType: EmailTemplateTypes.Dispute,
   } as IBuildTemplateParams);
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
+};
+export const testCaseWonProvisionalCreditAlreadyIssuedEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const { _id } = req.requestor;
+    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
+    const { email } = user.emails.find((e) => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendCaseWonProvisionalCreditAlreadyIssuedEmail({
+      user: user._id,
+      recipientEmail: email,
+      name: user.name,
+      amount: '10.44',
+      merchantName: 'Amazon',
+      submittedClaimDate: dayjs().format('MM/DD/YYYY'),
+    });
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
 };
 export const sendCashbackPayoutEmail = async ({
   user,

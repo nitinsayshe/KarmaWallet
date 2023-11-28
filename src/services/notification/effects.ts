@@ -4,6 +4,7 @@ import { NotificationChannelEnum, NotificationEffectsEnum, NotificationEffectsEn
 import CustomError from '../../lib/customError';
 import { IUserDocument } from '../../models/user';
 import {
+  IBankLinkedConfirmationEmailData,
   ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   IEarnedCashbackNotificationData,
   IKarmaCardWelcomeData,
@@ -11,7 +12,7 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -152,6 +153,24 @@ export const handleSendProvisionalCreditIssuedEmailEffect = async <DataType>(use
   }
 };
 
+export const handleSendBankLinkedConfirmationEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IBankLinkedConfirmationEmailData;
+  const { lastDigitsOfBankAccountNumber, instituteName, name } = d;
+  if (!d) throw new Error('Invalid bank linked user data');
+  try {
+    await sendBankLinkedConfirmationEmail({
+      user: user._id,
+      name,
+      instituteName,
+      lastDigitsOfBankAccountNumber,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending bank linked confirmation email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -163,6 +182,8 @@ export const NotificationEffectsFunctions: {
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
   SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,
+  SendBankLinkedConfirmationEmail: handleSendBankLinkedConfirmationEmailEffect,
+
 } as const;
 
 export const NotificationChannelEffects = {
@@ -171,6 +192,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendPayoutIssuedEmail,
     NotificationEffectsEnum.SendACHInitiationEmail,
     NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
+    NotificationEffectsEnum.SendBankLinkedConfirmationEmail,
     NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
     NotificationEffectsEnum.SendProvisionalCreditIssuedEmail,
   ],

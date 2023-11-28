@@ -1,4 +1,4 @@
-import { sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendChangePasswordEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendProvisionalCreditIssuedEmail } from '.';
+import { sendNoChargebackRightsEmail, sendKarmaCardWelcomeEmail, sendChangePasswordEmail, sendACHInitiationEmail, sendCashbackPayoutEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { UserModel } from '../../models/user';
@@ -132,6 +132,33 @@ export const testProvisionalCreditIssuedEmail = async (req: IRequest<{}, {}, {}>
       amount: '10.44',
       date: '12/14/2023',
     });
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testBankLinkedConfirmationEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    if (!user?.name) throw new CustomError(`No name found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const instituteName = 'Test Bank';
+    const lastDigitsOfBankAccountNumber = '5555';
+    const emailResponse = await sendBankLinkedConfirmationEmail(
+      {
+        user: req.requestor._id,
+        recipientEmail: email,
+        instituteName,
+        lastDigitsOfBankAccountNumber,
+        name: user?.name,
+      },
+    );
+
     if (!!emailResponse) {
       return 'Email sent successfully';
     }

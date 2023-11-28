@@ -47,4 +47,11 @@ router.route('/provisional-credit-issued-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testProvisionalCreditIssuedEmail,
   );
+
+router.route('/bank-linked-confirmation')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testBankLinkedConfirmationEmail,
+  );
 export default router;

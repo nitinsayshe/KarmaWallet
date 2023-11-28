@@ -56,3 +56,12 @@ export const testProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {}> = asy
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const testBankLinkedConfirmationEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testBankLinkedConfirmationEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

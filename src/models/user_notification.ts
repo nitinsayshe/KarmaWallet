@@ -56,6 +56,12 @@ export interface IProvisialCreditIssuedData extends UserNotificationData {
   date: string;
 }
 
+export interface IBankLinkedConfirmationEmailData extends UserNotificationData {
+  name: string;
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string
+}
+
 export type NotificationData =
   | IEarnedCashbackNotificationData
   | IPayoutNotificationData

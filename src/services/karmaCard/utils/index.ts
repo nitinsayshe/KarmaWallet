@@ -24,22 +24,22 @@ enum SolutionMessages {
 }
 
 const AcceptedDocuments = {
-  NAME_OR_DOB_ISSUE: ['- Driver’s license or state-issued identification card',
-    '- Passport or US passport card'],
+  NAME_OR_DOB_ISSUE: ['Driver’s license or state-issued identification card',
+    'Passport or US passport card'],
   ADDRESS_ISSUE: [
-    '- Unexpired state-issued driver’s license or identification card',
-    '- US Military Identification Card',
-    '- Utility bill',
-    '- Bank statement',
-    '- Current rental or lease agreement',
-    '- Mortgage statement'],
+    'Unexpired state-issued driver’s license or identification card',
+    'US Military Identification Card',
+    'Utility bill',
+    'Bank statement',
+    'Current rental or lease agreement',
+    'Mortgage statement'],
   DateOfBirthIssue: [
-    '- Driver’s license or state-issued identification card',
-    '- Passport or US passport card'],
+    'Driver’s license or state-issued identification card',
+    'Passport or US passport card'],
   SSN_ISSUE: [
-    '- Social Security card',
-    '- Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
-    '- ITIN card or document showing ITIN approval'],
+    'Social Security card',
+    'Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
+    'ITIN card or document showing ITIN approval'],
 };
 
 export enum ReasonCode {

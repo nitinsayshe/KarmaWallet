@@ -306,14 +306,14 @@ export const unenrollFromKardRewards = async (
 };
 
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
-  const { user_token, token: card_token, expiration_time, last_four, pan, fulfillment_status } = cardData;
+  const { user_token, token, card_product_token, expiration_time, last_four, pan, fulfillment_status, barcode, created_time, instrument_type, pin_is_set, state } = cardData;
 
   // Find the existing card document with Marqeta integration
   let card = await CardModel.findOne({
     $and: [
       { userId: _userId },
       { 'integrations.marqeta': { $exists: true } },
-      { 'integrations.marqeta.card_token': card_token },
+      { 'integrations.marqeta.card_token': token },
     ],
   });
 
@@ -328,13 +328,20 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
 
   // prepare the cardItem Details
   const cardItem = {
-    ...cardData,
-    card_token,
+    barcode,
+    card_product_token,
+    card_token: token,
+    created_time,
+    expiration_time,
     expr_month: month,
-    fulfillment_status,
     expr_year: year,
+    fulfillment_status,
+    instrument_type,
     last_four: encrypt(last_four),
     pan: encrypt(pan),
+    pin_is_set,
+    user_token,
+    state,
   };
   // Set lastModified date
   card.lastModified = dayjs().utc().toDate();
@@ -413,10 +420,6 @@ export const handleMarqetaCardNotificationFromWebhook = async (
 };
 
 export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
-  console.log('/////// marqeta card webhook data', {
-    cardFromWebhook,
-  });
-
   const { year, month } = extractYearAndMonth(cardFromWebhook.expiration_time);
   const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
 

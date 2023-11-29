@@ -431,7 +431,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     card_token: cardFromWebhook?.card_token,
     user_token: cardFromWebhook?.user_token,
     card_product_token: cardFromWebhook?.card_product_token,
-    pan: cardFromWebhook?.pan,
+    pan: encrypt(cardFromWebhook?.pan),
     last_four: encrypt(cardFromWebhook?.last_four),
     expr_month: month,
     expr_year: year,

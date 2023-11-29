@@ -20,6 +20,13 @@ router.route('/ach-initiation-email')
     AdminEmailTestingController.testACHInitiationEmail,
   );
 
+router.route('/case-won-provisional-credit-already-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseWonProvisionalCreditAlreadyIssuedEmail,
+  );
+
 router.route('/no-chargeback-rights-email')
   .post(
     authenticate,
@@ -40,4 +47,40 @@ router.route('/change-password-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testChangePasswordEmail,
   );
+
+router.route('/case-lost-provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseLostProvisionalCreditIssuedEmail,
+  );
+
+router.route('/provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testProvisionalCreditIssuedEmail,
+  );
+
+router.route('/bank-linked-confirmation')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testBankLinkedConfirmationEmail,
+  );
+
+router.route('/case-won-provisional-credit-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseWonProvisionalCreditAlreadyIssuedEmail,
+  );
+
+router.route('/case-won-provisional-credit-not-already-issued-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCaseWonProvisionalCreditNotAlreadyIssuedEmail,
+  );
+
 export default router;

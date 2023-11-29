@@ -35,10 +35,11 @@ interface IEmailTemplateParams extends IBaseEmailParams {
 
 export interface IDisputeEmailData extends IBaseEmailParams {
   user: IUserDocument;
+  reason?: string;
   amount?: string;
   companyName?: string;
   date?: string;
-  name: string;
+  reversalDate?: string;
 }
 
 export interface IDeleteAccountRequestVerificationTemplateParams {
@@ -95,8 +96,10 @@ export interface IEmailJobData {
   companyName?: string;
   currentYear?: string;
   date?: string;
+  reversalDate?: string;
   deleteAccountRequestId?: string;
   deleteReason?: string;
+  reason?: string;
   domain?: string;
   emailTemplateConfig?: IEmailTemplateConfig;
   footerStyle?: string;
@@ -120,6 +123,8 @@ export interface IEmailJobData {
   userId?: string;
   verificationLink?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
+  instituteName?: string;
+  lastDigitsOfBankAccountNumber?: string;
 }
 
 export interface IBuildTemplateParams {
@@ -132,4 +137,9 @@ export interface IBuildTemplateParams {
 
 export interface ISendTransactionsProcessedEmailParams extends IEmailTemplateParams {
   isSuccess: boolean;
+}
+
+export interface IBankLinkedConfirmationEmailTemplate extends IEmailTemplateParams {
+  instituteName: string;
+  lastDigitsOfBankAccountNumber: string
 }

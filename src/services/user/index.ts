@@ -250,7 +250,6 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   const authKey = await Session.createSession(user._id.toString());
 
   await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
-
   if (fcmToken && deviceInfo) {
     await addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
   }

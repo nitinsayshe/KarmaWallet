@@ -5,7 +5,26 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { saveDocuments } from '../../lib/model';
 import { IChargebackDocument, ChargebackModel } from '../../models/chargeback';
-import { createNoChargebackRightsUserNotification, createProvisionalCreditPermanentNotification } from '../user_notification';
+import { createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification, createNoChargebackRightsUserNotification, createProvisionalCreditPermanentNotification } from '../user_notification';
+import { TransactionModel } from '../../models/transaction';
+import { TransactionModelTypeEnum, TransactionModelTypeEnumValues } from '../../clients/marqeta/types';
+
+export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
+  const existingTransaction = await TransactionModel.findOne({
+    $or: [
+      { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': c.integrations.marqeta.transaction_token }] },
+      {
+        $and: [
+          { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+          { 'integrations.marqeta.relatedTransactions.token': c.integrations.marqeta.transaction_token },
+        ],
+      },
+    ],
+  });
+
+  if (!!existingTransaction) return existingTransaction;
+  return null;
+};
 
 export const createChargeback = async (chargeback: Partial<IChargebackDocument>): Promise<IChargebackDocument> => {
   try {
@@ -162,6 +181,40 @@ const handleRegulationProvisionalCreditPermanent = async (
   await createProvisionalCreditPermanentNotification(chargebackTransition);
 };
 
+export const creditIssued = async (type: TransactionModelTypeEnumValues) => type === TransactionModelTypeEnum.AuthorizationClearingChargebackCompleted || type === TransactionModelTypeEnum.PindebitChargebackCompleted;
+
+export const checkIfProvisionalCreditAlreadyApplied = async (c: IChargebackDocument) => {
+  const existingTransaction = await getExistingTransactionFromChargeback(c);
+  if (!existingTransaction) {
+    return false;
+  }
+
+  if (!!existingTransaction) {
+    const { relatedTransactions } = existingTransaction.integrations.marqeta;
+    if (!!creditIssued(existingTransaction.integrations.marqeta.type)) return true;
+    for (const rt of relatedTransactions) {
+      if (!!creditIssued(rt.type)) {
+        console.log(`Found existing provisional credit issued transaction with token: ${rt.token}`);
+        return true;
+      }
+    }
+
+    return false;
+  }
+};
+
+export const checkIfShouldSendCaseWonProvisionalCreditNotAlreadyIssuedEmail = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<void> => {
+  if (chargebackTransition.integrations.marqeta.type !== 'case.won') {
+    return;
+  }
+  const shouldSendEmail = await checkIfProvisionalCreditAlreadyApplied(chargebackTransition);
+  if (!!shouldSendEmail) {
+    await createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification(chargebackTransition);
+  }
+};
+
 // This is a placeholder for adding logic that handles the dispute macros
 export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocument[]): Promise<void> => {
   await Promise.all(
@@ -178,7 +231,8 @@ export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocu
             break;
           case ChargebackTypeEnum.ARBITRATION:
             break;
-          case ChargebackTypeEnum.CASE_WON:
+          case ChargebackTypeEnum.CASE_WON || ChargebackTypeEnum.REGULATION_CASE_WON:
+            await checkIfShouldSendCaseWonProvisionalCreditNotAlreadyIssuedEmail(c);
             break;
           case ChargebackTypeEnum.CASE_LOST:
             break;
@@ -189,8 +243,12 @@ export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocu
             break;
           case ChargebackTypeEnum.WRITTEN_OFF_PROGRAM:
             break;
-          case ChargebackTypeEnum.REGULATION_PROVISIONAL_CREDIT_PERMANENT:
+          case ChargebackTypeEnum.REGULATION_PROVISIONAL_CREDIT_PERMANENT || ChargebackTypeEnum.PROVISIONAL_CREDIT_PERMANENT:
             await handleRegulationProvisionalCreditPermanent(c);
+            break;
+          case ChargebackTypeEnum.REGULATION_CASE_LOST_ACTION_REQUIRED:
+            break;
+          case ChargebackTypeEnum.CASE_LOST_ACTION_REQUIRED:
             break;
           default:
             console.log(`No notification created for chargeback transition with type: ${c?.integrations?.marqeta?.type}`);

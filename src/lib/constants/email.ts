@@ -19,11 +19,16 @@ export enum EmailTemplateKeys {
   CaseWonProvisionalCreditAlreadyIssued = 'caseWonProvisionalCreditAlreadyIssued',
   WelcomeGroup = 'welcomeGroup',
   KarmaCardWelcome = 'karmaCardWelcome',
+  CaseLostProvisionalCreditAlreadyIssued = 'caseLostProvisionalCreditAlreadyIssued',
+  ProvisionalCreditIssued = 'provisionalCreditIssued',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
+  CaseWonProvisionalCreditNotAlreadyIssued = 'caseWonProvisionalCreditNotAlreadyIssued',
 }
 
 export enum EmailTemplateTypes {
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
+  BankLinkedConfirmation = 'bankLinkedConfirmation',
   CashbackNotificaiton = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
@@ -106,6 +111,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
     name: EmailTemplateKeys.CaseWonProvisionalCreditAlreadyIssued,
     type: EmailTemplateTypes.Dispute,
   },
+  CaseWonProvisionalCreditNotAlreadyIssued: {
+    name: EmailTemplateKeys.CaseWonProvisionalCreditNotAlreadyIssued,
+    type: EmailTemplateTypes.Dispute,
+  },
   SupportTicket: {
     name: EmailTemplateKeys.SupportTicket,
     type: EmailTemplateTypes.SupportTicket,
@@ -117,6 +126,18 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardWelcome: {
     name: EmailTemplateKeys.KarmaCardWelcome,
     type: EmailTemplateTypes.Essential,
+  },
+  CaseLostProvisionalCreditAlreadyIssued: {
+    name: EmailTemplateKeys.CaseLostProvisionalCreditAlreadyIssued,
+    type: EmailTemplateTypes.Dispute,
+  },
+  ProvisionalCreditIssued: {
+    name: EmailTemplateKeys.ProvisionalCreditIssued,
+    type: EmailTemplateTypes.Dispute,
+  },
+  BankLinkedConfirmation: {
+    name: EmailTemplateKeys.BankLinkedConfirmation,
+    type: EmailTemplateTypes.BankLinkedConfirmation,
   },
 };
 

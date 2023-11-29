@@ -32,6 +32,7 @@ export interface IEarnedCashbackNotificationData extends UserNotificationData {
   name: string;
   companyName: string;
 }
+
 export interface ICaseWonProvisionalCreditAlreadyIssuedNotificationData extends UserNotificationData {
   name: string;
   amount: string;
@@ -48,6 +49,34 @@ export interface IPayoutNotificationData extends UserNotificationData {
 export interface IKarmaCardWelcomeData extends UserNotificationData {
   name: string;
   newUser: boolean;
+}
+
+export interface ICaseLostProvisionalCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+  reversalDate: string;
+  companyName: string;
+  reason: string;
+}
+
+export interface ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData extends UserNotificationData {
+  name: string;
+  amount: string;
+  companyName: string;
+  date: string;
+}
+
+export interface IProvisialCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+}
+
+export interface IBankLinkedConfirmationEmailData extends UserNotificationData {
+  name: string;
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string
 }
 
 export type NotificationData =

@@ -363,6 +363,7 @@ export const handleMarqetaCardNotificationFromWebhook = async (
   oldCard: ICardDocument,
   user: IUserDocument,
 ) => {
+  console.log('///// this is the old card', oldCard);
   const prevCardStatus = oldCard?.integrations?.marqeta?.state?.toUpperCase();
   console.log('////// previous state', prevCardStatus);
 
@@ -461,6 +462,7 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   if (!user) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token }, { userId: user._id });
   if (!prevCardData) throw new CustomError(`Card with marqeta card token of ${cardWebhookData?.card_token} not found`, ErrorTypes.NOT_FOUND);
+  console.log('///// this is the prev card data', prevCardData);
 
   await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
   await updateCardFromMarqetaCardWebhook(cardWebhookData);

@@ -16,7 +16,7 @@ import { IRequest } from '../../types/request';
 import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
-import { IMarqetaWebhookCardsEvent, MarqetaCardState } from '../../integrations/marqeta/types';
+import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import { createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 
@@ -456,6 +456,16 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   await existingCard.save();
 };
 
+export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
+  switch (cardFromWebhook?.type) {
+    case MarqetaCardWebhookType.SHIPPED:
+      /// put code to send emails
+      break;
+    default:
+      console.log('///// No action needed for this webhook type')  
+  }
+}
+
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
@@ -463,4 +473,5 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   if (!prevCardData) throw new CustomError(`Card with marqeta card token of ${cardWebhookData?.card_token} not found`, ErrorTypes.NOT_FOUND);
   await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
   await updateCardFromMarqetaCardWebhook(cardWebhookData);
+  await sendCardUpdateEmails(cardWebhookData);
 };

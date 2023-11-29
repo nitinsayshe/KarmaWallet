@@ -67,6 +67,10 @@ export interface ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData exten
   date: string;
 }
 
+export interface ICardShippedNotificationData {
+  name: string;
+}
+
 export interface IProvisialCreditIssuedData extends UserNotificationData {
   name: string;
   amount: string;

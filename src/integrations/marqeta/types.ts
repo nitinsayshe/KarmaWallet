@@ -2,7 +2,6 @@ import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
 import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
-import { MarqetaCardFulfillmentStatus } from '../../lib/constants/card';
 
 interface Identification {
   type: string;
@@ -331,6 +330,29 @@ export type MarqetaCardModel = {
   token: string;
   user_token?: string;
 };
+
+export enum MarqetaCardWebhookType {
+  'DELIVERED' = 'fulfillment.delivered',
+  'DIGITALLY_PRESENTED' = 'fulfillment.digitally_presented',
+  'ISSUED' = 'fulfillment.issued',
+  'ORDERED' = 'fulfillment.ordered',
+  'REJECTED' = 'fulfillment.rejected',
+  'SHIPPED' = 'fulfillment.shipped',
+  'ACTIVATED' = 'state.activated',
+  'LIMITED' = 'state.limited',
+  'SUSPENDED' = 'state.suspended',
+  'TERMINATED' = 'state.terminated',
+  'REINSTATED' = 'state.reinstated',
+}
+
+export enum MarqetaCardFulfillmentStatus {
+  'DELIVERED' = 'DELIVERED',
+  'DIGITALLY_PRESENTED' = 'DIGITALLY_PRESENTED',
+  'ISSUED' = 'ISSUED',
+  'ORDERED' = 'ORDERED',
+  'REJECTED' = 'REJECTED',
+  'SHIPPED' = 'SHIPPED',
+}
 
 export interface IMarqetaWebhookCardsEvent {
   card_product_token: string;

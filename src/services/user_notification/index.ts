@@ -652,3 +652,25 @@ export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = as
     console.log(`Error creating case won provisional credit not already issued notification: ${e}`);
   }
 };
+
+export const createCardShippedUserNotification = async (
+  user: IUserDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CardShipped,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating card shipped notification: ${e}`);
+  }
+};

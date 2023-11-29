@@ -177,28 +177,30 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
         { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': token }] },
         {
           $and: [
+            { 'integrations.marqeta.preceding_related_transaction_token': { $exists: true } },
+            { 'integrations.marqeta.preceding_related_transaction_token': token },
+          ],
+        },
+        {
+          $and: [
             { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
             { 'integrations.marqeta.relatedTransactions.token': token },
           ],
         },
       ],
     });
-
-    const existingProcessingTransaction = procesingTransactions?.find((t) => t?.integrations?.marqeta?.token === token);
-
-    const transaction = existingTransaction?.integrations?.marqeta ? existingTransaction : existingProcessingTransaction;
-
-    if (!transaction?.integrations?.marqeta) {
-      throw new Error(`No transaction found with marqeta token: ${token}`);
-    }
-
-    console.log(`Found existing processing transaction with token: ${transaction}`);
-    return transaction;
+    if (existingTransaction?.integrations?.marqeta) return existingTransaction;
   } catch (err) {
     console.log(`Error looking up transaction with marqeta token: ${token}}`);
     console.log(err);
     return null;
   }
+
+  const existingProcessingTransaction = procesingTransactions?.find((t) => t?.integrations?.marqeta?.token === token);
+  if (existingProcessingTransaction?.integrations?.marqeta) return existingProcessingTransaction;
+
+  console.log(`No transaction found with marqeta token: ${token}`);
+  return null;
 };
 
 // Mappings were worked on on the google doc:

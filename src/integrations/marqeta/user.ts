@@ -9,7 +9,7 @@ import {
   IMarqetaUserToken,
   GetUserByEmailResponse,
   ListUsersResponse,
-  UserModel,
+  MarqetaUserModel,
   IMarqetaUpdateUser,
 } from './types';
 
@@ -29,7 +29,7 @@ export const listMarqetaUsers = async (): Promise<ListUsersResponse> => {
   return userResponse;
 };
 
-export const getMarqetaUser = async (userToken: string): Promise<UserModel> => {
+export const getMarqetaUser = async (userToken: string): Promise<MarqetaUserModel> => {
   const userResponse = await user.getMarqetaUser(userToken);
   return userResponse;
 };

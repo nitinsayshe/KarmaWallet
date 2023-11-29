@@ -359,7 +359,7 @@ export const handleMarqetaCardNotificationFromWebhook = async (
   const prevCardStatus = oldCard?.integrations?.marqeta?.state?.toUpperCase();
   const newCardStatus = cardFromWebhook?.state?.toUpperCase();
   if (prevCardStatus === newCardStatus) {
-    console.log('////// Card status has not changed, no notifications sent //////');
+    console.log('////// No state change //////');
     return;
   }
 
@@ -412,25 +412,16 @@ export const handleMarqetaCardNotificationFromWebhook = async (
   }
 };
 
-export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent, prevCardData: ICardDocument) => {
-  console.log('////// Updating card data with Marqeta Webhook data //////');
-  // update the card model as needed
-  const existingMarqetaData = prevCardData?.integrations?.marqeta;
-
-  const newIntegrationData = {
-    ...existingMarqetaData,
-    state: cardFromWebhook?.state,
-    fulfillment_status: cardFromWebhook?.fulfillment_status,
-  };
-
-  if (cardFromWebhook?.state === MarqetaCardState.TERMINATED) {
-    prevCardData.status = CardStatus.Removed;
-    prevCardData.removedDate = dayjs().utc().toDate();
-  }
-
-  prevCardData.lastModified = dayjs().utc().toDate();
-  prevCardData.integrations.marqeta = newIntegrationData;
-  await prevCardData.save();
+export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
+  await CardModel.findOneAndUpdate(
+    { 'integrations.marqeta.card_token': cardFromWebhook?.card_token },
+    {
+      $set: {
+        'integrations.marqeta': cardFromWebhook,
+        ...(cardFromWebhook?.state?.toUpperCase() === MarqetaCardState.TERMINATED ? { status: 'removed' } : { status: 'linked' }),
+      },
+    },
+  );
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
@@ -440,5 +431,5 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   if (!prevCardData) throw new CustomError(`Card with marqeta card token of ${cardWebhookData?.card_token} not found`, ErrorTypes.NOT_FOUND);
 
   await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
-  await updateCardFromMarqetaCardWebhook(cardWebhookData, prevCardData);
+  await updateCardFromMarqetaCardWebhook(cardWebhookData);
 };

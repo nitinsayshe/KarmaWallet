@@ -33,7 +33,8 @@ import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargeback
 import { ChargebackTransition } from '../integrations/marqeta/types';
 import { handleTransactionDisputeMacro } from '../services/transaction';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID,
+  MARQETA_WEBHOOK_PASSWORD, MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -116,11 +117,6 @@ export enum MarqetaCardStates {
   LIMITED = 'LIMITED',
   SUSPENDED = 'SUSPENDED',
   TERMINATED = 'TERMINATED',
-}
-
-export enum MarqetaCardProductTokens {
-  PHYSICAL = 'kw_phys_cp_asi',
-  DIGITAL = 'kw_virt_cp',
 }
 
 interface IMarqetaWebhookCardsEvent {
@@ -432,8 +428,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           if (!user) throw new CustomError(`User with marqeta user token of ${card?.user_token} not found`, ErrorTypes.NOT_FOUND);
 
           let cardType = '';
-          if (card?.card_product_token === MarqetaCardProductTokens.PHYSICAL) cardType = 'physical ';
-          if (card?.card_product_token === MarqetaCardProductTokens.DIGITAL) cardType = 'digital ';
+          if (card?.card_product_token === MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN) cardType = 'physical ';
+          if (card?.card_product_token === MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN) cardType = 'digital ';
 
           // Notification for the first-time activation of a card, for example, when a card is activated using the widget.
           if ((prevCardStatus === MarqetaCardStates.UNACTIVATED || prevCardStatus === MarqetaCardStates.SUSPENDED)

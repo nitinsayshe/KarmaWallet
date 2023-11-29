@@ -33,7 +33,8 @@ import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargeback
 import { ChargebackTransition } from '../integrations/marqeta/types';
 import { handleTransactionDisputeMacro } from '../services/transaction';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID,
+  MARQETA_WEBHOOK_PASSWORD, MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -110,9 +111,17 @@ interface IPaypalWebhookBody {
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
 
+export enum MarqetaCardStates {
+  UNACTIVATED = 'UNACTIVATED',
+  ACTIVE = 'ACTIVE',
+  LIMITED = 'LIMITED',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+}
+
 interface IMarqetaWebhookCardsEvent {
   token: String;
-  state: String;
+  state: MarqetaCardStates;
   reason: String;
   channel: String;
   validations: Object;
@@ -400,7 +409,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
       for (const card of cards) {
-        await CardModel.findOneAndUpdate(
+        const prevCardData = await CardModel.findOneAndUpdate(
           { 'integrations.marqeta.card_token': card?.card_token },
           {
             $set: {
@@ -409,23 +418,55 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
               ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
             },
           },
-          { new: true },
         );
-        // Adding in a state check for now, but this needs to be removed and updated to be more specific
-        // 1) There are other states besides active that would not mean that the user has deactivated their card
-        // 2) Am I write in assuming this should be sent when a card is unlocked or locked? Or is this when they activate a card?
-        // 3) Either way, we need to more appropriately handle the different states here queuing off of the webhook type (reference cardtransition types)
-        if (card.type.includes('state')) {
+
+        const prevCardStatus = prevCardData?.integrations?.marqeta?.state?.toUpperCase();
+        const currentCardStatus = card?.state?.toUpperCase();
+
+        if (Object.values(MarqetaCardStates)?.includes(currentCardStatus as MarqetaCardStates)) {
           const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
           if (!user) throw new CustomError(`User with marqeta user token of ${card?.user_token} not found`, ErrorTypes.NOT_FOUND);
-          await createPushUserNotificationFromUserAndPushData(user, {
-            pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
-            body:
-                card?.state.toString() === 'ACTIVE'
-                  ? 'You have successfully activated your card.'
-                  : 'You have successfully deactivated your card.',
-            title: 'Security Alert!',
-          });
+
+          let cardType = '';
+          if (card?.card_product_token === MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN) cardType = 'physical ';
+          if (card?.card_product_token === MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN) cardType = 'digital ';
+
+          // Notification for the first-time activation of a card, for example, when a card is activated using the widget.
+          if ((prevCardStatus === MarqetaCardStates.UNACTIVATED || prevCardStatus === MarqetaCardStates.SUSPENDED)
+             && currentCardStatus === MarqetaCardStates.ACTIVE) {
+            await createPushUserNotificationFromUserAndPushData(user, {
+              pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
+              body: `You have successfully activated your ${cardType}card.`,
+              title: 'Security Alert!',
+            });
+          }
+
+          // Notification for an event when we lock a card from the app.
+          if (prevCardStatus === MarqetaCardStates.ACTIVE && currentCardStatus === MarqetaCardStates.LIMITED) {
+            await createPushUserNotificationFromUserAndPushData(user, {
+              pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
+              body: `You have successfully locked your ${cardType}card.`,
+              title: 'Security Alert!',
+            });
+          }
+
+          // Notification for an event when we unlock a card from the app.
+          if (prevCardStatus === MarqetaCardStates.LIMITED && currentCardStatus === MarqetaCardStates.ACTIVE) {
+            await createPushUserNotificationFromUserAndPushData(user, {
+              pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
+              body: `You have successfully unlocked your ${cardType}card.`,
+              title: 'Security Alert!',
+            });
+          }
+
+          // Notification for events of card suspension or termination.
+          if (currentCardStatus === MarqetaCardStates.SUSPENDED || currentCardStatus === MarqetaCardStates.TERMINATED) {
+            await createPushUserNotificationFromUserAndPushData(user, {
+              pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
+              body: `Your ${cardType}card has been deactivated.`,
+              title: 'Security Alert!',
+            });
+          }
         }
       }
     }

@@ -413,15 +413,41 @@ export const handleMarqetaCardNotificationFromWebhook = async (
 };
 
 export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
-  await CardModel.findOneAndUpdate(
-    { 'integrations.marqeta.card_token': cardFromWebhook?.card_token },
-    {
-      $set: {
-        'integrations.marqeta': cardFromWebhook,
-        ...(cardFromWebhook?.state?.toUpperCase() === MarqetaCardState.TERMINATED ? { status: 'removed' } : { status: 'linked' }),
-      },
-    },
-  );
+  console.log('/////// marqeta card webhook data', {
+    cardFromWebhook,
+  });
+
+  const { year, month } = extractYearAndMonth(cardFromWebhook.expiration_time);
+  const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
+
+  if (!existingCard) {
+    return;
+  }
+
+  const newData: any = {
+    card_token: cardFromWebhook?.card_token,
+    user_token: cardFromWebhook?.user_token,
+    card_product_token: cardFromWebhook?.card_product_token,
+    pan: cardFromWebhook?.pan,
+    last_four: encrypt(cardFromWebhook?.last_four),
+    expr_month: month,
+    expr_year: year,
+    created_time: cardFromWebhook?.created_time,
+    pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
+    state: cardFromWebhook?.state,
+    fulfillment_status: cardFromWebhook?.fulfillment_status,
+  };
+
+  if (existingCard?.integrations?.marqeta?.instrument_type) {
+    newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
+  }
+
+  if (existingCard?.integrations?.marqeta?.barcode) {
+    newData.barcode = existingCard?.integrations?.marqeta?.barcode;
+  }
+
+  existingCard.integrations.marqeta = newData;
+  await existingCard.save();
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {

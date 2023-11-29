@@ -422,6 +422,7 @@ export const handleMarqetaCardNotificationFromWebhook = async (
 export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
   const { year, month } = extractYearAndMonth(cardFromWebhook.expiration_time);
   const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
+  const origCreatedTime = existingCard?.createdOn;
 
   if (!existingCard) {
     return;
@@ -435,7 +436,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     last_four: encrypt(cardFromWebhook?.last_four),
     expr_month: month,
     expr_year: year,
-    created_time: cardFromWebhook?.created_time,
+    created_time: existingCard?.integrations.marqeta.created_time,
     pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
     state: cardFromWebhook?.state,
     fulfillment_status: cardFromWebhook?.fulfillment_status,
@@ -450,6 +451,8 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   }
 
   existingCard.integrations.marqeta = newData;
+  existingCard.lastModified = dayjs().utc().toDate();
+  existingCard.createdOn = origCreatedTime;
   await existingCard.save();
 };
 

@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { isValidObjectId, Types } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import dayjs from 'dayjs';
@@ -41,6 +42,7 @@ import {
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
 import { IACHTransferEmailData } from '../email/types';
+import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
 
 dayjs.extend(utc);
 
@@ -650,5 +652,30 @@ export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = as
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating case won provisional credit not already issued notification: ${e}`);
+  }
+};
+
+export const createCardShippedUserNotification = async (
+  webhookData: IMarqetaWebhookCardsEvent,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user_token } = webhookData;
+    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
+    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CardShipped,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating card shipped notification: ${e}`);
   }
 };

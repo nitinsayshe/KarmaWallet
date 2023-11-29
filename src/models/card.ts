@@ -3,8 +3,7 @@ import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
-import { MarqetaCardFulfillmentStatus } from '../lib/constants/card';
-import { MarqetaCardState } from '../integrations/marqeta/types';
+import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../integrations/marqeta/types';
 
 export interface IPlaidCardIntegration {
   accessToken: string;

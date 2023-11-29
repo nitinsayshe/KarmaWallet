@@ -5,6 +5,7 @@ import CustomError from '../../lib/customError';
 import { IUserDocument } from '../../models/user';
 import {
   IBankLinkedConfirmationEmailData,
+  ICardShippedNotificationData,
   ICaseLostProvisionalCreditIssuedData,
   ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData,
@@ -14,7 +15,7 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -213,6 +214,22 @@ export const handleCaseWonProvisionalCreditNotAlreadyIssuedEffect = async <DataT
   }
 };
 
+export const handleCardShippedEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as ICardShippedNotificationData;
+  const { name } = d;
+  if (!d) throw new Error('Invalid card shipped data');
+  try {
+    await sendCardShippedEmail({
+      user: user._id,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+      name,
+    });
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending card shipped email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -227,6 +244,7 @@ export const NotificationEffectsFunctions: {
   SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,
   SendBankLinkedConfirmationEmail: handleSendBankLinkedConfirmationEmailEffect,
   SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: handleCaseWonProvisionalCreditNotAlreadyIssuedEffect,
+  SendCardShippedEmail: handleCardShippedEffect,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -239,6 +257,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
     NotificationEffectsEnum.SendProvisionalCreditIssuedEmail,
     NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
+    NotificationEffectsEnum.SendCardShippedEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

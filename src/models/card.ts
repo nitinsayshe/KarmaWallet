@@ -3,7 +3,8 @@ import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
-import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../lib/constants/card';
+import { MarqetaCardFulfillmentStatus } from '../lib/constants/card';
+import { MarqetaCardState } from '../integrations/marqeta/types';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -43,8 +44,8 @@ export interface IMarqetaCardIntegration {
   created_time: Date;
   pin_is_set: boolean;
   state: MarqetaCardState;
-  instrument_type: string;
-  barcode: string;
+  instrument_type?: string;
+  barcode?: string;
   fulfillment_status: MarqetaCardFulfillmentStatus;
 }
 

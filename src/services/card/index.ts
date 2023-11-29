@@ -17,7 +17,7 @@ import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
 import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
-import { createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { createCardShippedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 
 dayjs.extend(utc);
@@ -459,12 +459,13 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
 export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
   switch (cardFromWebhook?.type) {
     case MarqetaCardWebhookType.SHIPPED:
+      await createCardShippedUserNotification(cardFromWebhook);
       /// put code to send emails
       break;
     default:
-      console.log('///// No action needed for this webhook type')  
+      console.log('///// No action needed for this webhook type');
   }
-}
+};
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });

@@ -402,14 +402,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
           if (user && transaction?.gpa_order?.amount && transaction?.gpa_order?.state === MarqetaWebhookConstants.COMPLETION) {
             await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.EARNED_CASHBACK,
-              body: `You earned $${transaction?.gpa_order?.amount} in Karma Cash`,
-              title: 'Received Cashback',
-            });
-
-            await createPushUserNotificationFromUserAndPushData(user, {
               pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-              body: `$${transaction?.gpa_order?.amount} in Karma Cash has been deposited into your Karma Wallet Card`,
+              body: `$${transaction?.gpa_order?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
               title: 'Received Cashback',
             });
           }
@@ -435,8 +429,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           ) {
             await createPushUserNotificationFromUserAndPushData(user, {
               pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
-              body: 'Transaction Complete',
-              title: `$${transaction?.amount} spent at ${transaction?.card_acceptor?.name}`,
+              title: 'Transaction Alert',
+              body: `$${transaction?.amount} spent at ${transaction?.card_acceptor?.name}`,
             });
 
             // Send push notification for spending on dining or gas
@@ -444,15 +438,15 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
               // Notification of transaction on dining
               await createPushUserNotificationFromUserAndPushData(user, {
                 pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
-                body: 'Transaction Complete',
-                title: 'You dined out. We donated a meal.',
+                title: 'Donation Alert!',
+                body: 'You dined out. We donated a meal.',
               });
             } else if (MCCStandards.GAS.includes(transaction?.card_acceptor?.mcc)) {
               // Notification of transaction on gas
               await createPushUserNotificationFromUserAndPushData(user, {
                 pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
-                body: 'Transaction Complete',
-                title: 'You bought gas. We donated to reforestation.',
+                title: 'Donation Alert!',
+                body: 'You bought gas. We donated to reforestation.',
               });
             }
           }

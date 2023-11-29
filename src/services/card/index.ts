@@ -364,7 +364,10 @@ export const handleMarqetaCardNotificationFromWebhook = async (
   user: IUserDocument,
 ) => {
   const prevCardStatus = oldCard?.integrations?.marqeta?.state?.toUpperCase();
+  console.log('////// previous state', prevCardStatus);
+
   const newCardStatus = cardFromWebhook?.state?.toUpperCase();
+  console.log('////// new state', newCardStatus);
   if (prevCardStatus === newCardStatus) {
     console.log('////// No state change //////');
     return;

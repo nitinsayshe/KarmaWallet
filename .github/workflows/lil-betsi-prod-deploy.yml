@@ -91,5 +91,11 @@ jobs:
     - run: echo 'MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN=${{secrets.MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN}}' >> .env
     - run: echo 'MARQETA_BASE_URL=${{secrets.PRODUCTION_MARQETA_BASE_URL}}' >> .env
     - run: echo 'MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN=${{secrets.MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN}}' >> .env
+    - run: echo 'FIREBASE_PROJECT_ID=${{secrets.PRODUCTION_FIREBASE_PROJECT_ID}}' >> .env
+    - run: echo 'FIREBASE_PRIVATE_KEY_ID=${{secrets.PRODUCTION_FIREBASE_PRIVATE_KEY_ID}}' >> .env
+    - run: echo 'FIREBASE_PRIVATE_KEY=${{secrets.PRODUCTION_FIREBASE_PRIVATE_KEY}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_EMAIL=${{secrets.PRODUCTION_FIREBASE_CLIENT_EMAIL}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_ID=${{secrets.PRODUCTION_FIREBASE_CLIENT_ID}}' >> .env
+    - run: echo 'FIREBASE_CLIENT_X509_CERT_URL=${{secrets.PRODUCTION_FIREBASE_CLIENT_X509_CERT_URL}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env

@@ -18,7 +18,7 @@ enum ResponseMessages {
 enum SolutionMessages {
   NAME_OR_DOB_ISSUE = 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
   SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
-  ADDRESS_ISSUE = 'Please submit two of the following documents that shows your full name and address to support@karmawallet.io',
+  ADDRESS_ISSUE = 'Please submit two of the following documents that show your full name and address to support@karmawallet.io',
   CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
   ALREADY_REGISTERED = 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
 }

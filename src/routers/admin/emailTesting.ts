@@ -89,4 +89,11 @@ router.route('/card-shipped-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testCardShippedEmail,
   );
+
+router.route('/card-delivered-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCardDeliveredEmail,
+  );
 export default router;

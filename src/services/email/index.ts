@@ -715,3 +715,22 @@ export const sendCardShippedEmail = async ({
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
+export const sendCardDeliveredEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  sendEmail = true,
+}: Partial<IEmailVerificationTemplateParams>) => {
+  const subject = 'Your Karma Wallet Card Has Been Delivered!';
+  const emailTemplateConfig = EmailTemplateConfigs.CardDelivered;
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name'], { domain, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain } } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};

@@ -17,7 +17,7 @@ import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
 import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
-import { createCardShippedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { createCardDeliveredUserNotification, createCardShippedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 
 dayjs.extend(utc);
@@ -460,7 +460,9 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
   switch (cardFromWebhook?.type) {
     case MarqetaCardWebhookType.SHIPPED:
       await createCardShippedUserNotification(cardFromWebhook);
-      /// put code to send emails
+      break;
+    case MarqetaCardWebhookType.DELIVERED:
+      await createCardDeliveredUserNotification(cardFromWebhook);
       break;
     default:
       console.log('///// No action needed for this webhook type');

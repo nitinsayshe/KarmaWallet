@@ -15,7 +15,7 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -230,6 +230,22 @@ export const handleCardShippedEffect = async <DataType>(user: IUserDocument, dat
   }
 };
 
+export const handleCardDeliveredEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as ICardShippedNotificationData;
+  const { name } = d;
+  if (!d) throw new Error('Invalid card shipped data');
+  try {
+    await sendCardDeliveredEmail({
+      user: user._id,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+      name,
+    });
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending card shipped email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -245,6 +261,7 @@ export const NotificationEffectsFunctions: {
   SendBankLinkedConfirmationEmail: handleSendBankLinkedConfirmationEmailEffect,
   SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: handleCaseWonProvisionalCreditNotAlreadyIssuedEffect,
   SendCardShippedEmail: handleCardShippedEffect,
+  SendCardDeliveredEmail: handleCardShippedEffect,
 } as const;
 
 export const NotificationChannelEffects = {

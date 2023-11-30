@@ -679,3 +679,28 @@ export const createCardShippedUserNotification = async (
     console.log(`Error creating card shipped notification: ${e}`);
   }
 };
+
+export const createCardDeliveredUserNotification = async (
+  webhookData: IMarqetaWebhookCardsEvent,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user_token } = webhookData;
+    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
+    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CardDelivered,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating card delivered notification: ${e}`);
+  }
+};

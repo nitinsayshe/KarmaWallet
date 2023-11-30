@@ -20,7 +20,7 @@ enum SolutionMessages {
   SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
   ADDRESS_ISSUE = 'Please submit one of the following documents that shows your full name and address to support@karmawallet.io',
   CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-  ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Card per account.',
+  ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
 }
 
 const AcceptedDocuments = {

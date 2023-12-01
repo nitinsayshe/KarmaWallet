@@ -26,6 +26,7 @@ export const NotificationTypeEnum = {
   CaseLostProvisionalCreditAlreadyIssued: 'caseLostProvisionalCreditAlreadyIssued',
   ProvisionalCreditIssued: 'provisionalCreditIssued',
   CaseWonProvisionalCreditNotAlreadyIssued: 'caseWonProvisionalCreditNotAlreadyIssued',
+  DisputeReceivedNoProvisionalCreditIssued: 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped: 'cardShipped',
   CardDelivered: 'cardDelivered',
 } as const;
@@ -43,6 +44,7 @@ export const NotificationEffectsEnum = {
   SendProvisionalCreditIssuedEmail: 'SendProvisionalCreditIssuedEmail',
   SendBankLinkedConfirmationEmail: 'SendBankLinkedConfirmationEmail',
   SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditNotAlreadyIssuedEmail',
+  SendDisputeReceivedNoProvisionalCreditIssuedEmail: 'SendDisputeReceivedNoProvisionalCreditIssuedEmail',
   SendCardShippedEmail: 'SendCardShippedEmail',
   SendCardDeliveredEmail: 'SendCardDeliveredEmail',
 } as const;

@@ -79,6 +79,30 @@ export const getTransactionData = (transaction: ITransaction) => {
   return transactionData;
 };
 
+export const getTypeText = (transaction: ITransaction) => {
+  if (transaction.type === TransactionTypeEnum.Credit) {
+    if (transaction.subType === TransactionSubtypeEnum.Cashback) {
+      return 'Cashback';
+    }
+
+    if (transaction.subType === TransactionSubtypeEnum.Employer) {
+      return 'Employer Gift';
+    }
+
+    if (transaction.subType === TransactionSubtypeEnum.Refund) {
+      return 'Refund';
+    }
+  }
+
+  if (transaction.type === TransactionTypeEnum.Debit) {
+    return 'Debit';
+  }
+
+  if (transaction.type === TransactionTypeEnum.Adjustment) {
+    return 'Adjustment';
+  }
+};
+
 export const buildTransactionsTable = (transactions: ITransaction[]) => {
   const transactionsTable: any = {
     headers: [
@@ -89,13 +113,14 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
       { label: 'Description', property: 'description', width: 200, headerColor: 'white', font: 'Helvetiva-Bold' },
     ],
     rows: transactions.map(t => {
-      const { date, integrations, type, amount } = t;
-      const balance = integrations.marqeta.gpa.available_balance;
+      const hasRelatedTransactions = !!t.integrations?.marqeta?.relatedTransactions && !!t.integrations?.marqeta?.relatedTransactions.length;
+      const { settledDate, integrations, amount, date } = t;
+      const balance = hasRelatedTransactions ? t.integrations.marqeta.relatedTransactions[0].gpa.ledger_balance : integrations.marqeta.gpa.ledger_balance;
       const transactionData = getTransactionData(t);
 
       return [
-        dayjs(date).format('MM/DD'),
-        type || 'Debit',
+        !!settledDate ? dayjs(settledDate).format('MM/DD') : dayjs(date).format('MM/DD'),
+        getTypeText(t),
         `${transactionData.amountPrefix}$${amount.toFixed(2)}`,
         `$${balance.toFixed(2)}`,
         transactionData.descriptionText,
@@ -161,6 +186,8 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
       $in: transactions,
     },
   });
+
+  const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
 
   let pageNumber = 0;
   const doc = new PDFKit({ autoFirstPage: false, margins: { top: 53, bottom: 53, left: 53, right: 53 } });
@@ -263,7 +290,7 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
   doc.moveDown();
   doc.moveDown();
 
-  const transactionsTable = buildTransactionsTable(statementTransactions);
+  const transactionsTable = buildTransactionsTable(sortedOldestTransactionsFirst);
 
   await doc.table(transactionsTable, {
     x: spaceFromSide + 30,

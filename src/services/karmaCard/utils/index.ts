@@ -7,7 +7,7 @@ export enum IMarqetaUserState {
 }
 
 enum ResponseMessages {
-  APPROVED = 'Your Karma Wallet card will be mailed to your address within 5-7 business days.',
+  APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
   NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',
   ADDRESS_ISSUE = 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
   DATE_OF_BIRTH_ISSUE = 'Your application is pending due to an invalid or mismatched date of birth.',
@@ -20,7 +20,7 @@ enum SolutionMessages {
   SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
   ADDRESS_ISSUE = 'Please submit two of the following documents that show your full name and address to support@karmawallet.io',
   CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-  ALREADY_REGISTERED = 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
+  ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
 }
 
 const AcceptedDocuments = {

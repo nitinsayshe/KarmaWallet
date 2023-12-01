@@ -136,6 +136,7 @@ export interface IShareableTransaction {
   subType?: TransactionSubtypeEnumValues;
   reversed: boolean;
   date: Date;
+  settledDate?: Date;
   integrations?: ITransactionIntegrations;
   createdOn: Date;
   lastModified: Date;
@@ -207,6 +208,7 @@ export const transactionSchemaDefinition = {
   // if true, means this transaction was cancelled, bounced
   // refunded, or otherwise not processed.
   reversed: { type: Boolean },
+  settledDate: { type: Date },
   // use this to "link" 2 transactions together because they
   // are related in some way. Like a negative transaction
   // linked to the positive transaction because it was

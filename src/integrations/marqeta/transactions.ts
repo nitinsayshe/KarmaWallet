@@ -117,7 +117,9 @@ const matchTransactionsToCompaniesByMCC = async (
     ...(
       await Promise.all(
         notMatched.map(async (t) => {
-          const company = await getCompanyByMCC(parseInt((t as EnrichedMarqetaTransaction)?.marqeta_transaction?.card_acceptor?.mcc, 10));
+          const company = await getCompanyByMCC(
+            parseInt((t as EnrichedMarqetaTransaction)?.marqeta_transaction?.card_acceptor?.mcc || '-1', 10),
+          );
           if (!company?._id) {
             return null;
           }
@@ -324,6 +326,12 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     }
     existingTransaction.amount = t.amount;
 
+    if (!!t.marqeta_transaction.settlement_date) {
+      if (!!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
+        existingTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+      }
+    }
+
     return existingTransaction;
   }
 
@@ -355,7 +363,10 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 
   try {
     const card = await CardModel.findOne({
-      'integrations.marqeta.token': t?.marqeta_transaction?.card_token,
+      $or: [
+        { 'integrations.marqeta.token': t?.marqeta_transaction?.card_token },
+        { 'integrations.marqeta.card_token': t?.marqeta_transaction?.card_token },
+      ],
     });
     if (!card?._id) {
       throw Error(`No card found associated with the marqeta card token :${t?.marqeta_transaction?.card_token}`);
@@ -373,6 +384,10 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   newTransaction.type = types?.type;
   newTransaction.subType = types?.subType;
   newTransaction.date = getDateFromMarqetaTransaction(t.marqeta_transaction);
+
+  if (!!t.marqeta_transaction.settlement_date && !!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
+    newTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+  }
 
   return newTransaction;
 };
@@ -394,16 +409,23 @@ export const mapMarqetaTransactionsToKarmaTransactions = async (
 
   const mapped = mapMarqetaTransactionToPlaidTransaction(marqetaTransactions);
 
-  // filter out transactions that aren't authorizations
-  const authorizations = mapped.filter((t) => t?.marqeta_transaction?.type === 'authorization');
-  let { matched, notMatched } = await matchTransactionCompanies(authorizations, saveMatches);
+  // filter out any that couldn't map to a plaid transaction
+  const transactionsWithNoNameOrMerchantName: EnrichedMarqetaTransaction[] = [];
+  const mappedWithCompanyName = mapped.filter((t) => {
+    if (!t.name && !t.merchant_name) {
+      transactionsWithNoNameOrMerchantName.push(t);
+      return false;
+    }
+    return true;
+  });
+
+  let { matched, notMatched } = await matchTransactionCompanies(mappedWithCompanyName, saveMatches);
+  notMatched = [...notMatched, ...transactionsWithNoNameOrMerchantName];
+
   ({ matched, notMatched } = await matchTransactionsToCompaniesByMCC(
     matched as (EnrichedMarqetaTransaction & { company: ObjectId })[],
     notMatched as EnrichedMarqetaTransaction[],
   ));
-
-  const nonAuthorizations = mapped.filter((t) => t?.marqeta_transaction?.type !== 'authorization');
-  notMatched = [...notMatched, ...nonAuthorizations];
 
   if (matched.length > 0) console.log(`matches found for ${matched?.length} transactions`);
   if (notMatched.length > 0) console.log(`no matches found for ${notMatched?.length} transactions`);

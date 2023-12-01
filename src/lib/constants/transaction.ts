@@ -114,10 +114,18 @@ export const CreditTransactionTypeEnum = {
   RefundAuthorizationClearing: TransactionModelTypeEnum.RefundAuthorizationClearing,
   RefundAuthorizationReversal: TransactionModelTypeEnum.RefundAuthorizationReversal,
   PindebitRefund: TransactionModelTypeEnum.PindebitRefund,
-  PindebitRefundReversal: TransactionModelTypeEnum.PindebitRefundReversal,
   PindebitCashback: TransactionModelTypeEnum.PindebitCashback,
 } as const;
 export type CreditTransactionTypeEnumValues = (typeof CreditTransactionTypeEnum)[keyof typeof CreditTransactionTypeEnum];
+
+export const RefundTransactionTypeEnum = {
+  Refund: TransactionModelTypeEnum.Refund,
+  RefundAuthorization: TransactionModelTypeEnum.RefundAuthorization,
+  RefundAuthorizationClearing: TransactionModelTypeEnum.RefundAuthorizationClearing,
+  RefundAuthorizationReversal: TransactionModelTypeEnum.RefundAuthorizationReversal,
+  PindebitRefund: TransactionModelTypeEnum.PindebitRefund,
+} as const;
+export type RefundTransactionTypeEnumValues = (typeof RefundTransactionTypeEnum)[keyof typeof RefundTransactionTypeEnum];
 
 export const DebitTransactionTypeEnum = {
   Authorization: TransactionModelTypeEnum.Authorization,
@@ -143,6 +151,7 @@ export const DebitTransactionTypeEnum = {
   PindebitAtmWithdrawal: TransactionModelTypeEnum.PindebitAtmWithdrawal,
   PindebitAuthorization: TransactionModelTypeEnum.PindebitAuthorization,
   PindebitQuasicash: TransactionModelTypeEnum.PindebitQuasicash,
+  PindebitRefundReversal: TransactionModelTypeEnum.PindebitRefundReversal,
   PindebitAuthorizationClearing: TransactionModelTypeEnum.PindebitAuthorizationClearing,
   PindebitAuthorizationReversal: TransactionModelTypeEnum.PindebitAuthorizationReversal,
   PindebitAuthorizationReversalIssuerexpiration: TransactionModelTypeEnum.PindebitAuthorizationReversalIssuerexpiration,

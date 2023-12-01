@@ -146,7 +146,6 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
 };
 
 // run on the first of each month
-
 export const getKarmaCardStatementPDF = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
   if (!statementId) {

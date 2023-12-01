@@ -15,7 +15,7 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -179,22 +179,21 @@ export const handleSendCaseLostProvisionalCreditAlreadyIssuedEmailEffect = async
 
 export const handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as ICaseLostProvisionalCreditIssuedData;
-  const { amount, date, name, reversalDate, companyName, reason } = d;
-  if (!d) throw new Error('Invalid case lost provisional credit issued data');
+  const { amount, date, name, companyName, reason } = d;
+  if (!d) throw new Error('Invalid case lost provisional credit not already issued issued data');
 
   try {
-    await sendCaseLostProvisionalCreditAlreadyIssuedEmail({
+    await sendCaseLostProvisionalCreditNotAlreadyIssuedEmail({
       user,
       name,
       amount,
       date,
-      reversalDate,
       reason,
       companyName,
     });
   } catch (err) {
     console.error(err);
-    throw new CustomError('Error sending case lost provisional credit issued email', ErrorTypes.SERVER);
+    throw new CustomError('Error sending case lost provisional credit not already issued email', ErrorTypes.SERVER);
   }
 };
 

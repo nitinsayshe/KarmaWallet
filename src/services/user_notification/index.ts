@@ -557,7 +557,6 @@ export const createCaseLostProvisionalCreditNotAlreadyIssuedUserNotification = a
     }
     const user = await UserModel.findById(transaction.user);
     const companyName = transaction.integrations.marqeta.card_acceptor.name;
-    const reversalDate = dayjs(transaction.date).utc().add(5, 'days').format('MM/DD/YYYY');
 
     const mockRequest = {
       body: {
@@ -570,7 +569,6 @@ export const createCaseLostProvisionalCreditNotAlreadyIssuedUserNotification = a
           amount: `$${transaction.amount}`,
           companyName,
           date: dayjs(transaction.date).utc().format('MM/DD/YYYY'),
-          reversalDate,
           reason: chargebackDocument.integrations.marqeta.reason,
         },
       } as unknown as CreateNotificationRequest,

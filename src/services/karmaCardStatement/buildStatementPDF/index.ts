@@ -83,20 +83,21 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
   const transactionsTable: any = {
     headers: [
       { label: 'Date', property: 'date', width: 50, headerColor: 'white', font: 'Helvetiva-Bold' },
-      { label: 'Type', property: 'type', width: 70, headerColor: 'white', font: 'Helvetiva-Bold' },
-      { label: 'Amount', property: 'amount', width: 70, headerColor: 'white', font: 'Helvetiva-Bold' },
+      { label: 'Type', property: 'type', width: 50, headerColor: 'white', font: 'Helvetiva-Bold' },
+      { label: 'Amount', property: 'amount', width: 90, headerColor: 'white', font: 'Helvetiva-Bold' },
       { label: 'Balance', property: 'balance', width: 70, headerColor: 'white', font: 'Helvetiva-Bold' },
       { label: 'Description', property: 'description', width: 200, headerColor: 'white', font: 'Helvetiva-Bold' },
     ],
     rows: transactions.map(t => {
-      const { date, integrations, type, amount } = t;
-      const balance = integrations.marqeta.gpa.available_balance;
+      const hasRelatedTransactions = !!t.integrations?.marqeta?.relatedTransactions && !!t.integrations?.marqeta?.relatedTransactions.length;
+      const { date, integrations, type, amount, status } = t;
+      const balance = hasRelatedTransactions ? t.integrations.marqeta.relatedTransactions[0].gpa.available_balance : integrations.marqeta.gpa.available_balance;
       const transactionData = getTransactionData(t);
 
       return [
         dayjs(date).format('MM/DD'),
         type || 'Debit',
-        `${transactionData.amountPrefix}$${amount.toFixed(2)}`,
+        `${transactionData.amountPrefix}$${amount.toFixed(2)}${status === 'PENDING' ? ' (pending)' : ''}`,
         `$${balance.toFixed(2)}`,
         transactionData.descriptionText,
       ];
@@ -161,6 +162,8 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
       $in: transactions,
     },
   });
+
+  const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
 
   let pageNumber = 0;
   const doc = new PDFKit({ autoFirstPage: false, margins: { top: 53, bottom: 53, left: 53, right: 53 } });
@@ -263,7 +266,7 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
   doc.moveDown();
   doc.moveDown();
 
-  const transactionsTable = buildTransactionsTable(statementTransactions);
+  const transactionsTable = buildTransactionsTable(sortedOldestTransactionsFirst);
 
   await doc.table(transactionsTable, {
     x: spaceFromSide + 30,

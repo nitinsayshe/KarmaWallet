@@ -79,25 +79,49 @@ export const getTransactionData = (transaction: ITransaction) => {
   return transactionData;
 };
 
+export const getTypeText = (transaction: ITransaction) => {
+  if (transaction.type === TransactionTypeEnum.Credit) {
+    if (transaction.subType === TransactionSubtypeEnum.Cashback) {
+      return 'Cashback';
+    }
+
+    if (transaction.subType === TransactionSubtypeEnum.Employer) {
+      return 'Employer Gift';
+    }
+
+    if (transaction.subType === TransactionSubtypeEnum.Refund) {
+      return 'Refund';
+    }
+  }
+
+  if (transaction.type === TransactionTypeEnum.Debit) {
+    return 'Debit';
+  }
+
+  if (transaction.type === TransactionTypeEnum.Adjustment) {
+    return 'Adjustment';
+  }
+};
+
 export const buildTransactionsTable = (transactions: ITransaction[]) => {
   const transactionsTable: any = {
     headers: [
       { label: 'Date', property: 'date', width: 50, headerColor: 'white', font: 'Helvetiva-Bold' },
-      { label: 'Type', property: 'type', width: 50, headerColor: 'white', font: 'Helvetiva-Bold' },
-      { label: 'Amount', property: 'amount', width: 90, headerColor: 'white', font: 'Helvetiva-Bold' },
+      { label: 'Type', property: 'type', width: 70, headerColor: 'white', font: 'Helvetiva-Bold' },
+      { label: 'Amount', property: 'amount', width: 70, headerColor: 'white', font: 'Helvetiva-Bold' },
       { label: 'Balance', property: 'balance', width: 70, headerColor: 'white', font: 'Helvetiva-Bold' },
       { label: 'Description', property: 'description', width: 200, headerColor: 'white', font: 'Helvetiva-Bold' },
     ],
     rows: transactions.map(t => {
       const hasRelatedTransactions = !!t.integrations?.marqeta?.relatedTransactions && !!t.integrations?.marqeta?.relatedTransactions.length;
-      const { date, integrations, type, amount, status } = t;
-      const balance = hasRelatedTransactions ? t.integrations.marqeta.relatedTransactions[0].gpa.available_balance : integrations.marqeta.gpa.available_balance;
+      const { settledDate, integrations, amount, date } = t;
+      const balance = hasRelatedTransactions ? t.integrations.marqeta.relatedTransactions[0].gpa.ledger_balance : integrations.marqeta.gpa.ledger_balance;
       const transactionData = getTransactionData(t);
 
       return [
-        dayjs(date).format('MM/DD'),
-        type || 'Debit',
-        `${transactionData.amountPrefix}$${amount.toFixed(2)}${status === 'PENDING' ? ' (pending)' : ''}`,
+        !!settledDate ? dayjs(settledDate).format('MM/DD') : dayjs(date).format('MM/DD'),
+        getTypeText(t),
+        `${transactionData.amountPrefix}$${amount.toFixed(2)}`,
         `$${balance.toFixed(2)}`,
         transactionData.descriptionText,
       ];

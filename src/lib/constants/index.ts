@@ -350,6 +350,7 @@ export const ChargebackTypeEnum = {
   CASE_WON: 'case.won',
   REGULATION_CASE_WON: 'regulation.case.won',
   INITIATED: 'initiated',
+  REGULATION_INITIATED: 'regulation.initiated',
   NETWORK_REJECTED: 'network.rejected',
   PREARBITRATION: 'prearbitration',
   PREARBITRATION_RESPONDED: 'prearbitration.responded',

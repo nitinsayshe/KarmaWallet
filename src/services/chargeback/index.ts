@@ -5,9 +5,9 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { saveDocuments } from '../../lib/model';
 import { IChargebackDocument, ChargebackModel } from '../../models/chargeback';
-import { createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification, createNoChargebackRightsUserNotification, createProvisionalCreditPermanentNotification } from '../user_notification';
 import { TransactionModel } from '../../models/transaction';
 import { TransactionModelTypeEnum, TransactionModelTypeEnumValues } from '../../clients/marqeta/types';
+import { createProvisionalCreditPermanentNotification, createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification, createNoChargebackRightsUserNotification, createDisputeReceivedNoProvisionalCreditIssuedUserNotification } from '../user_notification';
 
 export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
   const existingTransaction = await TransactionModel.findOne({
@@ -183,19 +183,39 @@ const handleRegulationProvisionalCreditPermanent = async (
 
 export const creditIssued = async (type: TransactionModelTypeEnumValues) => type === TransactionModelTypeEnum.AuthorizationClearingChargebackCompleted || type === TransactionModelTypeEnum.PindebitChargebackCompleted;
 
+export const creditNotIssued = async (type: TransactionModelTypeEnumValues) => type === TransactionModelTypeEnum.AuthorizationClearingChargeback || type === TransactionModelTypeEnum.PindebitChargeback;
+
 export const checkIfProvisionalCreditAlreadyApplied = async (c: IChargebackDocument) => {
   const existingTransaction = await getExistingTransactionFromChargeback(c);
-  if (!existingTransaction) {
-    return false;
-  }
-
+  if (!existingTransaction) return false;
   if (!!existingTransaction) {
     const { relatedTransactions } = existingTransaction.integrations.marqeta;
     if (!!creditIssued(existingTransaction.integrations.marqeta.type)) return true;
-    for (const rt of relatedTransactions) {
-      if (!!creditIssued(rt.type)) {
-        console.log(`Found existing provisional credit issued transaction with token: ${rt.token}`);
-        return true;
+    if (relatedTransactions.length > 0) {
+      for (const rt of relatedTransactions) {
+        if (!!creditIssued(rt.type)) {
+          console.log(`Found existing provisional credit issued transaction with token: ${rt.token}`);
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+};
+
+export const checkIfProvisionalCreditNotAlreadyApplied = async (c: IChargebackDocument) => {
+  const existingTransaction = await getExistingTransactionFromChargeback(c);
+  if (!existingTransaction) return false;
+  if (!!existingTransaction) {
+    const { relatedTransactions } = existingTransaction.integrations.marqeta;
+    if (!!creditNotIssued(existingTransaction.integrations.marqeta.type)) return true;
+    if (relatedTransactions.length > 0) {
+      for (const rt of relatedTransactions) {
+        if (!!creditNotIssued(rt.type)) {
+          console.log(`Found existing provisional credit issued transaction with token: ${rt.token}`);
+          return true;
+        }
       }
     }
 
@@ -206,12 +226,18 @@ export const checkIfProvisionalCreditAlreadyApplied = async (c: IChargebackDocum
 export const checkIfShouldSendCaseWonProvisionalCreditNotAlreadyIssuedEmail = async (
   chargebackTransition: IChargebackDocument,
 ): Promise<void> => {
-  if (chargebackTransition.integrations.marqeta.type !== 'case.won') {
-    return;
-  }
   const shouldSendEmail = await checkIfProvisionalCreditAlreadyApplied(chargebackTransition);
   if (!!shouldSendEmail) {
     await createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification(chargebackTransition);
+  }
+};
+
+const checkIfShouldSendDisputeReceivedNoProvisionalCreditIssuedEmail = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<void> => {
+  const shouldSendEmail = await checkIfProvisionalCreditAlreadyApplied(chargebackTransition);
+  if (!!shouldSendEmail) {
+    await createDisputeReceivedNoProvisionalCreditIssuedUserNotification(chargebackTransition);
   }
 };
 
@@ -221,7 +247,8 @@ export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocu
     chargebackTransitions.map(async (c) => {
       try {
         switch (c?.integrations?.marqeta?.type) {
-          case ChargebackTypeEnum.INITIATED:
+          case ChargebackTypeEnum.INITIATED || ChargebackTypeEnum.REGULATION_INITIATED:
+            await checkIfShouldSendDisputeReceivedNoProvisionalCreditIssuedEmail(c);
             break;
           case ChargebackTypeEnum.REPRESENTMENT:
             break;

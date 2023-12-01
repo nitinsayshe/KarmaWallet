@@ -7,7 +7,7 @@ import { saveDocuments } from '../../lib/model';
 import { IChargebackDocument, ChargebackModel } from '../../models/chargeback';
 import { TransactionModel } from '../../models/transaction';
 import { TransactionModelTypeEnum, TransactionModelTypeEnumValues } from '../../clients/marqeta/types';
-import { createProvisionalCreditPermanentNotification, createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification, createNoChargebackRightsUserNotification, createDisputeReceivedNoProvisionalCreditIssuedUserNotification } from '../user_notification';
+import { createProvisionalCreditPermanentNotification, createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification, createNoChargebackRightsUserNotification, createDisputeReceivedNoProvisionalCreditIssuedUserNotification, createCaseLostProvisionalCreditNotAlreadyIssuedUserNotification } from '../user_notification';
 
 export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
   const existingTransaction = await TransactionModel.findOne({
@@ -183,7 +183,16 @@ const handleRegulationProvisionalCreditPermanent = async (
 
 export const creditIssued = async (type: TransactionModelTypeEnumValues) => type === TransactionModelTypeEnum.AuthorizationClearingChargebackCompleted || type === TransactionModelTypeEnum.PindebitChargebackCompleted;
 
-export const creditNotIssued = async (type: TransactionModelTypeEnumValues) => type === TransactionModelTypeEnum.AuthorizationClearingChargeback || type === TransactionModelTypeEnum.PindebitChargeback;
+export const creditNotIssued = async (type: TransactionModelTypeEnumValues) => {
+  if (type === TransactionModelTypeEnum.AuthorizationClearingChargeback
+    || type === TransactionModelTypeEnum.PindebitChargeback
+    || type === TransactionModelTypeEnum.AuthorizationClearingChargebackReversal
+    || type === TransactionModelTypeEnum.PindebitChargebackReversal
+    || type === TransactionModelTypeEnum.AuthorizationClearingChargebackRepresentment) {
+    return true;
+  }
+  return false;
+};
 
 export const checkIfProvisionalCreditAlreadyApplied = async (c: IChargebackDocument) => {
   const existingTransaction = await getExistingTransactionFromChargeback(c);
@@ -241,6 +250,15 @@ const checkIfShouldSendDisputeReceivedNoProvisionalCreditIssuedEmail = async (
   }
 };
 
+const checkIfShouldSendCaseLostProvisionalCreditNotAlreadyIssuedEmail = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<void> => {
+  const shouldSendEmail = await checkIfProvisionalCreditNotAlreadyApplied(chargebackTransition);
+  if (!!shouldSendEmail) {
+    await createCaseLostProvisionalCreditNotAlreadyIssuedUserNotification(chargebackTransition);
+  }
+};
+
 // This is a placeholder for adding logic that handles the dispute macros
 export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocument[]): Promise<void> => {
   await Promise.all(
@@ -261,7 +279,8 @@ export const handleDisputeMacros = async (chargebackTransitions: IChargebackDocu
           case ChargebackTypeEnum.CASE_WON || ChargebackTypeEnum.REGULATION_CASE_WON:
             await checkIfShouldSendCaseWonProvisionalCreditNotAlreadyIssuedEmail(c);
             break;
-          case ChargebackTypeEnum.CASE_LOST:
+          case ChargebackTypeEnum.CASE_LOST || ChargebackTypeEnum.REGULATION_CASE_LOST:
+            await checkIfShouldSendCaseLostProvisionalCreditNotAlreadyIssuedEmail(c);
             break;
           case ChargebackTypeEnum.NETWORK_REJECTED:
             await createNoChargebackRightsUserNotification(c);

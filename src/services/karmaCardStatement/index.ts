@@ -12,6 +12,7 @@ import { UserModel } from '../../models/user';
 import { uploadPDF } from '../upload';
 import { AwsClient } from '../../clients/aws';
 import { TransactionCreditSubtypeEnum, TransactionCreditSubtypeEnumValues, TransactionTypeEnum, TransactionTypeEnumValues } from '../../lib/constants/transaction';
+import { TransactionModelStateEnum } from '../../clients/marqeta/types';
 
 export const getKarmaCardStatement = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
@@ -34,7 +35,7 @@ export const getSumOfTransactionsByTransactionSubType = (transactionSubType: Tra
   return sum;
 };
 
-export const getEndBalance = (transaction: ITransaction) => {
+export const getStartBalance = (transaction: ITransaction) => {
   if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
     const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
     const mostRecentTransaction = sortByNewestFirst[0];
@@ -43,10 +44,13 @@ export const getEndBalance = (transaction: ITransaction) => {
   return transaction.integrations.marqeta.gpa.available_balance;
 };
 
-export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.available_balance;
+export const getEndBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.available_balance;
 
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;
+  const previousStatements = await KarmaCardStatementModel.find({ userId });
+  const isFirstStatement = previousStatements.length === 0;
+
   let endBalanceFromLastStatement = 0;
   let transactionsSortedByDate: ITransaction[] | [] = [];
   let endBalance = 0;
@@ -59,8 +63,8 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
 
   if (!!hasTransactions) {
     transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
-    startBalance = getEndBalance(transactionsSortedByDate[0]);
-    endBalance = getStartBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
+    startBalance = !!isFirstStatement ? 0 : getStartBalance(transactionsSortedByDate[0]);
+    endBalance = getEndBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
     const debitsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Debit, transactionsSortedByDate);
     const depositsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Deposit, transactionsSortedByDate);
     const adjustmentsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Adjustment, transactionsSortedByDate);
@@ -122,12 +126,20 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
       'integrations.marqeta': { $exists: true },
     });
 
-    const transactionTotals = await getStatementData(transactions, user._id.toString());
+    const filteredTransactions = transactions.filter((t => {
+      if (t.status === TransactionModelStateEnum.Pending) {
+        return false;
+      }
+      if (!!t?.settledDate && (dayjs(t.settledDate).utc() > dayjs(endDate).utc())) return false;
+      return true;
+    }));
+
+    const transactionTotals = await getStatementData(filteredTransactions, user._id.toString());
 
     statement = await KarmaCardStatementModel.create({
-      transactions,
+      transactions: filteredTransactions,
       startDate: dayjs(startDate),
-      endDate: dayjs(endDate).subtract(1, 'day'),
+      endDate,
       transactionTotals,
       userId,
       pdf: '',
@@ -144,8 +156,6 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   // placeholder for testing, if generation fails we would also want to delete the statement maybe?
   await statement.save();
 };
-
-// run on the first of each month
 
 export const getKarmaCardStatementPDF = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;

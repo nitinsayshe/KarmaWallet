@@ -55,6 +55,23 @@ export type CreateNotificationRequest<T = undefined> = {
   data?: T;
 };
 
+export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
+  const existingTransaction = await TransactionModel.findOne({
+    $or: [
+      { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': c.integrations.marqeta.transaction_token }] },
+      {
+        $and: [
+          { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+          { 'integrations.marqeta.relatedTransactions.token': c.integrations.marqeta.transaction_token },
+        ],
+      },
+    ],
+  });
+
+  if (!!existingTransaction) return existingTransaction;
+  return null;
+};
+
 export const getShareableUserNotification = (notification: IUserNotificationDocument): IShareableUserNotification => ({
   _id: notification._id,
   createdOn: notification.createdOn,
@@ -499,7 +516,7 @@ export const createNoChargebackRightsUserNotification = async (
     if (!transactionToken) {
       throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
     }
-    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
     if (!transaction) {
       throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
     }
@@ -534,7 +551,7 @@ export const createCaseLostProvisionalCreditIssuedUserNotification = async (
     if (!transactionToken) {
       throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
     }
-    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
     if (!transaction) {
       throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
     }
@@ -625,7 +642,7 @@ export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = as
     if (!transactionToken) {
       throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
     }
-    const transaction = await TransactionModel.findOne({ 'integrations.marqeta.token': transactionToken });
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
     if (!transaction) {
       throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
     }
@@ -655,6 +672,37 @@ export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = as
   }
 };
 
+export const createDisputeReceivedNoProvisionalCreditIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const { name } = user;
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name,
+        },
+      },
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating dispute received no provisional credit issued: ${err}`);
+  }
+};
+
 export const createCardShippedUserNotification = async (
   webhookData: IMarqetaWebhookCardsEvent,
 ): Promise<IUserNotificationDocument | void> => {
@@ -677,5 +725,30 @@ export const createCardShippedUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating card shipped notification: ${e}`);
+  }
+};
+
+export const createCardDeliveredUserNotification = async (
+  webhookData: IMarqetaWebhookCardsEvent,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user_token } = webhookData;
+    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
+    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CardDelivered,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating card delivered notification: ${e}`);
   }
 };

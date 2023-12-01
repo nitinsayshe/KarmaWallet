@@ -52,7 +52,7 @@ export class AwsClient extends SdkClient {
   }
 
   sendMail = ({
-    senderName = 'KarmaWallet',
+    senderName = 'Karma Wallet',
     senderEmail = EmailAddresses.NoReply,
     recipientEmail,
     template,

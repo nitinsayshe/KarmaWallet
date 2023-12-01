@@ -38,12 +38,12 @@ export const getEndBalance = (transaction: ITransaction) => {
   if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
     const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
     const mostRecentTransaction = sortByNewestFirst[0];
-    return mostRecentTransaction.gpa.ledger_balance;
+    return mostRecentTransaction.gpa.available_balance;
   }
-  return transaction.integrations.marqeta.gpa.ledger_balance;
+  return transaction.integrations.marqeta.gpa.available_balance;
 };
 
-export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.ledger_balance;
+export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.available_balance;
 
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;
@@ -59,13 +59,13 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
 
   if (!!hasTransactions) {
     transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
-    endBalance = getEndBalance(transactionsSortedByDate[0]);
-    startBalance = getStartBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
+    startBalance = getEndBalance(transactionsSortedByDate[0]);
+    endBalance = getStartBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
     const debitsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Debit, transactionsSortedByDate);
     const depositsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Deposit, transactionsSortedByDate);
     const adjustmentsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Adjustment, transactionsSortedByDate);
     const cashbackTotal = getSumOfTransactionsByTransactionSubType(TransactionCreditSubtypeEnum.Cashback, transactionsSortedByDate);
-    const creditTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Credit, transactionsSortedByDate);
+    const creditTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Credit, transactionsSortedByDate) - cashbackTotal;
 
     debits = debitsTotal;
     deposits = depositsTotal;
@@ -127,7 +127,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
     statement = await KarmaCardStatementModel.create({
       transactions,
       startDate: dayjs(startDate),
-      endDate: dayjs(endDate),
+      endDate: dayjs(endDate).subtract(1, 'day'),
       transactionTotals,
       userId,
       pdf: '',

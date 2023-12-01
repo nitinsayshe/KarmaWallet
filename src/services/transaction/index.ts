@@ -434,6 +434,7 @@ export const getShareableTransaction = ({
   createdOn,
   lastModified,
   integrations,
+  settledDate,
   type,
   subType,
 }: ITransactionDocument) => {
@@ -459,6 +460,7 @@ export const getShareableTransaction = ({
     createdOn,
     lastModified,
     type,
+    settledDate,
     subType,
     status,
   };

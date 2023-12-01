@@ -327,7 +327,9 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     existingTransaction.amount = t.amount;
 
     if (!!t.marqeta_transaction.settlement_date) {
-      existingTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+      if (!!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
+        existingTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+      }
     }
 
     return existingTransaction;
@@ -383,7 +385,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   newTransaction.subType = types?.subType;
   newTransaction.date = getDateFromMarqetaTransaction(t.marqeta_transaction);
 
-  if (!!t.marqeta_transaction.settlement_date) {
+  if (!!t.marqeta_transaction.settlement_date && !!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
     newTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
   }
 

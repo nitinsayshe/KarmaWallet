@@ -377,6 +377,36 @@ export const sendCaseLostProvisionalCreditAlreadyIssuedEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+export const sendCaseLostProvisionalCreditNotAlreadyIssuedEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  amount,
+  date,
+  companyName,
+  reason,
+  sendEmail = true,
+}: IDisputeEmailData) => {
+  const subject = 'Dispute Case Lost';
+  const emailTemplateConfig = EmailTemplateConfigs.CaseLostProvisionalCreditNotAlreadyIssued;
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['amount', 'domain', 'recipientEmail', 'name', 'amount', 'date', 'companyName', 'reason'],
+    { amount, domain, recipientEmail, name, date, companyName, reason },
+  );
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    templateType: emailTemplateConfig.type,
+    data: { name, domain, amount, companyName, date, reason },
+  } as IBuildTemplateParams);
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const sendCaseWonProvisionalCreditAlreadyIssuedEmail = async ({
   user,
   recipientEmail,

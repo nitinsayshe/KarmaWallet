@@ -345,6 +345,7 @@ export type TransactionIntegrationTypesEnumValues = (typeof TransactionIntegrati
 export const ChargebackTypeEnum = {
   ARBITRATION: 'arbitration',
   CASE_LOST: 'case.lost',
+  REGULATION_CASE_LOST: 'regulation.case.lost',
   REGULATION_CASE_LOST_ACTION_REQUIRED: 'regulation.case.lost.action.required',
   CASE_LOST_ACTION_REQUIRED: 'case.lost.action.required',
   CASE_WON: 'case.won',

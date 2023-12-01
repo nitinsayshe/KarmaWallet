@@ -29,6 +29,7 @@ export const NotificationTypeEnum = {
   DisputeReceivedNoProvisionalCreditIssued: 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped: 'cardShipped',
   CardDelivered: 'cardDelivered',
+  CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
 
@@ -47,6 +48,7 @@ export const NotificationEffectsEnum = {
   SendDisputeReceivedNoProvisionalCreditIssuedEmail: 'SendDisputeReceivedNoProvisionalCreditIssuedEmail',
   SendCardShippedEmail: 'SendCardShippedEmail',
   SendCardDeliveredEmail: 'SendCardDeliveredEmail',
+  SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 

@@ -75,6 +75,15 @@ export const testCaseLostProvisionalCreditIssuedEmail: IRequestHandler<{}, {}, {
   }
 };
 
+export const testCaseLostProvisionalCreditNotAlreadyIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testCaseLostProvisionalCreditNotAlreadyIssuedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const testCaseWonProvisionalCreditAlreadyIssuedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const email = await EmailTestingService.testCaseWonProvisionalCreditAlreadyIssuedEmail(req);

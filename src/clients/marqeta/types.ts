@@ -423,6 +423,7 @@ export const TransactionModelTypeEnum = {
   AuthorizationClearingChargebackCompleted: 'authorization.clearing.chargeback.completed',
   AuthorizationClearingChargebackProvisionalCredit: 'authorization.clearing.chargeback.provisional.credit',
   AuthorizationClearingChargebackProvisionalDebit: 'authorization.clearing.chargeback.provisional.debit',
+  AuthorizationClearingChargebackRepresentment: 'authorization.clearing.chargeback.representment',
   AuthorizationClearingChargebackReversal: 'authorization.clearing.chargeback.reversal',
   AuthorizationClearingChargebackWriteoff: 'authorization.clearing.chargeback.writeoff',
   AuthorizationClearingQuasiCash: 'authorization.clearing.quasi.cash',

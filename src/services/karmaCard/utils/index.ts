@@ -7,7 +7,7 @@ export enum IMarqetaUserState {
 }
 
 enum ResponseMessages {
-  APPROVED = 'Your Karma Wallet card will be mailed to your address within 5-7 business days.',
+  APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
   NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',
   ADDRESS_ISSUE = 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
   DATE_OF_BIRTH_ISSUE = 'Your application is pending due to an invalid or mismatched date of birth.',
@@ -18,28 +18,28 @@ enum ResponseMessages {
 enum SolutionMessages {
   NAME_OR_DOB_ISSUE = 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
   SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
-  ADDRESS_ISSUE = 'Please submit one of the following documents that shows your full name and address to (insert email here?)',
+  ADDRESS_ISSUE = 'Please submit one of the following documents that shows your full name and address to support@karmawallet.io',
   CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
-  ALREADY_REGISTERED = 'You already have a Karma Wallet card. We currently only allow one Karma card per account.',
+  ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
 }
 
 const AcceptedDocuments = {
-  NAME_OR_DOB_ISSUE: ['- Driver’s license or state-issued identification card',
-    '- Passport or US passport card'],
+  NAME_OR_DOB_ISSUE: ['Driver’s license or state-issued identification card',
+    'Passport or US passport card'],
   ADDRESS_ISSUE: [
-    '- Unexpired state-issued driver’s license or identification card',
-    '- US Military Identification Card',
-    '- Utility bill',
-    '- Bank statement',
-    '- Current rental or lease agreement',
-    '- Mortgage statement'],
+    'Unexpired state-issued driver’s license or identification card',
+    'US Military Identification Card',
+    'Utility bill',
+    'Bank statement',
+    'Current rental or lease agreement',
+    'Mortgage statement'],
   DateOfBirthIssue: [
-    '- Driver’s license or state-issued identification card',
-    '- Passport or US passport card'],
+    'Driver’s license or state-issued identification card',
+    'Passport or US passport card'],
   SSN_ISSUE: [
-    '- Social Security card',
-    '- Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
-    '- ITIN card or document showing ITIN approval'],
+    'Social Security card',
+    'Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
+    'ITIN card or document showing ITIN approval'],
 };
 
 export enum ReasonCode {

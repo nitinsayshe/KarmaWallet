@@ -8,19 +8,16 @@ interface Identification {
   value: string;
 }
 
-// interface Metadata {
-//   notification_email: string;
-//   notification_language: string;
-//   authentication_question1: string;
-//   authentication_question2: string;
-//   authentication_question3: string;
-//   authentication_answer1: string;
-//   authentication_answer2: string;
-//   authentication_answer3: string;
-// }
-
 export interface IMarqetaUserToken {
   userToken: string;
+}
+
+export enum MarqetaCardState {
+  UNACTIVATED = 'UNACTIVATED',
+  ACTIVE = 'ACTIVE',
+  LIMITED = 'LIMITED',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
 }
 
 export interface IMarqetaCreateUser {
@@ -36,8 +33,6 @@ export interface IMarqetaCreateUser {
   state: string;
   country: string;
   postalCode: string;
-  // do we need this??
-  // metadata: Metadata;
 }
 
 export interface IMarqetaUserAddress {
@@ -59,9 +54,11 @@ export interface IMarqetaUpdateUser extends IMarqetaUserAddress {
   // do we need this??
   // metadata: Metadata;
 }
+
 export interface IMarqetaLookUp {
   email: string;
 }
+
 export interface IMarqetaUserTransition extends IMarqetaUserToken {
   channel: string;
   reason: string;
@@ -94,17 +91,10 @@ export type GpaOrderTagEnumValues = (typeof GpaOrderTagEnum)[keyof typeof GpaOrd
 
 export interface IMarqetaProcessKyc extends IMarqetaUserToken { }
 
-enum IMarqetaCardState {
-  ACTIVE = 'ACTIVE',
-  LIMITED = 'LIMITED',
-  SUSPENDED = 'SUSPENDED',
-  TERMINATED = 'TERMINATED',
-}
-
 export interface IMarqetaCardTransition {
   cardToken: string;
   channel: string;
-  state: IMarqetaCardState;
+  state: MarqetaCardState;
   reasonCode: string;
 }
 
@@ -172,6 +162,7 @@ export enum CardholderVerificationMethod {
   otp_cvv = 'OTP_CVV',
   other = 'OTHER',
 }
+
 export interface IMarqetaPinControlToken {
   cardToken: string;
   controlTokenType?: ControlTokenType;
@@ -320,27 +311,70 @@ export interface IACHBankTransferRequestFields extends IMarqetaACHBankTransfer {
   userId: ObjectId;
 }
 
-export type CardModel = {
-  created_time?: string;
-  last_modified_time?: string;
-  token: string;
-  user_token?: string;
-  card_product_token?: string;
-  last_four?: string;
-  pan?: string;
-  expiration?: string;
-  expiration_time?: string;
+export type MarqetaCardModel = {
   barcode?: string;
-  pin_is_set?: boolean;
-  state?: string;
-  state_reason?: string;
+  card_product_token?: string;
+  created_time?: string;
+  expedite?: boolean;
+  expiration_time?: string;
+  expiration?: string;
   fulfillment_status?: string;
   instrument_type?: string;
-  expedite?: boolean;
+  last_four?: string;
+  last_modified_time?: string;
   metadata?: Record<string, any>;
+  pan?: string;
+  pin_is_set?: boolean;
+  state_reason?: string;
+  state?: string;
+  token: string;
+  user_token?: string;
 };
 
-export type UserModel = {
+export enum MarqetaCardWebhookType {
+  'DELIVERED' = 'fulfillment.delivered',
+  'DIGITALLY_PRESENTED' = 'fulfillment.digitally_presented',
+  'ISSUED' = 'fulfillment.issued',
+  'ORDERED' = 'fulfillment.ordered',
+  'REJECTED' = 'fulfillment.rejected',
+  'SHIPPED' = 'fulfillment.shipped',
+  'ACTIVATED' = 'state.activated',
+  'LIMITED' = 'state.limited',
+  'SUSPENDED' = 'state.suspended',
+  'TERMINATED' = 'state.terminated',
+  'REINSTATED' = 'state.reinstated',
+}
+
+export enum MarqetaCardFulfillmentStatus {
+  'DELIVERED' = 'DELIVERED',
+  'DIGITALLY_PRESENTED' = 'DIGITALLY_PRESENTED',
+  'ISSUED' = 'ISSUED',
+  'ORDERED' = 'ORDERED',
+  'REJECTED' = 'REJECTED',
+  'SHIPPED' = 'SHIPPED',
+}
+
+export interface IMarqetaWebhookCardsEvent {
+  card_product_token: string;
+  card_token: string;
+  card: Object;
+  channel: string;
+  created_time: string;
+  expiration_time: Date;
+  expiration: string;
+  fulfillment_status: MarqetaCardFulfillmentStatus;
+  last_four: string;
+  pan: string;
+  pin_is_set: Boolean;
+  reason: string;
+  state: MarqetaCardState;
+  token: string;
+  type: string;
+  user_token: string;
+  validations: Object;
+}
+
+export type MarqetaUserModel = {
   token: string;
   active?: boolean;
   first_name?: string;
@@ -520,9 +554,72 @@ export type PaginatedMarqetaResponse<DataType> = {
   data: DataType;
 };
 
-export type ListUsersResponse = PaginatedMarqetaResponse<UserModel[]>;
-export type GetUserByEmailResponse = PaginatedMarqetaResponse<UserModel[]>;
-export type ListCardsResponse = { cards: PaginatedMarqetaResponse<CardModel[]> };
+export interface IMarqetaCardActionEvent {
+  card_token: string;
+  created_time: Date;
+  state: string;
+  token: string;
+  type: string;
+  user_token: string;
+}
+
+export interface IMarqetaUserTransitionsEvent {
+  token: string;
+  status: string;
+  reason_code: string;
+  channel: string;
+  created_time: Date;
+  last_modified_time: Date;
+  user_token: string;
+  metadata: Object;
+}
+
+export interface IMarqetaBankTransferTransitionEvent {
+  token: string;
+  bank_transfer_token: string;
+  status: string;
+  reason: string;
+  channel: string;
+  created_time: Date;
+  last_modified_time: Date;
+}
+
+export interface IMarqetaWebhookBody {
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  chargebacktransitions: ChargebackTransition[];
+  usertransitions: IMarqetaUserTransitionsEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: TransactionModel[];
+  cardtransitions: IMarqetaWebhookCardsEvent[];
+}
+
+export interface IMarqetaWebhookHeader {
+  authorization: string;
+}
+
+export enum MarqetaWebhookConstants {
+  PIN_SET = 'pin.set',
+  COMPLETED = 'COMPLETED',
+  AUTHORIZATION = 'authorization',
+  AUTHORIZATION_CLEARING = 'authorization.clearing',
+  GPA_CREDIT = 'gpa.credit',
+  PIN_DEBIT = 'pindebit',
+  COMPLETION = 'COMPLETION',
+}
+
+export const MCCStandards = {
+  DINING: ['5812', '5814'],
+  GAS: ['5542'],
+};
+
+export const InsufficientFundsConstants = {
+  CODES: ['1016', '1865', '1923'],
+};
+
+export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
+export type GetUserByEmailResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
+export type ListCardsResponse = { cards: PaginatedMarqetaResponse<MarqetaCardModel[]> };
 export type ListTransactionsResponse = { data: PaginatedMarqetaResponse<TransactionModel[]> };
 export type ListACHFundingSourcesForUserResponse = { data: PaginatedMarqetaResponse<IACHFundingSource[]> };
 export type ListACHBankTransfersResponse = { data: PaginatedMarqetaResponse<ACHTransferModel[]> };

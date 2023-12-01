@@ -90,4 +90,10 @@ router.route('/dispute-received-no-provisional-credit-issued-email')
     AdminEmailTestingController.testDisputeReceivedNoProvisionalCreditIssuedEmail,
   );
 
+router.route('/card-shipped-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testCardShippedEmail,
+  );
 export default router;

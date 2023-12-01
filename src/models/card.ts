@@ -3,7 +3,7 @@ import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
-import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../lib/constants/card';
+import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../integrations/marqeta/types';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -31,21 +31,23 @@ export interface IKardIntegration {
 }
 
 export interface IMarqetaCardIntegration {
-  token?: string;
-  expiration_time: Date;
-  user_token: string;
-  card_token: string,
+  barcode?: string;
   card_product_token: string;
-  pan: string;
-  last_four: string;
+  // we save as card_token in our db
+  card_token: string,
+  // from marqeta it comes in as token
+  token?: string;
+  created_time: Date;
+  expiration_time: Date;
   expr_month: number;
   expr_year: number;
-  created_time: Date;
+  fulfillment_status: MarqetaCardFulfillmentStatus;
+  instrument_type?: string;
+  last_four: string;
+  pan: string;
   pin_is_set: boolean;
   state: MarqetaCardState;
-  instrument_type: string;
-  barcode: string;
-  fulfillment_status: MarqetaCardFulfillmentStatus;
+  user_token: string;
 }
 
 export interface ICardIntegrations {

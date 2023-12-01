@@ -101,3 +101,11 @@ export const testDisputeReceivedNoProvisionalCreditIssuedEmail: IRequestHandler<
     output.error(req, res, asCustomError(err));
   }
 };
+export const testCardShippedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testCardShippedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

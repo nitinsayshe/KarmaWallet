@@ -15,7 +15,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
 import { IUserDocument, UserModel } from '../models/user';
-import { _getCard } from '../services/card';
+import { _getCard, handleMarqetaCardWebhook } from '../services/card';
 import { mapWildfireCommissionToKarmaCommission, processKardWebhook } from '../services/commission/utils';
 import { getGroup, IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
 import { Logger } from '../services/logger';
@@ -25,15 +25,15 @@ import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
 import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
-import { TransactionModel } from '../clients/marqeta/types';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
-import { ChargebackTransition } from '../integrations/marqeta/types';
 import { handleTransactionDisputeMacro } from '../services/transaction';
+import { IMarqetaWebhookBody, IMarqetaWebhookHeader, MarqetaWebhookConstants, InsufficientFundsConstants, MCCStandards } from '../integrations/marqeta/types';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID,
+  MARQETA_WEBHOOK_PASSWORD } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -109,89 +109,6 @@ interface IPaypalWebhookBody {
 }
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
-
-interface IMarqetaWebhookCardsEvent {
-  token: String;
-  state: String;
-  reason: String;
-  channel: String;
-  validations: Object;
-  type: String;
-  pan: String;
-  expiration: String;
-  card_token: String;
-  user_token: String;
-  fulfillment_status: String;
-  created_time: String;
-  card_product_token: String;
-  last_four: String;
-  expiration_time: Date;
-  pin_is_set: Boolean;
-  card: Object;
-}
-
-interface IMarqetaCardActionEvent {
-  card_token: String;
-  created_time: Date;
-  state: String;
-  token: String;
-  type: String;
-  user_token: String;
-}
-
-interface IMarqetaUserTransitionsEvent {
-  token: String;
-  status: String;
-  reason_code: String;
-  channel: String;
-  created_time: Date;
-  last_modified_time: Date;
-  user_token: String;
-  metadata: Object;
-}
-
-interface IMarqetaBankTransferTransitionEvent {
-  token: String;
-  bank_transfer_token: String;
-  status: String;
-  reason: String;
-  channel: String;
-  created_time: Date;
-  last_modified_time: Date;
-}
-
-interface IMarqetaWebhookBody {
-  cards: IMarqetaWebhookCardsEvent[];
-  cardactions: IMarqetaCardActionEvent[];
-  chargebacktransitions: ChargebackTransition[];
-  usertransitions: IMarqetaUserTransitionsEvent[];
-  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
-  transactions: TransactionModel[];
-  cardtransitions: IMarqetaWebhookCardsEvent[];
-}
-
-interface IMarqetaWebhookHeader {
-  authorization: string;
-}
-
-export enum MarqetaWebhookConstants {
-  PIN_SET = 'pin.set',
-  COMPLETED = 'COMPLETED',
-  AUTHORIZATION = 'authorization',
-  AUTHORIZATION_CLEARING = 'authorization.clearing',
-  GPA_CREDIT = 'gpa.credit',
-  PIN_DEBIT = 'pindebit',
-  COMPLETION = 'COMPLETION',
-}
-
-const MCCStandards = {
-  DINING: ['5812', '5814'],
-  GAS: ['5542'],
-};
-
-const InsufficientFundsConstants = {
-  CODES: ['1016', '1865', '1923'],
-};
 
 export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
   if (
@@ -387,8 +304,8 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
 
 export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
   try {
+    console.log('////////// RECEIVED MARQETA WEBHOOK ////////// ');
     const marqetaAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
-
     const { headers } = <{ headers: IMarqetaWebhookHeader }>req;
 
     if (headers?.authorization !== `Basic ${marqetaAuthBuffer}`) {
@@ -399,39 +316,15 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
+      console.log('////////// PROCESSING MARQETA CARD WEBHOOK ////////// ');
       for (const card of cards) {
-        await CardModel.findOneAndUpdate(
-          { 'integrations.marqeta.card_token': card?.card_token },
-          {
-            $set: {
-              'integrations.marqeta': card,
-              ...((card?.state?.toUpperCase() === 'SUSPENDED' || card?.state?.toUpperCase() === 'TERMINATED') ? { status: 'removed' } : {}),
-              ...(card?.state?.toUpperCase() === 'ACTIVE' ? { status: 'linked' } : {}),
-            },
-          },
-          { new: true },
-        );
-        // Adding in a state check for now, but this needs to be removed and updated to be more specific
-        // 1) There are other states besides active that would not mean that the user has deactivated their card
-        // 2) Am I write in assuming this should be sent when a card is unlocked or locked? Or is this when they activate a card?
-        // 3) Either way, we need to more appropriately handle the different states here queuing off of the webhook type (reference cardtransition types)
-        if (card.type.includes('state')) {
-          const user = await UserModel.findOne({ 'integrations.marqeta.userToken': card?.user_token });
-          if (!user) throw new CustomError(`User with marqeta user token of ${card?.user_token} not found`, ErrorTypes.NOT_FOUND);
-          await createPushUserNotificationFromUserAndPushData(user, {
-            pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
-            body:
-                card?.state.toString() === 'ACTIVE'
-                  ? 'You have successfully activated your card.'
-                  : 'You have successfully deactivated your card.',
-            title: 'Security Alert!',
-          });
-        }
+        await handleMarqetaCardWebhook(card);
       }
     }
 
     // Card action events include PIN set, PIN change, and PIN reveal actions
     if (!!cardactions) {
+      console.log('////////// PROCESSING MARQETA CARD ACTION WEBHOOK ////////// ');
       for (const cardaction of cardactions) {
         if (cardaction.type === MarqetaWebhookConstants.PIN_SET) {
           await CardModel.findOneAndUpdate(
@@ -445,6 +338,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     // User transitions events include activities such as a user being created, activated, suspended, or closed
     if (!!usertransitions) {
+      console.log('////////// PROCESSING MARQETA USERTRANSITION WEBHOOK ////////// ');
       for (const usertransition of usertransitions) {
         await UserModel.findOneAndUpdate(
           { 'integrations.marqeta.userToken': usertransition?.user_token },
@@ -456,6 +350,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
 
     // ACH Origination transition events include activities such as bank transfer being transitioned to a pending, processing, submitted, completed, returned, or cancelled state
     if (!!banktransfertransitions) {
+      console.log('////////// PROCESSING MARQETA BANKTRANSFERTRANSITION WEBHOOK ////////// ');
       for (const banktransfertransition of banktransfertransitions) {
         const userTransitions = await ACHTransferModel.findOneAndUpdate(
           {
@@ -487,6 +382,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
     let user: IUserDocument = null;
     if (transactions) {
+      console.log('////////// PROCESSING MARQETA TRANSACTION (1) WEBHOOK ////////// ');
       for (const transaction of transactions) {
         if (user === null) {
           user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
@@ -506,14 +402,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
           if (user && transaction?.gpa_order?.amount && transaction?.gpa_order?.state === MarqetaWebhookConstants.COMPLETION) {
             await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.EARNED_CASHBACK,
-              body: `You earned $${transaction?.gpa_order?.amount} in Karma Cash`,
-              title: 'Received Cashback',
-            });
-
-            await createPushUserNotificationFromUserAndPushData(user, {
               pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-              body: `$${transaction?.gpa_order?.amount} in Karma Cash has been deposited into your Karma Wallet Card`,
+              body: `$${transaction?.gpa_order?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
               title: 'Received Cashback',
             });
           }
@@ -539,8 +429,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           ) {
             await createPushUserNotificationFromUserAndPushData(user, {
               pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
-              body: 'Transaction Complete',
-              title: `$${transaction?.amount} spent at ${transaction?.card_acceptor?.name}`,
+              title: 'Transaction Alert',
+              body: `$${transaction?.amount} spent at ${transaction?.card_acceptor?.name}`,
             });
 
             // Send push notification for spending on dining or gas
@@ -548,15 +438,15 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
               // Notification of transaction on dining
               await createPushUserNotificationFromUserAndPushData(user, {
                 pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
-                body: 'Transaction Complete',
-                title: 'You dined out. We donated a meal.',
+                title: 'Donation Alert!',
+                body: 'You dined out. We donated a meal.',
               });
             } else if (MCCStandards.GAS.includes(transaction?.card_acceptor?.mcc)) {
               // Notification of transaction on gas
               await createPushUserNotificationFromUserAndPushData(user, {
                 pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
-                body: 'Transaction Complete',
-                title: 'You bought gas. We donated to reforestation.',
+                title: 'Donation Alert!',
+                body: 'You bought gas. We donated to reforestation.',
               });
             }
           }
@@ -564,11 +454,13 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       }
     }
     if (!!transactions) {
+      console.log('////////// PROCESSING MARQETA TRANSACTION (2) WEBHOOK ////////// ');
       const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
       await handleTransactionDisputeMacro(savedTransactions);
     }
 
     if (!!chargebacktransitions) {
+      console.log('////////// PROCESSING MARQETA CHARGEBACKTRANSITION WEBHOOK ////////// ');
       const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
       await handleDisputeMacros(savedChargebacks);
     }

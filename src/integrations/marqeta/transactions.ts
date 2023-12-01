@@ -17,6 +17,7 @@ import {
   CreditTransactionTypeEnum,
   DebitTransactionTypeEnum,
   DepositTransactionTypeEnum,
+  RefundTransactionTypeEnum,
   TransactionCreditSubtypeEnum,
   TransactionSubtypeEnumValues,
   TransactionTypeEnum,
@@ -249,7 +250,7 @@ const getSubtypeAndTypeFromMarqetaTransaction = (
   t: TransactionModel,
 ): { subType?: TransactionSubtypeEnumValues; type?: TransactionTypeEnumValues } => {
   const type = getTransactionTypeFromMarqetaTransactionType(t.type);
-  const isRefund = t.type === TransactionModelTypeEnum.Refund;
+  const isRefund = !!Object.values(RefundTransactionTypeEnum).find((tr) => tr === t.type);
   const isGPAOrderWithTags = t.type === TransactionModelTypeEnum.GpaCredit && !!t.gpa_order.tags;
   const isGPAOrderWithoutTags = t.type === TransactionModelTypeEnum.GpaCredit && !t.gpa_order.tags;
 

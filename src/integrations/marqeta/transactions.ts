@@ -290,9 +290,9 @@ const toDate = (date: string): Date | null => {
   }
 };
 
-const getDateFromMarqetaTransaction = (marqetaTransaction: TransactionModel): Date | null => toDate(marqetaTransaction?.created_time)
+const getDateFromMarqetaTransaction = (marqetaTransaction: TransactionModel): Date | null => toDate(marqetaTransaction?.user_transaction_time)
   || toDate(marqetaTransaction?.local_transaction_date)
-  || toDate(marqetaTransaction?.user_transaction_time)
+  || toDate(marqetaTransaction?.created_time)
   || null;
 
 const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
@@ -329,8 +329,16 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 
     if (!!t.marqeta_transaction.settlement_date) {
       if (!!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
-        existingTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+        const settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+        existingTransaction.settledDate = settledDate;
+        existingTransaction.sortableDate = settledDate;
       }
+    } else if (t.marqeta_transaction.type === TransactionModelTypeEnum.GpaCredit) {
+      // gpa transactions are always cleared on the same day
+      existingTransaction.settledDate = existingTransaction.date;
+      existingTransaction.sortableDate = existingTransaction.date;
+    } else {
+      existingTransaction.sortableDate = existingTransaction.date;
     }
 
     return existingTransaction;
@@ -379,15 +387,26 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   }
 
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);
+  const date = getDateFromMarqetaTransaction(t.marqeta_transaction);
   newTransaction.amount = t?.amount;
   newTransaction.status = t.marqeta_transaction?.state;
   newTransaction.integrations = { marqeta: t.marqeta_transaction };
   newTransaction.type = types?.type;
   newTransaction.subType = types?.subType;
-  newTransaction.date = getDateFromMarqetaTransaction(t.marqeta_transaction);
+  newTransaction.date = date;
 
   if (!!t.marqeta_transaction.settlement_date && !!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
-    newTransaction.settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+    // settled date added to the og transaction
+    const settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+    newTransaction.settledDate = settledDate;
+    newTransaction.sortableDate = settledDate;
+  } else if (t.marqeta_transaction.type === TransactionModelTypeEnum.GpaCredit) {
+    // gpa transactions are always cleared on the same day
+    newTransaction.settledDate = date;
+    newTransaction.sortableDate = date;
+  } else {
+    // pending transaction
+    newTransaction.sortableDate = date;
   }
 
   return newTransaction;

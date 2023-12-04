@@ -141,6 +141,7 @@ export interface IShareableTransaction {
   createdOn: Date;
   lastModified: Date;
   matchType: MatchTypes;
+  sortableDate?: Date;
 }
 
 export interface ITransaction extends IShareableTransaction {
@@ -209,6 +210,7 @@ export const transactionSchemaDefinition = {
   // refunded, or otherwise not processed.
   reversed: { type: Boolean },
   settledDate: { type: Date },
+  sortableDate: { type: Date },
   // use this to "link" 2 transactions together because they
   // are related in some way. Like a negative transaction
   // linked to the positive transaction because it was

@@ -532,7 +532,7 @@ export const sendDeleteAccountRequestEmail = async ({
   user,
   deleteReason,
   deleteAccountRequestId,
-  recipientEmail = 'support@theimpactkarma.com',
+  recipientEmail = 'support@karmawallet.io',
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
 }: IDeleteAccountRequestVerificationTemplateParams) => {

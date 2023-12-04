@@ -46,7 +46,6 @@ export const exec = async ({
   if (!user && !visitor) throw new Error('Must provide either user or visitor');
   let _user;
   let userEmailObject;
-
   if (!!user) {
     _user = await UserModel.findOne({ _id: user });
     userEmailObject = _user.emails.find(u => u.email === recipientEmail);

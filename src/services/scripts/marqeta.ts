@@ -57,6 +57,6 @@ export const getCardsFromMarqeta = async (userId: string) => {
   const cardClient = await new Card(marqetaClient);
   const usersCards = await cardClient.listCards(userToken);
   for (const card of usersCards.data) {
-    await mapMarqetaCardtoCard(userId, card)
+    await mapMarqetaCardtoCard(userId, card);
   }
-}
+};

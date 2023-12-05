@@ -305,7 +305,7 @@ export const unenrollFromKardRewards = async (
   }
 };
 
-export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration) => {
+export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration | IMarqetaWebhookCardsEvent) => {
   const { user_token, token, card_product_token, expiration_time, last_four, pan, fulfillment_status, barcode, created_time, instrument_type, pin_is_set, state } = cardData;
 
   // Find the existing card document with Marqeta integration
@@ -327,7 +327,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   const { year, month } = extractYearAndMonth(expiration_time);
 
   // prepare the cardItem Details
-  const cardItem = {
+  const cardItem: any = {
     barcode,
     card_product_token,
     card_token: token,
@@ -473,7 +473,9 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
-  if (!prevCardData) throw new CustomError(`Card with marqeta card token of ${cardWebhookData?.card_token} not found`, ErrorTypes.NOT_FOUND);
+  if (!prevCardData) {
+    await mapMarqetaCardtoCard(user._id.toString(), cardWebhookData);
+  }
   await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
   await updateCardFromMarqetaCardWebhook(cardWebhookData);
   await sendCardUpdateEmails(cardWebhookData);

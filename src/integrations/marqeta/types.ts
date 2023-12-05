@@ -357,6 +357,8 @@ export enum MarqetaCardFulfillmentStatus {
 export interface IMarqetaWebhookCardsEvent {
   card_product_token: string;
   card_token: string;
+  barcode?: string;
+  instrument_type?: string;
   card: Object;
   channel: string;
   created_time: string;

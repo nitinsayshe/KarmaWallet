@@ -350,9 +350,11 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
       query.$and.push({ company: { $ne: null } });
     }
 
-    const transactions = await _getTransactions(query);
+    const transactions = await _getTransactions(query, integrationType === TransactionIntegrationTypesEnum.Marqeta);
 
-    if (integrationType === TransactionIntegrationTypesEnum.Marqeta) return transactions.slice(0, _limit);
+    if (integrationType === TransactionIntegrationTypesEnum.Marqeta) {
+      return transactions.slice(0, _limit);
+    }
 
     const uniqueCompanies = new Set();
     const recentTransactions: ITransactionDocument[] = [];

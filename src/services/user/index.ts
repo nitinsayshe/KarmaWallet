@@ -623,7 +623,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
 
-  if (!existingUser || !visitor) {
+  if (!existingUser && !visitor) {
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 

@@ -531,7 +531,6 @@ export type TransactionModelTypeEnumValues = typeof TransactionModelTypeEnum[key
 
 export const TransactionModelStateEnum = {
   Pending: 'PENDING',
-  Cleared: 'CLEARED',
   Completion: 'COMPLETION',
   Declined: 'DECLINED',
   Error: 'ERROR',

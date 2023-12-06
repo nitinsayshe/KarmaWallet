@@ -8,6 +8,14 @@ interface Identification {
   value: string;
 }
 
+export enum IMarqetaUserStatus {
+  ACTIVE = 'ACTIVE',
+  UNVERIFIED = 'UNVERIFIED',
+  LIMITED = 'LIMITED',
+  SUSPENDED = 'SUSPENDED',
+  CLOSED = 'CLOSED',
+}
+
 export interface IMarqetaUserToken {
   userToken: string;
 }
@@ -567,7 +575,7 @@ export interface IMarqetaCardActionEvent {
 
 export interface IMarqetaUserTransitionsEvent {
   token: string;
-  status: string;
+  status: IMarqetaUserStatus;
   reason_code: string;
   channel: string;
   created_time: Date;

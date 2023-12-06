@@ -4,7 +4,7 @@ import { ObjectId, Types } from 'mongoose';
 import { generateCommissionPayoutOverview } from '..';
 import { MerchantSource, RewardStatus, RewardType } from '../../../clients/kard';
 import { MongoClient } from '../../../clients/mongo';
-import { IMarqetaKycState } from '../../../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { cleanUpDocuments } from '../../../lib/model';
@@ -24,7 +24,6 @@ import { ICommissionDocument, KarmaCommissionStatus, WildfireCommissionStatus } 
 import { ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument } from '../../../models/merchant';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
-import { IMarqetaUserState } from '../../karmaCard/utils';
 import { aggregateCommissionTotalAndIds } from '../utils';
 
 describe('tests commission service logic', () => {
@@ -156,7 +155,7 @@ describe('tests commission service logic', () => {
               postal_code: '12345',
               account_holder_group_token: randomUUID().toString(),
               identifications: [],
-              status: IMarqetaUserState.active,
+              status: IMarqetaUserStatus.ACTIVE,
               created_time: getUtcDate().toDate().toString(),
             },
           },

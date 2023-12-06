@@ -16,8 +16,7 @@ import {
 import { ICardDocument } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
 import { IUserDocument, UserEmailStatus } from '../../../models/user';
-import { IMarqetaUserState } from '../../../services/karmaCard/utils';
-import { IMarqetaKycState, MarqetaCardFulfillmentStatus, MarqetaCardState } from '../types';
+import { IMarqetaKycState, IMarqetaUserStatus, MarqetaCardFulfillmentStatus, MarqetaCardState } from '../types';
 import { TransactionModel } from '../../../clients/marqeta/types';
 import { ISectorDocument } from '../../../models/sector';
 import { cleanUpDocuments } from '../../../lib/model';
@@ -97,7 +96,7 @@ describe('tests marqeta integration transaction logic', () => {
               postal_code: '12345',
               account_holder_group_token: randomUUID().toString(),
               identifications: [],
-              status: IMarqetaUserState.active,
+              status: IMarqetaUserStatus.ACTIVE,
               created_time: getUtcDate().toDate().toString(),
             },
           },

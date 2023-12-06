@@ -2,38 +2,40 @@ import {
   Document, model, ObjectId, PaginateModel, Schema,
 } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { IMarqetaKycState } from '../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
 import { getUtcDate } from '../lib/date';
-import { IMarqetaUserState } from '../services/karmaCard/utils';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
 
 interface IMarqetaKycResult {
-  status: IMarqetaKycState,
-  codes: string[]
+  status: IMarqetaKycState;
+  codes: string[];
 }
+
 interface IMarqetaIdentification {
-  type: string,
-  value: string,
+  type: string;
+  value: string;
 }
+
 export interface IMarqetaVisitorData {
   userToken: string;
   email: string;
   kycResult: IMarqetaKycResult;
-  first_name?: string,
-  last_name?: string,
-  birth_date?: string,
-  address1?: string,
-  address2?: string,
-  city?: string,
-  state?: string,
-  country?: string,
-  postal_code?: string,
-  account_holder_group_token?: string,
-  identifications?: IMarqetaIdentification[],
-  status?: IMarqetaUserState,
-  created_time?: string,
+  first_name?: string;
+  last_name?: string;
+  birth_date?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  account_holder_group_token?: string;
+  identifications?: IMarqetaIdentification[];
+  status?: IMarqetaUserStatus;
+  created_time?: string;
 }
+
 export interface IVisitorIntegrations {
   groupCode?: string;
   urlParams?: IUrlParam[];

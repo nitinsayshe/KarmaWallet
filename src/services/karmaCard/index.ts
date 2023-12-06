@@ -112,7 +112,6 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
     }
   }
 
-  console.log('///// this is the kyc response', kycResponse);
   return { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse };
 };
 

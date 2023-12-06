@@ -643,6 +643,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     });
 
     user.integrations.marqeta = visitor.integrations.marqeta;
+    await user.save();
     await createKarmaCardWelcomeUserNotification(user, true);
+    console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');
   }
 };

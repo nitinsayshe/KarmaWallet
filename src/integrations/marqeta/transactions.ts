@@ -337,6 +337,10 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
       // gpa transactions are always cleared on the same day
       existingTransaction.settledDate = existingTransaction.date;
       existingTransaction.sortableDate = existingTransaction.date;
+    } else if (t.marqeta_transaction.type === TransactionModelTypeEnum.AchPull) {
+      const settledDate = dayjs(t.marqeta_transaction.created_time).utc().toDate();
+      existingTransaction.sortableDate = settledDate;
+      existingTransaction.settledDate = settledDate;
     } else {
       existingTransaction.sortableDate = existingTransaction.date;
     }

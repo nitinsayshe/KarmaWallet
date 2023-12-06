@@ -1,7 +1,8 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IMarqetaKycResult, IShareableUser } from './user';
+import { IMarqetaKycResult } from './user';
+import { IShareableVisitor } from './visitor';
 
 export enum ApplicationStatus {
   SUCCESS = 'success',
@@ -10,8 +11,8 @@ export enum ApplicationStatus {
 }
 
 export interface IShareableCardApplication {
-  userId?: IRef<ObjectId, IShareableUser>;
-  visitorId: IRef<ObjectId, IShareableUser>;
+  userId?: string;
+  visitorId?: IRef<ObjectId, IShareableVisitor>;
   userToken: string;
   firstName: string;
   lastName: string;
@@ -34,14 +35,10 @@ export interface IKarmaCardApplicationDocument extends IKarmaCardApplication, Do
 export type IKarmaCardApplicationModel = IModel<IKarmaCardApplication>;
 
 const karmaCardApplication = new Schema({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'user',
-  },
+  userId: { type: String },
   visitorId: {
     type: Schema.Types.ObjectId,
     ref: 'visitor',
-    required: true,
   },
   firstName: { type: String },
   lastName: { type: String },

@@ -235,7 +235,7 @@ const getUpdatedTransactionStatusFromRelatedTransactionType = (
   }
 
   if (!!Object.values(TriggerClearedTransactionTypeEnum).find((t) => t === type)) {
-    return TransactionModelStateEnum.Cleared;
+    return TransactionModelStateEnum.Completion;
   }
   if (!!Object.values(TriggerPendingTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Pending;

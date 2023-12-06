@@ -182,14 +182,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   if (address2) marqetaKYCInfo.address2 = address2;
   // perform the KYC logic and Marqeta stuff here
   const marqetaResponse = await performMarqetaCreateAndKYC(marqetaKYCInfo);
-  console.log('////// this is the marqeta response', marqetaResponse);
   const { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse } = marqetaResponse;
   // get the kyc result code
   const { status, codes } = kycResponse.result;
-  console.log('///////', {
-    status,
-    codes,
-  });
   const kycErrorCodes = codes.map((item: any) => item.code);
   const marqeta = {
     userToken: marqetaUserResponse.token,
@@ -200,11 +195,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const kycStatus = status;
 
   if (!existingUser) {
-    console.log('///// this is a visitor update visitor');
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email });
   } else {
-    console.log('///// this is an existing user update the user');
     existingUser.integrations.marqeta = marqeta;
     await existingUser.save();
   }
@@ -254,7 +247,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     } else {
       // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
       // add the marqeta integration to the newly created user or the existing user (userObject)
-      const { user } = await UserService.register(req, {
+      const { user } = await UserService.register({
         name: `${firstName} ${lastName}`,
         password: generateRandomPasswordString(14),
         visitorId: _visitor._id,

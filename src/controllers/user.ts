@@ -27,7 +27,7 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
       return;
     }
     const { password, name, token, promo } = body;
-    const { user, authKey, groupCode } = await UserService.register(req, { password, name, token, promo });
+    const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo });
     output.api(req, res, { user: UserService.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));

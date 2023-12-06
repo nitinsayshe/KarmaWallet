@@ -5,8 +5,7 @@ import { UserRoles } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IPromo, IPromoDocument } from './promo';
 import { IArticle } from './article';
-import { IMarqetaKycState } from '../integrations/marqeta/types';
-import { IMarqetaUserState } from '../services/karmaCard/utils';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -69,35 +68,37 @@ export interface IReferrals {
 
 export interface IBiometrics {
   _id?: string;
-  biometricKey: string,
-  isBiometricEnabled: Boolean,
+  biometricKey: string;
+  isBiometricEnabled: Boolean;
 }
+
 export interface IMarqetaKycResult {
-  status: IMarqetaKycState,
-  codes: string[]
+  status: IMarqetaKycState;
+  codes: string[];
 }
+
 export interface IMarqetaUserIntegrations {
   userToken: string;
   email?: string;
   kycResult: IMarqetaKycResult;
-  first_name?: string,
-  last_name?: string,
-  birth_date?: string,
-  address1?: string,
-  address2?: string,
-  city?: string,
-  state?: string,
-  country?: string,
-  postal_code?: string,
-  account_holder_group_token?: string,
-  identifications?: IMarqetaIdentification[],
-  status?: IMarqetaUserState,
-  created_time?: string,
+  first_name?: string;
+  last_name?: string;
+  birth_date?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  account_holder_group_token?: string;
+  identifications?: IMarqetaIdentification[];
+  status?: IMarqetaUserStatus;
+  created_time?: string;
 }
 
 export interface IFCMTokenIntegration {
   token: string;
-  deviceId: String;
+  deviceId: string;
 }
 
 export interface IUserIntegrations {

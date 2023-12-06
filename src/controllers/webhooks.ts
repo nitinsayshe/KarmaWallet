@@ -31,6 +31,7 @@ import { createPushUserNotificationFromUserAndPushData } from '../services/user_
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { handleTransactionDisputeMacro } from '../services/transaction';
 import { IMarqetaWebhookBody, IMarqetaWebhookHeader, MarqetaWebhookConstants, InsufficientFundsConstants, MCCStandards } from '../integrations/marqeta/types';
+import { handleMarqetaUserTransitionWebhook } from '../services/user';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID,
   MARQETA_WEBHOOK_PASSWORD } = process.env;
@@ -340,11 +341,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!usertransitions) {
       console.log('////////// PROCESSING MARQETA USERTRANSITION WEBHOOK ////////// ');
       for (const usertransition of usertransitions) {
-        await UserModel.findOneAndUpdate(
-          { 'integrations.marqeta.userToken': usertransition?.user_token },
-          { 'integrations.marqeta.kycResult.status': usertransition.status },
-          { new: true },
-        );
+        await handleMarqetaUserTransitionWebhook(usertransition);
       }
     }
 

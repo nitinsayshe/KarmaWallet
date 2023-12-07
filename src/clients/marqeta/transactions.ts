@@ -65,4 +65,18 @@ export class Transactions {
       throw asCustomError(err);
     }
   }
+
+  // list transactions for single user over a specified time period
+  // allowable formats for startDate and endDate are: yyyy-MM-dd or yyyy-MM-ddThh:mm:ss.SS
+  async listTransactionsForUserCardOverTimePeriod(userToken: string, cardToken: string, startDate: string, endDate: string) {
+    try {
+      const { data } = await this._marqetaClient._client.get(
+        `transactions?user_token=${userToken}&start_date=${startDate}&end_date=${endDate}&card_token=${cardToken}&sort_by=created_time`,
+      );
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
 }

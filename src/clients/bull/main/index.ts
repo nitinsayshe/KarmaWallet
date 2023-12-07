@@ -1,6 +1,7 @@
 import path from 'path';
 import { Worker } from 'bullmq';
-import { JobNames, QueueNames, CsvReportTypes, UserReportType, StatementReportType } from '../../../lib/constants/jobScheduler';
+import dayjs from 'dayjs';
+import { JobNames, QueueNames, CsvReportTypes, UserReportType, StatementReportType, MarqetaDataSyncTypeEnum } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
 import { ActiveCampaignSyncTypes } from '../../../lib/constants/activecampaign';
@@ -71,6 +72,7 @@ export class _MainBullClient extends _BullClient {
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
 
+      this.createJob(JobNames.MarqetaDataSync, { syncTypes: [MarqetaDataSyncTypeEnum.Transactions, MarqetaDataSyncTypeEnum.Users, MarqetaDataSyncTypeEnum.Cards], startDate: dayjs().subtract(30, 'day').toDate(), endDate: dayjs().toDate() }, { jobId: `${JobNames.MarqetaDataSync}-daily`, repeat: { cron: '0 3 * * *' } });
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Affiliates },

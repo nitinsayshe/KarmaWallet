@@ -68,6 +68,7 @@ export enum CardStatus {
   Unlinked = 'unlinked',
   Error = 'error',
   Removed = 'removed',
+  Locked = 'locked',
 }
 
 export enum KardEnrollmentStatus {

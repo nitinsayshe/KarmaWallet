@@ -1,3 +1,4 @@
+import { GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { User } from '../../clients/marqeta/user';
 import { IRequest } from '../../types/request';
@@ -11,6 +12,7 @@ import {
   ListUsersResponse,
   MarqetaUserModel,
   IMarqetaUpdateUser,
+  PaginatedMarqetaResponse,
 } from './types';
 
 // Instantiate the MarqetaClient
@@ -71,4 +73,9 @@ export const createMarqetaUserAuthToken = async (req: IRequest<{}, {}, IMarqetaU
   const params = req.body;
   const userResponse = await user.createMarqetaUserAuthToken(params);
   return { data: userResponse };
+};
+
+export const getUsers = async (queryParams: GetPaginiatedResourceParams): Promise<PaginatedMarqetaResponse<MarqetaUserModel[]>> => {
+  const users = await user.listMarqetaUsers(queryParams);
+  return users;
 };

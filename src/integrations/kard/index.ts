@@ -236,7 +236,7 @@ const sendTransactionsInBatches = async (
 
       console.log(`Kard API Request ${i} of ${batches.length}: queueing transactions for processing: `, JSON.stringify(req));
       responses.push(await kc.queueTransactionsForProcessing(req));
-      sleep(QueueTransactionBackoffMs);
+      await sleep(QueueTransactionBackoffMs);
     } catch (err) {
       console.error('Error queuing transactions: ', err);
     }

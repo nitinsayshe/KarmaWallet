@@ -65,6 +65,6 @@ export const sendPayouts = async (payouts: IMarqetaCreateGPAorder[]) => {
     if (!marqetaResponse) {
       console.log(`failed to send payout: ${i} of ${payouts.length}`);
     }
-    sleep(1000);
+    await sleep(1000);
   }
 };

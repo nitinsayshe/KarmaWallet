@@ -9,6 +9,7 @@ import * as CalculateAverageSectorScores from '../../../jobs/calculateAverageSec
 import * as CalculateCompanyScores from '../../../jobs/calculateCompanyScores';
 import * as CreateBatchCompanies from '../../../jobs/createBatchCompanies';
 import * as CreateBatchedDataSources from '../../../jobs/createBatchDataSources';
+import * as MarqetaTransactionSync from '../../../jobs/marqetaSync';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotals';
 import * as GenerateUserReport from '../../../jobs/generateUserReport';
@@ -160,6 +161,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateKardMerchantsAndData:
       result = await UpdateKardMerchantsAndData.exec();
+      break;
+    case JobNames.MarqetaDataSync:
+      result = await MarqetaTransactionSync.exec(data);
       break;
     case JobNames.GenerateKarmaCardStatements:
       result = await GenerateKarmaCardStatements.exec();

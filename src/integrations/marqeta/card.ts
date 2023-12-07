@@ -1,8 +1,9 @@
 /* eslint-disable camelcase */
+import { GetPaginiatedResourceParams } from '.';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { IRequest } from '../../types/request';
-import { IMarqetaCardTransition, IMarqetaCreateCard, ListCardsResponse } from './types';
+import { IMarqetaCardTransition, IMarqetaCreateCard, ListCardsResponse, MarqetaCardModel, PaginatedMarqetaResponse } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
@@ -29,4 +30,9 @@ export const getCardDetails = async (req: IRequest<{ cardToken: string }, {}, {}
   const { cardToken } = req.params;
   const userResponse = await cardClient.getCardDetails(cardToken);
   return { data: userResponse };
+};
+
+export const getCardsForUser = async (queryParams: GetPaginiatedResourceParams): Promise<PaginatedMarqetaResponse<MarqetaCardModel[]>> => {
+  const cards = await cardClient.listCards(queryParams?.userToken, queryParams);
+  return cards;
 };

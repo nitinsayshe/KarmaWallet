@@ -17,7 +17,11 @@ import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
 import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
-import { createCardDeliveredUserNotification, createCardShippedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import {
+  createCardDeliveredUserNotification,
+  createCardShippedUserNotification,
+  createPushUserNotificationFromUserAndPushData,
+} from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 
 dayjs.extend(utc);
@@ -67,9 +71,7 @@ export const getShareableCard = ({
   initialTransactionsProcessing,
   lastTransactionSync,
 }: ICardDocument): IShareableCard & { _id: string } => {
-  const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name
-    ? getShareableUser(userId as IUserDocument)
-    : userId;
+  const _user: IRef<ObjectId, IShareableUser> = !!(userId as IUserDocument)?.name ? getShareableUser(userId as IUserDocument) : userId;
 
   return {
     _id,
@@ -191,9 +193,7 @@ const removeKardIntegrationDataFromCard = async (card: ICardDocument): Promise<I
   return card.save();
 };
 
-export const enrollInKardRewards = async (
-  req: IRequest<KardRewardsParams, {}, KardRewardsRegisterRequest>,
-): Promise<ICardDocument> => {
+export const enrollInKardRewards = async (req: IRequest<KardRewardsParams, {}, KardRewardsRegisterRequest>): Promise<ICardDocument> => {
   // validate data
   const kardRewardsRegisterRequestSchema = z.object({
     lastFour: z
@@ -264,9 +264,7 @@ export const enrollInKardRewards = async (
   }
 };
 
-export const unenrollFromKardRewards = async (
-  req: IRequest<KardRewardsParams, {}, {}>,
-): Promise<ICardDocument> => {
+export const unenrollFromKardRewards = async (req: IRequest<KardRewardsParams, {}, {}>): Promise<ICardDocument> => {
   // validate data
   const kardRewardsRegisterRequestSchema = z.object({
     card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object reference' }),
@@ -305,16 +303,41 @@ export const unenrollFromKardRewards = async (
   }
 };
 
+export const getCardStatusFromMarqetaCardState = (cardState: MarqetaCardState): CardStatus => {
+  switch (cardState) {
+    case MarqetaCardState.ACTIVE:
+      return CardStatus.Linked;
+    case MarqetaCardState.TERMINATED:
+      return CardStatus.Removed;
+    case MarqetaCardState.SUSPENDED:
+    case MarqetaCardState.UNACTIVATED:
+      return CardStatus.Unlinked;
+    case MarqetaCardState.LIMITED:
+      return CardStatus.Locked;
+    default:
+      return CardStatus.Error;
+  }
+};
+
 export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration | IMarqetaWebhookCardsEvent) => {
-  const { user_token, token, card_product_token, expiration_time, last_four, pan, fulfillment_status, barcode, created_time, instrument_type, pin_is_set, state } = cardData;
+  const {
+    user_token,
+    token,
+    card_product_token,
+    expiration_time,
+    last_four,
+    pan,
+    fulfillment_status,
+    barcode,
+    created_time,
+    instrument_type,
+    pin_is_set,
+    state,
+  } = cardData;
 
   // Find the existing card document with Marqeta integration
   let card = await CardModel.findOne({
-    $and: [
-      { userId: _userId },
-      { 'integrations.marqeta': { $exists: true } },
-      { 'integrations.marqeta.card_token': token },
-    ],
+    $and: [{ userId: _userId }, { 'integrations.marqeta': { $exists: true } }, { 'integrations.marqeta.card_token': token }],
   });
 
   // If the card document doesn't exist, you may choose to create a new one , with default values for karma Card
@@ -347,12 +370,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
-
-  if (cardData.state === MarqetaCardState.TERMINATED) {
-    card.status = CardStatus.Removed;
-  } else {
-    card.status = CardStatus.Linked;
-  }
+  card.status = cardData.state === MarqetaCardState.TERMINATED ? CardStatus.Removed : CardStatus.Linked;
 
   // Save the updated card document
   await card.save();
@@ -377,8 +395,10 @@ export const handleMarqetaCardNotificationFromWebhook = async (
     if (cardFromWebhook?.card_product_token.includes('virt')) cardType = 'digital ';
 
     // Notification for the first-time activation of a card, for example, when a card is activated using the widget.
-    if ((prevCardStatus === MarqetaCardState.UNACTIVATED || prevCardStatus === MarqetaCardState.SUSPENDED)
-       && newCardStatus === MarqetaCardState.ACTIVE) {
+    if (
+      (prevCardStatus === MarqetaCardState.UNACTIVATED || prevCardStatus === MarqetaCardState.SUSPENDED)
+      && newCardStatus === MarqetaCardState.ACTIVE
+    ) {
       console.log('// Sending card activated notification //');
       await createPushUserNotificationFromUserAndPushData(user, {
         pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
@@ -453,6 +473,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   existingCard.integrations.marqeta = newData;
   existingCard.lastModified = dayjs().utc().toDate();
   existingCard.createdOn = origCreatedTime;
+  existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
   await existingCard.save();
 };
 

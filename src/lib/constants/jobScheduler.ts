@@ -26,6 +26,7 @@ export enum JobNames {
   CalculateCompanyScores = 'calculate-company-scores',
   CreateBatchCompanies = 'create-batch-companies',
   CreateBatchDataSources = 'create-batch-data-sources',
+  MarqetaDataSync = 'marqeta-transaction-sync',
   GenerateGroupOffsetStatements = 'generate-group-offset-statements',
   GenerateUserImpactTotals = 'generate-user-impact-totals',
   GenerateUserTransactionTotals = 'generate-user-transaction-totals',
@@ -52,3 +53,11 @@ export enum JobNames {
   SendAccountCreationReminderEmail = 'send-account-creation-reminder-email',
   GenerateKarmaCardStatements = 'generate-karma-card-statements',
 }
+
+export const MarqetaDataSyncTypeEnum = {
+  Transactions: 'transactions',
+  Users: 'users',
+  Cards: 'cards',
+};
+
+export type MarqetaSyncJobTypeEnumValues = (typeof MarqetaDataSyncTypeEnum)[keyof typeof MarqetaDataSyncTypeEnum];

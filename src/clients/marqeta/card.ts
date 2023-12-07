@@ -22,9 +22,10 @@ export class Card {
   }
 
   // get user cards list
-  async listCards(userToken: string) {
+  async listCards(userToken: string, queryParams?: Record<string, string>) {
     try {
-      const { data } = await this._marqetaClient._client.get(`/cards/user/${userToken}`);
+      const queryString = new URLSearchParams(camelToSnakeCase(queryParams)).toString();
+      const { data } = await this._marqetaClient._client.get(`/cards/user/${userToken}?${queryString}`);
       return data;
     } catch (err) {
       console.log(err);

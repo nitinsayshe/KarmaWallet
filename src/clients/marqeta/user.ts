@@ -22,9 +22,10 @@ export class User {
   }
 
   // get user list
-  async listMarqetaUsers() {
+  async listMarqetaUsers(queryParams?: Record<string, string>) {
     try {
-      const { data } = await this._marqetaClient._client.get('/users');
+      const queryString = new URLSearchParams(camelToSnakeCase(queryParams)).toString();
+      const { data } = await this._marqetaClient._client.get(`users?${queryString}`);
       return data;
     } catch (err) {
       console.log(err);

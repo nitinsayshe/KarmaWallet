@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { parseInt } from 'lodash';
 import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
+import { getMarqetaResources, GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../clients/marqeta/transactions';
 import {
@@ -44,6 +45,7 @@ import {
   IMarqetaMakeTransactionAdvice,
   IMarqetaMakeTransactionClearing,
   ListTransactionsResponse,
+  PaginatedMarqetaResponse,
 } from './types';
 
 // Instantiate the MarqetaClient
@@ -326,6 +328,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
       existingTransaction.status = t.marqeta_transaction.state;
     }
     existingTransaction.amount = t.amount;
+    existingTransaction.lastModified = dayjs().utc().toDate();
 
     if (!!t.marqeta_transaction.settlement_date) {
       if (!!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
@@ -491,4 +494,16 @@ export const mapAndSaveMarqetaTransactionsToKarmaTransactions = async (
 ): Promise<ITransactionDocument[]> => {
   const transactionsToSave = await mapMarqetaTransactionsToKarmaTransactions(marqetaTransactions, true);
   return saveDocuments(transactionsToSave) as unknown as ITransactionDocument[];
+};
+
+export const getTransactions = async (queryParams: GetPaginiatedResourceParams): Promise<PaginatedMarqetaResponse<TransactionModel[]>> => {
+  const transactions = await transactionsClient.listTransaction(queryParams);
+  return transactions;
+};
+
+export const getPaginatedTransactionsForUser = async (userId: string): Promise<TransactionModel[]> => {
+  const userDoc = await UserModel.findById(userId);
+  const { userToken } = userDoc.integrations.marqeta;
+  const transactions = await getMarqetaResources({ userToken, sortBy: 'created_time' }, getTransactions);
+  return transactions;
 };

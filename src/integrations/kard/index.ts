@@ -234,7 +234,7 @@ const sendTransactionsInBatches = async (
         };
       });
 
-      console.log(`Kard API Request ${i} of ${batches.length}: queueing transactions for processing: `, JSON.stringify(req));
+      console.log(`Kard API Request ${i} of ${batches.length}.`);
       responses.push(await kc.queueTransactionsForProcessing(req));
       await sleep(QueueTransactionBackoffMs);
     } catch (err) {

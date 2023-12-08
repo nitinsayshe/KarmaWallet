@@ -436,7 +436,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
               await createPushUserNotificationFromUserAndPushData(user, {
                 pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
                 title: 'Donation Alert!',
-                body: 'You dined out. We donated a meal.',
+                body: 'You dined out. We donated to hunger alleviation!',
               });
             } else if (MCCStandards.GAS.includes(transaction?.card_acceptor?.mcc)) {
               // Notification of transaction on gas

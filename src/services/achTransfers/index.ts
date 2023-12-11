@@ -11,6 +11,7 @@ import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
 import { createACHInitiationUserNotification } from '../user_notification';
+import { BankConnectionModel } from '../../models/bankConnection';
 
 dayjs.extend(utc);
 
@@ -123,6 +124,12 @@ export const updateACHTransfer = async (req: IRequest<IACHTransferParams, {}, IM
   return updatedTransfer;
 };
 
+export const getACHSourceBankName = async (accessToken: string) => {
+  const bankConnection = await BankConnectionModel.findOne({ 'integrations.plaid.accessToken': accessToken });
+  if (!bankConnection) throw new CustomError('Unable to find bank connection.', ErrorTypes.GEN);
+  return bankConnection.institution;
+};
+
 export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
   const { body } = req;
   const { amount, fundingSourceToken } = body;
@@ -146,12 +153,13 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   const transferBankData = await ACHFundingSourceModel.findOne({
     token: fundingSourceToken,
   });
+  const bankName = await getACHSourceBankName(transferBankData.accessToken);
   // Create user notification
   await createACHInitiationUserNotification({
     user: req.requestor,
     amount,
     accountMask: transferBankData.account_suffix.toString(),
-    accountType: transferBankData.account_type.toString(),
+    accountType: `${bankName} ${transferBankData.account_type.toString()}`,
     date: dayjs(data.created_time).utc().format('MMMM DD, YYYY'),
   });
 

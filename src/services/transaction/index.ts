@@ -442,6 +442,7 @@ export const getShareableTransaction = ({
   sortableDate,
   type,
   subType,
+  group,
 }: ITransactionDocument) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name ? getShareableUser(user as IUserDocument) : user;
 
@@ -469,6 +470,7 @@ export const getShareableTransaction = ({
     sortableDate,
     subType,
     status,
+    group,
   };
 
   if (integrations?.rare) {
@@ -511,7 +513,7 @@ export const getShareableTransaction = ({
       currency_code: currencyCode,
     } = integrations.marqeta;
 
-    const marqetaIntegration = {
+    const marqetaIntegration: any = {
       token,
       userToken,
       cardToken,
@@ -525,6 +527,10 @@ export const getShareableTransaction = ({
       merchantName: integrations?.marqeta?.card_acceptor?.name || null,
       cardMask: integrations.marqeta?.card?.last_four || null,
     };
+
+    if (!!integrations?.marqeta?.gpa_order) {
+      marqetaIntegration.gpa_order = integrations.marqeta.gpa_order;
+    }
 
     shareableTransaction.integrations = {
       ...shareableTransaction.integrations,
@@ -890,6 +896,8 @@ export const getMatchedCompanies = async (req: IRequest<{}, IGetMatchedCompanies
 };
 
 export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>) => {
+  let carbonEmissionsMetricTonnes = 0;
+  let groupName = '';
   const { transactionId } = req.params;
   const matchedTransaction = await TransactionModel.findOne({
     _id: transactionId,
@@ -901,14 +909,22 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
   if (!matchedTransaction) throw new CustomError('No transaction found with given id.', ErrorTypes.NOT_FOUND);
 
   const sectorData = await SectorModel.findById(matchedTransaction.sector);
-  let carbonEmissionsMetricTonnes = 0;
 
   if (!!sectorData && !!sectorData?.carbonMultiplier && !!matchedTransaction?.amount) {
     carbonEmissionsMetricTonnes = getCarbonEmissionsForTransaction(sectorData.carbonMultiplier, matchedTransaction?.amount) / 1000;
   }
 
+  if (matchedTransaction.group) {
+    const groupData = await GroupModel.findById(matchedTransaction.group);
+
+    if (!!groupData) {
+      groupName = groupData.name;
+    }
+  }
+
   return {
     carbonEmissionsMetricTonnes,
+    groupName,
     transaction: getShareableTransaction(matchedTransaction),
   };
 };

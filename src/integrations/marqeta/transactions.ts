@@ -440,6 +440,12 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     newTransaction.sortableDate = date;
   }
 
+  if (types.subType === TransactionCreditSubtypeEnum.Employer) {
+    const tagsData = getTagsDataFromMarqetaGPAOrder(t.marqeta_transaction.gpa_order.tags);
+    const group = await CompanyModel.findById(tagsData.groupId);
+    newTransaction.group = group?._id;
+  }
+
   return newTransaction;
 };
 

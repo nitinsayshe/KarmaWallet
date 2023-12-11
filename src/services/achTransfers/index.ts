@@ -154,6 +154,7 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
     token: fundingSourceToken,
   });
   const bankName = await getACHSourceBankName(transferBankData.accessToken);
+  console.log('///// this is the bank name', bankName);
   // Create user notification
   await createACHInitiationUserNotification({
     user: req.requestor,

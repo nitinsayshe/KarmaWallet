@@ -142,6 +142,7 @@ export interface IShareableTransaction {
   lastModified: Date;
   matchType: MatchTypes;
   sortableDate?: Date;
+  group?: IRef<ObjectId, IShareableGroup>;
 }
 
 export interface ITransaction extends IShareableTransaction {
@@ -200,6 +201,10 @@ export const transactionSchemaDefinition = {
   carbonMultiplier: {
     type: Schema.Types.ObjectId,
     ref: 'plaid_category_mapping',
+  },
+  group: {
+    type: Schema.Types.ObjectId,
+    ref: 'group',
   },
   amount: { type: Number },
   status: { type: String, enum: Object.values(TransactionModelStateEnum) },

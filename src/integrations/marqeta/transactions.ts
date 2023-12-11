@@ -441,7 +441,6 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   }
 
   if (types.subType === TransactionCreditSubtypeEnum.Employer) {
-    console.log('///// this is an employer deposit');
     const tagsData = getTagsDataFromMarqetaGPAOrder(t.marqeta_transaction.gpa_order.tags);
     const group = await CompanyModel.findById(tagsData.groupId);
     newTransaction.group = group?._id;

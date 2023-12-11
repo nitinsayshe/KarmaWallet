@@ -441,6 +441,8 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     newTransaction.sortableDate = date;
   }
 
+  console.log('////// this is the subType', types?.subType);
+
   if (types.subType === TransactionCreditSubtypeEnum.Employer) {
     console.log('////// EMPLOYER GIFT TRANSACTION');
     const tagsData = getTagsDataFromMarqetaGPAOrder(t.marqeta_transaction.gpa_order.tags);

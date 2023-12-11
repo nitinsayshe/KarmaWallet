@@ -214,7 +214,6 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
 const getTransactionTypeFromMarqetaTransactionType = (
   marqetaTransactionType: TransactionModelTypeEnumValues,
 ): TransactionTypeEnumValues | undefined => {
-  console.log('/////// this is the type', marqetaTransactionType);
   if (!!Object.values(DepositTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
     return TransactionTypeEnum.Deposit;
   }
@@ -222,7 +221,6 @@ const getTransactionTypeFromMarqetaTransactionType = (
     return TransactionTypeEnum.Debit;
   }
   if (!!Object.values(CreditTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
-    console.log('///// this is a credit');
     return TransactionTypeEnum.Credit;
   }
   if (!!Object.values(AdjustmentTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {

@@ -81,6 +81,10 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
 export interface IMarqetaLoadGpaFromProgramFundingSource {
   amount: number;
   userId: string;
+  // this should be the group id
+  memo?: string;
+  // this should be the subtype
+  tags?: string;
 }
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
@@ -89,6 +93,7 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   fees?: number;
   currencyCode: string;
   fundingSourceToken: string;
+  memo?: string;
 }
 
 export const GpaOrderTagEnum = {

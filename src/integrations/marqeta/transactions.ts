@@ -20,6 +20,7 @@ import {
   DepositTransactionTypeEnum,
   RefundTransactionTypeEnum,
   TransactionCreditSubtypeEnum,
+  TransactionCreditSubtypeEnumValues,
   TransactionSubtypeEnumValues,
   TransactionTypeEnum,
   TransactionTypeEnumValues,
@@ -40,13 +41,13 @@ import { IRequest } from '../../types/request';
 import { IMatchedTransaction } from '../plaid/types';
 import {
   EnrichedMarqetaTransaction,
-  GpaOrderTagEnum,
   IMarqetaMakeTransaction,
   IMarqetaMakeTransactionAdvice,
   IMarqetaMakeTransactionClearing,
   ListTransactionsResponse,
   PaginatedMarqetaResponse,
 } from './types';
+import { IMarqetaGPACustomTags } from '../../services/transaction/types';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -213,6 +214,7 @@ const getExistingTransactionFromMarqetaTransactionToken = async (
 const getTransactionTypeFromMarqetaTransactionType = (
   marqetaTransactionType: TransactionModelTypeEnumValues,
 ): TransactionTypeEnumValues | undefined => {
+  console.log('/////// this is the type', marqetaTransactionType);
   if (!!Object.values(DepositTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
     return TransactionTypeEnum.Deposit;
   }
@@ -220,6 +222,7 @@ const getTransactionTypeFromMarqetaTransactionType = (
     return TransactionTypeEnum.Debit;
   }
   if (!!Object.values(CreditTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
+    console.log('///// this is a credit');
     return TransactionTypeEnum.Credit;
   }
   if (!!Object.values(AdjustmentTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
@@ -248,6 +251,35 @@ const getUpdatedTransactionStatusFromRelatedTransactionType = (
   return undefined; // return TransactionModelStateEnum.Error instead?
 };
 
+export const getSubTypeFromMarqetaGPATag = (tag: string): TransactionCreditSubtypeEnumValues => {
+  if (tag === TransactionCreditSubtypeEnum.Employer) {
+    return TransactionCreditSubtypeEnum.Employer;
+  }
+  if (tag === TransactionCreditSubtypeEnum.Cashback) {
+    return TransactionCreditSubtypeEnum.Cashback;
+  }
+  return undefined;
+};
+
+export const getTagsDataFromMarqetaGPAOrder = (
+  tags: string,
+): IMarqetaGPACustomTags => {
+  const splitTags = tags.split(',');
+  const type = splitTags.find((tag) => tag.includes('type'));
+  const groupId = splitTags.find((tag) => tag.includes('groupId'));
+  const subType = getSubTypeFromMarqetaGPATag(type.split('=')[1]);
+  const tagsData: IMarqetaGPACustomTags = {
+    type: subType,
+  };
+
+  if (!!groupId) {
+    // eslint-disable-next-line prefer-destructuring
+    tagsData.groupId = groupId.split('=')[1];
+  }
+
+  return tagsData;
+};
+
 const getSubtypeAndTypeFromMarqetaTransaction = (
   t: TransactionModel,
 ): { subType?: TransactionSubtypeEnumValues; type?: TransactionTypeEnumValues } => {
@@ -262,14 +294,8 @@ const getSubtypeAndTypeFromMarqetaTransaction = (
 
   if (isGPAOrderWithTags) {
     // seperate the coma seperated tags
-    const tags = t.gpa_order.tags.split(',');
-    // tags should only contain one of the following:
-    if (tags.includes(GpaOrderTagEnum.CashbackPayout)) {
-      return { subType: TransactionCreditSubtypeEnum.Cashback, type };
-    }
-    if (tags.includes(GpaOrderTagEnum.EmployerGifting)) {
-      return { subType: TransactionCreditSubtypeEnum.Employer, type };
-    }
+    const tagsData = getTagsDataFromMarqetaGPAOrder(t.gpa_order.tags);
+    return { subType: tagsData.type, type };
   }
   // this is a catch for now since we don't have tags on all of our gpa order transactions
   if (isGPAOrderWithoutTags) {

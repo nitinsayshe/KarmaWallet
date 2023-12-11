@@ -3,6 +3,7 @@ import { ObjectId } from 'mongoose';
 import { TransactionIntegrationTypesEnumValues } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
 import { ICompanyProtocol } from '../company';
+import { TransactionCreditSubtypeEnumValues } from '../../lib/constants/transaction';
 
 export enum ITransactionsConfig {
   MostRecent = 'recent',
@@ -105,4 +106,21 @@ export interface IGetMatchedCompaniesQuery {
   page?: number;
   limit?: number;
   search?: string;
+}
+
+export interface IGPADeposit {
+  amount: number;
+  userId: string;
+}
+
+export interface IInitiateGPADepositsRequest {
+  groupId?: string;
+  type: TransactionCreditSubtypeEnumValues;
+  gpaDeposits: IGPADeposit[];
+  memo?: string;
+}
+
+export interface IMarqetaGPACustomTags {
+  groupId?: string;
+  type: TransactionCreditSubtypeEnumValues;
 }

@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { parseInt } from 'lodash';
-import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
+import { ObjectId } from 'mongoose';
 import { getMarqetaResources, GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../clients/marqeta/transactions';
@@ -48,6 +48,7 @@ import {
   PaginatedMarqetaResponse,
 } from './types';
 import { IMarqetaGPACustomTags } from '../../services/transaction/types';
+import { GroupModel } from '../../models/group';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -447,9 +448,11 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     console.log('////// EMPLOYER GIFT TRANSACTION');
     const tagsData = getTagsDataFromMarqetaGPAOrder(t.marqeta_transaction.gpa_order.tags);
     console.log('///// TAGS DATA', tagsData);
-    const group = await CompanyModel.findById(tagsData.groupId);
-    console.log('/////// this is the group id', group?._id);
-    newTransaction.group = group?._id;
+    const group = await GroupModel.findOne({ _id: tagsData.groupId });
+    if (!group._id) {
+      throw new Error(`No group found with id ${tagsData.groupId}`);
+    }
+    newTransaction.group = group as any;
   }
 
   return newTransaction;

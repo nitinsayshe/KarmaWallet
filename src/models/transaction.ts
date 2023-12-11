@@ -142,7 +142,7 @@ export interface IShareableTransaction {
   lastModified: Date;
   matchType: MatchTypes;
   sortableDate?: Date;
-  group?: IRef<ObjectId, IShareableGroup>;
+  group?: ObjectId;
 }
 
 export interface ITransaction extends IShareableTransaction {
@@ -157,6 +157,7 @@ export interface ITransaction extends IShareableTransaction {
   transactionAssociations: ITransactionAssociation[];
   user: IRef<ObjectId, IUserDocument>;
   userId: IRef<ObjectId, IUserDocument>;
+  group?: ObjectId;
 }
 
 export interface ITransactionAggregate extends ITransaction {

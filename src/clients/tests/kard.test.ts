@@ -11,7 +11,7 @@ import {
   RewardType,
   TransactionStatus,
   UpdateUserRequest,
-  verifyWebhookSignature,
+  verifyAggregatorEnvWebhookSignature,
 } from '../kard';
 
 describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
@@ -123,7 +123,7 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const stringified = JSON.stringify(exampleWebhookBody);
     const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
 
-    const error = verifyWebhookSignature(exampleWebhookBody, signature);
+    const error = verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
     expect(error).toBeNull();
   });
 
@@ -131,7 +131,7 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const stringified = JSON.stringify(exampleWebhookBody);
     const signature = createHmac('sha256', "I'mNotTheSecret").update(stringified).digest('base64');
 
-    const error = verifyWebhookSignature(exampleWebhookBody, signature);
+    const error = verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
     expect(error).toBe(KardInvalidSignatureError);
   });
 
@@ -141,7 +141,7 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
     delete modifiedExampleWebhookBody.issuer;
 
-    const error = verifyWebhookSignature(modifiedExampleWebhookBody as EarnedRewardWebhookBody, signature);
+    const error = verifyAggregatorEnvWebhookSignature(modifiedExampleWebhookBody as EarnedRewardWebhookBody, signature);
     expect(error).toBe(KardInvalidSignatureError);
   });
 

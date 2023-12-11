@@ -8,15 +8,8 @@ import CustomError from '../../../lib/customError';
 import { getUtcDate } from '../../../lib/date';
 import { roundToPercision } from '../../../lib/misc';
 import { CardModel } from '../../../models/card';
-import {
-  CommissionPayoutModel,
-  KarmaCommissionPayoutStatus,
-  PayPalPayoutItemStatus,
-} from '../../../models/commissionPayout';
-import {
-  CommissionPayoutOverviewModel,
-  KarmaCommissionPayoutOverviewStatus,
-} from '../../../models/commissionPayoutOverview';
+import { CommissionPayoutModel, KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../../models/commissionPayout';
+import { CommissionPayoutOverviewModel, KarmaCommissionPayoutOverviewStatus } from '../../../models/commissionPayoutOverview';
 import {
   CommissionModel,
   ICommissionDocument,
@@ -81,11 +74,7 @@ type IUserId = string | IRef<ObjectId, IUserDocument>;
 
 export const currentAccurualsQuery = {
   status: {
-    $in: [
-      KarmaCommissionStatus.Pending,
-      KarmaCommissionStatus.ReceivedFromVendor,
-      KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
-    ],
+    $in: [KarmaCommissionStatus.Pending, KarmaCommissionStatus.ReceivedFromVendor, KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment],
   },
 };
 
@@ -129,10 +118,7 @@ export const getKarmaCommissionStatusFromWildfireStatus = (
   wildfireStatus: WildfireCommissionStatus,
   currentKarmaStatus: KarmaCommissionStatus,
 ) => {
-  if (
-    currentKarmaStatus === KarmaCommissionStatus.ReceivedFromVendor
-    && WildfireCommissionStatus.Paid === wildfireStatus
-  ) {
+  if (currentKarmaStatus === KarmaCommissionStatus.ReceivedFromVendor && WildfireCommissionStatus.Paid === wildfireStatus) {
     return KarmaCommissionStatus.ReceivedFromVendor;
   }
   switch (wildfireStatus) {
@@ -201,10 +187,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     return;
   }
   // if already paid to user DO NOT update the Karma Commission Status, this will revert the status back to received-from-vendor
-  if (
-    existingCommission.status === KarmaCommissionStatus.PaidToUser
-    || existingCommission.status === KarmaCommissionStatus.Failed
-  ) {
+  if (existingCommission.status === KarmaCommissionStatus.PaidToUser || existingCommission.status === KarmaCommissionStatus.Failed) {
     return;
   }
   const newStatus = getKarmaCommissionStatusFromWildfireStatus(Status, existingCommission.status);
@@ -219,14 +202,8 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
   await CommissionModel.updateOne({ _id: existingCommission?._id }, updates);
 };
 
-export const updateCommissionOverviewStatus = async (
-  commissionOverviewId: string,
-  status: KarmaCommissionPayoutOverviewStatus,
-) => {
-  const commissionPayoutOverview = await CommissionPayoutOverviewModel.findOneAndUpdate(
-    { _id: commissionOverviewId },
-    { status },
-  );
+export const updateCommissionOverviewStatus = async (commissionOverviewId: string, status: KarmaCommissionPayoutOverviewStatus) => {
+  const commissionPayoutOverview = await CommissionPayoutOverviewModel.findOneAndUpdate({ _id: commissionOverviewId }, { status });
   if (!commissionPayoutOverview) {
     throw new CustomError(`PayoutOverview with id ${commissionOverviewId} not found`, ErrorTypes.NOT_FOUND);
   }
@@ -265,10 +242,7 @@ export const updateCommissionPayoutStatus = async (
   }
 };
 
-export const getKarmaCommissionStatusFromKardStatus = (
-  kardStatus: RewardStatus,
-  currentKarmaStatus: KarmaCommissionStatus,
-) => {
+export const getKarmaCommissionStatusFromKardStatus = (kardStatus: RewardStatus, currentKarmaStatus: KarmaCommissionStatus) => {
   if (currentKarmaStatus === KarmaCommissionStatus.ReceivedFromVendor && RewardStatus.SETTLED === kardStatus) {
     return KarmaCommissionStatus.ReceivedFromVendor;
   }
@@ -282,9 +256,7 @@ export const getKarmaCommissionStatusFromKardStatus = (
   }
 };
 
-export const mapKardCommissionToKarmaCommisison = async (
-  kardCommission: EarnedRewardWebhookBody,
-): Promise<ICommissionDocument | void> => {
+export const mapKardCommissionToKarmaCommisison = async (kardCommission: EarnedRewardWebhookBody): Promise<ICommissionDocument | void> => {
   const { user: kardUser, reward, transaction, error } = kardCommission;
   if (!!error && Object.keys(error)?.length > 0) {
     console.error('Error in kard commission: ', JSON.stringify(error, null, 2));
@@ -311,16 +283,18 @@ export const mapKardCommissionToKarmaCommisison = async (
     },
   };
 
+  // get the associated transaction looking it up either by the id we added or the marqeta transaction id
   const associatedTransaction = await TransactionModel.findOne({
-    'integrations.kard.id': transaction.issuerTransactionId,
+    $or: [{ 'integrations.kard.id': transaction.issuerTransactionId }, { 'integrations.marqeta.token': transaction.transactionId }, { 'integrations.marqeta.relatedTransactions.token': transaction.transactionId }],
   });
+  if (!associatedTransaction?._id) throw new Error('Transaction not found');
 
   if (!!associatedTransaction?.integrations?.kard) {
     associatedTransaction.integrations.kard.rewardData = { ...transaction };
-    associatedTransaction?.save();
   } else {
-    throw new Error('Transaction not found');
+    associatedTransaction.integrations.kard = { rewardData: { ...transaction } };
   }
+  associatedTransaction?.save();
 
   // create a new commission if it does not exist
   const existingCommission = await CommissionModel.findOne({
@@ -336,7 +310,13 @@ export const mapKardCommissionToKarmaCommisison = async (
     const company = await CompanyModel.findOne({ merchant: merchant?._id });
     if (!company?._id) throw new Error('Company not found');
 
-    const card = await CardModel.findOne({ 'integrations.kard.userId': kardUser?.referringPartnerUserId });
+    // card could be from our marqeta integration or from plaid
+    const card = await CardModel.findOne({
+      $or: [
+        { 'integrations.kard.userId': kardUser?.referringPartnerUserId },
+        { 'integrations.marqeta.user_token': kardUser?.referringPartnerUserId },
+      ] });
+
     if (!card?._id) throw new Error(`Card not found for refferringPartnerUserId: ${kardUser?.referringPartnerUserId}`);
 
     const user = await UserModel.findOne({ _id: card.userId });
@@ -360,10 +340,7 @@ export const mapKardCommissionToKarmaCommisison = async (
     return newCommission.save();
   }
 
-  if (
-    existingCommission.status === KarmaCommissionStatus.PaidToUser
-    || existingCommission.status === KarmaCommissionStatus.Failed
-  ) {
+  if (existingCommission.status === KarmaCommissionStatus.PaidToUser || existingCommission.status === KarmaCommissionStatus.Failed) {
     return;
   }
   const newStatus = getKarmaCommissionStatusFromKardStatus(reward.status, existingCommission.status);

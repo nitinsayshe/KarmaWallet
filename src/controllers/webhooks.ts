@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
 import { MainBullClient } from '../clients/bull/main';
-import { EarnedRewardWebhookBody, KardInvalidSignatureError, verifyWebhookSignature } from '../clients/kard';
+import { EarnedRewardWebhookBody, KardInvalidSignatureError, verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../clients/kard';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
 import { processPaypalWebhook } from '../integrations/paypal';
@@ -30,11 +30,16 @@ import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { handleTransactionDisputeMacro } from '../services/transaction';
-import { IMarqetaWebhookBody, IMarqetaWebhookHeader, MarqetaWebhookConstants, InsufficientFundsConstants, MCCStandards } from '../integrations/marqeta/types';
+import {
+  IMarqetaWebhookBody,
+  IMarqetaWebhookHeader,
+  MarqetaWebhookConstants,
+  InsufficientFundsConstants,
+  MCCStandards,
+} from '../integrations/marqeta/types';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID,
-  MARQETA_WEBHOOK_PASSWORD } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -280,9 +285,13 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       return error(req, res, new CustomError('A token is required for authentication', ErrorTypes.FORBIDDEN));
     }
 
-    const errorVerifyingSignature = verifyWebhookSignature(req.body, headers['notify-signature']);
-    if (errorVerifyingSignature) {
-      if (errorVerifyingSignature === KardInvalidSignatureError) {
+    const errorVerifyingAggregatorEnvSignature = verifyAggregatorEnvWebhookSignature(req.body, headers['notify-signature']);
+    const errorVerifyingIssuerEnvSignature = verifyIssuerEnvWebhookSignature(req.body, headers['notify-signature']);
+    if (errorVerifyingIssuerEnvSignature && errorVerifyingAggregatorEnvSignature) {
+      if (
+        errorVerifyingIssuerEnvSignature === KardInvalidSignatureError
+        || errorVerifyingAggregatorEnvSignature === KardInvalidSignatureError
+      ) {
         console.log('\n KARD WEBHOOK: Invalid Token Provided \n');
         console.log(`Event ID: ${eventId}`);
         return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.AUTHENTICATION));
@@ -291,7 +300,6 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
     }
-
     const processingError = await processKardWebhook(req.body);
     if (!!processingError) {
       return error(req, res, processingError);

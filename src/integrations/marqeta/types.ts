@@ -96,12 +96,6 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   memo?: string;
 }
 
-export const GpaOrderTagEnum = {
-  CashbackPayout: 'cashback-payout',
-  EmployerGifting: 'employer-gifting',
-} as const;
-export type GpaOrderTagEnumValues = (typeof GpaOrderTagEnum)[keyof typeof GpaOrderTagEnum];
-
 export interface IMarqetaProcessKyc extends IMarqetaUserToken { }
 
 export interface IMarqetaCardTransition {

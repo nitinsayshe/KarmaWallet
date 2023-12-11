@@ -23,10 +23,11 @@ import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../.
 import CustomError from '../../lib/customError';
 import { IPromo } from '../../models/promo';
 import { getUtcDate } from '../../lib/date';
-import { GpaOrderTagEnum, IMarqetaCreateGPAorder } from '../../integrations/marqeta/types';
+import { IMarqetaCreateGPAorder } from '../../integrations/marqeta/types';
 import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/accountFundingSource';
 import { sendPayouts } from '../../controllers/integrations/marqeta/gpa';
 import { createPayoutUserNotificationFromCommissionPayout } from '../user_notification';
+import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';
 
 dayjs.extend(utc);
 
@@ -378,7 +379,8 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
           amount: payoutData.amount,
           fees: 0,
           currencyCode: 'USD',
-          tags: GpaOrderTagEnum.CashbackPayout,
+          tags: `type=${TransactionCreditSubtypeEnum.Cashback}`,
+          memo: 'You earned cashback from Karma Wallet. Great job!',
           fundingSourceToken: MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN,
         });
       } else if (!!paypal?.payerId) {

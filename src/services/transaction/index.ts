@@ -16,7 +16,7 @@ import {
   UserRoles,
 } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
-import { AdjustmentTransactionTypeEnum, sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import { AdjustmentTransactionTypeEnum, TransactionCreditSubtypeEnum, sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors } from '../../lib/validation';
@@ -60,7 +60,9 @@ import {
   IUpdateManualMatchRequest,
   IGetMatchedCompaniesQuery,
   ITransactionIdParam,
+  IInitiateGPADepositsRequest,
 } from './types';
+import { fundUserGPAFromProgramFundingSource } from '../../integrations/marqeta/gpa';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -933,4 +935,68 @@ export const handleTransactionDisputeMacro = async (transactions: ITransactionDo
       }
     }),
   );
+};
+
+export const isValidMemoLength = (memo: string) => memo.length > 99;
+
+export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
+  const { groupId, type, gpaDeposits, memo } = deposits;
+  const group = await GroupModel.findById(groupId);
+
+  if (!group) {
+    throw new CustomError(`Group with groupId: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
+  }
+
+  for (const deposit of gpaDeposits) {
+    const tags = `groupId=${groupId},type=${type}`;
+    const gpaFundResponse = await fundUserGPAFromProgramFundingSource({
+      userId: deposit.userId,
+      amount: deposit.amount,
+      tags,
+      memo: !!memo ? memo : `Deposit from ${group.name}`,
+    });
+
+    if (!gpaFundResponse.data) {
+      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
+    } else {
+      console.log(`Successfully funded user ${deposit.userId}`);
+    }
+  }
+};
+
+export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
+  const { type, gpaDeposits, memo } = deposits;
+
+  for (const deposit of gpaDeposits) {
+    const tags = `type=${type}`;
+    const gpaFundResponse = await fundUserGPAFromProgramFundingSource({
+      userId: deposit.userId,
+      amount: deposit.amount,
+      tags,
+      memo: !!memo ? memo : 'Quarterly cashback deposit',
+    });
+
+    if (!gpaFundResponse.data) {
+      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
+    } else {
+      console.log(`Successfully funded user ${deposit.userId}`);
+    }
+  }
+};
+
+export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
+  const { groupId, type, memo } = deposits;
+
+  if (!!memo && !isValidMemoLength) {
+    throw new CustomError('Memo must be 99 characters or less', ErrorTypes.INVALID_ARG);
+  }
+
+  if (type === TransactionCreditSubtypeEnum.Employer) {
+    if (!groupId) throw new CustomError('Missing group id', ErrorTypes.INVALID_ARG);
+    await processEmployerGPADeposits(deposits);
+  }
+
+  if (type === TransactionCreditSubtypeEnum.Cashback) {
+    await processCashbackGPADeposits(deposits);
+  }
 };

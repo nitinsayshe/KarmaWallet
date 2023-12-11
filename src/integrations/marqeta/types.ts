@@ -81,6 +81,10 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
 export interface IMarqetaLoadGpaFromProgramFundingSource {
   amount: number;
   userId: string;
+  // this should be an optional note about the credit deposit
+  memo?: string;
+  // will come in as a string: `groupId=${groupId},type=${type}`, groupId is not required for cashback
+  tags?: string;
 }
 
 export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
@@ -89,13 +93,8 @@ export interface IMarqetaCreateGPAorder extends IMarqetaUserToken {
   fees?: number;
   currencyCode: string;
   fundingSourceToken: string;
+  memo?: string;
 }
-
-export const GpaOrderTagEnum = {
-  CashbackPayout: 'cashback-payout',
-  EmployerGifting: 'employer-gifting',
-} as const;
-export type GpaOrderTagEnumValues = (typeof GpaOrderTagEnum)[keyof typeof GpaOrderTagEnum];
 
 export interface IMarqetaProcessKyc extends IMarqetaUserToken { }
 

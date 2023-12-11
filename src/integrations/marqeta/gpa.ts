@@ -14,12 +14,12 @@ const marqetaClient = new MarqetaClient();
 const gpa = new GPA(marqetaClient);
 
 export const fundUserGPAFromProgramFundingSource = async (params: IMarqetaLoadGpaFromProgramFundingSource) => {
-  const { userId, amount } = params;
+  const { userId, amount, tags, memo } = params;
 
   // get the program funding source balance
   const programFundingResponse = await gpa.getProgramFundingBalance();
 
-  if (process.env.MARQETA !== 'immxmgr_sandbox' && programFundingResponse?.available_balance < amount) {
+  if (process.env.MARQETA_APPLICATION_TOKEN === 'immxmgr_prod_api_consumer' && programFundingResponse?.available_balance < amount) {
     throw new CustomError('Program funding source balance is not enough to make a cashBack !', ErrorTypes.UNPROCESSABLE);
   }
   // find the user in DB
@@ -34,7 +34,13 @@ export const fundUserGPAFromProgramFundingSource = async (params: IMarqetaLoadGp
     amount,
     currencyCode: 'USD',
     fundingSourceToken: MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN,
+    tags,
   };
+
+  if (!!memo) {
+    marqetaGPAOrder.memo = memo;
+  }
+
   const gpaOrderResponse = await gpa.gpaOrder(marqetaGPAOrder);
   return { data: gpaOrderResponse };
 };

@@ -4,7 +4,7 @@ import { StateAbbreviation } from '../lib/constants';
 import { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 
-const { KARD_API_URL, KARD_COGNITO_URL, KARD_CLIENT_HASH, KARD_ISSUER_NAME, KARD_WEBHOOK_KEY } = process.env;
+const { KARD_API_URL, KARD_COGNITO_URL, KARD_CLIENT_HASH, KARD_ISSUER_NAME, KARD_WEBHOOK_KEY, KARD_ISSUER_WEBHOOK_KEY } = process.env;
 
 export const KardIssuer = KARD_ISSUER_NAME;
 
@@ -223,7 +223,23 @@ export type GetRewardsMerchantsResponse = Merchant[];
 export const KardServerError = new Error('Bad Request');
 export const KardInvalidSignatureError = new Error('Invalid Signature');
 
-export const verifyWebhookSignature = (body: EarnedRewardWebhookBody, signature: string): Error | null => {
+export const verifyIssuerEnvWebhookSignature = (body: EarnedRewardWebhookBody, signature: string): Error | null => {
+  try {
+    const stringified = JSON.stringify(body);
+
+    const hash = createHmac('sha256', KARD_ISSUER_WEBHOOK_KEY).update(stringified).digest('base64');
+    if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
+      return null;
+    }
+
+    return KardInvalidSignatureError;
+  } catch (err) {
+    console.error(err);
+    return KardServerError;
+  }
+};
+
+export const verifyAggregatorEnvWebhookSignature = (body: EarnedRewardWebhookBody, signature: string): Error | null => {
   try {
     const stringified = JSON.stringify(body);
 

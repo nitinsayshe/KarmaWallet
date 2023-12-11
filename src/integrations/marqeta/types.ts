@@ -81,9 +81,9 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
 export interface IMarqetaLoadGpaFromProgramFundingSource {
   amount: number;
   userId: string;
-  // this should be the group id
+  // this should be an optional note about the credit deposit
   memo?: string;
-  // this should be the subtype
+  // will come in as a string: `groupId=${groupId},type=${type}`, groupId is not required for cashback
   tags?: string;
 }
 

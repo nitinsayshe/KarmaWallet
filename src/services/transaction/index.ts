@@ -16,7 +16,7 @@ import {
   UserRoles,
 } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
-import { AdjustmentTransactionTypeEnum, TransactionCreditSubtypeEnum, sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import { AdjustmentTransactionTypeEnum, TransactionCreditSubtypeEnum, TransactionTypeEnum, sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors } from '../../lib/validation';
@@ -63,6 +63,9 @@ import {
   IInitiateGPADepositsRequest,
 } from './types';
 import { fundUserGPAFromProgramFundingSource } from '../../integrations/marqeta/gpa';
+import { TransactionModelStateEnum } from '../../clients/marqeta/types';
+import { createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { PushNotificationTypes } from '../../lib/constants/notification';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -930,7 +933,7 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
 };
 
 // This is a placeholder for adding logic that handles the dispute macros
-export const handleTransactionDisputeMacro = async (transactions: ITransactionDocument[]): Promise<void> => {
+export const handleTransactionDisputeMacros = async (transactions: ITransactionDocument[]): Promise<void> => {
   await Promise.all(
     transactions.map(async (c) => {
       try {
@@ -946,6 +949,48 @@ export const handleTransactionDisputeMacro = async (transactions: ITransactionDo
         }
       } catch (err) {
         console.error(`Error creating notification from transaction transition: ${JSON.stringify(c)}`);
+        console.error(err);
+        return null;
+      }
+    }),
+  );
+};
+
+export const handleCreditNotification = async (transaction: ITransactionDocument) => {
+  if (transaction.status !== TransactionModelStateEnum.Completion) return;
+  const user = await UserModel.findById(transaction.user);
+  if (transaction.subType === TransactionCreditSubtypeEnum.Employer) {
+    // add notifiction here?
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
+      body: `$${transaction?.amount} has been deposited onto your Karma Wallet Card`,
+      title: 'Employer Gift Received!',
+    });
+  }
+
+  if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
+      body: `$${transaction?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      title: 'Karma Cash Deposited!',
+    });
+  }
+};
+
+export const handleTransactionNotifications = async (transactions: ITransactionDocument[]): Promise<void> => {
+  await Promise.all(
+    transactions.map(async (t) => {
+      try {
+        switch (t.type) {
+          case TransactionTypeEnum.Credit:
+            // call function
+            handleCreditNotification(t);
+            break;
+          default:
+            console.log(`No notification created for transaction with type: ${t.type}`);
+        }
+      } catch (err) {
+        console.error(`Error creating notification from transaction transition: ${JSON.stringify(t)}`);
         console.error(err);
         return null;
       }

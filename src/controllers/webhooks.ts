@@ -29,7 +29,7 @@ import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integration
 import { PushNotificationTypes } from '../lib/constants/notification';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
-import { handleTransactionDisputeMacro } from '../services/transaction';
+import { handleTransactionDisputeMacros, handleTransactionNotifications } from '../services/transaction';
 import {
   IMarqetaWebhookBody,
   IMarqetaWebhookHeader,
@@ -403,16 +403,6 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           console.log('authorization.clearing ', transaction);
         }
 
-        // event for Funding GPA via Funding Source Program (Reward related transaction)
-        if (transaction.type === MarqetaWebhookConstants.GPA_CREDIT) {
-          if (user && transaction?.gpa_order?.amount && transaction?.gpa_order?.state === MarqetaWebhookConstants.COMPLETION) {
-            await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-              body: `$${transaction?.gpa_order?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
-              title: 'Received Cashback',
-            });
-          }
-        }
         // Transactions
         if (transaction.type.includes(MarqetaWebhookConstants.PIN_DEBIT)) {
           // Send push notification of transaction
@@ -461,7 +451,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!transactions) {
       console.log('////////// PROCESSING MARQETA TRANSACTION (2) WEBHOOK ////////// ');
       const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
-      await handleTransactionDisputeMacro(savedTransactions);
+      await handleTransactionDisputeMacros(savedTransactions);
+      await handleTransactionNotifications(savedTransactions);
     }
 
     if (!!chargebacktransitions) {

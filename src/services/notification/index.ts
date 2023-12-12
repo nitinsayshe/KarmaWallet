@@ -17,6 +17,7 @@ export const executeUserNotificationEffects = async <NotificationDataType>(
     const { type, channel, data } = userNotification;
     // pull the notification using the type
     const notification = await NotificationModel.findOne({ type });
+    console.log('///// this is the notification', notification);
 
     // check if the channel is one of the ones that this notification can be triggered for
     if (!notification?.channels?.includes(channel)) {

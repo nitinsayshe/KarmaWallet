@@ -38,11 +38,14 @@ export interface INotificationDocument extends INotification, Document {
 
 const notification = new Schema({
   type: { required: true, unique: true, type: String, enum: Object.values(NotificationTypeEnum) },
-  channels: {
-    required: true,
-    type: [Object.values(NotificationChannelEnum)],
-  },
-  effects: { type: [Object.values(NotificationEffectsEnum)] },
+  channels: [
+    {
+      required: true,
+      type: String,
+      enum: Object.values(NotificationChannelEnum),
+    },
+  ],
+  effects: [{ type: String, enum: Object.values(NotificationEffectsEnum) }],
   createdOn: { required: true, type: Date, default: () => getUtcDate().toDate() },
   lastModified: { required: true, type: Date, default: () => getUtcDate().toDate() },
 });

@@ -62,7 +62,10 @@ export const updateACHFundingSource = async (userId: string, accessToken: string
 };
 
 export const createACHBankTransfer = async (req: IRequest<{}, {}, ACHTransferTypes.IMarqetaACHBankTransfer>) => {
-  const params = req.body;
+  const params = {
+    ...req.body,
+    standard_entry_class_code: 'WEB',
+  };
   const userResponse = await achFundingSource.createACHBankTransfer(params);
   return { data: userResponse };
 };

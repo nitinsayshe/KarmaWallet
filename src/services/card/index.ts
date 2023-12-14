@@ -333,6 +333,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     instrument_type,
     pin_is_set,
     state,
+    card_token,
   } = cardData;
 
   // Find the existing card document with Marqeta integration
@@ -353,7 +354,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   const cardItem: any = {
     barcode,
     card_product_token,
-    card_token: token,
+    card_token: !!card_token ? card_token : token,
     created_time,
     expiration_time,
     expr_month: month,

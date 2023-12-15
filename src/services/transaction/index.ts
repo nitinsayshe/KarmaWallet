@@ -1034,7 +1034,7 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : 'Quarterly cashback deposit',
+      memo: !!memo ? memo : 'Quarterly Karma Cash deposit',
     });
 
     if (!gpaFundResponse.data) {

@@ -17,13 +17,11 @@ export const executeUserNotificationEffects = async <NotificationDataType>(
     const { type, channel, data } = userNotification;
     // pull the notification using the type
     const notification = await NotificationModel.findOne({ type });
-    console.log('///// this is the notification', notification);
-    console.log('///// Includes?', notification?.channels?.includes(channel));
 
     // check if the channel is one of the ones that this notification can be triggered for
-    // if (!notification?.channels?.includes(channel)) {
-    //   throw new Error(`No notification found for type ${type} and channel ${channel}`);
-    // }
+    if (!notification?.channels?.includes(channel)) {
+      throw new Error(`No notification found for type ${type} and channel ${channel}`);
+    }
 
     // filter out any effects that can't be triggered for this channel
     const notificationChannelEffects = NotificationChannelEffects[channel].map((e) => e.toString());

@@ -125,7 +125,7 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   },
   AccountDeleteRequest: {
     name: EmailTemplateKeys.AccountDeleteRequest,
-    type: EmailTemplateTypes.AccountDeleteRequest,
+    type: EmailTemplateTypes.Support,
   },
   KarmaCardWelcome: {
     name: EmailTemplateKeys.KarmaCardWelcome,

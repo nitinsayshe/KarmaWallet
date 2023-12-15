@@ -40,7 +40,7 @@ export enum EmailTemplateTypes {
   Essential = 'essential',
   Marketing = 'marketing',
   Password = 'password',
-  SupportTicket = 'supportTicket',
+  Support = 'support',
   Verification = 'verification',
 }
 
@@ -121,7 +121,7 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   },
   SupportTicket: {
     name: EmailTemplateKeys.SupportTicket,
-    type: EmailTemplateTypes.SupportTicket,
+    type: EmailTemplateTypes.Support,
   },
   AccountDeleteRequest: {
     name: EmailTemplateKeys.AccountDeleteRequest,

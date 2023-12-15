@@ -16,29 +16,37 @@ import { IMatchedTransaction } from '../../integrations/plaid/types';
 import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
 import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
-import { updateTransactions } from '../../integrations/plaid/v2_transaction';
 import { ITransaction, TransactionModel } from '../../models/transaction';
+import { CombinedPartialTransaction } from '../../types/transaction';
+import { updatePlaidTransactions } from '../../integrations/plaid/v2_transaction';
+import { updateMarqetaTransactions } from '../../integrations/marqeta/transactions';
 
 dayjs.extend(utc);
 
+export enum TransactionSource {
+  Plaid = 'plaid',
+  Marqeta = 'marqeta',
+}
 export interface IGlobalTransactionUpdatesParams {
   writeOutput?: boolean;
   userId?: Types.ObjectId | string;
   startingUserCursor?: number;
+  transactionSource?: TransactionSource;
 }
 
 export const globalTransactionUpdates = async ({
   writeOutput = false,
   userId = null,
   startingUserCursor = null,
+  transactionSource = TransactionSource.Plaid,
 }: IGlobalTransactionUpdatesParams) => {
   const logId = '[gptu] - ';
   const log = (message: string) => {
     console.log(`${logId}${message}`);
   };
-  const overallTimestring = `${logId}global plaid transaction mapping for ${dayjs().toISOString()} ---`;
+  const overallTimestring = `${logId}global ${transactionSource} transaction mapping for ${dayjs().toISOString()} ---`;
   console.time(overallTimestring);
-  log(`global plaid transaction update started for ${dayjs().toISOString()}`);
+  log(`global ${transactionSource} transaction update started for ${dayjs().toISOString()}`);
 
   // iterate over cards
   // grab transactions for each card
@@ -93,13 +101,32 @@ export const globalTransactionUpdates = async ({
         // get already matched each time as it builds on itself
         const alreadyMatchedCompanies = await V2TransactionMatchedCompanyNameModel.find({});
 
-        const allUserTransactions = await TransactionModel.find({ user: user._id, 'integrations.plaid': { $ne: null } }).lean();
+        const transactionQuery: any = { user: user._id };
+
+        if (transactionSource === TransactionSource.Plaid) transactionQuery['integrations.plaid'] = { $ne: null };
+        if (transactionSource === TransactionSource.Marqeta) transactionQuery['integrations.marqeta'] = { $ne: null };
+
+        const allUserTransactions = await TransactionModel.find(transactionQuery).lean();
 
         const matchedTransactions: IMatchedTransaction[] = [];
 
-        let remainingTransactions: Transaction[] = [];
+        let remainingTransactions: CombinedPartialTransaction[] = [];
 
-        remainingTransactions = allUserTransactions.map(t => ({ datetime: t.date, amount: t.amount, ...t.integrations.plaid }) as any as Transaction);
+        // mappers will be different for each source
+        if (transactionSource === TransactionSource.Plaid) {
+          remainingTransactions = allUserTransactions.reduce((acc: CombinedPartialTransaction[], t) => {
+            if (t.integrations.plaid) acc.push({ datetime: t.date.toDateString(), amount: t.amount, ...t.integrations.plaid } as any as CombinedPartialTransaction);
+            return acc;
+          }, [] as Transaction[]);
+        }
+
+        if (transactionSource === TransactionSource.Marqeta) {
+          remainingTransactions = allUserTransactions.reduce((acc: CombinedPartialTransaction[], t) => {
+            // potential for fp or fn here due to the merchant_name and name issues from plaid
+            if (t.integrations.marqeta && t.integrations.marqeta?.card_acceptor?.name) acc.push({ merchant_name: t.integrations.marqeta?.card_acceptor?.name, name: t.integrations.marqeta?.card_acceptor?.name, ...t.integrations.marqeta } as CombinedPartialTransaction);
+            return acc;
+          }, []);
+        }
 
         const timeString = `${logId}matching for user ${user._id.toString()}`;
         console.time(timeString);
@@ -107,11 +134,13 @@ export const globalTransactionUpdates = async ({
         log(`initial transaction count ${remainingTransactions.length}`);
 
         // filter out pending transactions
-        remainingTransactions = remainingTransactions.filter((t) => !t.pending);
-        log(`initial transaction count after pending ${remainingTransactions.length}`);
+        if (transactionSource === TransactionSource.Plaid) {
+          remainingTransactions = remainingTransactions.filter((t) => !t?.pending);
+          log(`initial transaction count after pending ${remainingTransactions.length}`);
+        }
 
         // filter out false positives
-        const foundFalsePositives: Transaction[] = [];
+        const foundFalsePositives: CombinedPartialTransaction[] = [];
         remainingTransactions = remainingTransactions.filter((t) => {
           if (falsePositives.find((fp) => fp.originalValue === t[fp.matchType])) {
             foundFalsePositives.push(t);
@@ -154,7 +183,9 @@ export const globalTransactionUpdates = async ({
         if (writeOutput) output.push(...newlyMatchedTransactions);
 
         // logic to update transactions
-        await updateTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
+
+        if (transactionSource === TransactionSource.Plaid) await updatePlaidTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
+        if (transactionSource === TransactionSource.Marqeta) await updateMarqetaTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
       }
     } catch (err) {
       log('error - trying again');

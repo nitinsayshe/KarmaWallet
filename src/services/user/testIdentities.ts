@@ -16,11 +16,12 @@ import { JobNames } from '../../lib/constants/jobScheduler';
 import { encrypt } from '../../lib/encryption';
 import { saveDocuments } from '../../lib/model';
 import { getRandomInt } from '../../lib/number';
-import { createSomeCards, createSomeUsers} from '../../lib/testingUtils';
+import { createSomeCards, createSomeUsers } from '../../lib/testingUtils';
 import { CardModel, ICardDocument } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { IUserDocument, UserEmailStatus, UserModel } from '../../models/user';
 import { IRequest } from '../../types/request';
+import { CardResponse } from '../../clients/marqeta/types';
 
 export enum TestIdentities {
   HenryDavidThoreau = 'HenryDavidThoreau',
@@ -414,7 +415,7 @@ IMatchedTransaction & {
   for (let i = 0; i < numTransactions; i++) {
     transactions.push({
       userId: userId.toString(),
-      card,
+      card: card as any as CardResponse & ICardDocument,
       companyDocument: company,
       date: dayjs(endDate).subtract(i, 'day').format('YYYY-MM-DD'),
       authorized_date: dayjs(endDate).subtract(i, 'day').format('YYYY-MM-DD'),
@@ -449,7 +450,7 @@ IMatchedTransaction & {
   for (let i = 0; i < numTransactions; i++) {
     transactions.push({
       userId,
-      card,
+      card: card as any as CardResponse & ICardDocument,
       companyDocument: company,
       date: dayjs(startDate).add(i, 'day').format('YYYY-MM-DD'),
       authorized_date: dayjs(startDate).add(i, 'day').format('YYYY-MM-DD'),

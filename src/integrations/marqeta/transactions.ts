@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 import dayjs from 'dayjs';
 import { parseInt } from 'lodash';
 import { Transaction } from 'plaid';
@@ -33,7 +34,7 @@ import { saveDocuments } from '../../lib/model';
 import { CardModel } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ISectorDocument, SectorModel } from '../../models/sector';
-import { ITransactionDocument, TransactionModel as MongooseTransactionModel } from '../../models/transaction';
+import { ITransaction, ITransactionDocument, TransactionModel as MongooseTransactionModel } from '../../models/transaction';
 import { UserModel } from '../../models/user';
 import { matchTransactionCompanies } from '../../services/transaction';
 import { IRef } from '../../types/model';
@@ -49,6 +50,10 @@ import {
 } from './types';
 import { IMarqetaGPACustomTags } from '../../services/transaction/types';
 import { GroupModel } from '../../models/group';
+
+export interface IMarqetaTokenTransactionDictionary {
+  [key: string]: ITransactionDocument;
+}
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
@@ -545,4 +550,57 @@ export const getPaginatedTransactionsForUser = async (userId: string): Promise<T
   const { userToken } = userDoc.integrations.marqeta;
   const transactions = await getMarqetaResources({ userToken, sortBy: 'created_time' }, getTransactions);
   return transactions;
+};
+
+export const updateMarqetaTransactions = async (
+  allUserTransactions: ITransaction[],
+  newlyMatchedTransactions: IMatchedTransaction[],
+) => {
+  const logId = '[updt] - ';
+  const log = (message: string) => console.log(`${logId}${message}`);
+
+  log('updating transactions');
+  log(`transaction count: ${allUserTransactions.length}`);
+  log(`remaining transaction count: ${newlyMatchedTransactions.length}`);
+
+  const transactionsToSave: any = [];
+
+  const marqetaTokenDictionary: IMarqetaTokenTransactionDictionary = allUserTransactions.reduce(
+    (acc: { [key: string]: ITransactionDocument }, t) => {
+      if (!t.integrations?.marqeta?.token) return acc;
+      acc[t.integrations.marqeta.token] = t as ITransactionDocument;
+      return acc;
+    },
+    {},
+  );
+
+  const timeString = `${logId}transactions comparison`;
+  console.time(timeString);
+
+  for (const newlyMatchedTransaction of newlyMatchedTransactions) {
+    const transaction = marqetaTokenDictionary[newlyMatchedTransaction.token];
+    if (!transaction) continue;
+    transaction.integrations.marqeta = newlyMatchedTransaction;
+    if (
+      transaction.company?.toString() === newlyMatchedTransaction.company?.toString()
+      || (!transaction.company && !newlyMatchedTransaction.company)
+    ) {
+      continue;
+    }
+    log(
+      `updating transaction ${transaction._id} company from ${transaction.company} to ${newlyMatchedTransaction.company}`,
+    );
+
+    const update: any = {
+      _id: transaction._id,
+    };
+
+    if (newlyMatchedTransaction.company) update.company = newlyMatchedTransaction.company;
+    else update.$unset = { company: '' };
+    transactionsToSave.push(MongooseTransactionModel.updateOne({ _id: transaction._id }, update));
+  }
+
+  log(`transactions to save count: ${transactionsToSave.length}`);
+  await Promise.all(transactionsToSave);
+  console.timeEnd(timeString);
 };

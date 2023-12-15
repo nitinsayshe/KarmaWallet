@@ -333,7 +333,12 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     const _limit = parseInt(limit.toString());
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
-    const query: FilterQuery<ITransactionDocument> = { $and: [{ sector: { $nin: sectorsToExcludeFromTransactions } }] };
+    const query: FilterQuery<ITransactionDocument> = {
+      $and: [
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { status: { $ne: TransactionModelStateEnum.Declined } },
+      ],
+    };
 
     if (!!userId) {
       if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {

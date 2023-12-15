@@ -26,6 +26,7 @@ export interface ITransactionsRequestQuery extends AqpQuery {
   userId?: string;
   includeOffsets?: boolean;
   includeNullCompanies?: boolean;
+  includeDeclined?: boolean;
   onlyOffsets?: boolean;
   integrationType?: TransactionIntegrationTypesEnumValues;
   startDate: Date;

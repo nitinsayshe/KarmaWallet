@@ -206,7 +206,7 @@ const getTransactionIntegrationFilter = (integrationType: TransactionIntegration
 };
 
 export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate, includeDeclined } = req.query;
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};
@@ -270,7 +270,8 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
             && key !== 'includeNullCompanies'
             && key !== 'onlyOffsets'
             && key !== 'startDate'
-            && key !== 'endDate',
+            && key !== 'endDate'
+            && key !== 'integrationType',
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
@@ -298,6 +299,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
   if (!!startDate) filter.$and.push(startDateQuery);
   if (!!endDate) filter.$and.push(endDateQuery);
+  if (!includeDeclined) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
 
   const transactions = await TransactionModel.paginate(filter, paginationOptions);
 

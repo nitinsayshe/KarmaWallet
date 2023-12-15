@@ -271,7 +271,8 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
             && key !== 'onlyOffsets'
             && key !== 'startDate'
             && key !== 'endDate'
-            && key !== 'integrationType',
+            && key !== 'integrationType'
+            && key !== 'includeDeclined',
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },

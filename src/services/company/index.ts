@@ -519,9 +519,10 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
     }
 
     if (!!excludeKarmaCollective) {
+      delete filter.excludeKarmaCollective;
       aggregateSteps.push({
         $match: {
-          'merchant.karmaCollectiveMember': false,
+          'merchant.karmaCollectiveMember': { $ne: true },
         },
       });
     }

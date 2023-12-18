@@ -1,6 +1,7 @@
 import { AccountBase, AccountIdentity, Item, Transaction } from 'plaid';
 import { ObjectId } from 'mongoose';
 import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
+import { CombinedPartialTransaction } from '../../types/transaction';
 
 export interface IPlaidInstitution {
   name: string;
@@ -59,6 +60,6 @@ export interface ICompanyMatchingResult {
   company: ObjectId;
 }
 
-export interface IMatchedTransaction extends Transaction {
+export interface IMatchedTransaction extends CombinedPartialTransaction {
   company?: ObjectId;
 }

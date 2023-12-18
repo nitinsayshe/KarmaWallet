@@ -214,7 +214,7 @@ export interface IPlaidIdTransactionDictionary {
   [key: string]: ITransactionDocument;
 }
 
-export const updateTransactions = async (
+export const updatePlaidTransactions = async (
   allUserTransactions: ITransaction[],
   newlyMatchedTransactions: IMatchedTransaction[],
 ) => {
@@ -229,6 +229,7 @@ export const updateTransactions = async (
 
   const plaidIdTransactionDictionary: IPlaidIdTransactionDictionary = allUserTransactions.reduce(
     (acc: { [key: string]: ITransactionDocument }, t) => {
+      if (!t.integrations?.plaid?.transaction_id) return acc;
       acc[t.integrations.plaid.transaction_id] = t as ITransactionDocument;
       return acc;
     },
@@ -252,13 +253,13 @@ export const updateTransactions = async (
       `updating transaction ${transaction._id} company from ${transaction.company} to ${newlyMatchedTransaction.company}`,
     );
 
-    transactionsToSave.push(
-      TransactionModel.findOneAndUpdate(
-        { _id: transaction._id },
-        { company: newlyMatchedTransaction.company },
-        { new: true },
-      ),
-    );
+    const update: any = {
+      _id: transaction._id,
+    };
+
+    if (newlyMatchedTransaction.company) update.company = newlyMatchedTransaction.company;
+    else update.$unset = { company: '' };
+    transactionsToSave.push(TransactionModel.updateOne({ _id: transaction._id }, update));
   }
 
   log(`transactions to save count: ${transactionsToSave.length}`);

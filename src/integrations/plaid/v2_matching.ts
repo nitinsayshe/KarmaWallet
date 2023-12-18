@@ -4,7 +4,6 @@ import Fuse from 'fuse.js';
 import { parse, transforms } from 'json2csv';
 import { Schema } from 'mongoose';
 import path from 'path';
-import { Transaction } from 'plaid';
 import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
 import { CompanyModel, ICompany } from '../../models/company';
 import { PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
@@ -15,6 +14,7 @@ import {
 } from '../../models/v2_transaction_matchedCompanyName';
 import { IRef } from '../../types/model';
 import { ICompanyMatchingResult, IMatchedTransaction } from './types';
+import { CombinedPartialTransaction } from '../../types/transaction';
 
 interface ICompanyWithCleanedName extends ICompany {
   companyCleanedName: string;
@@ -55,7 +55,7 @@ const regexReplacements = [/[0-9]+/gi, /\.$/, /-$/, /,$/];
 const THRESHOLD = 0.000000101;
 
 interface IMatchTransactionsToCompaniesParams {
-  transactions: Transaction[];
+  transactions: CombinedPartialTransaction[];
   cleanedCompanies: ICompanyWithCleanedName[];
   writeToDisk?: boolean;
   saveMatches?: boolean;
@@ -231,11 +231,11 @@ export const getMatchResults = async ({
 };
 
 export const matchTransactionsToCompanies = (
-  transactions: Transaction[],
+  transactions: CombinedPartialTransaction[],
   results: ICompanyMatchingResult[] | IV2TransactionMatchedCompanyName[],
 ) => {
   const matchedTransactions: IMatchedTransaction[] = [];
-  const nonMatchedTransactions: Transaction[] = [];
+  const nonMatchedTransactions: CombinedPartialTransaction[] = [];
   transactions.forEach((transaction) => {
     const alreadyMatchedCompany = results.find((amc) => amc.originalValue === transaction[amc.matchType]);
     if (alreadyMatchedCompany) {

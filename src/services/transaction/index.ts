@@ -66,6 +66,7 @@ import { fundUserGPAFromProgramFundingSource } from '../../integrations/marqeta/
 import { TransactionModelStateEnum } from '../../clients/marqeta/types';
 import { createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
+import { CombinedPartialTransaction } from '../../types/transaction';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -579,9 +580,9 @@ export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
 };
 
 export const matchTransactionCompanies = async (
-  transactions: Transaction[],
+  transactions: CombinedPartialTransaction[],
   saveMatches = false,
-): Promise<{ matched: IMatchedTransaction[]; notMatched: Transaction[] }> => {
+): Promise<{ matched: IMatchedTransaction[]; notMatched: CombinedPartialTransaction[] }> => {
   let remainingTransactions = transactions;
   let matchedTransactions: IMatchedTransaction[] = [];
 
@@ -589,7 +590,7 @@ export const matchTransactionCompanies = async (
     // handle known false positive matches
     const falsePositives = await V2TransactionFalsePositiveModel.find({});
 
-    const foundFalsePositives: Transaction[] = [];
+    const foundFalsePositives: CombinedPartialTransaction[] = [];
     remainingTransactions = remainingTransactions.filter((t) => {
       if (falsePositives.find((fp) => fp.originalValue === t[fp.matchType])) {
         foundFalsePositives.push(t);

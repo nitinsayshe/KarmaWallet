@@ -68,6 +68,7 @@ export const getShareableMerchant = ({
   _id,
   name,
   integrations,
+  karmaCollectiveMember,
 }: IMerchantDocument): IShareableMerchantWithEnrichedData => {
   let maxDescription = '';
   let maxAmount = '';
@@ -112,6 +113,7 @@ export const getShareableMerchant = ({
     maxDescription,
     maxAmount,
     maxRateType,
+    karmaCollectiveMember: !!karmaCollectiveMember,
   };
 };
 

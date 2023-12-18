@@ -207,7 +207,7 @@ const getTransactionIntegrationFilter = (integrationType: TransactionIntegration
 };
 
 export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate, includeDeclined } = req.query;
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};
@@ -271,7 +271,9 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
             && key !== 'includeNullCompanies'
             && key !== 'onlyOffsets'
             && key !== 'startDate'
-            && key !== 'endDate',
+            && key !== 'endDate'
+            && key !== 'integrationType'
+            && key !== 'includeDeclined',
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
@@ -299,6 +301,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
   if (!!startDate) filter.$and.push(startDateQuery);
   if (!!endDate) filter.$and.push(endDateQuery);
+  if (!includeDeclined) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
 
   const transactions = await TransactionModel.paginate(filter, paginationOptions);
 
@@ -332,7 +335,12 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     const _limit = parseInt(limit.toString());
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
-    const query: FilterQuery<ITransactionDocument> = { $and: [{ sector: { $nin: sectorsToExcludeFromTransactions } }] };
+    const query: FilterQuery<ITransactionDocument> = {
+      $and: [
+        { sector: { $nin: sectorsToExcludeFromTransactions } },
+        { status: { $ne: TransactionModelStateEnum.Declined } },
+      ],
+    };
 
     if (!!userId) {
       if (req.requestor._id.toString() !== userId && req.requestor.role === UserRoles.None) {

@@ -14,6 +14,7 @@ interface ICompareQuery {
 export const getCompanies: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
+    console.log('/////// info', query);
     const companies = await CompanyService.getCompanies(req, query);
     const sharableCompanies = {
       ...companies,

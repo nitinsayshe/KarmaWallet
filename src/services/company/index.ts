@@ -407,7 +407,7 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false, excludeKarmaCollective = false) => {
+export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false, excludeKarmaCollective = true) => {
   const { filter } = query;
   let unsdgQuery = {};
   let searchQuery = {};

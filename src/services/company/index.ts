@@ -407,7 +407,7 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
+export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false, excludeKarmaCollective = false) => {
   const { filter } = query;
   let unsdgQuery = {};
   let searchQuery = {};
@@ -513,6 +513,14 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       aggregateSteps.push({
         $match: {
           'merchant.karmaCollectiveMember': true,
+        },
+      });
+    }
+
+    if (!!excludeKarmaCollective) {
+      aggregateSteps.push({
+        $match: {
+          'merchant.karmaCollectiveMember': false,
         },
       });
     }

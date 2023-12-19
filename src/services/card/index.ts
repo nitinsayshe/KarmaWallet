@@ -310,8 +310,9 @@ export const getCardStatusFromMarqetaCardState = (cardState: MarqetaCardState): 
     case MarqetaCardState.TERMINATED:
       return CardStatus.Removed;
     case MarqetaCardState.SUSPENDED:
+      return CardStatus.Locked;
     case MarqetaCardState.UNACTIVATED:
-      return CardStatus.Unlinked;
+      return CardStatus.Linked;
     case MarqetaCardState.LIMITED:
       return CardStatus.Locked;
     default:
@@ -371,7 +372,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
-  card.status = cardData.state === MarqetaCardState.TERMINATED ? CardStatus.Removed : CardStatus.Linked;
+  card.status = getCardStatusFromMarqetaCardState(cardData.state);
 
   // Save the updated card document
   await card.save();

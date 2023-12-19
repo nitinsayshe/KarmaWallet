@@ -1,49 +1,14 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
-import { createHmac } from 'crypto';
 import {
   AddCardToUserRequest,
   CreateUserRequest,
-  EarnedRewardWebhookBody,
   KardClient,
-  KardInvalidSignatureError,
   QueueTransactionsRequest,
-  RewardStatus,
-  RewardType,
   TransactionStatus,
   UpdateUserRequest,
-  verifyAggregatorEnvWebhookSignature,
 } from '../kard';
 
 describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
-  const exampleWebhookBody: EarnedRewardWebhookBody = {
-    issuer: process.env.KARD_ISSUER_NAME,
-    user: {
-      referringPartnerUserId: '12345',
-    },
-    reward: {
-      merchantId: 'TestMerchantId',
-      name: 'TestMerchantName',
-      type: RewardType.CARDLINKED,
-      status: RewardStatus.SETTLED,
-      commissionToIssuer: 0,
-    },
-    card: {
-      bin: '123456',
-      last4: '4321',
-      network: 'VISA',
-    },
-    transaction: {
-      issuerTransactionId: 'TestTransactionId',
-      transactionId: 'TestTransactionId',
-      transactionAmountInCents: 100,
-      status: TransactionStatus.APPROVED,
-      itemsOrdered: [],
-      transactionTimeStamp: '2021-01-01T00:00:00.000Z',
-    },
-    postDineInLinkURL: 'https://test.com',
-    error: {},
-  };
-
   afterEach(() => {
     /* clean up between tests */
   });
@@ -116,33 +81,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
     expect(res.email).not.toBe('');
     expect(res.id).not.toBe('');
     expect(res.cards?.length).toBeGreaterThan(0);
-  });
-
-  it('verifyWebhookSignature uses request body and kard secret to verify signature', async () => {
-    /* use hash_hmac to generate signature */
-    const stringified = JSON.stringify(exampleWebhookBody);
-    const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
-
-    const error = verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
-    expect(error).toBeNull();
-  });
-
-  it('verifyWebhookSignature returns KardInvalidTokenError when signature is generated with incorrect secret', async () => {
-    const stringified = JSON.stringify(exampleWebhookBody);
-    const signature = createHmac('sha256', "I'mNotTheSecret").update(stringified).digest('base64');
-
-    const error = verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
-    expect(error).toBe(KardInvalidSignatureError);
-  });
-
-  it('verifyWebhookSignature returns KardBadRequestError when body is empty', async () => {
-    const modifiedExampleWebhookBody = { ...exampleWebhookBody };
-    const stringified = JSON.stringify(modifiedExampleWebhookBody);
-    const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
-    delete modifiedExampleWebhookBody.issuer;
-
-    const error = verifyAggregatorEnvWebhookSignature(modifiedExampleWebhookBody as EarnedRewardWebhookBody, signature);
-    expect(error).toBe(KardInvalidSignatureError);
   });
 
   it.skip('getRewardsMerchants fetched merchats that offer rewards', async () => {

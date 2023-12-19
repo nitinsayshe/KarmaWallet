@@ -468,21 +468,3 @@ export class KardClient extends SdkClient {
     }
   }
 }
-
-export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
-  try {
-    const client = new KardClient(KardEnvironmentEnum.Issuer);
-    return client.verifyWebhookSignature(body, signature);
-  } catch (err) {
-    return KardServerError;
-  }
-};
-
-export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
-  try {
-    const client = new KardClient(KardEnvironmentEnum.Aggregator);
-    return client.verifyWebhookSignature(body, signature);
-  } catch (err) {
-    return KardServerError;
-  }
-};

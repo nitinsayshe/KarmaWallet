@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
 import { MainBullClient } from '../clients/bull/main';
-import { EarnedRewardWebhookBody, KardInvalidSignatureError, verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../clients/kard';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
 import { processPaypalWebhook } from '../integrations/paypal';
@@ -38,6 +37,8 @@ import {
   MCCStandards,
 } from '../integrations/marqeta/types';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
+import { EarnedRewardWebhookBody, KardInvalidSignatureError } from '../clients/kard';
+import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 

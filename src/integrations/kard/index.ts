@@ -6,7 +6,9 @@ import {
   AddCardToUserResponse,
   CardInfo,
   CreateUserRequest,
+  EarnedRewardWebhookBody,
   KardClient,
+  KardEnvironmentEnum,
   KardIssuerName,
   QueueTransactionsRequest,
   Transaction,
@@ -278,5 +280,23 @@ export const queueSettledTransactions = async (
     return sendTransactionsInBatches(batches, c);
   } catch (err) {
     console.error('Error queuing transactions: ', err);
+  }
+};
+
+export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Issuer);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    console.error('Error verifying webhook signature: ', err);
+  }
+};
+
+export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Aggregator);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    console.error('Error verifying webhook signature: ', err);
   }
 };

@@ -144,7 +144,6 @@ const getKardOfferData = async (): Promise<{
   domains: Domain[];
 } | null> => {
   try {
-    // getting merchant offers from the issuer environment includes karma collective one
     const kc = new KardClient(KardEnvironmentEnum.Issuer);
     const merchants = await kc.getRewardsMerchants();
     if (!merchants) return null;

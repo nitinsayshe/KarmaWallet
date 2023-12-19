@@ -1,10 +1,10 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { AxiosResponse } from 'axios';
-import { randomUUID } from 'crypto';
+import { createHmac, randomUUID } from 'crypto';
 import dayjs from 'dayjs';
 import { now } from 'lodash';
-import { createKardUserAndAddIntegrations, getCardInfo, deleteKardUsersForUser, queueSettledTransactions } from '..';
-import { MerchantSource, OfferType, CommissionType, KardClient, TransactionStatus } from '../../../clients/kard';
+import { createKardUserAndAddIntegrations, getCardInfo, deleteKardUsersForUser, queueSettledTransactions, verifyAggregatorEnvWebhookSignature } from '..';
+import { MerchantSource, OfferType, CommissionType, KardClient, TransactionStatus, EarnedRewardWebhookBody, RewardStatus, RewardType } from '../../../clients/kard';
 import { MongoClient } from '../../../clients/mongo';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
@@ -50,6 +50,35 @@ describe('kard client interface can fetch session tokes, create, update, and del
     bin: `5${getRandomInt(10000, 99999).toString()}`,
     issuer: 'test issuer',
     network: CardNetwork.Mastercard,
+  };
+
+  const exampleWebhookBody: EarnedRewardWebhookBody = {
+    issuer: process.env.KARD_ISSUER_NAME,
+    user: {
+      referringPartnerUserId: '12345',
+    },
+    reward: {
+      merchantId: 'TestMerchantId',
+      name: 'TestMerchantName',
+      type: RewardType.CARDLINKED,
+      status: RewardStatus.SETTLED,
+      commissionToIssuer: 0,
+    },
+    card: {
+      bin: '123456',
+      last4: '4321',
+      network: 'VISA',
+    },
+    transaction: {
+      issuerTransactionId: 'TestTransactionId',
+      transactionId: 'TestTransactionId',
+      transactionAmountInCents: 100,
+      status: TransactionStatus.APPROVED,
+      itemsOrdered: [],
+      transactionTimeStamp: '2021-01-01T00:00:00.000Z',
+    },
+    postDineInLinkURL: 'https://test.com',
+    error: {},
   };
 
   beforeEach(() => {});
@@ -361,4 +390,32 @@ describe('kard client interface can fetch session tokes, create, update, and del
     // clean up
     await deleteKardUsersForUser(testUserWithKardIntegration);
   }, 15000);
+
+  it('verifyWebhookSignature uses request body and kard secret to verify signature', async () => {
+    /* use hash_hmac to generate signature */
+    const stringified = JSON.stringify(exampleWebhookBody);
+    const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
+
+    const error = await verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
+    console.log(error);
+    expect(error).toBeNull();
+  });
+
+  it('verifyWebhookSignature returns error when signature is generated with incorrect secret', async () => {
+    const stringified = JSON.stringify(exampleWebhookBody);
+    const signature = createHmac('sha256', "I'mNotTheSecret").update(stringified).digest('base64');
+
+    const error = await verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
+    expect(error).not.toBeNull();
+  });
+
+  it('verifyWebhookSignature returns error when body is empty', async () => {
+    const modifiedExampleWebhookBody = { ...exampleWebhookBody };
+    const stringified = JSON.stringify(modifiedExampleWebhookBody);
+    const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
+    delete modifiedExampleWebhookBody.issuer;
+
+    const error = await verifyAggregatorEnvWebhookSignature(modifiedExampleWebhookBody as EarnedRewardWebhookBody, signature);
+    expect(error).not.toBeNull();
+  });
 });

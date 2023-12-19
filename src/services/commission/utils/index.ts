@@ -22,7 +22,7 @@ import { MerchantModel } from '../../../models/merchant';
 import { TransactionModel } from '../../../models/transaction';
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
-import { createEarnedCashbackUserNotificationFromCommission } from '../../user_notification';
+import { createEarnedCashbackNotificationsFromCommission } from '../../user_notification';
 
 export type IWildfireCommission = {
   CommissionID: number;
@@ -359,7 +359,7 @@ export const processKardWebhook = async (body: EarnedRewardWebhookBody): Promise
   try {
     const commission = await mapKardCommissionToKarmaCommisison(body);
     if (!commission) throw Error('Error creating karma commisison');
-    await createEarnedCashbackUserNotificationFromCommission(commission);
+    await createEarnedCashbackNotificationsFromCommission(commission, ['email', 'push']);
   } catch (e) {
     console.log('Error mapping kard commission to karma commission');
     console.log(e);

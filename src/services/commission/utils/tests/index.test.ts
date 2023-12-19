@@ -31,7 +31,7 @@ import { IMerchantDocument } from '../../../../models/merchant';
 import { ITransactionDocument } from '../../../../models/transaction';
 import { IUserDocument, UserEmailStatus } from '../../../../models/user';
 import { IUserNotificationDocument } from '../../../../models/user_notification';
-import { createEarnedCashbackUserNotificationFromCommission } from '../../../user_notification';
+import { createEarnedCashbackEmailNotificationFromCommission } from '../../../user_notification';
 
 describe('tests commission utils logic', () => {
   let testUserWithLinkedCard: IUserDocument;
@@ -179,7 +179,7 @@ describe('tests commission utils logic', () => {
   });
 
   it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
-    const earnedRewardNotification = await createEarnedCashbackUserNotificationFromCommission(testCommission, true);
+    const earnedRewardNotification = await createEarnedCashbackEmailNotificationFromCommission(testCommission, true);
     expect(earnedRewardNotification).toBeDefined();
     expect(earnedRewardNotification).not.toBeNull();
     const n = earnedRewardNotification as IUserNotificationDocument;

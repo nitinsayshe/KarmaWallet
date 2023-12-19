@@ -26,7 +26,7 @@ import { getUtcDate } from '../../lib/date';
 import { IMarqetaCreateGPAorder } from '../../integrations/marqeta/types';
 import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/accountFundingSource';
 import { sendPayouts } from '../../controllers/integrations/marqeta/gpa';
-import { createPayoutUserNotificationFromCommissionPayout } from '../user_notification';
+import { createPayoutNotificationsFromCommissionPayout } from '../user_notification';
 import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';
 
 dayjs.extend(utc);
@@ -221,7 +221,7 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
         { $set: { status: KarmaCommissionStatus.PendingPaymentToUser, lastStatusUpdate: getUtcDate() } },
       );
       console.log(`[+] Created CommissionPayout for user ${user._id}`);
-      await createPayoutUserNotificationFromCommissionPayout(commissionPayout);
+      await createPayoutNotificationsFromCommissionPayout(commissionPayout, ['email', 'push']);
     } catch (err) {
       console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
     }

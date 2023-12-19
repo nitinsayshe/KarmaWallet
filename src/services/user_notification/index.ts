@@ -58,7 +58,12 @@ export type CreateNotificationRequest<T = undefined> = {
 export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
   const existingTransaction = await TransactionModel.findOne({
     $or: [
-      { $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': c.integrations.marqeta.transaction_token }] },
+      {
+        $and: [
+          { 'integrations.marqeta.token': { $exists: true } },
+          { 'integrations.marqeta.token': c.integrations.marqeta.transaction_token },
+        ],
+      },
       {
         $and: [
           { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
@@ -261,6 +266,8 @@ const getNotificationTypeFromPushNotificationType = (pushNotificationType: PushN
   switch (pushNotificationType) {
     case PushNotificationTypes.EARNED_CASHBACK:
       return NotificationTypeEnum.EarnedCashback;
+    case PushNotificationTypes.EMPLOYER_GIFT:
+      return NotificationTypeEnum.EmployerGift;
     case PushNotificationTypes.REWARD_DEPOSIT:
       return NotificationTypeEnum.Payout;
     case PushNotificationTypes.FUNDS_AVAILABLE:
@@ -310,41 +317,46 @@ export const createPushUserNotificationFromUserAndPushData = async (
   }
 };
 
-export const createEarnedCashbackUserNotificationFromCommission = async (
+export const getCommissionWithPopulatedUserAndCompany = async (commission: ICommissionDocument) => {
+  const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await CommissionModel.aggregate()
+    .match({
+      _id: commission._id,
+    })
+    .lookup({
+      from: 'companies',
+      localField: 'company',
+      foreignField: '_id',
+      as: 'company',
+    })
+    .unwind({ path: '$company' })
+    .lookup({
+      from: 'users',
+      localField: 'user',
+      foreignField: '_id',
+      as: 'user',
+    })
+    .unwind({ path: '$user' });
+
+  if (
+    !commissionWithPopulatedUserAndCompany
+      || !commissionWithPopulatedUserAndCompany.length
+      || !commissionWithPopulatedUserAndCompany[0]
+      || !(commissionWithPopulatedUserAndCompany[0]?.company as ICompanyDocument)?.companyName
+      || !(commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument)?.name
+  ) {
+    throw Error(`Error creating notificaiton for commission: ${commission}`);
+  }
+
+  return commissionWithPopulatedUserAndCompany;
+};
+
+export const createEarnedCashbackEmailNotificationFromCommission = async (
   commission: ICommissionDocument,
   disableEmail = false,
 ): Promise<IUserNotificationDocument | void> => {
   // get user and company data
   try {
-    const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await CommissionModel.aggregate()
-      .match({
-        _id: commission._id,
-      })
-      .lookup({
-        from: 'companies',
-        localField: 'company',
-        foreignField: '_id',
-        as: 'company',
-      })
-      .unwind({ path: '$company' })
-      .lookup({
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      })
-      .unwind({ path: '$user' });
-
-    if (
-      !commissionWithPopulatedUserAndCompany
-      || !commissionWithPopulatedUserAndCompany.length
-      || !commissionWithPopulatedUserAndCompany[0]
-      || !(commissionWithPopulatedUserAndCompany[0]?.company as ICompanyDocument)?.companyName
-      || !(commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument)?.name
-    ) {
-      throw Error(`Error creating notificaiton for commission: ${commission}`);
-    }
-
+    const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await getCommissionWithPopulatedUserAndCompany(commission);
     const company = commissionWithPopulatedUserAndCompany[0].company as ICompanyDocument;
     const user = commissionWithPopulatedUserAndCompany[0].user as IUserDocument;
 
@@ -363,36 +375,78 @@ export const createEarnedCashbackUserNotificationFromCommission = async (
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IEarnedCashbackNotificationData>>;
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating earned cashback notification: ${e}`);
+    console.log(`Error creating earned cashback email notification: ${e}`);
   }
 };
 
-export const createPayoutUserNotificationFromCommissionPayout = async (
+export const createEarnedCashbackPushNotificationFromCommission = async (commission: ICommissionDocument) => {
+  try {
+    const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await getCommissionWithPopulatedUserAndCompany(commission);
+    const user = commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument;
+
+    if (!user?.integrations?.marqeta) {
+      throw new CustomError(`User with commission: ${commission} does not have a marqeta integration.`);
+    }
+
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.EARNED_CASHBACK,
+      body: `You earned $${roundToPercision(commission.amount, 2)} in Karma Cash`,
+      title: 'You earned Karma Cash!',
+    });
+  } catch (e) {
+    console.log(`Error creating earned cashback push notification: ${e}`);
+  }
+};
+
+export const createEarnedCashbackNotificationsFromCommission = async (
+  commission: ICommissionDocument,
+  channels: NotificationChannelEnumValue[],
+): Promise<(IUserNotificationDocument | void
+  )[]> => (
+  await Promise.all(
+    channels.map(async (channel) => {
+      switch (channel) {
+        case NotificationChannelEnum.Email:
+          return createEarnedCashbackEmailNotificationFromCommission(commission);
+        case NotificationChannelEnum.Push:
+          return createEarnedCashbackPushNotificationFromCommission(commission);
+        default:
+          return null;
+      }
+    }),
+  )
+).filter((notification) => !!notification);
+
+export const getCommissionPayoutWithPopulatedUser = async (commissionPayout: ICommissionPayoutDocument): Promise<ICommissionPayoutDocument[]> => {
+  const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await CommissionPayoutModel.aggregate()
+    .match({
+      _id: commissionPayout._id,
+    })
+    .lookup({
+      from: 'users',
+      localField: 'user',
+      foreignField: '_id',
+      as: 'user',
+    })
+    .unwind({ path: '$user' });
+
+  if (
+    !commissionPayoutWithPopulatedUser
+      || !commissionPayoutWithPopulatedUser.length
+      || !commissionPayoutWithPopulatedUser[0]
+      || !(commissionPayoutWithPopulatedUser[0]?.user as IUserDocument)?.name
+  ) {
+    throw Error(`Error creating notificaiton for commission payout: ${commissionPayout}`);
+  }
+  return commissionPayoutWithPopulatedUser;
+};
+
+export const createPayoutEmailNotificationFromCommissionPayout = async (
   commissionPayout: ICommissionPayoutDocument,
 ): Promise<IUserNotificationDocument | void> => {
   // get user and company data
   try {
-    const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await CommissionPayoutModel.aggregate()
-      .match({
-        _id: commissionPayout._id,
-      })
-      .lookup({
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      })
-      .unwind({ path: '$user' });
-
-    if (
-      !commissionPayoutWithPopulatedUser
-      || !commissionPayoutWithPopulatedUser.length
-      || !commissionPayoutWithPopulatedUser[0]
-      || !(commissionPayoutWithPopulatedUser[0]?.user as IUserDocument)?.name
-    ) {
-      throw Error(`Error creating notificaiton for commission payout: ${commissionPayout}`);
-    }
-
+    const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await getCommissionPayoutWithPopulatedUser(commissionPayout);
     const user = commissionPayoutWithPopulatedUser[0].user as IUserDocument;
 
     const mockRequest = {
@@ -410,9 +464,47 @@ export const createPayoutUserNotificationFromCommissionPayout = async (
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating payout notification: ${e}`);
+    console.log(`Error creating payout email notification: ${e}`);
   }
 };
+
+export const createPayoutPushNotificationFromCommissionPayout = async (commissionPayout: ICommissionPayoutDocument) => {
+  try {
+    const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await getCommissionPayoutWithPopulatedUser(commissionPayout);
+    const user = commissionPayoutWithPopulatedUser[0]?.user as IUserDocument;
+
+    if (!user?.integrations?.marqeta) {
+      throw new CustomError(`User with commission payout: ${commissionPayout} does not have a marqeta integration.`);
+    }
+
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
+      body: `$${roundToPercision(commissionPayout.amount, 2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      title: 'Karma Cash Was Deposited',
+    });
+  } catch (e) {
+    console.log(`Error creating payout push notification: ${e}`);
+  }
+};
+
+export const createPayoutNotificationsFromCommissionPayout = async (
+  commissionPayout: ICommissionPayoutDocument,
+  channels: NotificationChannelEnumValue[],
+): Promise<(IUserNotificationDocument | void
+  )[]> => (
+  await Promise.all(
+    channels.map(async (channel) => {
+      switch (channel) {
+        case NotificationChannelEnum.Email:
+          return createPayoutEmailNotificationFromCommissionPayout(commissionPayout);
+        case NotificationChannelEnum.Push:
+          return createPayoutPushNotificationFromCommissionPayout(commissionPayout);
+        default:
+          return null;
+      }
+    }),
+  )
+).filter((notification) => !!notification);
 
 export const createProvisionalCreditPermanentNotification = async (
   chargebackTransition: IChargebackDocument,

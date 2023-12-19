@@ -7,7 +7,7 @@ import {
   CardInfo,
   CreateUserRequest,
   KardClient,
-  KardIssuer,
+  KardIssuerName,
   QueueTransactionsRequest,
   Transaction,
 } from '../../clients/kard';
@@ -34,7 +34,7 @@ export const getCardInfo = (card: ICardDocument): CardInfo => {
   if (!last4 || !bin) {
     throw new Error('Missing card info');
   }
-  const issuer = KardIssuer;
+  const issuer = KardIssuerName;
   const network = getNetworkFromBin(bin) || '';
   if (!issuer || !network) {
     throw new Error('Missing card issuer or network info');

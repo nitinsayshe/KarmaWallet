@@ -5,6 +5,7 @@ import path from 'path';
 import {
   CommissionType,
   KardClient,
+  KardEnvironmentEnum,
   Merchant,
   Offer,
   OfferType,
@@ -143,7 +144,8 @@ const getKardOfferData = async (): Promise<{
   domains: Domain[];
 } | null> => {
   try {
-    const kc = new KardClient();
+    // getting merchant offers from the issuer environment includes karma collective one
+    const kc = new KardClient(KardEnvironmentEnum.Issuer);
     const merchants = await kc.getRewardsMerchants();
     if (!merchants) return null;
 

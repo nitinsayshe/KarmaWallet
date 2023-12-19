@@ -4,9 +4,16 @@ import { StateAbbreviation } from '../lib/constants';
 import { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 
-const { KARD_API_URL, KARD_COGNITO_URL, KARD_CLIENT_HASH, KARD_ISSUER_NAME, KARD_WEBHOOK_KEY, KARD_ISSUER_WEBHOOK_KEY } = process.env;
-
-export const KardIssuer = KARD_ISSUER_NAME;
+const {
+  KARD_API_URL,
+  KARD_COGNITO_URL,
+  KARD_CLIENT_HASH,
+  KARD_ISSUER_NAME,
+  KARD_WEBHOOK_KEY,
+  KARD_ISSUER_WEBHOOK_KEY,
+  KARD_ISSUER_CLIENT_HASH,
+  KARD_ISSUER_ISSUER_NAME,
+} = process.env;
 
 export enum RewardType {
   'CARDLINKED' = 'CARDLINKED',
@@ -218,42 +225,17 @@ export type Merchant = {
   offers: Offer[];
 };
 
+export const KardEnvironmentEnum = {
+  Aggregator: 'Aggregator',
+  Issuer: 'Issuer',
+};
+
+export type KardEnvironmentEnumValues = (typeof KardEnvironmentEnum)[keyof typeof KardEnvironmentEnum];
+
 export type GetRewardsMerchantsResponse = Merchant[];
 
 export const KardServerError = new Error('Bad Request');
 export const KardInvalidSignatureError = new Error('Invalid Signature');
-
-export const verifyIssuerEnvWebhookSignature = (body: EarnedRewardWebhookBody, signature: string): Error | null => {
-  try {
-    const stringified = JSON.stringify(body);
-
-    const hash = createHmac('sha256', KARD_ISSUER_WEBHOOK_KEY).update(stringified).digest('base64');
-    if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
-      return null;
-    }
-
-    return KardInvalidSignatureError;
-  } catch (err) {
-    console.error(err);
-    return KardServerError;
-  }
-};
-
-export const verifyAggregatorEnvWebhookSignature = (body: EarnedRewardWebhookBody, signature: string): Error | null => {
-  try {
-    const stringified = JSON.stringify(body);
-
-    const hash = createHmac('sha256', KARD_WEBHOOK_KEY).update(stringified).digest('base64');
-    if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
-      return null;
-    }
-
-    return KardInvalidSignatureError;
-  } catch (err) {
-    console.error(err);
-    return KardServerError;
-  }
-};
 
 const validateEnvironmentVariables = (): Error | null => {
   const loadingErrorPrefix = 'Error Loading Kard Environment Variables: ';
@@ -272,14 +254,27 @@ const validateEnvironmentVariables = (): Error | null => {
   if (!KARD_WEBHOOK_KEY) {
     return new Error(`${loadingErrorPrefix}KARD_WEBHOOK_KEY not found`);
   }
+  if (!KARD_ISSUER_WEBHOOK_KEY) {
+    return new Error(`${loadingErrorPrefix}KARD_ISSUER_WEBHOOK_KEY not found`);
+  }
+  if (!KARD_ISSUER_CLIENT_HASH) {
+    return new Error(`${loadingErrorPrefix}KARD_ISSUER_CLIENT_HASH not found`);
+  }
+  if (!KARD_ISSUER_ISSUER_NAME) {
+    return new Error(`${loadingErrorPrefix}KARD_ISSUER_ISSUER_NAME not found`);
+  }
   return null;
 };
 
+export const KardIssuerName = KARD_ISSUER_NAME;
+
 export class KardClient extends SdkClient {
   private _client: AxiosInstance;
+  private _env: KardEnvironmentEnumValues;
 
-  constructor() {
+  constructor(env: KardEnvironmentEnumValues = KardEnvironmentEnum.Aggregator) {
     super('Kard');
+    this._env = env;
   }
 
   protected _init() {
@@ -305,9 +300,10 @@ export class KardClient extends SdkClient {
 
   public async getSessionToken(): Promise<GetSessionTokenResponse> {
     try {
+      const clientHash = this._env === KardEnvironmentEnum.Aggregator ? KARD_CLIENT_HASH : KARD_ISSUER_CLIENT_HASH;
       const headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${KARD_CLIENT_HASH}`,
+        Authorization: `Basic ${clientHash}`,
       };
       const { data } = await this._client({
         url: '/oauth2/token?grant_type=client_credentials',
@@ -325,6 +321,24 @@ export class KardClient extends SdkClient {
     }
   }
 
+  public async verifyWebhookSignature(body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> {
+    try {
+      const stringified = JSON.stringify(body);
+
+      const key = this._env === KardEnvironmentEnum.Aggregator ? KARD_WEBHOOK_KEY : KARD_ISSUER_WEBHOOK_KEY;
+
+      const hash = createHmac('sha256', key).update(stringified).digest('base64');
+      if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
+        return null;
+      }
+
+      return KardInvalidSignatureError;
+    } catch (err) {
+      console.error(err);
+      return KardServerError;
+    }
+  }
+
   // accept a session token or get one if not provided
   public async createUser(req: CreateUserRequest, token?: KardAccessToken): Promise<AxiosResponse<{}, any>> {
     if (!token) {
@@ -333,7 +347,7 @@ export class KardClient extends SdkClient {
       token = sessionToken.access_token;
     }
     if (!!req?.cardInfo) {
-      req.cardInfo.issuer = KardIssuer;
+      req.cardInfo.issuer = this._env === KardEnvironmentEnum.Aggregator ? KARD_ISSUER_NAME : KARD_ISSUER_ISSUER_NAME;
     }
     try {
       const data = await this._client.post('/users/users', { ...req }, { headers: { Authorization: token } });
@@ -354,7 +368,7 @@ export class KardClient extends SdkClient {
       token = sessionToken.access_token;
     }
     if (!!req?.cardInfo) {
-      req.cardInfo.issuer = KardIssuer;
+      req.cardInfo.issuer = this._env === KardEnvironmentEnum.Aggregator ? KARD_ISSUER_NAME : KARD_ISSUER_ISSUER_NAME;
     }
     try {
       const { data }: AxiosResponse<AddCardToUserResponse, any> = await this._client.post(
@@ -414,10 +428,7 @@ export class KardClient extends SdkClient {
     }
   }
 
-  public async queueTransactionsForProcessing(
-    req: QueueTransactionsRequest,
-    token?: KardAccessToken,
-  ): Promise<AxiosResponse<{}, any>> {
+  public async queueTransactionsForProcessing(req: QueueTransactionsRequest, token?: KardAccessToken): Promise<AxiosResponse<{}, any>> {
     if (!token) {
       const sessionToken = await this.getSessionToken();
       if (!sessionToken) throw new Error('Unable to get session token');
@@ -457,3 +468,21 @@ export class KardClient extends SdkClient {
     }
   }
 }
+
+export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Issuer);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    return KardServerError;
+  }
+};
+
+export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Aggregator);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    return KardServerError;
+  }
+};

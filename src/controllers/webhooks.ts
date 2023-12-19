@@ -285,8 +285,9 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       return error(req, res, new CustomError('A token is required for authentication', ErrorTypes.FORBIDDEN));
     }
 
-    const errorVerifyingAggregatorEnvSignature = verifyAggregatorEnvWebhookSignature(req.body, headers['notify-signature']);
-    const errorVerifyingIssuerEnvSignature = verifyIssuerEnvWebhookSignature(req.body, headers['notify-signature']);
+    const errorVerifyingAggregatorEnvSignature = await verifyAggregatorEnvWebhookSignature(req.body, headers['notify-signature']);
+    const errorVerifyingIssuerEnvSignature = await verifyIssuerEnvWebhookSignature(req.body, headers['notify-signature']);
+
     if (errorVerifyingIssuerEnvSignature && errorVerifyingAggregatorEnvSignature) {
       if (
         errorVerifyingIssuerEnvSignature === KardInvalidSignatureError

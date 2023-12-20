@@ -66,7 +66,7 @@ import { fundUserGPAFromProgramFundingSource } from '../../integrations/marqeta/
 import { TransactionModelStateEnum } from '../../clients/marqeta/types';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 import { CombinedPartialTransaction } from '../../types/transaction';
-import { createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -975,6 +975,8 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
       body: `An employer gift of $${transaction?.amount} has been deposited onto your Karma Wallet Card`,
       title: 'Employer Gift Received!',
     });
+
+    await createEmployerGiftEmailUserNotification(user, transaction);
   }
 
   if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {

@@ -317,6 +317,29 @@ export const createPushUserNotificationFromUserAndPushData = async (
   }
 };
 
+export const createEmployerGiftEmailUserNotification = async (
+  user: IUserDocument,
+  transaction: ITransactionDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.EmployerGift,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: transaction.amount,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating notification: ${e}`);
+  }
+};
+
 export const getCommissionWithPopulatedUserAndCompany = async (commission: ICommissionDocument) => {
   const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await CommissionModel.aggregate()
     .match({

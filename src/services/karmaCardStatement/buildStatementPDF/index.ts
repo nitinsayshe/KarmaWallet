@@ -25,7 +25,7 @@ export const getTransactionData = (transaction: ITransaction) => {
     transactionData.amountPrefix = '+';
 
     if (subType === TransactionSubtypeEnum.Cashback) {
-      transactionData.descriptionText = 'Cashback';
+      transactionData.descriptionText = 'Cashback Deposit';
     }
 
     if (subType === TransactionSubtypeEnum.Employer) {
@@ -59,6 +59,11 @@ export const getTransactionData = (transaction: ITransaction) => {
       transactionData.descriptionText = `${merchant} POS Quasi Cash`;
     }
 
+    if (marqetaType === 'pindebit') {
+      const merchant = transaction.integrations.marqeta.card_acceptor.name;
+      transactionData.descriptionText = `${merchant} POS Purchase`;
+    }
+
     if (marqetaType.includes('authorization')) {
       transactionData.descriptionText = transaction.integrations.marqeta.card_acceptor.name;
     }
@@ -73,7 +78,7 @@ export const getTransactionData = (transaction: ITransaction) => {
   // Deposit Transaction
   if (type === TransactionTypeEnum.Deposit) {
     transactionData.amountPrefix = '+';
-    transactionData.descriptionText = 'Deposit';
+    transactionData.descriptionText = 'ACHO Transfer';
   }
 
   return transactionData;
@@ -81,12 +86,8 @@ export const getTransactionData = (transaction: ITransaction) => {
 
 export const getTypeText = (transaction: ITransaction) => {
   if (transaction.type === TransactionTypeEnum.Credit) {
-    if (transaction.subType === TransactionSubtypeEnum.Cashback) {
-      return 'Cashback';
-    }
-
-    if (transaction.subType === TransactionSubtypeEnum.Employer) {
-      return 'Employer Gift';
+    if (transaction.subType === TransactionSubtypeEnum.Cashback || transaction.subType === TransactionSubtypeEnum.Employer) {
+      return 'Credit';
     }
 
     if (transaction.subType === TransactionSubtypeEnum.Refund) {
@@ -100,6 +101,10 @@ export const getTypeText = (transaction: ITransaction) => {
 
   if (transaction.type === TransactionTypeEnum.Adjustment) {
     return 'Adjustment';
+  }
+
+  if (transaction.type === TransactionTypeEnum.Deposit) {
+    return 'Deposit';
   }
 };
 

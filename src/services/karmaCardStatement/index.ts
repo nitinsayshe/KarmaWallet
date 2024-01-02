@@ -130,6 +130,12 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
       if (t.status === TransactionModelStateEnum.Pending) {
         return false;
       }
+
+      if (t.integrations.marqeta.state === TransactionModelStateEnum.Declined) {
+        return false;
+      }
+
+      if (t.amount === 0) return false;
       if (!!t?.settledDate && (dayjs(t.settledDate).utc() > dayjs(endDate).utc())) return false;
       return true;
     }));

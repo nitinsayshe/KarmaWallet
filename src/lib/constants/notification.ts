@@ -38,6 +38,7 @@ export const NotificationEffectsEnum = {
   SendEarnedCashbackEmail: 'SendEarnedCashbackEmail',
   SendPayoutIssuedEmail: 'SendPayoutIssuedEmail',
   SendPushNotification: 'SendPushNotification',
+  SendEmployerGiftEmail: 'SendEmployerGiftEmail',
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditAlreadyIssuedEmail',
   SendACHInitiationEmail: 'SendACHInitiationEmail',
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',

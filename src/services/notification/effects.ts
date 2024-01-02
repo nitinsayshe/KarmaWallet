@@ -10,12 +10,13 @@ import {
   ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData,
   IEarnedCashbackNotificationData,
+  IEmployerGiftData,
   IKarmaCardWelcomeData,
   IPayoutNotificationData,
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -281,6 +282,23 @@ export const handleCardDeliveredEffect = async <DataType>(user: IUserDocument, d
   }
 };
 
+export const handleSendEmployerGiftEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IEmployerGiftData;
+  const { name, amount } = d;
+  if (!d) throw new Error('Invalid employer gift data');
+  try {
+    await sendEmployerGiftEmail({
+      user: user._id,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+      name,
+      amount,
+    });
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending employer gift email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: <DataType>(user: IUserDocument, data: DataType) => Promise<void>;
 } = {
@@ -299,6 +317,7 @@ export const NotificationEffectsFunctions: {
   SendCardShippedEmail: handleCardShippedEffect,
   SendCardDeliveredEmail: handleCardDeliveredEffect,
   SendCaseLostProvisionalCreditNotAlreadyIssued: handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect,
+  SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -317,6 +336,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCardShippedEmail,
     NotificationEffectsEnum.SendCardDeliveredEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued,
+    NotificationEffectsEnum.SendEmployerGiftEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

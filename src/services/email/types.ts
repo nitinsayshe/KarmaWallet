@@ -9,7 +9,6 @@ export interface ICreateSentEmailParams {
   user?: Types.ObjectId;
   visitor?: Types.ObjectId;
 }
-
 export interface IACHTransferEmailData {
   user: IUserDocument;
   amount: string;
@@ -31,6 +30,12 @@ interface IBaseEmailParams {
 interface IEmailTemplateParams extends IBaseEmailParams {
   user?: Types.ObjectId;
   amount?: string;
+}
+
+export interface IEmployerGiftEmailData extends IBaseEmailParams {
+  user: IUserDocument;
+  name: string;
+  amount: string;
 }
 
 export interface IDisputeEmailData extends IBaseEmailParams {

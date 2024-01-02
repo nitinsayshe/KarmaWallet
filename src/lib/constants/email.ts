@@ -7,6 +7,7 @@ export enum EmailTemplateKeys {
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountEmailVerification = 'createAccountEmailVerification',
   EarnedCashbackNotification = 'earnedCashbackNotification',
+  EmployerGift = 'employerGift',
   EmailVerification = 'emailVerification',
   GroupVerification = 'groupVerification',
   NoChargebackRights = 'noChargebackRights',
@@ -42,6 +43,7 @@ export enum EmailTemplateTypes {
   Password = 'password',
   Support = 'support',
   Verification = 'verification',
+  EmployerGift = 'employerGift',
 }
 
 export interface IEmailTemplateConfig {
@@ -158,6 +160,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   CaseLostProvisionalCreditNotAlreadyIssued: {
     name: EmailTemplateKeys.CaseLostProvisionalCreditNotAlreadyIssued,
     type: EmailTemplateTypes.Dispute,
+  },
+  EmployerGift: {
+    name: EmailTemplateKeys.EmployerGift,
+    type: EmailTemplateTypes.EmployerGift,
   },
 };
 

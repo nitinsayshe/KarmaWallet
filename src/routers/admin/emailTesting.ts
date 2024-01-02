@@ -110,4 +110,11 @@ router.route('/case-lost-provisional-credit-not-already-issued-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testCaseLostProvisionalCreditNotAlreadyIssuedEmail,
   );
+
+router.route('/employer-gift-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testEmployerGiftEmail,
+  );
 export default router;

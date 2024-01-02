@@ -71,6 +71,11 @@ export interface ICardShippedNotificationData {
   name: string;
 }
 
+export interface IEmployerGiftData {
+  name: string;
+  amount: string;
+}
+
 export interface IProvisialCreditIssuedData extends UserNotificationData {
   name: string;
   amount: string;

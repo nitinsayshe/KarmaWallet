@@ -124,7 +124,7 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
       const transactionData = getTransactionData(t);
 
       return [
-        !!settledDate ? dayjs(settledDate).format('MM/DD') : dayjs(date).format('MM/DD'),
+        !!settledDate ? dayjs(settledDate).utc().format('MM/DD') : dayjs(date).utc().format('MM/DD'),
         getTypeText(t),
         `${transactionData.amountPrefix}$${amount.toFixed(2)}`,
         `$${balance.toFixed(2)}`,
@@ -192,7 +192,7 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     },
   });
 
-  const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
+  const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.sortableDate).isBefore(dayjs(b.sortableDate)) ? -1 : 1));
 
   let pageNumber = 0;
   const doc = new PDFKit({ autoFirstPage: false, margins: { top: 53, bottom: 53, left: 53, right: 53 } });

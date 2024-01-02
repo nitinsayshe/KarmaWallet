@@ -131,7 +131,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
         return false;
       }
 
-      if (t.integrations.marqeta.state === TransactionModelStateEnum.Declined) {
+      if (t.integrations.marqeta.state === 'DECLINED' || t.status === TransactionModelStateEnum.Declined) {
         return false;
       }
 

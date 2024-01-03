@@ -356,9 +356,7 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
 
     // TODO: check if there is enough money in the marqeta account to cover
     // amount in commissionPayoutOverview.destination.marqeta
-
     const paypalPayouts: ISendPayoutBatchItem[] = [];
-    // const marqetaFormattedPayouts: IMarqetaCreateGPAorder[] = [];
     const marqetaPayouts: ICommissionPayoutDocument[] = [];
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {

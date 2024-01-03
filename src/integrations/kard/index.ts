@@ -216,25 +216,20 @@ const sendTransactionsInBatches = async (
   for (let i = 0; i < batches.length; i++) {
     try {
       const batch = batches[i];
-      const req: QueueTransactionsRequest = batch.map((t): Transaction => {
-        const description = `Transaction with ${(t.company as ICompanyDocument)?.companyName} on ${t.date.toISOString()} for ${
-          t.amount * CentsInUSD
-        } USD cents`;
-        return {
-          transactionId: t.integrations?.kard?.id,
-          referringPartnerUserId: card?.integrations?.kard?.userId,
-          amount: floorToPercision(t.amount * CentsInUSD, 0),
-          status: t?.integrations?.kard?.status,
-          currency: t?.integrations?.plaid?.iso_currency_code,
-          description,
-          settledDate: t?.date?.toISOString(),
-          merchantName: (t.company as ICompanyDocument)?.companyName,
-          mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
-          cardBIN: decrypt((t?.card as ICard)?.binToken),
-          cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
-          authorizationDate: t?.date?.toISOString(),
-        };
-      });
+      const req: QueueTransactionsRequest = batch.map((t): Transaction => ({
+        transactionId: t.integrations?.kard?.id,
+        referringPartnerUserId: card?.integrations?.kard?.userId,
+        amount: floorToPercision(t.amount * CentsInUSD, 0),
+        status: t?.integrations?.kard?.status,
+        currency: t?.integrations?.plaid?.iso_currency_code,
+        description: (t.company as ICompanyDocument)?.companyName,
+        settledDate: t?.date?.toISOString(),
+        merchantName: (t.company as ICompanyDocument)?.companyName,
+        mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
+        cardBIN: decrypt((t?.card as ICard)?.binToken),
+        cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
+        authorizationDate: t?.date?.toISOString(),
+      }));
 
       console.log(`Kard API Request ${i} of ${batches.length}.`);
       responses.push(await kc.queueTransactionsForProcessing(req));

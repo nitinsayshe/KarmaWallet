@@ -995,23 +995,26 @@ export const handleDebitNotification = async (transaction: ITransactionDocument)
   const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
   const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
 
-  // send notification when initial transaction is completed (usually starts in pending state, sometimes starts in completion state)
+  // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
   if (status === TransactionModelStateEnum.Pending || (status === TransactionModelStateEnum.Completion && !transaction.integrations.marqeta.relatedTransactions)) {
+    // any notification
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
       title: 'Transaction Alert',
       body: `$${amount} spent at ${merchantName}`,
     });
 
+    // Dining out notification
     if (MCCStandards.DINING.includes(mccCode)) {
-      // Notification of transaction on dining
       await createPushUserNotificationFromUserAndPushData(user, {
         pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
         title: 'Donation Alert!',
         body: 'You dined out. We donated to hunger alleviation!',
       });
-    } else if (MCCStandards.GAS.includes(mccCode)) {
-      // Notification of transaction on gas
+    }
+
+    // Gas notification
+    if (MCCStandards.GAS.includes(mccCode)) {
       await createPushUserNotificationFromUserAndPushData(user, {
         pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
         title: 'Donation Alert!',

@@ -19,6 +19,7 @@ import articleRouter from './article';
 import utilitiesRouter from './utilities';
 import userNotificationRouter from './user_notification';
 import emailTesting from './emailTesting';
+import webAnalyticsRouter from './webAnalytics';
 
 const adminRouter = Router();
 
@@ -39,6 +40,7 @@ adminRouter.use('/campaign', campaignRouter);
 adminRouter.use('/transaction', transaction);
 adminRouter.use('/banner', bannerRouter);
 adminRouter.use('/article', articleRouter);
+adminRouter.use('/web-analytics', webAnalyticsRouter);
 adminRouter.use('/utilities', utilitiesRouter);
 adminRouter.use('/user-notification', userNotificationRouter);
 adminRouter.use('/email-testing', emailTesting);

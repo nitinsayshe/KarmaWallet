@@ -25,7 +25,7 @@ export const getTransactionData = (transaction: ITransaction) => {
     transactionData.amountPrefix = '+';
 
     if (subType === TransactionSubtypeEnum.Cashback) {
-      transactionData.descriptionText = 'Cashback';
+      transactionData.descriptionText = 'Cashback Deposit';
     }
 
     if (subType === TransactionSubtypeEnum.Employer) {
@@ -59,6 +59,11 @@ export const getTransactionData = (transaction: ITransaction) => {
       transactionData.descriptionText = `${merchant} POS Quasi Cash`;
     }
 
+    if (marqetaType === 'pindebit') {
+      const merchant = transaction.integrations.marqeta.card_acceptor.name;
+      transactionData.descriptionText = `${merchant} POS Purchase`;
+    }
+
     if (marqetaType.includes('authorization')) {
       transactionData.descriptionText = transaction.integrations.marqeta.card_acceptor.name;
     }
@@ -73,7 +78,7 @@ export const getTransactionData = (transaction: ITransaction) => {
   // Deposit Transaction
   if (type === TransactionTypeEnum.Deposit) {
     transactionData.amountPrefix = '+';
-    transactionData.descriptionText = 'Deposit';
+    transactionData.descriptionText = 'ACH Transfer';
   }
 
   return transactionData;
@@ -81,12 +86,8 @@ export const getTransactionData = (transaction: ITransaction) => {
 
 export const getTypeText = (transaction: ITransaction) => {
   if (transaction.type === TransactionTypeEnum.Credit) {
-    if (transaction.subType === TransactionSubtypeEnum.Cashback) {
-      return 'Cashback';
-    }
-
-    if (transaction.subType === TransactionSubtypeEnum.Employer) {
-      return 'Employer Gift';
+    if (transaction.subType === TransactionSubtypeEnum.Cashback || transaction.subType === TransactionSubtypeEnum.Employer) {
+      return 'Credit';
     }
 
     if (transaction.subType === TransactionSubtypeEnum.Refund) {
@@ -100,6 +101,10 @@ export const getTypeText = (transaction: ITransaction) => {
 
   if (transaction.type === TransactionTypeEnum.Adjustment) {
     return 'Adjustment';
+  }
+
+  if (transaction.type === TransactionTypeEnum.Deposit) {
+    return 'Deposit';
   }
 };
 
@@ -119,7 +124,7 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
       const transactionData = getTransactionData(t);
 
       return [
-        !!settledDate ? dayjs(settledDate).format('MM/DD') : dayjs(date).format('MM/DD'),
+        !!settledDate ? dayjs(settledDate).utc().format('MM/DD') : dayjs(date).utc().format('MM/DD'),
         getTypeText(t),
         `${transactionData.amountPrefix}$${amount.toFixed(2)}`,
         `$${balance.toFixed(2)}`,
@@ -187,7 +192,7 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     },
   });
 
-  const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
+  const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.sortableDate).isBefore(dayjs(b.sortableDate)) ? -1 : 1));
 
   let pageNumber = 0;
   const doc = new PDFKit({ autoFirstPage: false, margins: { top: 53, bottom: 53, left: 53, right: 53 } });

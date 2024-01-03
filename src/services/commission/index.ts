@@ -10,7 +10,7 @@ import {
   KarmaCommissionStatus,
 } from '../../models/commissions';
 import { IRequest } from '../../types/request';
-import { CommissionPayoutModel, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
+import { CommissionPayoutModel, ICommissionPayoutDocument, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
 import { currentAccurualsQuery, getNextPayoutDate, getUserCurrentAccrualsBalance, getUserLifetimeCashbackPayoutsTotal } from './utils';
 import { CommissionPayoutDayForUser, ErrorTypes, UserRoles, ImpactKarmaCompanyData } from '../../lib/constants';
 import { IUserDocument, UserModel } from '../../models/user';
@@ -23,11 +23,11 @@ import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../.
 import CustomError from '../../lib/customError';
 import { IPromo } from '../../models/promo';
 import { getUtcDate } from '../../lib/date';
-import { IMarqetaCreateGPAorder } from '../../integrations/marqeta/types';
-import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/accountFundingSource';
-import { sendPayouts } from '../../controllers/integrations/marqeta/gpa';
-import { createPayoutNotificationsFromCommissionPayout } from '../user_notification';
 import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';
+import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/accountFundingSource';
+import { addFundsToGPAFromProgramFundingSource } from '../../controllers/integrations/marqeta/gpa';
+import { createPayoutNotificationsFromCommissionPayout } from '../user_notification';
+import { sleep } from '../../lib/misc';
 
 dayjs.extend(utc);
 
@@ -221,7 +221,6 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
         { $set: { status: KarmaCommissionStatus.PendingPaymentToUser, lastStatusUpdate: getUtcDate() } },
       );
       console.log(`[+] Created CommissionPayout for user ${user._id}`);
-      await createPayoutNotificationsFromCommissionPayout(commissionPayout, ['email', 'push']);
     } catch (err) {
       console.log(`[+] Error create CommissionPayout for user ${user._id}`, err);
     }
@@ -303,6 +302,30 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date): Promis
   }
 };
 
+// send each payouts with a delay of 1 second
+export const sendPayoutsToKarmaCard = async (payouts: ICommissionPayoutDocument[]) => {
+  for (let i = 0; i < payouts.length; i++) {
+    const user = await UserModel.findById(payouts[i].user);
+    const marqetaFormattedPayout = {
+      userToken: user.integrations.marqeta.userToken,
+      amount: payouts[i].amount,
+      fees: 0,
+      currencyCode: 'USD',
+      tags: `type=${TransactionCreditSubtypeEnum.Cashback}`,
+      memo: 'You earned cashback from Karma Wallet. Great job!',
+      fundingSourceToken: MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN,
+    };
+    console.log(`Sending Commission Payout: ${i} of ${payouts.length}`);
+    const marqetaResponse = await addFundsToGPAFromProgramFundingSource(marqetaFormattedPayout);
+    if (!marqetaResponse) {
+      console.log(`failed to send payout: ${i} of ${payouts.length}`);
+    } else {
+      await createPayoutNotificationsFromCommissionPayout(payouts[i], ['email', 'push']);
+    }
+    await sleep(1000);
+  }
+};
+
 export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) => {
   try {
     const commissionPayoutOverview = await CommissionPayoutOverviewModel.findById(commissionPayoutOverviewId);
@@ -334,8 +357,9 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
     // TODO: check if there is enough money in the marqeta account to cover
     // amount in commissionPayoutOverview.destination.marqeta
 
-    const paypalFormattedPayouts: ISendPayoutBatchItem[] = [];
-    const marqetaFormattedPayouts: IMarqetaCreateGPAorder[] = [];
+    const paypalPayouts: ISendPayoutBatchItem[] = [];
+    // const marqetaFormattedPayouts: IMarqetaCreateGPAorder[] = [];
+    const marqetaPayouts: ICommissionPayoutDocument[] = [];
 
     const sendPayoutHeader: ISendPayoutBatchHeader = {
       sender_batch_header: {
@@ -345,11 +369,10 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
       },
     };
 
-    // Adding Valid Commission Payouts to Paypal Formatted Payouts Array
-    // Checking that each commission payout has an associated user and hasn't alreacy benn paid
-    // If so, we add it to the paypal formatted payouts array
+    // Group and pay payouts by Non-Karma Card holders and Karma Card holders
     for (const commissionPayout of commissionPayouts) {
       const payoutData = await CommissionPayoutModel.findById(commissionPayout);
+
       if (!payoutData?._id) {
         console.log('[+] Commission payout not found. Skipping payout.');
         continue;
@@ -369,22 +392,16 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
       const { paypal, marqeta } = user.integrations;
 
       if (!paypal && !marqeta) {
-        console.log('[+] User does not have paypal or marqeta integration. Skipping payout.');
+        console.log('[+] User does not have PayPal or Marqeta integration. Skipping payout.');
         continue;
       }
 
       if (!!marqeta?.userToken) {
-        marqetaFormattedPayouts.push({
-          userToken: marqeta.userToken,
-          amount: payoutData.amount,
-          fees: 0,
-          currencyCode: 'USD',
-          tags: `type=${TransactionCreditSubtypeEnum.Cashback}`,
-          memo: 'You earned cashback from Karma Wallet. Great job!',
-          fundingSourceToken: MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN,
-        });
+        // If this is a Karma Card holder, deposit funds to Marqeta account
+        marqetaPayouts.push(payoutData);
       } else if (!!paypal?.payerId) {
-        paypalFormattedPayouts.push({
+        // If this is a non Karma Card holder, deposit funds to Paypal account
+        paypalPayouts.push({
           recipient_type: 'PAYPAL_ID',
           amount: {
             value: payoutData.amount.toString(),
@@ -397,15 +414,15 @@ export const sendCommissionPayouts = async (commissionPayoutOverviewId: string) 
       }
     }
 
-    if (!!paypalFormattedPayouts.length) {
-      const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalFormattedPayouts);
+    if (!!paypalPayouts.length) {
+      const paypalResponse = await paypalClient.sendPayout(sendPayoutHeader, paypalPayouts);
       console.log('[+] Paypal payout sent', paypalResponse);
     } else {
       console.log('[-] No valid paypal payouts to send.');
     }
 
-    if (!!marqetaFormattedPayouts.length) {
-      await sendPayouts(marqetaFormattedPayouts);
+    if (!!marqetaPayouts.length) {
+      await sendPayoutsToKarmaCard(marqetaPayouts);
       console.log('[+] Marqeta payouts sent');
     } else {
       console.log('[-] No valid marqeta payouts to send.');

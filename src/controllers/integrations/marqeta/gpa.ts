@@ -4,7 +4,6 @@ import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as GPAService from '../../../integrations/marqeta/gpa';
-import { sleep } from '../../../lib/misc';
 import { ErrorTypes } from '../../../lib/constants';
 
 export const fundUserGPAFromProgramFundingSource: IRequestHandler<{}, {}, IMarqetaLoadGpaFromProgramFundingSource> = async (req, res) => {
@@ -54,17 +53,5 @@ export const getProgramFundingBalance: IRequestHandler<{}, {}, {}> = async (req,
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
-  }
-};
-
-// send each payouts with a delay of 1 second
-export const sendPayouts = async (payouts: IMarqetaCreateGPAorder[]) => {
-  for (let i = 0; i < payouts.length; i++) {
-    console.log(`sending payout: ${i} of ${payouts.length}`);
-    const marqetaResponse = await addFundsToGPAFromProgramFundingSource(payouts[i]);
-    if (!marqetaResponse) {
-      console.log(`failed to send payout: ${i} of ${payouts.length}`);
-    }
-    await sleep(1000);
   }
 };

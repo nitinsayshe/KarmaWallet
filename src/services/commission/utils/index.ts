@@ -27,7 +27,7 @@ import { MerchantModel } from '../../../models/merchant';
 import { TransactionModel } from '../../../models/transaction';
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
-import { createEarnedCashbackNotificationsFromCommission } from '../../user_notification';
+import { createEarnedCashbackNotificationsFromCommission, createPayoutNotificationsFromCommissionPayout } from '../../user_notification';
 
 export type IWildfireCommission = {
   CommissionID: number;
@@ -225,6 +225,11 @@ export const updateCommissionPayoutStatus = async (
     if (!commissionPayout) {
       throw new CustomError(`Payout with id ${commissionPayoutId} not found`, ErrorTypes.NOT_FOUND);
     }
+
+    if (paypalStatus === PayPalPayoutItemStatus.Success) {
+      await createPayoutNotificationsFromCommissionPayout(commissionPayout, ['email', 'push']);
+    }
+
     for (const commission of commissionPayout.commissions) {
       const commissionItem = await CommissionModel.findOne({ _id: commission });
       if (status === KarmaCommissionPayoutStatus.Paid) {

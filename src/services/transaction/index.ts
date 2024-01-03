@@ -991,7 +991,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
 
 export const handleDebitNotification = async (transaction: ITransactionDocument) => {
   const user = await UserModel.findById(transaction.user);
-  const { status, amount } = transaction;
+  const { status } = transaction;
   const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
   const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
 
@@ -1001,7 +1001,7 @@ export const handleDebitNotification = async (transaction: ITransactionDocument)
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
       title: 'Transaction Alert',
-      body: `$${amount} spent at ${merchantName}`,
+      body: `New transaction from ${merchantName}`,
     });
 
     // Dining out notification

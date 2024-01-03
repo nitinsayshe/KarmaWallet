@@ -4,6 +4,7 @@ import { mapKardCommissionToKarmaCommisison } from '..';
 import {
   CardNetwork,
   EarnedRewardWebhookBody,
+  KardEnvironmentEnum,
   MerchantSource,
   RewardStatus,
   RewardType,
@@ -178,7 +179,7 @@ describe('tests commission utils logic', () => {
     });
   });
 
-  it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
+  it('createEarnedCashbackNotification creates a valid EarnedCashbackNotification', async () => {
     const earnedRewardNotification = await createEarnedCashbackEmailNotificationFromCommission(testCommission, true);
     expect(earnedRewardNotification).toBeDefined();
     expect(earnedRewardNotification).not.toBeNull();
@@ -196,7 +197,7 @@ describe('tests commission utils logic', () => {
   });
 
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
-    const karmaCommission = (await mapKardCommissionToKarmaCommisison(testEarnedWebhookBody)) as ICommissionDocument;
+    const karmaCommission = (await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Aggregator, testEarnedWebhookBody)) as ICommissionDocument;
     expect(karmaCommission).toBeDefined();
     expect(karmaCommission).not.toBeNull();
     expect(karmaCommission).toHaveProperty('allocation');

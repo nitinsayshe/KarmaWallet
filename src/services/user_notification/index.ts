@@ -117,9 +117,9 @@ const getZodDataSchemaFromData = <DataType>(data: DataType): z.ZodSchema => {
   if (!data) {
     return z.object({}).optional();
   }
-  const payoutNotificaitonDataFields = ['name', 'payoutAmount'];
+  const payoutNotificationDataFields = ['name', 'payoutAmount'];
   const isPayoutNotificationData = Object.keys(data)?.reduce((acc, curr) => {
-    if (!(curr in payoutNotificaitonDataFields)) {
+    if (!(curr in payoutNotificationDataFields)) {
       return false;
     }
     return acc;
@@ -299,7 +299,7 @@ export const createPushUserNotificationFromUserAndPushData = async (
     const { pushNotificationType, body, title } = data;
 
     if (!pushNotificationType || !body || !title) {
-      throw Error(`Error creating notificaiton for user: ${user}. Missing data: ${data}`);
+      throw Error(`Error creating notification for user: ${user}. Missing data: ${data}`);
     }
 
     const mockRequest = {
@@ -367,7 +367,7 @@ export const getCommissionWithPopulatedUserAndCompany = async (commission: IComm
       || !(commissionWithPopulatedUserAndCompany[0]?.company as ICompanyDocument)?.companyName
       || !(commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument)?.name
   ) {
-    throw Error(`Error creating notificaiton for commission: ${commission}`);
+    throw Error(`Error creating notification for commission: ${commission}`);
   }
 
   return commissionWithPopulatedUserAndCompany;
@@ -459,7 +459,7 @@ export const getCommissionPayoutWithPopulatedUser = async (commissionPayout: ICo
       || !commissionPayoutWithPopulatedUser[0]
       || !(commissionPayoutWithPopulatedUser[0]?.user as IUserDocument)?.name
   ) {
-    throw Error(`Error creating notificaiton for commission payout: ${commissionPayout}`);
+    throw Error(`Error creating notification for commission payout: ${commissionPayout}`);
   }
   return commissionPayoutWithPopulatedUser;
 };
@@ -549,7 +549,7 @@ export const createProvisionalCreditPermanentNotification = async (
       })) as unknown as ITransactionDocument & { user: IUserDocument };
 
     if (!transaction || !transaction?.user?._id) {
-      throw Error(`Error creating notificaiton for chargeback transition: ${chargebackTransition}`);
+      throw Error(`Error creating notification for chargeback transition: ${chargebackTransition}`);
     }
 
     const mockRequest = {

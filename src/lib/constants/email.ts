@@ -34,7 +34,7 @@ export enum EmailTemplateTypes {
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
   BankLinkedConfirmation = 'bankLinkedConfirmation',
-  CashbackNotificaiton = 'cashbackNotification',
+  CashbackNotification = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
   Dispute = 'dispute',
@@ -107,11 +107,11 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   },
   EarnedCashbackReward: {
     name: EmailTemplateKeys.EarnedCashbackNotification,
-    type: EmailTemplateTypes.CashbackNotificaiton,
+    type: EmailTemplateTypes.CashbackNotification,
   },
   CashbackPayoutNotification: {
     name: EmailTemplateKeys.CashbackPayoutNotification,
-    type: EmailTemplateTypes.CashbackNotificaiton,
+    type: EmailTemplateTypes.CashbackNotification,
   },
   CaseWonProvisionalCreditAlreadyIssued: {
     name: EmailTemplateKeys.CaseWonProvisionalCreditAlreadyIssued,

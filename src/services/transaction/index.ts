@@ -67,6 +67,7 @@ import { TransactionModelStateEnum } from '../../clients/marqeta/types';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { MCCStandards } from '../../integrations/marqeta/types';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -988,14 +989,57 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   }
 };
 
+export const handleDebitNotification = async (transaction: ITransactionDocument) => {
+  const user = await UserModel.findById(transaction.user);
+  const { status, amount } = transaction;
+  const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
+  const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
+
+  // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
+  if (status === TransactionModelStateEnum.Pending || (status === TransactionModelStateEnum.Completion && !transaction.integrations.marqeta.relatedTransactions)) {
+    // any notification
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
+      title: 'Transaction Alert',
+      body: `$${amount} spent at ${merchantName}`,
+    });
+
+    // Dining out notification
+    if (MCCStandards.DINING.includes(mccCode)) {
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
+        title: 'Donation Alert!',
+        body: 'You dined out. We donated to hunger alleviation!',
+      });
+    }
+
+    // Gas notification
+    if (MCCStandards.GAS.includes(mccCode)) {
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
+        title: 'Donation Alert!',
+        body: 'You bought gas. We donated to reforestation.',
+      });
+    }
+  }
+};
+
 export const handleTransactionNotifications = async (transactions: ITransactionDocument[]): Promise<void> => {
   await Promise.all(
     transactions.map(async (t) => {
       try {
         switch (t.type) {
           case TransactionTypeEnum.Credit:
-            // call function
             handleCreditNotification(t);
+            break;
+          case TransactionTypeEnum.Debit:
+            handleDebitNotification(t);
+            break;
+          case TransactionTypeEnum.Deposit:
+            // add code as needed
+            break;
+          case TransactionTypeEnum.Adjustment:
+            // add code as needed
             break;
           default:
             console.log(`No notification created for transaction with type: ${t.type}`);

@@ -13,7 +13,7 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import CustomError, { asCustomError } from '../lib/customError';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
-import { IUserDocument, UserModel } from '../models/user';
+import { UserModel } from '../models/user';
 import { _getCard, handleMarqetaCardWebhook } from '../services/card';
 import { mapWildfireCommissionToKarmaCommission, processKardWebhook } from '../services/commission/utils';
 import { getGroup, IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
@@ -32,9 +32,8 @@ import { handleTransactionDisputeMacros, handleTransactionNotifications } from '
 import {
   IMarqetaWebhookBody,
   IMarqetaWebhookHeader,
-  MarqetaWebhookConstants,
   InsufficientFundsConstants,
-  MCCStandards,
+  MarqetaWebhookConstants,
 } from '../integrations/marqeta/types';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { EarnedRewardWebhookBody, KardInvalidSignatureError } from '../clients/kard';
@@ -387,71 +386,22 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         }
       }
     }
-    let user: IUserDocument = null;
-    if (transactions) {
-      console.log('////////// PROCESSING MARQETA TRANSACTION (1) WEBHOOK ////////// ');
+
+    if (!!transactions) {
+      console.log('////////// PROCESSING MARQETA TRANSACTION WEBHOOK ////////// ');
       for (const transaction of transactions) {
-        if (user === null) {
-          user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
-        }
-
-        // event for Authorization Transaction initialization
-        if (transaction.type === MarqetaWebhookConstants.AUTHORIZATION) {
-          console.log('authorization ', transaction);
-        }
-
-        // event for Authorization Transaction clearing
-        if (transaction.type === MarqetaWebhookConstants.AUTHORIZATION_CLEARING) {
-          console.log('authorization.clearing ', transaction);
-        }
-
-        // Transactions
-        if (transaction.type.includes(MarqetaWebhookConstants.PIN_DEBIT)) {
-          // Send push notification of transaction
-          const { code } = transaction.response as any;
-
-          // Check if transaction response code is of insufficient funds, to trigger low balance push notification
-
-          if (InsufficientFundsConstants.CODES.includes(code) && user) {
-            await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.BALANCE_THRESHOLD,
-              body: 'Your account has a low balance. Click to reload your Karma Wallet Card.',
-              title: 'Low Balance Alert',
-            });
-          } else if (
-            user
-            && transaction?.state === MarqetaWebhookConstants.COMPLETION
-            && transaction?.amount
-            && transaction?.card_acceptor?.name
-          ) {
-            await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
-              title: 'Transaction Alert',
-              body: `$${transaction?.amount} spent at ${transaction?.card_acceptor?.name}`,
-            });
-
-            // Send push notification for spending on dining or gas
-            if (MCCStandards.DINING.includes(transaction?.card_acceptor?.mcc)) {
-              // Notification of transaction on dining
-              await createPushUserNotificationFromUserAndPushData(user, {
-                pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
-                title: 'Donation Alert!',
-                body: 'You dined out. We donated to hunger alleviation!',
-              });
-            } else if (MCCStandards.GAS.includes(transaction?.card_acceptor?.mcc)) {
-              // Notification of transaction on gas
-              await createPushUserNotificationFromUserAndPushData(user, {
-                pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
-                title: 'Donation Alert!',
-                body: 'You bought gas. We donated to reforestation.',
-              });
-            }
-          }
+        // Handle any code that tees off of the transaction code here before mapping to a transaction
+        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
+        const { code } = transaction.response as any;
+        // Insufficent funds from code
+        if (InsufficientFundsConstants.CODES.includes(code)) {
+          await createPushUserNotificationFromUserAndPushData(user, {
+            pushNotificationType: PushNotificationTypes.BALANCE_THRESHOLD,
+            body: 'Your account has a low balance. Click to reload your Karma Wallet Card.',
+            title: 'Low Balance Alert',
+          });
         }
       }
-    }
-    if (!!transactions) {
-      console.log('////////// PROCESSING MARQETA TRANSACTION (2) WEBHOOK ////////// ');
       const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
       await handleTransactionDisputeMacros(savedTransactions);
       await handleTransactionNotifications(savedTransactions);

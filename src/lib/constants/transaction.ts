@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { TransactionModelTypeEnum } from '../../clients/marqeta/types';
+import { TransactionModelStateEnum, TransactionModelTypeEnum } from '../../clients/marqeta/types';
 
 export const sectorsToExcludeFromTransactions = [
   // production
@@ -31,6 +31,17 @@ export const TransactionTypeEnum = {
   Deposit: 'deposit',
 } as const;
 export type TransactionTypeEnumValues = (typeof TransactionTypeEnum)[keyof typeof TransactionTypeEnum];
+
+export const transactionTypesToExcludeFromImpactReports = [
+  TransactionTypeEnum.Credit,
+  TransactionTypeEnum.Adjustment,
+  TransactionTypeEnum.Deposit,
+];
+
+export const transactionStatusesToExcludeFromImpactReports = [
+  TransactionModelStateEnum.Declined,
+  TransactionModelStateEnum.Error,
+];
 
 export const TriggerDeclinedTransactionTypeEnum = {
   AuthorizationClearingChargebackReversal: TransactionModelTypeEnum.AuthorizationClearingChargebackReversal,

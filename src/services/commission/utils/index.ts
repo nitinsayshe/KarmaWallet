@@ -268,9 +268,18 @@ const getAssociatedTransaction = async (kardEnv: KardEnvironmentEnumValues, tran
     case KardEnvironmentEnum.Issuer:
       return TransactionModel.findOne({
         $or: [
-          { 'integrations.marqeta.token': transaction.transactionId },
-          { 'integrations.marqeta.relatedTransactions.token': transaction.transactionId },
-        ],
+          {
+            $and: [
+              { 'integrations.marqeta.token': { $exists: true } },
+              { 'integrations.marqeta.token': transaction.issuerTransactionId },
+            ],
+          },
+          {
+            $and: [
+              { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+              { 'integrations.marqeta.relatedTransactions.token': transaction.issuerTransactionId },
+            ],
+          }],
       });
     default:
   }
@@ -333,7 +342,7 @@ export const mapKardCommissionToKarmaCommisison = async (
     transaction: associatedTransaction._id,
   });
 
-  if (!existingCommission._id) {
+  if (!existingCommission?._id) {
     const merchant = await MerchantModel.findOne({
       'integrations.kard.id': reward.merchantId,
     });

@@ -79,12 +79,13 @@ export const getPrevPayoutDate = (date: Date = getUtcDate().toDate()) => {
 
 type IUserId = string | IRef<ObjectId, IUserDocument>;
 
-export const currentAccurualsQuery = {
+export const currentAccrualsQuery = {
   status: {
     $in: [
       KarmaCommissionStatus.Pending,
       KarmaCommissionStatus.ReceivedFromVendor,
       KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment,
+      KarmaCommissionStatus.PendingPaymentToUser,
     ],
   },
 };
@@ -112,7 +113,7 @@ export const getUserCurrentAccrualsBalance = async (userId: IUserId) => {
     {
       $match: {
         user: userId,
-        ...currentAccurualsQuery,
+        ...currentAccrualsQuery,
       },
     },
     {

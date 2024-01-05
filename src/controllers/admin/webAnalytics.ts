@@ -38,3 +38,12 @@ export const createWebAnalytics: IRequestHandler<{}, {}, WebAnalyticsService.IWe
     error(req, res, asCustomError(err));
   }
 };
+
+export const deleteWebAnalyticsById: IRequestHandler<WebAnalyticsService.IWebAnalyticsRequestParams, {}, {}> = async (req, res) => {
+  try {
+    const result = await WebAnalyticsService.deleteWebAnalyticsById(req);
+    api(req, res, result);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

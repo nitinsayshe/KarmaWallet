@@ -34,4 +34,11 @@ router.post(
   WebAnalyticsController.createWebAnalytics,
 );
 
+router.delete(
+  '/:id',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+  WebAnalyticsController.deleteWebAnalyticsById,
+);
+
 export default router;

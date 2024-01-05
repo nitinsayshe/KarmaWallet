@@ -171,13 +171,21 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
 };
 
 export const generateCommissionPayoutForUsers = async (min: number) => {
-  const users = await UserModel.find({});
+  const users = await UserModel.find({
+    $or: [
+      { 'integrations.marqeta.userToken': { $exists: true } },
+      { 'integrations.paypal.payerId': { $exists: true } },
+    ],
+  });
+
+  console.log('///// found this many users', users.length);
 
   for (const user of users) {
-    if (!user.integrations?.paypal || !user?.integrations?.marqeta?.userToken) continue;
+    const hasKarmaCard = !!user.integrations?.marqeta?.userToken;
+    const hasPaypal = !!user.integrations?.paypal?.payerId;
 
-    if (!user.integrations?.paypal?.payerId) {
-      console.log(`[+] Skipping user ${user._id} - no paypal integration`);
+    if (!hasPaypal && !hasKarmaCard) {
+      console.log(`[+] User ${user._id} does not have a payout destination. Skipping.`);
       continue;
     }
 
@@ -188,13 +196,16 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
             user: user._id,
             status: {
               $in: [KarmaCommissionStatus.ReceivedFromVendor, KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment],
-              $nin: [KarmaCommissionStatus.PendingPaymentToUser, KarmaCommissionStatus.PaidToUser, KarmaCommissionStatus.Failed],
+              $nin: [KarmaCommissionStatus.PaidToUser, KarmaCommissionStatus.PendingPaymentToUser, KarmaCommissionStatus.Failed],
             },
           },
         },
       ]);
 
-      if (!validUserCommissions.length) continue;
+      if (!validUserCommissions.length) {
+        console.log(`[+] No valid commissions found for user ${user._id}. Skipping.`);
+        continue;
+      }
 
       const [commissionsTotal, commissionIds] = validUserCommissions.reduce(
         (acc, c) => {
@@ -205,7 +216,10 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
         [0, []],
       );
 
-      if (commissionsTotal < min) continue;
+      if (!hasKarmaCard && commissionsTotal < min) {
+        console.log(`[+] User ${user._id} does not have a karma card and has less than $${min} in commissions. Skipping.`);
+        continue;
+      }
 
       const commissionPayout = new CommissionPayoutModel({
         user: user._id,

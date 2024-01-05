@@ -31,6 +31,11 @@ export enum PlaidCompanyMatchType {
   Name = 'name',
 }
 
+export enum sourceDevice {
+  android ='android',
+  ios ='ios',
+}
+
 export const perTransferLimit = 2500;
 export const dailyACHTransferLimit = 5000;
 export const monthlyACHTransferLimit = 50000;

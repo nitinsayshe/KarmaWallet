@@ -15,6 +15,7 @@ import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integ
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
 import PlaidUser from '../integrations/plaid/user';
 import { BankConnectionStatus, CardStatus, ErrorTypes } from '../lib/constants';
+import { sourceDevice } from '../lib/constants/plaid';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
@@ -60,6 +61,7 @@ export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
   app?: boolean;
+  device?: string
 }
 
 export interface ISandboxItemFireWebhookRequest {
@@ -138,7 +140,7 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  createLinkToken = async ({ userId, access_token, app }: ICreateLinkTokenParams) => {
+  createLinkToken = async ({ userId, access_token, app, device }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
     const configs: LinkTokenCreateRequest = {
       user: {
@@ -147,7 +149,6 @@ export class PlaidClient extends SdkClient {
       client_name: 'Karma Wallet',
       country_codes: [CountryCode.Us],
       language: 'en',
-      redirect_uri: process.env.PLAID_REDIRECT_URI,
       webhook: process.env.PLAID_WEBHOOK_URI,
     };
     // accessToken provided if launching link in update mode
@@ -157,12 +158,19 @@ export class PlaidClient extends SdkClient {
     // products should be excluded if launching link in update mode
     if (!access_token) {
       configs.products = [Products.Transactions, Products.Auth];
-
       // if request is coming from web set products to Transactions only
       if (!app) {
         configs.products = [Products.Transactions];
       }
     }
+
+    // if request is comming from mobile/app and source is Android set android_package
+    if (app && device === sourceDevice.android) {
+      configs.android_package_name = process.env.PLAID_ANDROID_PACKAGE;
+    } else {
+      configs.redirect_uri = process.env.PLAID_REDIRECT_URI;
+    }
+
     try {
       const response = await this._client.linkTokenCreate(configs);
       return { userId, ...response.data };

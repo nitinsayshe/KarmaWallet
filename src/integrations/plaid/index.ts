@@ -84,10 +84,10 @@ export const reset = async (_: IRequest) => {
   await mapper.reset();
 };
 
-export const createLinkToken = async (req: IRequest<{app: boolean}, {}, ICreateLinkTokenBody>) => {
+export const createLinkToken = async (req: IRequest<{}, { app: boolean, device: string }, ICreateLinkTokenBody>) => {
   const userId = req.requestor._id.toString();
   const { cardId } = req.body;
-  const { app } = req.params;
+  const { app, device } = req.query;
   let access_token;
   if (cardId) {
     const card = await _getCard({ _id: cardId, user: userId });
@@ -97,7 +97,7 @@ export const createLinkToken = async (req: IRequest<{app: boolean}, {}, ICreateL
       : card?.integrations?.plaid?.unlinkedAccessTokens[card?.integrations?.plaid?.unlinkedAccessTokens.length];
   }
   const client = new PlaidClient();
-  return client.createLinkToken({ userId, access_token, app });
+  return client.createLinkToken({ userId, access_token, app, device });
 };
 
 export const exchangePublicToken = (req: IRequest<{}, {}, IExchangePublicTokenBody>) => {

@@ -50,6 +50,7 @@ jobs:
     - run: echo 'PLAID_WEBHOOK_URI=https://backend.staging.karmawallet.io/webhook/plaid' >> .env
     - run: echo 'PLAID_REDIRECT_URI=https://ui.staging.karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
+    - run: echo 'PLAID_ANDROID_PACKAGE=${{secrets.PLAID_ANDROID_PACKAGE}}' >> .env
     - run: echo 'MAILCHIMP_KEY=' >> .env
     - run: echo 'MAILCHIMP_SERVER=' >> .env
     - run: echo 'RARE_API_KEY=${{ secrets.STAGING_RARE_API_KEY }}' >> .env

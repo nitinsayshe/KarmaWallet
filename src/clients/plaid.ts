@@ -164,7 +164,7 @@ export class PlaidClient extends SdkClient {
       }
     }
 
-    // if request is comming from mobile/app and source is Android set android_package
+    // if request is comming from mobile/app and source is Android set android_package else set rediredct_url
     if (app && device === sourceDevice.android) {
       configs.android_package_name = process.env.PLAID_ANDROID_PACKAGE;
     } else {

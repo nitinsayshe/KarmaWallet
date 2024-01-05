@@ -8,19 +8,13 @@ import {
 import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
 
-enum AnalyticLocation {
-  HomePage = 'home_page',
-  AboutPage = 'about_page',
-  ContactPage = 'contact_page',
-}
-
 export interface IAnalytic {
   _id: ObjectId;
   createdOn: Date;
-  lastModified: Date;
-  enabled: boolean;
+  lastModifiedOn: Date;
   name: string;
-  location: Location;
+  location: string;
+  subLocation: string;
   description: string;
 }
 
@@ -32,9 +26,10 @@ export type IWebAnalyticsModel = IModel<IAnalytic>;
 
 const webAnalyticsSchema = new Schema({
   createdOn: { type: Date, required: true, default: () => getUtcDate() },
-  lastModified: { type: Date, required: true, default: () => getUtcDate() },
+  lastModifiedOn: { type: Date, required: true, default: () => getUtcDate() },
   name: { type: String, required: true },
-  location: { type: String, enum: Object.values(AnalyticLocation), required: true },
+  location: { type: String, required: true },
+  subLocation: { type: String, required: true },
   description: { type: String, required: true },
 });
 

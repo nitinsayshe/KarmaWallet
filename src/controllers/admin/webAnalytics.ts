@@ -12,6 +12,15 @@ export const getAllWebAnalytics: IRequestHandler = async (req, res) => {
   }
 };
 
+export const getWebAnalyticsLocations: IRequestHandler = async (req, res) => {
+  try {
+    const analytics = await WebAnalyticsService.getWebAnalyticsLocations(req);
+    api(req, res, analytics);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
 export const getWebAnalyticsByPage: IRequestHandler<WebAnalyticsService.IWebAnalyticsRequestParams, {}, {}> = async (req, res) => {
   try {
     const analytics = await WebAnalyticsService.getWebAnalyticsByPage(req);
@@ -21,11 +30,11 @@ export const getWebAnalyticsByPage: IRequestHandler<WebAnalyticsService.IWebAnal
   }
 };
 
-// export const createWebAnalytic: IRequestHandler = async (req, res) => {
-//   try {
-//     const analytic = await WebAnalyticsService.createWebAnalytics(req);
-//     api(req, res, analytic);
-//   } catch (err) {
-//     error(req, res, asCustomError(err));
-//   }
-// };
+export const createWebAnalytics: IRequestHandler<{}, {}, WebAnalyticsService.IWebAnalyticsRequestBody> = async (req, res) => {
+  try {
+    const analytic = await WebAnalyticsService.createWebAnalytics(req);
+    api(req, res, analytic);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};

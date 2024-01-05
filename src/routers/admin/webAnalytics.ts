@@ -14,17 +14,24 @@ router.get(
 );
 
 router.get(
+  '/locations',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+  WebAnalyticsController.getWebAnalyticsLocations,
+);
+
+router.get(
   '/:location',
   authenticate,
   protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
   WebAnalyticsController.getWebAnalyticsByPage,
 );
 
-// router.post(
-//   '/',
-//   authenticate,
-//   protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
-//   WebAnalyticsController.createWebAnalytics,
-// );
+router.post(
+  '/',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+  WebAnalyticsController.createWebAnalytics,
+);
 
 export default router;

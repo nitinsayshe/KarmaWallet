@@ -252,13 +252,15 @@ export const updateTransactions = async (
       `updating transaction ${transaction._id} company from ${transaction.company} to ${newlyMatchedTransaction.company}`,
     );
 
-    transactionsToSave.push(
-      TransactionModel.findOneAndUpdate(
-        { _id: transaction._id },
-        { company: newlyMatchedTransaction.company },
-        { new: true },
-      ),
-    );
+    const update: any = {
+      _id: transaction._id,
+    };
+
+    console.log(newlyMatchedTransaction.company, typeof newlyMatchedTransaction.company);
+
+    if (newlyMatchedTransaction.company) update.company = newlyMatchedTransaction.company;
+    else update.$unset = { company: '' };
+    transactionsToSave.push(TransactionModel.updateOne({ _id: transaction._id }, update));
   }
 
   log(`transactions to save count: ${transactionsToSave.length}`);

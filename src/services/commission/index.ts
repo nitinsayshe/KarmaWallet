@@ -15,7 +15,7 @@ import {
   KarmaCommissionPayoutStatus,
 } from '../../models/commissionPayout';
 import {
-  currentAccurualsQuery,
+  currentAccrualsQuery,
   getNextPayoutDate,
   getUserCurrentAccrualsBalance,
   getUserLifetimeCashbackPayoutsTotal,
@@ -137,7 +137,7 @@ export const getCommissionsForUserByPayout = async (req: IRequest<{}, IGetCommis
   // no payoutID means current
   const { id } = req.query;
   if (!id) {
-    const commissions = await CommissionModel.find({ user: requestor?._id, ...currentAccurualsQuery })
+    const commissions = await CommissionModel.find({ user: requestor?._id, ...currentAccrualsQuery })
       .sort({ createdOn: -1 })
       .populate(defaultCommissionPopulation);
     const total = await getUserCurrentAccrualsBalance(requestor?._id);
@@ -162,7 +162,7 @@ export const getCommissionDashboardSummary = async (req: IRequest) => {
   const payouts = await CommissionPayoutModel.find({ user: requestor?._id, status: KarmaCommissionPayoutStatus.Paid });
   const accruals = await CommissionModel.find({
     user: requestor?._id,
-    ...currentAccurualsQuery,
+    ...currentAccrualsQuery,
   })
     .sort({ createdOn: -1 })
     .populate(defaultCommissionPopulation);

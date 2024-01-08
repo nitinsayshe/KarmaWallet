@@ -15,7 +15,7 @@ import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integ
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
 import PlaidUser from '../integrations/plaid/user';
 import { BankConnectionStatus, CardStatus, ErrorTypes } from '../lib/constants';
-import { sourceDevice } from '../lib/constants/plaid';
+import { plaidAndroidPackage, sourceDevice } from '../lib/constants/plaid';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
@@ -166,7 +166,7 @@ export class PlaidClient extends SdkClient {
 
     // if request is comming from mobile/app and source is Android set android_package else set rediredct_url
     if (app && device === sourceDevice.android) {
-      configs.android_package_name = process.env.PLAID_ANDROID_PACKAGE;
+      configs.android_package_name = plaidAndroidPackage;
     } else {
       configs.redirect_uri = process.env.PLAID_REDIRECT_URI;
     }

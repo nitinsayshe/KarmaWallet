@@ -36,6 +36,8 @@ export enum sourceDevice {
   ios ='ios',
 }
 
+export const plaidAndroidPackage = 'com.karmawalletnative.app';
+
 export const perTransferLimit = 2500;
 export const dailyACHTransferLimit = 5000;
 export const monthlyACHTransferLimit = 50000;

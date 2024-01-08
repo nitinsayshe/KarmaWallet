@@ -155,6 +155,11 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   return Array.from(_domains);
 };
 
+export const checkIfUserInGroup = async (userId: string, groupId: string) => {
+  const userGroup = await UserGroupModel.findOne({ user: userId, group: groupId });
+  return userGroup;
+};
+
 export const verifyGroupSettings = (settings: IGroupSettings, previousSettings?: IGroupSettings) => {
   const _settings = { ...defaultGroupSettings, ...(previousSettings || {}) };
   if (!!settings) {

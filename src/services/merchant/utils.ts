@@ -4,46 +4,28 @@ export const getMerchantRateDescription = (
   Kind: string | CommissionType,
   Amount: number,
 ): { maxDescription: string; maxAmount: string; amount: number } => {
-  let maxAmount = '';
   let maxDescription = '';
-  let amount = 0;
   if (!Kind) {
     return {
-      maxAmount,
+      maxAmount: Amount.toString(),
       maxDescription,
-      amount,
+      amount: Amount,
     };
   }
 
-  switch (Kind?.toLowerCase()) {
-    case 'percent': {
-      maxAmount = Amount % 1 === 0 ? `${Amount}%` : `${Amount.toFixed(2)}%`;
-      break;
-    }
-    case 'percentage': {
-      maxAmount = Amount % 1 === 0 ? `${Amount}%` : `${Amount.toFixed(2)}%`;
-      break;
-    }
-    case 'flat': {
-      maxAmount = Amount % 1 === 0 ? `$${Amount}` : `$${Amount.toFixed(2)}`;
-      break;
-    }
-
-    default:
-      return {
-        maxDescription,
-        maxAmount,
-        amount,
-      };
+  const kind = Kind?.toLowerCase();
+  if (kind !== 'fixed' && kind !== 'percentage' && kind !== 'flat') {
+    return {
+      maxDescription,
+      maxAmount: Amount.toString(),
+      amount: Amount,
+    };
   }
 
-  if (Amount === 0) maxAmount = '0';
-  maxDescription = `Up to ${maxAmount}`;
-  amount = Amount;
-
+  maxDescription = `Up to ${Amount}`;
   return {
     maxDescription,
-    maxAmount,
-    amount,
+    maxAmount: Amount.toString(),
+    amount: Amount,
   };
 };

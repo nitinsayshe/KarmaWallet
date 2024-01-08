@@ -28,11 +28,13 @@ import { IRequest } from '../../types/request';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 import { sendGroupVerificationEmail } from '../email';
+// eslint-disable-next-line import/no-cycle
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import { getEquivalencies, getOffsetTransactionsTotal, getRareOffsetAmount, IEquivalencyObject } from '../impact/utils/carbon';
 import { getStatements } from '../statements';
 import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
+// eslint-disable-next-line import/no-cycle
 import { getUser } from '../user';
 
 dayjs.extend(utc);

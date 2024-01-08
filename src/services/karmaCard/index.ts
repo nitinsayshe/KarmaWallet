@@ -155,7 +155,16 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     }
     // if is first time applying for the card or visiting site
   } else if (!existingVisitor && !existingUser) {
-    const newVisitorResponse = await VisitorService.createCreateAccountVisitor({ params: urlParams, email });
+    const visitorData: any = {
+      email,
+      params: urlParams,
+    };
+
+    if (urlParams.find((param) => param.key === 'groupCode')) {
+      visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
+    }
+
+    const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
     _visitor = newVisitorResponse;
   }
 

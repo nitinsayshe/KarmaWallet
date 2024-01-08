@@ -1,4 +1,6 @@
 import { FieldValue } from 'aws-sdk/clients/cloudsearch';
+import { AxiosInstance } from 'axios';
+import dayjs from 'dayjs';
 import isemail from 'isemail';
 import { FilterQuery, ObjectId, Types, UpdateQuery } from 'mongoose';
 import { IGetContactResponse } from '../../clients/activeCampaign';
@@ -8,17 +10,19 @@ import {
   getActiveCampaignContactByEmail,
   getActiveCampaignTags,
   getSubscribedLists,
+  subscribeContactToList,
   updateActiveCampaignData,
-  updateActiveCampaignListStatus,
+  updateActiveCampaignListStatusForEmail,
+  updateCustomFields,
 } from '../../integrations/activecampaign';
-import { ErrorTypes, UserGroupRole } from '../../lib/constants';
-import {
-  ProviderProductIdToSubscriptionCode,
-  SubscriptionCodeToProviderProductId,
-} from '../../lib/constants/subscription';
+import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum } from '../../lib/constants';
+import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
-import { IGroupDocument } from '../../models/group';
+import { sleep } from '../../lib/misc';
+import { GroupModel, IGroupDocument } from '../../models/group';
+import { MiscModel } from '../../models/misc';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
 import { IEmail, IUser, IUserDocument, UserModel } from '../../models/user';
 import { IUserGroup, UserGroupModel } from '../../models/userGroup';
@@ -53,23 +57,16 @@ export const updateNewUserSubscriptions = async (user: IUserDocument) => {
     if (!(sub?.status === SubscriptionStatus.Active)) {
       subscribe.push(ActiveCampaignListId.GeneralUpdates);
     }
-    await updateActiveCampaignListStatus(email, subscribe, [ActiveCampaignListId.MonthyNewsletters]);
+    await updateActiveCampaignListStatusForEmail(email, subscribe, [ActiveCampaignListId.MonthyNewsletters]);
     // cancel monthly newsletter subscription if subscribed
     await SubscriptionModel.findOneAndUpdate(
       { visitor: visitor._id, code: SubscriptionCode.monthlyNewsletters },
       { status: SubscriptionStatus.Cancelled },
     );
     // associate subscriptions with new user
-    await SubscriptionModel.updateMany(
-      { visitor: visitor._id },
-      { $set: { user: user._id, lastModified: getUtcDate() } },
-    );
+    await SubscriptionModel.updateMany({ visitor: visitor._id }, { $set: { user: user._id, lastModified: getUtcDate() } });
   } else {
-    await updateActiveCampaignListStatus(
-      email,
-      [ActiveCampaignListId.AccountUpdates, ActiveCampaignListId.GeneralUpdates],
-      [],
-    );
+    await updateActiveCampaignListStatusForEmail(email, [ActiveCampaignListId.AccountUpdates, ActiveCampaignListId.GeneralUpdates], []);
   }
   await SubscriptionModel.create({
     code: SubscriptionCode.accountUpdates,
@@ -90,17 +87,17 @@ export const updateNewUserSubscriptions = async (user: IUserDocument) => {
   );
 };
 
-export const getActiveCampaignSubscribedSubscriptionCodes = async (email: string): Promise<SubscriptionCode[]> => {
-  const listIds = await getActiveCampaignSubscribedListIds(email);
-  return listIds.map((id) => ProviderProductIdToSubscriptionCode[id]);
-};
-
-export const getActiveCampaignSubscribedListIds = async (email: string): Promise<ActiveCampaignListId[]> => {
+export const getActiveCampaignSubscribedListIds = async (email: string, client?: AxiosInstance): Promise<ActiveCampaignListId[]> => {
   try {
-    return await getSubscribedLists(email);
+    return await getSubscribedLists(email, client);
   } catch (err) {
     throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
   }
+};
+
+export const getActiveCampaignSubscribedSubscriptionCodes = async (email: string): Promise<SubscriptionCode[]> => {
+  const listIds = await getActiveCampaignSubscribedListIds(email);
+  return listIds.map((id) => ProviderProductIdToSubscriptionCode[id]);
 };
 
 // orchestrates reaching out to active campaign and transferring subscriptions
@@ -119,9 +116,7 @@ export const updateSubscriptionsOnEmailChange = async (
     let prevContact: IGetContactResponse | null = null;
     // get custom field values from the prev email
     prevContact = await getActiveCampaignContactByEmail(prevEmail);
-    prevSubs = contactListToSubscribedListIDs(prevContact.contactLists).map(
-      (id) => ProviderProductIdToSubscriptionCode[id],
-    );
+    prevSubs = contactListToSubscribedListIDs(prevContact.contactLists).map((id) => ProviderProductIdToSubscriptionCode[id]);
     prevCustomFields = prevContact.fieldValues
       ?.map((field) => {
         const id = parseInt(field.field, 10);
@@ -156,7 +151,7 @@ export const updateSubscriptionsOnEmailChange = async (
   }
 
   // remove any dupe subs that we actually want to keep
-  const unsubscribeLists: SubscriptionCode[] = newEmailSubs.length > 0 ? newEmailSubs.filter((sub) => !(prevSubs?.includes(sub))) : [];
+  const unsubscribeLists: SubscriptionCode[] = newEmailSubs.length > 0 ? newEmailSubs.filter((sub) => !prevSubs?.includes(sub)) : [];
 
   // subscribe new email to any active list subsctiptions in active campaign
   await updateActiveCampaignData({
@@ -233,9 +228,7 @@ const reconcileActiveCampaignListSubscriptions = async (
   visitor: boolean = false,
 ) => {
   // get a list of all active campaign subscription codes
-  const activeCampaignSubCodes = Object.values(ActiveCampaignListId).map(
-    (id) => ProviderProductIdToSubscriptionCode[id],
-  );
+  const activeCampaignSubCodes = Object.values(ActiveCampaignListId).map((listId) => ProviderProductIdToSubscriptionCode[listId]);
   const codes = activeCampaignSubs?.map((sub) => ProviderProductIdToSubscriptionCode[sub])?.concat(subCodes) || subCodes;
 
   /* update any activeCampaignSubs in subs to Active -- with upsert */
@@ -307,11 +300,7 @@ export const getUserGroupSubscriptionsToUpdate = async (
     const nonActiveCampaignSubs = await getNonActiveCampaignSubscriptions(user._id as unknown as Types.ObjectId);
 
     // update db with active campaign subscriptions
-    await reconcileActiveCampaignListSubscriptions(
-      new Types.ObjectId(user._id.toString()),
-      activeCampaignListIds,
-      nonActiveCampaignSubs,
-    );
+    await reconcileActiveCampaignListSubscriptions(new Types.ObjectId(user._id.toString()), activeCampaignListIds, nonActiveCampaignSubs);
 
     /* Should the user be enrolled in the admin list? */
     const adminQuery: FilterQuery<IUserGroup> = {
@@ -337,10 +326,7 @@ export const getUserGroupSubscriptionsToUpdate = async (
 
     // check if they are a member of any groups
     const memberQuery: FilterQuery<IUserGroup> = {
-      $and: [
-        { user: user._id },
-        { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } },
-      ],
+      $and: [{ user: user._id }, { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } }],
     };
     if (!!groupToBeDeleted) {
       memberQuery.$and.push({ group: { $ne: groupToBeDeleted } });
@@ -381,10 +367,7 @@ export const getUpdatedGroupChangeSubscriptions = async (
     }
 
     let userSubscriptions = await Promise.all(
-      groupUsers.map(async (userGroup) => getUserGroupSubscriptionsToUpdate(
-        userGroup.user as Partial<IUserDocument>,
-        groupToBeDeleted ? group._id : undefined,
-      )),
+      groupUsers.map(async (userGroup) => getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>, groupToBeDeleted ? group._id : undefined)),
     );
 
     userSubscriptions = userSubscriptions.filter((sub) => sub.subscribe.length > 0 || sub.unsubscribe.length > 0);
@@ -442,7 +425,7 @@ const updateSubscriptionsByQuery = async (query: FilterQuery<ISubscription>, upd
 
 const unsubscribeFromActiveCampaignNewsletters = async (email: string, unsubscribe: ActiveCampaignListId[]) => {
   try {
-    await updateActiveCampaignListStatus(email, [], unsubscribe);
+    await updateActiveCampaignListStatusForEmail(email, [], unsubscribe);
   } catch (err) {
     console.error(`Error unsubscribing contact with email ${email} from newsletters:`, err);
     throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
@@ -509,5 +492,114 @@ export const newsletterUnsubscribe = async (_: IRequest, email: string, preserve
   } catch (err) {
     console.log('Error unsubcribing', err);
     throw err;
+  }
+};
+
+const activateSubscription = async (userId: Types.ObjectId, code: SubscriptionCode) => {
+  try {
+    await SubscriptionModel.updateMany(
+      { user: userId, code },
+      {
+        user: userId,
+        code,
+        status: SubscriptionStatus.Active,
+        lastModified: getUtcDate(),
+      },
+      { upsert: true },
+    );
+  } catch (err) {
+    console.error('Error activating subscription', err);
+    throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
+  }
+};
+
+export const updateNewKWCardUserSubscriptions = async (user: IUserDocument, client?: AxiosInstance) => {
+  const sleepTime = 1000;
+  try {
+    // pull app version from misc collection
+    const appVersion = await MiscModel.findOne({ key: MiscAppVersionKey });
+    if (!appVersion._id) {
+      throw new CustomError('Error retrieving app version', ErrorTypes.SERVER);
+    }
+
+    // Is this user from the beta invite list?
+    // pull their ac lists
+    const userContactLists = await getActiveCampaignSubscribedListIds(user.emails[0].email, client);
+    await sleep(sleepTime);
+    if (!userContactLists) {
+      throw new CustomError('Error retrieving user contact lists', ErrorTypes.SERVER);
+    }
+
+    const subscriptionListsForUser: { activeCampaign: ActiveCampaignListId; subscriptionCode: SubscriptionCode }[] = [];
+
+    // check if they're in the beta invite list
+    const inBetaInviteList = userContactLists?.includes(ActiveCampaignListId.BetaTesterInvite);
+    const isInBetaTestersList = userContactLists?.includes(ActiveCampaignListId.BetaTesters);
+
+    if (!!inBetaInviteList && !isInBetaTestersList && appVersion.value === AppVersionEnum.Beta) {
+      // add them to the beta testers list
+      subscriptionListsForUser.push({ activeCampaign: ActiveCampaignListId.BetaTesters, subscriptionCode: SubscriptionCode.betaTesters });
+    }
+
+    // if the app is in v1, add them to the debit card holders list
+    const isInDebitCardHoldersList = userContactLists?.includes(ActiveCampaignListId.DebitCardHolders);
+    if (appVersion.value === AppVersionEnum.V1 && !isInDebitCardHoldersList) {
+      subscriptionListsForUser.push({
+        activeCampaign: ActiveCampaignListId.DebitCardHolders,
+        subscriptionCode: SubscriptionCode.debitCardHolders,
+      });
+    }
+    //
+    // check if they belong to any group with the employer program beta tag
+    // if so, add them to the employer program beta list if they're not already on it
+    const userGroups = await UserGroupModel.find({ user: user._id }).lean();
+
+    const isInEmployerBetaList = userContactLists?.includes(ActiveCampaignListId.EmployerProgramBeta);
+    if (!isInEmployerBetaList) {
+      let isInEmployerBetaGroup = false;
+
+      try {
+        await Promise.all(
+          userGroups?.map(async (userGroup) => {
+            if (!userGroup?.group) return;
+            const group = await GroupModel.findById(userGroup.group).lean();
+            if (!group?._id) return;
+            if (group?.tags?.includes(GroupTagsEnum.EmployerBeta)) {
+              isInEmployerBetaGroup = true;
+            }
+          }),
+        );
+      } catch (err) {
+        console.error('Error retrieving group details', err);
+      }
+      if (isInEmployerBetaGroup) {
+        subscriptionListsForUser.push({
+          activeCampaign: ActiveCampaignListId.EmployerProgramBeta,
+          subscriptionCode: SubscriptionCode.employerProgramBeta,
+        });
+      }
+    }
+
+    const { email } = user.emails.find((e) => e.primary);
+    // send requests to active campaign with a delay between each
+    for (let i = 0; i < subscriptionListsForUser.length; i++) {
+      await subscribeContactToList(email, subscriptionListsForUser[i].activeCampaign, client);
+      await activateSubscription(user._id, subscriptionListsForUser[i].subscriptionCode);
+      await sleep(sleepTime);
+    }
+
+    // update the existingWebAppUser field
+    // if the user account existed an hour before the marqeta integration, they are an existing user
+    let existingWebAppUser: 'true' | 'false' = 'true';
+    if (
+      !!user?.integrations?.marqeta
+      || dayjs(user.dateJoined).isAfter(dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour'))
+    ) {
+      existingWebAppUser = 'false';
+    }
+
+    await updateCustomFields(email, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: existingWebAppUser }], client);
+  } catch (err) {
+    console.log(err);
   }
 };

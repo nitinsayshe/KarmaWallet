@@ -252,7 +252,8 @@ const getUpdatedTransactionStatusFromRelatedTransactionType = (
   if (!!Object.values(TriggerDeclinedTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Declined;
   }
-  return undefined; // return TransactionModelStateEnum.Error instead?
+
+  return TransactionModelStateEnum.Error; // return TransactionModelStateEnum.Error instead?
 };
 
 export const getSubTypeFromMarqetaGPATag = (tag: string): TransactionCreditSubtypeEnumValues => {

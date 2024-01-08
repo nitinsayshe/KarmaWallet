@@ -1,4 +1,5 @@
 import { UserCommissionPercentage } from '../../lib/constants';
+import { roundToPercision } from '../../lib/misc';
 import {
   IKardMerchantIntegration,
   IMerchantDocument,
@@ -78,7 +79,7 @@ export const getShareableMerchant = ({
     const amount = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Amount;
     const kind = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind;
     // the cut that we are passing on to end user is 75%
-    const maxAmountNumber = !!amount ? Math.round(amount * UserCommissionPercentage * 100) / 100 : 0;
+    const maxAmountNumber = !!amount ? roundToPercision((amount * UserCommissionPercentage * 100) / 100, 4) : 0;
     const descriptions = getMerchantRateDescription(kind?.toLowerCase(), maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxRateType = getMerchantRateTypeFromString(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind);
@@ -90,7 +91,7 @@ export const getShareableMerchant = ({
   }
   if (!!integrations?.kard) {
     const maxAmountNumber = !!integrations.kard?.maxOffer?.totalCommission
-      ? Math.round((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
+      ? roundToPercision((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage, 4)
       : 0;
     const previousMaxAmount = parseFloat(maxAmount);
     if ((!previousMaxAmount || isNaN(previousMaxAmount)) || (!!maxAmountNumber && maxAmountNumber > previousMaxAmount)) {

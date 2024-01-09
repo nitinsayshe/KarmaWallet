@@ -28,11 +28,13 @@ import { IRequest } from '../../types/request';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 import { sendGroupVerificationEmail } from '../email';
+// eslint-disable-next-line import/no-cycle
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import { getEquivalencies, getOffsetTransactionsTotal, getRareOffsetAmount, IEquivalencyObject } from '../impact/utils/carbon';
 import { getStatements } from '../statements';
 import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
+// eslint-disable-next-line import/no-cycle
 import { getUser } from '../user';
 
 dayjs.extend(utc);
@@ -151,6 +153,11 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   const _domains = new Set(domains);
 
   return Array.from(_domains);
+};
+
+export const checkIfUserInGroup = async (userId: string, groupId: string) => {
+  const userGroup = await UserGroupModel.findOne({ user: userId, group: groupId });
+  return userGroup;
 };
 
 export const verifyGroupSettings = (settings: IGroupSettings, previousSettings?: IGroupSettings) => {
@@ -598,6 +605,7 @@ export const getShareableGroup = ({
   domains,
   logo,
   settings,
+  tags,
   members,
   owner,
   status,
@@ -617,6 +625,7 @@ export const getShareableGroup = ({
     domains,
     logo,
     settings,
+    tags,
     status,
     owner: _owner,
     totalMembers: members?.length || null,

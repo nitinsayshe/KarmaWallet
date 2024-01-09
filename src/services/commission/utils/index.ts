@@ -190,7 +190,7 @@ export const mapWildfireCommissionToKarmaCommission = async (wildfireCommission:
     // update cash back eligible purchase status in active campaign if first commssion
     const userCommissions = await CommissionModel.find({ user: user._id });
     if (userCommissions && userCommissions.length === 0) {
-      await updateMadeCashBackEligiblePurchaseStatus(user);
+      await updateMadeCashBackEligiblePurchaseStatus(user.emails.find((e) => e.primary).email);
     }
 
     await newCommission.save();
@@ -278,6 +278,7 @@ const getAssociatedTransaction = async (kardEnv: KardEnvironmentEnumValues, tran
     case KardEnvironmentEnum.Issuer:
       return TransactionModel.findOne({
         $or: [
+
           {
             $and: [
               { 'integrations.marqeta.token': { $exists: true } },
@@ -379,7 +380,7 @@ export const mapKardCommissionToKarmaCommisison = async (
     /* update cash back eligible purchase status in active campaign if first commssion */
     const userCommissions = await CommissionModel.find({ user: user._id });
     if (userCommissions && userCommissions.length === 0) {
-      await updateMadeCashBackEligiblePurchaseStatus(user);
+      await updateMadeCashBackEligiblePurchaseStatus(user.emails.find((e) => e.primary).email);
     }
 
     return newCommission.save();

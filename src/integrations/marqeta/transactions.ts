@@ -239,10 +239,6 @@ const getUpdatedTransactionStatusFromRelatedTransactionType = (
   type: TransactionModelTypeEnumValues,
   state: TransactionModelStateEnumValues,
 ): TransactionModelStateEnumValues => {
-  if (!!Object.values(TransactionModelStateEnum).includes(state)) {
-    return state;
-  }
-
   if (!!Object.values(TriggerClearedTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Completion;
   }
@@ -252,7 +248,12 @@ const getUpdatedTransactionStatusFromRelatedTransactionType = (
   if (!!Object.values(TriggerDeclinedTransactionTypeEnum).find((t) => t === type)) {
     return TransactionModelStateEnum.Declined;
   }
-  return undefined; // return TransactionModelStateEnum.Error instead?
+
+  if (!!Object.values(TransactionModelStateEnum).includes(state)) {
+    return state;
+  }
+
+  return TransactionModelStateEnum.Error; // return TransactionModelStateEnum.Error instead?
 };
 
 export const getSubTypeFromMarqetaGPATag = (tag: string): TransactionCreditSubtypeEnumValues => {

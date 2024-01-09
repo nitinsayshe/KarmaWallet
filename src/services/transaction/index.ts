@@ -37,11 +37,13 @@ import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manua
 import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+// eslint-disable-next-line import/no-cycle
 import { getShareableCard } from '../card';
 import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, ICompanyProtocol, _getPaginatedCompanies } from '../company';
 import { getCompanyRatingsThresholds } from '../misc';
 import { calculateCompanyScore } from '../scripts/calculate_company_scores';
 import { getShareableSector } from '../sectors';
+// eslint-disable-next-line import/no-cycle
 import { getShareableUser } from '../user';
 import { _getTransactions } from './utils';
 import {
@@ -68,6 +70,8 @@ import { PushNotificationTypes } from '../../lib/constants/notification';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { MCCStandards } from '../../integrations/marqeta/types';
+// eslint-disable-next-line import/no-cycle
+import { checkIfUserInGroup } from '../groups';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -1065,6 +1069,13 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
 
   for (const deposit of gpaDeposits) {
     const tags = `groupId=${groupId},type=${type}`;
+    const userInGroup = await checkIfUserInGroup(deposit.userId, groupId);
+
+    if (!userInGroup) {
+      console.error(`User ${deposit.userId} is not in group ${groupId}`);
+      continue;
+    }
+
     const gpaFundResponse = await fundUserGPAFromProgramFundingSource({
       userId: deposit.userId,
       amount: deposit.amount,

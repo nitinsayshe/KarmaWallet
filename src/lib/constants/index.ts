@@ -363,3 +363,15 @@ export const ChargebackTypeEnum = {
   WRITTEN_OFF_PROGRAM: 'written.off.program',
 } as const;
 export type ChargebackTypeEnumValues = (typeof ChargebackTypeEnum)[keyof typeof ChargebackTypeEnum];
+
+export const GroupTagsEnum = {
+  EmployerBeta: 'employer-beta',
+} as const;
+export type GroupTagsEnumValues = typeof GroupTagsEnum[keyof typeof GroupTagsEnum];
+
+export const AppVersionEnum = {
+  Beta: 'beta',
+  V1: 'v1',
+} as const;
+
+export const MiscAppVersionKey = 'AppVersion';

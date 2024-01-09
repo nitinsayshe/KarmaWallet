@@ -1,7 +1,13 @@
 import { AxiosInstance } from 'axios';
 import dayjs from 'dayjs';
 import { Schema, Types } from 'mongoose';
-import { ActiveCampaignClient, IContactAutomation, IContactList, IGetContactResponse } from '../../clients/activeCampaign';
+import {
+  ActiveCampaignClient,
+  IContactAutomation,
+  IContactList,
+  IGetContactResponse,
+  UpdateContactListStatusEnum,
+} from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
@@ -48,11 +54,7 @@ export interface UserSubscriptions {
   unsubscribe: Array<SubscriptionCode>;
 }
 
-export type CustomFieldSetter = (
-  userId: string,
-  customFields: FieldIds,
-  fieldValues?: FieldValues
-) => Promise<FieldValues>;
+export type CustomFieldSetter = (userId: string, customFields: FieldIds, fieldValues?: FieldValues) => Promise<FieldValues>;
 
 // duplicated code to avoid circular dependency
 const getShareableUserGroupFromUserGroupDocument = ({
@@ -387,9 +389,7 @@ const setBackfillCashBackEligiblePurchase = async (
 
   try {
     const userCommissions = await CommissionModel.find({ user: user._id });
-    const customField = customFields.find(
-      (field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase,
-    );
+    const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase);
     if (!!userCommissions && userCommissions.length >= 1 && !!customField) {
       fieldValues.push({ id: customField.id, value: 'true' });
     }
@@ -399,22 +399,20 @@ const setBackfillCashBackEligiblePurchase = async (
   return fieldValues;
 };
 
-export const updateMadeCashBackEligiblePurchaseStatus = async (user: IUserDocument, client?: AxiosInstance) => {
+export const updateMadeCashBackEligiblePurchaseStatus = async (userEmail: string, client?: AxiosInstance) => {
   try {
     const ac = new ActiveCampaignClient();
     ac.withHttpClient(client);
     const customFields = await ac.getCustomFieldIDs();
 
     const fields = [];
-    const customField = customFields.find(
-      (field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase,
-    );
+    const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.madeCashbackEligiblePurchase);
     if (customField) {
       fields.push({ id: customField.id, value: 'true' });
     }
     const contacts = [
       {
-        email: user.emails.find((e) => e.primary).email,
+        email: userEmail,
         fields,
       },
     ];
@@ -449,9 +447,7 @@ export const getUserGroups = async (userId: string): Promise<Array<string>> => {
   ]);
   let groupNames: string[];
   if (userGroups) {
-    groupNames = userGroups
-      .map((g) => getShareableUserGroupFromUserGroupDocument(g))
-      .map((g) => (g.group as IGroupDocument)?.name);
+    groupNames = userGroups.map((g) => getShareableUserGroupFromUserGroupDocument(g)).map((g) => (g.group as IGroupDocument)?.name);
   }
   return groupNames;
 };
@@ -509,9 +505,7 @@ export const updateActiveCampaignGroupListsAndTags = async (
     const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = subscriptions;
     const { subscribe, unsubscribe } = await getSubscriptionLists(
       subscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
-      unsubscribeCodes.map(
-        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId,
-      ),
+      unsubscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
     );
 
     const contacts = [
@@ -558,12 +552,8 @@ export const updateActiveCampaignData = async (
 
     const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = req.subscriptions;
     const { subscribe, unsubscribe } = await getSubscriptionLists(
-      subscribeCodes?.map(
-        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId,
-      ) || [],
-      unsubscribeCodes?.map(
-        (code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId,
-      ) || [],
+      subscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
+      unsubscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
     );
 
     /* TODO: handle removing tags - this doesn't seem possible through the same active campaign
@@ -595,6 +585,44 @@ export const updateActiveCampaignData = async (
   }
 };
 
+export const setCardSignupBackfill = async (
+  user: IUserDocument,
+  customFields: FieldIds,
+  fieldValues: FieldValues,
+): Promise<FieldValues> => {
+  if (!customFields) {
+    console.log('No custom fields provided');
+    return fieldValues;
+  }
+  if (!fieldValues) {
+    fieldValues = [];
+  }
+
+  try {
+    const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.existingWebAppUser);
+    if (!!customField) {
+      let existingUser = 'false';
+      if (dayjs(user?.dateJoined).isBefore(dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour'))) {
+        existingUser = 'true';
+      }
+      fieldValues.push({ id: customField.id, value: existingUser });
+    }
+  } catch (err) {
+    console.error('error setting existing user custom field', err);
+  }
+  return fieldValues;
+};
+
+export const prepareCardSignupBackfillSync = async (
+  user: IUserDocument,
+  customFields: FieldIds,
+  fieldValues: FieldValues,
+): Promise<FieldValues> => {
+  fieldValues = fieldValues || [];
+  fieldValues = await setCardSignupBackfill(user, customFields, fieldValues);
+
+  return fieldValues;
+};
 export const prepareBackfillSyncFields = async (
   user: IUserDocument,
   customFields: FieldIds,
@@ -614,11 +642,7 @@ export const prepareBackfillSyncFields = async (
 };
 
 /* optionally takes and appends to already inserted fieldValues */
-export const getCustomFieldIDsAndUpdateSetFields = async (
-  userId: string,
-  setFields: CustomFieldSetter,
-  client?: AxiosInstance,
-) => {
+export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFields: CustomFieldSetter, client?: AxiosInstance) => {
   try {
     const ac = new ActiveCampaignClient();
     ac.withHttpClient(client);
@@ -642,7 +666,7 @@ export const getCustomFieldIDsAndUpdateSetFields = async (
   }
 };
 
-export const updateActiveCampaignListStatus = async (
+export const updateActiveCampaignListStatusForEmail = async (
   email: string,
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
@@ -701,10 +725,7 @@ export const removeDuplicateAutomations = (automations: IContactAutomation[]): I
   return true;
 }) || [];
 
-export const removeDuplicateContactAutomaitons = async (
-  email: string,
-  client?: AxiosInstance,
-): Promise<void> => {
+export const removeDuplicateContactAutomations = async (email: string, client?: AxiosInstance): Promise<void> => {
   try {
     const ac = new ActiveCampaignClient();
     ac.withHttpClient(client);
@@ -730,19 +751,18 @@ export const removeDuplicateContactAutomaitons = async (
 
     const idsToRemove = dupeAutomations.map((a) => parseInt(a.id, 10));
 
-    await Promise.all(idsToRemove.map(async (automationId) => {
-      await ac.removeContactAutomation(automationId);
-    }));
+    await Promise.all(
+      idsToRemove.map(async (automationId) => {
+        await ac.removeContactAutomation(automationId);
+      }),
+    );
     console.log('done removing duplicate automations for ', email);
   } catch (err) {
     console.error('Error removing duplicate automation enrollments', err);
   }
 };
 
-export const getActiveCampaignContactByEmail = async (
-  email: string,
-  client?: AxiosInstance,
-): Promise<IGetContactResponse | null> => {
+export const getActiveCampaignContactByEmail = async (email: string, client?: AxiosInstance): Promise<IGetContactResponse | null> => {
   try {
     const ac = new ActiveCampaignClient();
     ac.withHttpClient(client);
@@ -794,5 +814,61 @@ export const getSubscribedLists = async (email: string, client?: AxiosInstance):
   } catch (err) {
     console.error('Error getting subscribed lists', err);
     return [];
+  }
+};
+
+export const subscribeContactToList = async (email: string, listId: ActiveCampaignListId, client?: AxiosInstance): Promise<void> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      throw new Error('No contact found');
+    }
+    // check if already subscribed
+    const subscribedLists = await getSubscribedLists(email, client);
+    // check if listIdis in subscribedLists
+    if (subscribedLists.includes(listId)) {
+      console.log('Contact already subscribed to list ', listId);
+      return;
+    }
+
+    const { id } = contactData.contacts[0];
+    console.log(`subscribing contact with email: ${email} to list id: ${listId}`);
+    await ac.updateContactListStatus({
+      contactList: { contact: parseInt(id), list: parseInt(listId), status: UpdateContactListStatusEnum.subscribe },
+    });
+  } catch (err) {
+    console.error('Error subscribing contact to list', err);
+  }
+};
+
+export const updateCustomFields = async (
+  userEmail: string,
+  fieldUpdates: { field: ActiveCampaignCustomFields; update: string }[],
+  client?: AxiosInstance,
+) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    const customFields = await ac.getCustomFieldIDs();
+    const fields: { id: number; value: string }[] = [];
+    fieldUpdates.forEach(async (fieldUpdate) => {
+      const customField = customFields.find((f) => f.name === fieldUpdate.field);
+      if (customField) {
+        fields.push({ id: customField.id, value: fieldUpdate.update });
+      }
+    });
+    const contacts = [
+      {
+        email: userEmail,
+        fields,
+      },
+    ];
+    await ac.importContacts({ contacts });
+  } catch (err) {
+    console.error(`error updating custom fields: ${JSON.stringify(fieldUpdates)}`, err);
   }
 };

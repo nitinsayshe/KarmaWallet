@@ -1,4 +1,4 @@
-import { UserCommissionPercentage } from '../../lib/constants';
+import { UserCommissionPercentage, UserCommissionPercentageForKarmaCollective } from '../../lib/constants';
 import { roundToPercision } from '../../lib/misc';
 import {
   IKardMerchantIntegration,
@@ -50,8 +50,11 @@ export const getShareableIntegrationFromWildfireIntegration = (
 
 export const getShareableIntegrationFromKardIntegration = (
   kardIntegration: IKardMerchantIntegration,
+  isKarmaCollectiveMember = false,
 ): ShareableMerchantIntegration => {
   const { id, name, websiteURL } = kardIntegration;
+  const userPercentageAmount = !!isKarmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
+
   return {
     merchantId: id,
     Name: name,
@@ -59,7 +62,7 @@ export const getShareableIntegrationFromKardIntegration = (
     maxRate: {
       type: getMerchantRateTypeFromString(kardIntegration?.maxOffer?.commissionType),
       amount: kardIntegration?.maxOffer?.totalCommission
-        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
+        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * userPercentageAmount)
         : 0,
     },
   };
@@ -94,6 +97,7 @@ export const getShareableMerchant = ({
       ? roundToPercision((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage, 4)
       : 0;
     const previousMaxAmount = parseFloat(maxAmount);
+
     if ((!previousMaxAmount || isNaN(previousMaxAmount)) || (!!maxAmountNumber && maxAmountNumber > previousMaxAmount)) {
       const descriptions = getMerchantRateDescription(integrations.kard?.maxOffer?.commissionType, maxAmountNumber);
       maxAmount = descriptions.maxAmount;
@@ -104,7 +108,7 @@ export const getShareableMerchant = ({
 
     _integrations = {
       ..._integrations,
-      kard: getShareableIntegrationFromKardIntegration(integrations.kard),
+      kard: getShareableIntegrationFromKardIntegration(integrations.kard, karmaCollectiveMember),
     };
   }
   return {

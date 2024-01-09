@@ -81,11 +81,11 @@ export const getShareableMerchant = ({
   if (integrations?.wildfire) {
     const amount = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Amount;
     const kind = integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind;
-    // the cut that we are passing on to end user is 75%
-    const maxAmountNumber = !!amount ? roundToPercision((amount * UserCommissionPercentage * 100) / 100, 4) : 0;
+    // the cut that we are passing on to end user is 75% unless they are karma collective then it is 65%
+    const maxAmountNumber = !!amount ? roundToPercision((amount * UserCommissionPercentage * 100) / 100, 2) : 0;
     const descriptions = getMerchantRateDescription(kind?.toLowerCase(), maxAmountNumber);
-    maxAmount = descriptions.maxAmount;
     maxRateType = getMerchantRateTypeFromString(integrations.wildfire?.domains?.[0]?.Merchant?.MaxRate?.Kind);
+    maxAmount = `${maxRateType === MerchantRateType.Flat ? '$' : ''}${descriptions.maxAmount}${maxRateType === MerchantRateType.Percent ? '%' : ''}`;
     maxDescription = descriptions.maxDescription;
     name = integrations?.wildfire.Name;
     _integrations = {
@@ -93,15 +93,16 @@ export const getShareableMerchant = ({
     };
   }
   if (!!integrations?.kard) {
+    const userPercentage = !!karmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
     const maxAmountNumber = !!integrations.kard?.maxOffer?.totalCommission
-      ? roundToPercision((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage, 4)
+      ? roundToPercision((integrations.kard?.maxOffer?.totalCommission || 0) * userPercentage, 2)
       : 0;
     const previousMaxAmount = parseFloat(maxAmount);
 
     if ((!previousMaxAmount || isNaN(previousMaxAmount)) || (!!maxAmountNumber && maxAmountNumber > previousMaxAmount)) {
       const descriptions = getMerchantRateDescription(integrations.kard?.maxOffer?.commissionType, maxAmountNumber);
-      maxAmount = descriptions.maxAmount;
       maxRateType = getMerchantRateTypeFromString(integrations.kard?.maxOffer?.commissionType);
+      maxAmount = `${maxRateType === MerchantRateType.Flat ? '$' : ''}${descriptions.maxAmount}${maxRateType === MerchantRateType.Percent ? '%' : ''}`;
       maxDescription = descriptions.maxDescription;
       name = integrations?.kard?.name;
     }

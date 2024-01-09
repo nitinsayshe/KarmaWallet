@@ -8,7 +8,7 @@ import {
   RewardStatus,
 } from '../../../clients/kard';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
-import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
+import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage, UserCommissionPercentageForKarmaCollective } from '../../../lib/constants';
 import CustomError from '../../../lib/customError';
 import { getUtcDate } from '../../../lib/date';
 import { roundToPercision } from '../../../lib/misc';
@@ -321,22 +321,6 @@ export const mapKardCommissionToKarmaCommisison = async (
     throw new Error('Invalid commission amount');
   }
 
-  const userCommissionCents = reward.commissionToIssuer * UserCommissionPercentage;
-  const userAllocation = roundToPercision(userCommissionCents / CentsInUSD, 2);
-  const karmaAllocation = reward.commissionToIssuer / CentsInUSD - userAllocation;
-
-  const commissionData: Partial<IShareableCommission> = {
-    amount: reward.commissionToIssuer,
-    allocation: {
-      user: userAllocation,
-      karma: karmaAllocation,
-    },
-    lastStatusUpdate: getUtcDate().toDate(),
-    integrations: {
-      kard: kardCommission,
-    },
-  };
-
   // get the associated transaction looking it up either by the id we added or the marqeta transaction id
   const associatedTransaction = await getAssociatedTransaction(kardEnv, transaction);
   if (!associatedTransaction?._id) throw new Error('Transaction not found');
@@ -353,12 +337,30 @@ export const mapKardCommissionToKarmaCommisison = async (
     transaction: associatedTransaction._id,
   });
 
-  if (!existingCommission?._id) {
-    const merchant = await MerchantModel.findOne({
-      'integrations.kard.id': reward.merchantId,
-    });
-    if (!merchant?._id) throw new Error('Merchant not found');
+  const merchant = await MerchantModel.findOne({
+    'integrations.kard.id': reward.merchantId,
+  });
 
+  if (!merchant?._id) throw new Error('Merchant not found');
+
+  const userPercentage = !!merchant.karmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
+  const userCommissionCents = reward.commissionToIssuer * userPercentage;
+  const userAllocation = roundToPercision(userCommissionCents / CentsInUSD, 2);
+  const karmaAllocation = reward.commissionToIssuer / CentsInUSD - userAllocation;
+
+  const commissionData: Partial<IShareableCommission> = {
+    amount: reward.commissionToIssuer,
+    lastStatusUpdate: getUtcDate().toDate(),
+    integrations: {
+      kard: kardCommission,
+    },
+    allocation: {
+      user: userAllocation,
+      karma: karmaAllocation,
+    },
+  };
+
+  if (!existingCommission?._id) {
     const company = await CompanyModel.findOne({ merchant: merchant?._id });
     if (!company?._id) throw new Error('Company not found');
 

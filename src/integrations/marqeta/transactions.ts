@@ -362,9 +362,10 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     existingTransaction.amount = t.amount;
     existingTransaction.lastModified = dayjs().utc().toDate();
 
+    // set settled date
     if (!!t.marqeta_transaction.settlement_date) {
       if (!!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
-        const settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+        const settledDate = dayjs(t.marqeta_transaction.created_time).utc().toDate();
         existingTransaction.settledDate = settledDate;
         existingTransaction.sortableDate = settledDate;
       }
@@ -436,7 +437,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
 
   if (!!t.marqeta_transaction.settlement_date && !!Object.values(TriggerClearedTransactionTypeEnum).find((tr) => tr === t.marqeta_transaction.type)) {
     // settled date added to the og transaction
-    const settledDate = dayjs(t.marqeta_transaction.settlement_date).utc().toDate();
+    const settledDate = dayjs(t.marqeta_transaction.created_time).utc().toDate();
     newTransaction.settledDate = settledDate;
     newTransaction.sortableDate = settledDate;
   } else if (t.marqeta_transaction.type === TransactionModelTypeEnum.GpaCredit) {
@@ -447,8 +448,6 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     // pending transaction
     newTransaction.sortableDate = date;
   }
-
-  console.log('////// this is the subType', types?.subType);
 
   if (types.subType === TransactionCreditSubtypeEnum.Employer) {
     console.log('////// EMPLOYER GIFT TRANSACTION');

@@ -1,5 +1,4 @@
-import { UserCommissionPercentage, UserCommissionPercentageForKarmaCollective } from '../../lib/constants';
-import { MerchantModel } from '../../models/merchant';
+import { UserCommissionPercentage } from '../../lib/constants';
 import { IMerchantRate, IShareableMerchantRate } from '../../models/merchantRate';
 import { getMerchantRateDescription } from '../merchant/utils';
 
@@ -29,7 +28,7 @@ export const getMerchantRateTypeFromString = (kind: string): MerchantRateType =>
   }
 };
 
-export const getShareableMerchantRate = async ({
+export const getShareableMerchantRate = ({
   _id,
   integrations,
   merchant,
@@ -38,10 +37,6 @@ export const getShareableMerchantRate = async ({
   let maxAmount = '';
   let name = '';
   let maxRateType = MerchantRateType.None;
-  const merchantData = await MerchantModel.findById(merchant);
-  if (!merchantData) {
-    throw new Error('Merchant not found');
-  }
 
   if (integrations?.wildfire) {
     const { Amount, Kind } = integrations.wildfire;
@@ -54,10 +49,8 @@ export const getShareableMerchantRate = async ({
     maxRateType = getMerchantRateTypeFromString(Kind);
   }
   if (integrations?.kard) {
-    const { karmaCollectiveMember } = merchantData;
     // the cut that we are passing on to end user is 75%
-    const userAmount = !!karmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
-    const maxAmountNumber = Math.round((integrations.kard?.totalCommission || 0) * userAmount);
+    const maxAmountNumber = Math.round((integrations.kard?.totalCommission || 0) * UserCommissionPercentage);
     const descriptions = getMerchantRateDescription(integrations.kard?.commissionType, maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxDescription = descriptions.maxDescription;

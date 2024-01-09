@@ -261,7 +261,6 @@ export const MinCompanayKarmaScore = -16;
 export const MaxCompanayKarmaScore = 16;
 
 export const UserCommissionPercentage = 0.75;
-export const UserCommissionPercentageForKarmaCollective = 0.65;
 
 export enum FrontendTemplates {
   OpenGraph = 'openGraph',

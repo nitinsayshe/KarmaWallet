@@ -1,4 +1,4 @@
-import { UserCommissionPercentage, UserCommissionPercentageForKarmaCollective } from '../../lib/constants';
+import { UserCommissionPercentage } from '../../lib/constants';
 import { roundToPercision } from '../../lib/misc';
 import {
   IKardMerchantIntegration,
@@ -50,10 +50,8 @@ export const getShareableIntegrationFromWildfireIntegration = (
 
 export const getShareableIntegrationFromKardIntegration = (
   kardIntegration: IKardMerchantIntegration,
-  isKarmaCollectiveMember = false,
 ): ShareableMerchantIntegration => {
   const { id, name, websiteURL } = kardIntegration;
-  const userPercentageAmount = !!isKarmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
 
   return {
     merchantId: id,
@@ -62,7 +60,7 @@ export const getShareableIntegrationFromKardIntegration = (
     maxRate: {
       type: getMerchantRateTypeFromString(kardIntegration?.maxOffer?.commissionType),
       amount: kardIntegration?.maxOffer?.totalCommission
-        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * userPercentageAmount)
+        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
         : 0,
     },
   };
@@ -93,9 +91,8 @@ export const getShareableMerchant = ({
     };
   }
   if (!!integrations?.kard) {
-    const userPercentage = !!karmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
     const maxAmountNumber = !!integrations.kard?.maxOffer?.totalCommission
-      ? roundToPercision((integrations.kard?.maxOffer?.totalCommission || 0) * userPercentage, 2)
+      ? roundToPercision((integrations.kard?.maxOffer?.totalCommission || 0) * UserCommissionPercentage, 2)
       : 0;
     const previousMaxAmount = parseFloat(maxAmount);
 
@@ -109,7 +106,7 @@ export const getShareableMerchant = ({
 
     _integrations = {
       ..._integrations,
-      kard: getShareableIntegrationFromKardIntegration(integrations.kard, karmaCollectiveMember),
+      kard: getShareableIntegrationFromKardIntegration(integrations.kard),
     };
   }
   return {

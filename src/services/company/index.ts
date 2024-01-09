@@ -40,7 +40,6 @@ import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from
 import { CompanyDataSourceModel } from '../../models/companyDataSource';
 import { DataSourceModel, IDataSourceDocument } from '../../models/dataSource';
 import { getUtcDate } from '../../lib/date';
-import { getShareableMerchantRate } from '../merchantRates';
 
 dayjs.extend(utc);
 
@@ -975,14 +974,7 @@ export const getMerchantRatesForCompany = async (req: IRequest<ICompanyRequestPa
   if (!company) throw new CustomError(`Company with id: ${companyId} could not be found.`, ErrorTypes.NOT_FOUND);
   if (!company.merchant) throw new CustomError(`Company with id: ${companyId} does not have a merchant.`, ErrorTypes.NOT_FOUND);
   const merchantRates = await MerchantRateModel.find({ merchant: company.merchant });
-  const shareableMerchantRates = [];
-
-  for (const merchantRate of merchantRates) {
-    const shareable = await getShareableMerchantRate(merchantRate);
-    shareableMerchantRates.push(shareable);
-  }
-
-  return shareableMerchantRates;
+  return merchantRates;
 };
 
 const isWildfireApp = (app: IApp): boolean => (!!Object.values(WildfireApiIds).filter(v => v === app?.apiId).length);

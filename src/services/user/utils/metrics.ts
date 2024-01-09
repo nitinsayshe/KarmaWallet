@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 import { FilterQuery, LeanDocument, Types } from 'mongoose';
-import { CardStatus, UserCommissionPercentage, UserCommissionPercentageForKarmaCollective } from '../../../lib/constants';
+import { CardStatus, UserCommissionPercentage } from '../../../lib/constants';
 import { CompanyRating } from '../../../lib/constants/company';
 import { sectorsToExcludeFromTransactions } from '../../../lib/constants/transaction';
 import { roundToPercision } from '../../../lib/misc';
@@ -408,8 +408,7 @@ const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransa
   const highestRate = await getMaxCommissionRate(merchant);
 
   const totalCommission = (highestRate / 100) * transaction.amount;
-  const userPercentage = !!merchant.karmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
-  return roundToPercision(totalCommission * userPercentage, 2);
+  return roundToPercision(totalCommission * UserCommissionPercentage, 2);
 };
 
 export const countUnlinkedAndRemovedAccounts = async (

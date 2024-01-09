@@ -8,7 +8,7 @@ import {
   RewardStatus,
 } from '../../../clients/kard';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
-import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage, UserCommissionPercentageForKarmaCollective } from '../../../lib/constants';
+import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
 import CustomError from '../../../lib/customError';
 import { getUtcDate } from '../../../lib/date';
 import { roundToPercision } from '../../../lib/misc';
@@ -342,9 +342,7 @@ export const mapKardCommissionToKarmaCommisison = async (
   });
 
   if (!merchant?._id) throw new Error('Merchant not found');
-
-  const userPercentage = !!merchant.karmaCollectiveMember ? UserCommissionPercentageForKarmaCollective : UserCommissionPercentage;
-  const userCommissionCents = reward.commissionToIssuer * userPercentage;
+  const userCommissionCents = reward.commissionToIssuer * UserCommissionPercentage;
   const userAllocation = roundToPercision(userCommissionCents / CentsInUSD, 2);
   const karmaAllocation = reward.commissionToIssuer / CentsInUSD - userAllocation;
 

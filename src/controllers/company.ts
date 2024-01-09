@@ -5,6 +5,7 @@ import * as output from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
 import { ICompanyDocument } from '../models/company';
+import { getShareableMerchantRate } from '../services/merchantRates';
 
 interface ICompareQuery {
   companies: string;
@@ -90,7 +91,7 @@ export const getCompanyScoreRange: IRequestHandler = async (req, res) => {
 export const getMerchantRatesForCompany: IRequestHandler<{ companyId: string }> = async (req, res) => {
   try {
     const result = await CompanyService.getMerchantRatesForCompany(req);
-    output.api(req, res, result);
+    output.api(req, res, result.map(mr => getShareableMerchantRate(mr)));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

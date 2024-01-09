@@ -32,7 +32,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -176,7 +176,7 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
     let authKey = '';
     authKey = await Session.createSession(newUser._id.toString());
     await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate(), authKey);
-    // await updateNewUserSubscriptions(newUser);
+    await updateNewUserSubscriptions(newUser);
     const responseInfo: any = {
       user: newUser,
       authKey,

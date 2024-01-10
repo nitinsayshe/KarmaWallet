@@ -83,7 +83,6 @@ export const subscribeToGroupList = async (user: IUserDocument, groupId: string)
   const groupName = group?.name;
   const subscribe = [ActiveCampaignListId.GroupMembers];
   await updateActiveCampaignListStatusForEmail(email, subscribe, []);
-  console.log('///// should subscribe to list', groupName);
   await SubscriptionModel.create({
     code: SubscriptionCode.groupMembers,
     user: user._id,
@@ -110,9 +109,6 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
   const { email } = user.emails.find((e) => e.primary);
   const visitor = await VisitorModel.findOneAndUpdate({ email }, { user: user._id }, { new: true });
   const { tags, debitCardholder, groupName, employerBeta, beta } = additionalData || {};
-  console.log('//// /should update', additionalData);
-  // eslint-disable-next-line no-debugger
-  debugger;
   if (!!visitor) {
     const subscribe = [];
     const unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
@@ -131,23 +127,14 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
     if (!debitCardholder) {
       // add to web account updates
       subscribe.push(ActiveCampaignListId.AccountUpdates);
-      const subscribedResponse = await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe, tags || []);
-      console.log('///// SUBSCRIBE RESPONSE', subscribedResponse);
+      await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe, tags || []);
     } else {
-      // eslint-disable-next-line no-debugger
-      debugger;
       // Debit Card Holder flow
       subscribe.push(ActiveCampaignListId.DebitCardHolders);
       if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
       if (!!employerBeta) subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
-      console.log('//// needs to subscribe');
-      // eslint-disable-next-line no-debugger
-      debugger;
-      const subscribedResponse = await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe, tags || []);
-      // eslint-disable-next-line no-debugger
-      debugger;
-      console.log('///// SUBSCRIBE RESPONSE', subscribedResponse);
+      await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe, tags || []);
     }
 
     await SubscriptionModel.findOneAndUpdate(

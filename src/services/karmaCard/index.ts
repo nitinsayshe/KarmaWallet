@@ -175,7 +175,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       params: urlParams,
     };
 
-    if (urlParams.find((param) => param.key === 'groupCode')) {
+    if (!!urlParams && urlParams.find((param) => param.key === 'groupCode')) {
       visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
     }
 
@@ -220,7 +220,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (!existingUser) {
     // Update the visitors marqeta Kyc status
-    _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email });
+    _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
   } else {
     existingUser.integrations.marqeta = marqeta;
     await existingUser.save();

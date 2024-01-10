@@ -6,7 +6,6 @@ import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constan
 import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
-import { filterToValidQueryParams } from '../../lib/validation';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
 import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
@@ -102,10 +101,16 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
     };
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
-      const _validParams = filterToValidQueryParams(info.params);
       visitorInfo.integrations = {};
-      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
-      if (_validParams.length > 0) visitorInfo.integrations.urlParams = _validParams;
+      if (!!info.groupCode) {
+        visitorInfo.integrations.groupCode = info.groupCode;
+      }
+      if (!!info.params) {
+        visitorInfo.integrations.urlParams = info.params;
+        if (info.params.find(p => p.key === 'groupCode')) {
+          visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
+        }
+      }
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
     }
     const visitor = await VisitorModel.create(visitorInfo);
@@ -120,7 +125,12 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale || !!info.marqeta) {
       visitor.integrations = {};
       if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-      if (!!info.params) visitor.integrations.urlParams = info.params;
+      if (!!info.params) {
+        visitor.integrations.urlParams = info.params;
+        if (info.params.find(p => p.key === 'groupCode')) {
+          visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
+        }
+      }
       if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
       if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     }

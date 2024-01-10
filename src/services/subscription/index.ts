@@ -44,47 +44,160 @@ export interface INewsletterUnsubscribeData {
 
 const shareableUnsubscribeError = 'Error processing unsubscribe request.';
 
-export const updateNewUserSubscriptions = async (user: IUserDocument) => {
+export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
+  const { email } = user.emails.find((e) => e.primary);
+  const subscribe = [ActiveCampaignListId.DebitCardHolders];
+  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
+  await SubscriptionModel.create({
+    code: SubscriptionCode.debitCardHolders,
+    user: user._id,
+    status: SubscriptionStatus.Active,
+  });
+};
+
+export const subscribeToEmployerProgramBetaList = async (user: IUserDocument) => {
+  const { email } = user.emails.find((e) => e.primary);
+  const subscribe = [ActiveCampaignListId.EmployerProgramBeta];
+  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
+  await SubscriptionModel.create({
+    code: SubscriptionCode.employerProgramBeta,
+    user: user._id,
+    status: SubscriptionStatus.Active,
+  });
+};
+
+export const subscribeToBetaTestersList = async (user: IUserDocument) => {
+  const { email } = user.emails.find((e) => e.primary);
+  const subscribe = [ActiveCampaignListId.BetaTesters];
+  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
+  await SubscriptionModel.create({
+    code: SubscriptionCode.betaTesters,
+    user: user._id,
+    status: SubscriptionStatus.Active,
+  });
+};
+
+export const subscribeToGroupList = async (user: IUserDocument, groupId: string) => {
+  const { email } = user.emails.find((e) => e.primary);
+  const group = await GroupModel.findById(groupId).lean();
+  const groupName = group?.name;
+  const subscribe = [ActiveCampaignListId.GroupMembers];
+  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
+  console.log('///// should subscribe to list', groupName);
+  await SubscriptionModel.create({
+    code: SubscriptionCode.groupMembers,
+    user: user._id,
+    status: SubscriptionStatus.Active,
+  });
+
+  await updateActiveCampaignData({
+    userId: user._id,
+    email,
+    subscriptions: { unsubscribe: [], subscribe: [] },
+    tags: { add: [groupName], remove: [] },
+  });
+};
+
+export interface IActiveCampaignSubscribeData {
+  tags?: string[];
+  debitCardholder?: boolean;
+  groupName?: string;
+  employerBeta?: boolean;
+  beta?: boolean;
+}
+
+export const updateNewUserSubscriptions = async (user: IUserDocument, additionalData?: IActiveCampaignSubscribeData) => {
   const { email } = user.emails.find((e) => e.primary);
   const visitor = await VisitorModel.findOneAndUpdate({ email }, { user: user._id }, { new: true });
+  const { tags, debitCardholder, groupName, employerBeta, beta } = additionalData || {};
+  console.log('//// /should update', additionalData);
+  // eslint-disable-next-line no-debugger
+  debugger;
   if (!!visitor) {
+    const subscribe = [];
+    const unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
+
     // check if they are receiving the general updates newsletter and add it if not
-    const subscribe = [ActiveCampaignListId.AccountUpdates];
     const sub = await SubscriptionModel.findOne({
       visitor: visitor._id,
       code: SubscriptionCode.generalUpdates,
     });
+    // add them to general update if they are not receiving yet
     if (!(sub?.status === SubscriptionStatus.Active)) {
       subscribe.push(ActiveCampaignListId.GeneralUpdates);
     }
-    await updateActiveCampaignListStatusForEmail(email, subscribe, [ActiveCampaignListId.MonthyNewsletters]);
-    // cancel monthly newsletter subscription if subscribed
+
+    // Joined Web App flow
+    if (!debitCardholder) {
+      // add to web account updates
+      subscribe.push(ActiveCampaignListId.AccountUpdates);
+      const subscribedResponse = await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe, tags || []);
+      console.log('///// SUBSCRIBE RESPONSE', subscribedResponse);
+    } else {
+      // eslint-disable-next-line no-debugger
+      debugger;
+      // Debit Card Holder flow
+      subscribe.push(ActiveCampaignListId.DebitCardHolders);
+      if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
+      if (!!employerBeta) subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
+      if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
+      console.log('//// needs to subscribe');
+      // eslint-disable-next-line no-debugger
+      debugger;
+      const subscribedResponse = await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe, tags || []);
+      // eslint-disable-next-line no-debugger
+      debugger;
+      console.log('///// SUBSCRIBE RESPONSE', subscribedResponse);
+    }
+
     await SubscriptionModel.findOneAndUpdate(
       { visitor: visitor._id, code: SubscriptionCode.monthlyNewsletters },
       { status: SubscriptionStatus.Cancelled },
     );
+
     // associate subscriptions with new user
     await SubscriptionModel.updateMany({ visitor: visitor._id }, { $set: { user: user._id, lastModified: getUtcDate() } });
-  } else {
-    await updateActiveCampaignListStatusForEmail(email, [ActiveCampaignListId.AccountUpdates, ActiveCampaignListId.GeneralUpdates], []);
-  }
-  await SubscriptionModel.create({
-    code: SubscriptionCode.accountUpdates,
-    user: user._id,
-    visitor: visitor?._id,
-    status: SubscriptionStatus.Active,
-  });
-  // findOne with upsert instead of create because they may have already subscribed to the newsletter
-  await SubscriptionModel.findOne(
-    {
-      code: SubscriptionCode.generalUpdates,
+    await SubscriptionModel.create({
+      code: SubscriptionCode.accountUpdates,
       user: user._id,
       visitor: visitor?._id,
       status: SubscriptionStatus.Active,
-    },
-    {},
-    { upsert: true },
-  );
+    });
+
+    // findOne with upsert instead of create because they may have already subscribed to the newsletter
+    await SubscriptionModel.findOne(
+      {
+        code: SubscriptionCode.generalUpdates,
+        user: user._id,
+        visitor: visitor?._id,
+        status: SubscriptionStatus.Active,
+      },
+      {},
+      { upsert: true },
+    );
+  } else {
+    // if no visitor then we do not need to update any subscriptions, we just need to subscribe the user
+    if (!debitCardholder) {
+      await updateActiveCampaignListStatusForEmail(email, [ActiveCampaignListId.AccountUpdates, ActiveCampaignListId.GeneralUpdates], [], []);
+      await SubscriptionModel.create({
+        code: SubscriptionCode.accountUpdates,
+        user: user._id,
+        visitor: visitor?._id,
+        status: SubscriptionStatus.Active,
+      });
+      // findOne with upsert instead of create because they may have already subscribed to the newsletter
+      await SubscriptionModel.findOne(
+        {
+          code: SubscriptionCode.generalUpdates,
+          user: user._id,
+          visitor: visitor?._id,
+          status: SubscriptionStatus.Active,
+        },
+        {},
+        { upsert: true },
+      );
+    }
+  }
 };
 
 export const getActiveCampaignSubscribedListIds = async (email: string, client?: AxiosInstance): Promise<ActiveCampaignListId[]> => {

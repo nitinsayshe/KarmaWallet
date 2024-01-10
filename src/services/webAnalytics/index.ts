@@ -56,6 +56,29 @@ export const createWebAnalytics = async (_req: IRequest<{}, {}, IWebAnalyticsReq
   return webAnalytics;
 };
 
+export const updateWebAnalytics = async (_req: IRequest<IWebAnalyticsRequestParams, {}, Partial<IWebAnalyticsRequestBody>>) => {
+  const { name, description } = _req.body;
+  const { id } = _req.params;
+
+  if (!id) throw new CustomError('Missing required field: id', ErrorTypes.NOT_FOUND);
+
+  const requiredFields = ['name', 'description'];
+
+  requiredFields.forEach((field) => {
+    if (!_req.body[field as keyof IWebAnalyticsRequestBody]) throw new CustomError(`Missing required field: ${field}`, ErrorTypes.NOT_FOUND);
+  });
+
+  return WebAnalyticsModel.findByIdAndUpdate(
+    id,
+    {
+      name,
+      description,
+      lastModifiedOn: new Date(),
+    },
+    { new: true },
+  );
+};
+
 export const deleteWebAnalyticsById = async (_req: IRequest<IWebAnalyticsRequestParams, {}, {}>) => {
   const { id } = _req.params;
 

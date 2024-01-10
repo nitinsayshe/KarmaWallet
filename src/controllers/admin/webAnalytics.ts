@@ -39,6 +39,15 @@ export const createWebAnalytics: IRequestHandler<{}, {}, WebAnalyticsService.IWe
   }
 };
 
+export const updateWebAnalytics: IRequestHandler<WebAnalyticsService.IWebAnalyticsRequestParams, {}, WebAnalyticsService.IWebAnalyticsRequestBody> = async (req, res) => {
+  try {
+    const analytic = await WebAnalyticsService.updateWebAnalytics(req);
+    api(req, res, analytic);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
 export const deleteWebAnalyticsById: IRequestHandler<WebAnalyticsService.IWebAnalyticsRequestParams, {}, {}> = async (req, res) => {
   try {
     const result = await WebAnalyticsService.deleteWebAnalyticsById(req);

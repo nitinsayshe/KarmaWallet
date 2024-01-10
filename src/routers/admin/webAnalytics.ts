@@ -34,6 +34,13 @@ router.post(
   WebAnalyticsController.createWebAnalytics,
 );
 
+router.put(
+  '/:id',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+  WebAnalyticsController.updateWebAnalytics,
+);
+
 router.delete(
   '/:id',
   authenticate,

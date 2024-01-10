@@ -269,7 +269,6 @@ export const getSubTypeFromMarqetaGPATag = (tag: string): TransactionCreditSubty
 export const getTagsDataFromMarqetaGPAOrder = (
   tags: string,
 ): IMarqetaGPACustomTags => {
-  console.log('////// getting tags in tag function');
   const splitTags = tags.split(',');
   const type = splitTags.find((tag) => tag.includes('type'));
   const groupId = splitTags.find((tag) => tag.includes('groupId'));
@@ -452,7 +451,6 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   if (types.subType === TransactionCreditSubtypeEnum.Employer) {
     console.log('////// EMPLOYER GIFT TRANSACTION');
     const tagsData = getTagsDataFromMarqetaGPAOrder(t.marqeta_transaction.gpa_order.tags);
-    console.log('///// TAGS DATA', tagsData);
     const group = await GroupModel.findOne({ _id: tagsData.groupId });
     if (!group._id) {
       throw new Error(`No group found with id ${tagsData.groupId}`);

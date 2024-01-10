@@ -510,8 +510,6 @@ export const updateActiveCampaignGroupListsAndTags = async (
       unsubscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
     );
 
-    console.log('//// this is the email', userData.emails?.find((e) => e.primary).email);
-
     const contacts = [
       {
         email: userData.emails?.find((e) => e.primary).email,
@@ -679,9 +677,6 @@ export const updateActiveCampaignListStatusForEmail = async (
 ) => {
   const ac = new ActiveCampaignClient();
   ac.withHttpClient(client);
-  // eslint-disable-next-line no-debugger
-  debugger;
-  console.log('//// subscribe data', tags, subscribe, unsubscribe);
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
@@ -694,10 +689,7 @@ export const updateActiveCampaignListStatusForEmail = async (
       tags,
     },
   ];
-  // eslint-disable-next-line no-debugger
-  debugger;
   const importContacts = await ac.importContacts({ contacts });
-  console.log('////// response for importContancts', importContacts);
   return importContacts;
 };
 
@@ -809,10 +801,8 @@ export const contactListToSubscribedListIDs = (lists: IContactList[]): ActiveCam
 export const getSubscribedLists = async (email: string, client?: AxiosInstance): Promise<ActiveCampaignListId[]> => {
   try {
     const ac = new ActiveCampaignClient();
-    console.log('///// email to check', email);
     ac.withHttpClient(client);
     const contactData = await ac.getContacts({ email });
-    console.log('//// here is the contact data', contactData);
     if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
       throw new Error('No contact found');
     }
@@ -820,12 +810,10 @@ export const getSubscribedLists = async (email: string, client?: AxiosInstance):
     const { id } = contactData.contacts[0];
     const contact = await ac.getContact(parseInt(id));
     if (!contact || !contact.contactLists || contact.contactLists.length <= 0) {
-      console.log('///// there is no contact');
       // not subscribed to any lists
       return [];
     }
 
-    console.log('//// getting subscribed list');
     return contactListToSubscribedListIDs(contact.contactLists);
   } catch (err) {
     console.error('Error getting subscribed lists', err);

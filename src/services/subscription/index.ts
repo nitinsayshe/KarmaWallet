@@ -42,6 +42,14 @@ export interface INewsletterUnsubscribeData {
   preserveSubscriptions: SubscriptionCode[];
 }
 
+export interface IActiveCampaignSubscribeData {
+  tags?: string[];
+  debitCardholder?: boolean;
+  groupName?: string;
+  employerBeta?: boolean;
+  beta?: boolean;
+}
+
 const shareableUnsubscribeError = 'Error processing unsubscribe request.';
 
 export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
@@ -54,56 +62,6 @@ export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
     status: SubscriptionStatus.Active,
   });
 };
-
-export const subscribeToEmployerProgramBetaList = async (user: IUserDocument) => {
-  const { email } = user.emails.find((e) => e.primary);
-  const subscribe = [ActiveCampaignListId.EmployerProgramBeta];
-  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
-  await SubscriptionModel.create({
-    code: SubscriptionCode.employerProgramBeta,
-    user: user._id,
-    status: SubscriptionStatus.Active,
-  });
-};
-
-export const subscribeToBetaTestersList = async (user: IUserDocument) => {
-  const { email } = user.emails.find((e) => e.primary);
-  const subscribe = [ActiveCampaignListId.BetaTesters];
-  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
-  await SubscriptionModel.create({
-    code: SubscriptionCode.betaTesters,
-    user: user._id,
-    status: SubscriptionStatus.Active,
-  });
-};
-
-export const subscribeToGroupList = async (user: IUserDocument, groupId: string) => {
-  const { email } = user.emails.find((e) => e.primary);
-  const group = await GroupModel.findById(groupId).lean();
-  const groupName = group?.name;
-  const subscribe = [ActiveCampaignListId.GroupMembers];
-  await updateActiveCampaignListStatusForEmail(email, subscribe, []);
-  await SubscriptionModel.create({
-    code: SubscriptionCode.groupMembers,
-    user: user._id,
-    status: SubscriptionStatus.Active,
-  });
-
-  await updateActiveCampaignData({
-    userId: user._id,
-    email,
-    subscriptions: { unsubscribe: [], subscribe: [] },
-    tags: { add: [groupName], remove: [] },
-  });
-};
-
-export interface IActiveCampaignSubscribeData {
-  tags?: string[];
-  debitCardholder?: boolean;
-  groupName?: string;
-  employerBeta?: boolean;
-  beta?: boolean;
-}
 
 export const updateNewUserSubscriptions = async (user: IUserDocument, additionalData?: IActiveCampaignSubscribeData) => {
   const { email } = user.emails.find((e) => e.primary);

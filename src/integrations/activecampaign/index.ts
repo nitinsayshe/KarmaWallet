@@ -689,8 +689,7 @@ export const updateActiveCampaignListStatusForEmail = async (
       tags,
     },
   ];
-  const importContacts = await ac.importContacts({ contacts });
-  return importContacts;
+  await ac.importContacts({ contacts });
 };
 
 export const deleteContact = async (email: string, client?: AxiosInstance) => {

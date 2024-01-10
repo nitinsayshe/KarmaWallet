@@ -68,7 +68,7 @@ export const updateWebAnalytics = async (_req: IRequest<IWebAnalyticsRequestPara
     if (!_req.body[field as keyof IWebAnalyticsRequestBody]) throw new CustomError(`Missing required field: ${field}`, ErrorTypes.NOT_FOUND);
   });
 
-  return WebAnalyticsModel.findByIdAndUpdate(
+  const updatedAnalytic = await WebAnalyticsModel.findByIdAndUpdate(
     id,
     {
       name,
@@ -77,6 +77,10 @@ export const updateWebAnalytics = async (_req: IRequest<IWebAnalyticsRequestPara
     },
     { new: true },
   );
+
+  if (!updatedAnalytic) throw new CustomError('A web analytic event with that id does not exist', ErrorTypes.NOT_FOUND);
+
+  return updatedAnalytic;
 };
 
 export const deleteWebAnalyticsById = async (_req: IRequest<IWebAnalyticsRequestParams, {}, {}>) => {

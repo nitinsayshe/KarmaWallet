@@ -8,12 +8,12 @@ router.route('/create')
   .post(authenticate, CardController.createCard);
 
 router.route('/list/:userToken')
-  .get(CardController.listCards);
+  .get(authenticate, CardController.listCards);
 
 router.route('/:cardToken')
-  .get(CardController.getCardDetails);
+  .get(authenticate, CardController.getCardDetails);
 
 router.route('/transition')
-  .post(CardController.cardTransition);
+  .post(authenticate, CardController.cardTransition);
 
 export default router;

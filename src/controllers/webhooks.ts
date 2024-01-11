@@ -375,12 +375,6 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
           const user = await UserModel.findById(userTransitions?.userId);
           if (user) {
             await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.RELOAD_SUCCESS,
-              body: 'Your Karma Wallet Card has been reloaded. Click to check your updated account balance!',
-              title: 'Reload Success',
-            });
-
-            await createPushUserNotificationFromUserAndPushData(user, {
               pushNotificationType: PushNotificationTypes.FUNDS_AVAILABLE,
               body: 'Your funds are now available on your Karma Wallet Card!',
               title: 'Deposit Alert',

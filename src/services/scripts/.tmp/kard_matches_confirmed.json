@@ -1,0 +1,22 @@
+[
+  {
+    "_id": "621b99af5f87e75f5365ec4d",
+    "merchantId": "63d9578acc67e500083e90b3",
+    "name": "AmazonBasics",
+    "url": "https://www.amazon.com",
+    "candidateUrl": "www.amazon.com/kindle-dbs/storefront",
+    "candidateName": "Kindle",
+    "searchItemId": "63d9578acc67e500083e90b3",
+    "score": 0.001
+  },
+  {
+    "_id": "62def00c7b212526d1e0496b",
+    "merchantId": "627488cbc5ed0c000975af16",
+    "name": "Tarte cosmetics",
+    "url": "https://tartecosmetics.com",
+    "candidateUrl": "tartecosmetics.com/",
+    "candidateName": "Tarte Cosmetics",
+    "searchItemId": "627488cbc5ed0c000975af16",
+    "score": 5.712707398900641e-13
+  }
+]

@@ -240,6 +240,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       subscribe.push(SubscriptionCode.betaTesters);
     }
 
+    if (!!urlParams && urlParams.find((param) => param.key === 'employerBeta')) {
+      subscribe.push(SubscriptionCode.employerProgramBeta);
+    }
+
     if (!!urlParams && urlParams.find((param) => param.key === 'groupCode')) {
       const mockRequest = ({
         requestor: existingUser,

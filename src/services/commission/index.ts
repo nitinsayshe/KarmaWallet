@@ -25,9 +25,9 @@ import { IPromo } from '../../models/promo';
 import { getUtcDate } from '../../lib/date';
 import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';
 import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/accountFundingSource';
-import { addFundsToGPAFromProgramFundingSource } from '../../controllers/integrations/marqeta/gpa';
-import { createPayoutNotificationsFromCommissionPayout } from '../user_notification';
 import { sleep } from '../../lib/misc';
+import { createPayoutNotificationsFromCommissionPayout } from '../user_notification';
+import { addFundsToGPAFromProgramFundingSource } from '../../controllers/integrations/marqeta/gpa';
 
 dayjs.extend(utc);
 
@@ -318,10 +318,11 @@ export const generateCommissionPayoutOverview = async (payoutDate: Date): Promis
 export const sendPayoutsToKarmaCard = async (payouts: ICommissionPayoutDocument[]) => {
   for (let i = 0; i < payouts.length; i++) {
     const user = await UserModel.findById(payouts[i].user);
+    const formattedAmount = Math.round(payouts[i].amount * 100) / 100;
+
     const marqetaFormattedPayout = {
       userToken: user.integrations.marqeta.userToken,
-      amount: payouts[i].amount,
-      fees: 0,
+      amount: formattedAmount,
       currencyCode: 'USD',
       tags: `type=${TransactionCreditSubtypeEnum.Cashback}`,
       memo: 'You earned cashback from Karma Wallet. Great job!',
@@ -332,7 +333,10 @@ export const sendPayoutsToKarmaCard = async (payouts: ICommissionPayoutDocument[
     if (!marqetaResponse) {
       console.log(`failed to send payout: ${i} of ${payouts.length}`);
     } else {
-      await createPayoutNotificationsFromCommissionPayout(payouts[i], ['email', 'push']);
+      const commissionPayoutToUpdate = await CommissionPayoutModel.findById(payouts[i]._id);
+      commissionPayoutToUpdate.status = KarmaCommissionPayoutStatus.Paid;
+      commissionPayoutToUpdate.save();
+      await createPayoutNotificationsFromCommissionPayout(payouts[i], ['push']);
     }
     await sleep(1000);
   }

@@ -223,7 +223,7 @@ export const updateCommissionOverviewStatus = async (commissionOverviewId: strin
 export const updateCommissionPayoutStatus = async (
   commissionPayoutId: string,
   status: KarmaCommissionPayoutStatus,
-  paypalStatus: PayPalPayoutItemStatus,
+  paypalStatus?: PayPalPayoutItemStatus,
 ) => {
   try {
     const commissionPayout = await CommissionPayoutModel.findOne({ _id: commissionPayoutId });
@@ -231,8 +231,10 @@ export const updateCommissionPayoutStatus = async (
       throw new CustomError(`Payout with id ${commissionPayoutId} not found`, ErrorTypes.NOT_FOUND);
     }
 
-    if (paypalStatus === PayPalPayoutItemStatus.Success) {
-      await createPayoutNotificationsFromCommissionPayout(commissionPayout, ['email', 'push']);
+    if (!!paypalStatus) {
+      if (paypalStatus === PayPalPayoutItemStatus.Success) {
+        await createPayoutNotificationsFromCommissionPayout(commissionPayout, ['email', 'push']);
+      }
     }
 
     for (const commission of commissionPayout.commissions) {
@@ -249,7 +251,10 @@ export const updateCommissionPayoutStatus = async (
     }
 
     commissionPayout.status = status;
-    commissionPayout.integrations.paypal.status = paypalStatus;
+    if (!!paypalStatus) {
+      commissionPayout.integrations.paypal.status = paypalStatus;
+    }
+
     await commissionPayout.save();
     console.log(`[+] Updated commission payout status to [${status}`);
   } catch (err) {

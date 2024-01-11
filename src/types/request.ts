@@ -19,7 +19,9 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
   apiRequestor?: IAppDocument;
   rateLimiterHeaders?: RateLimiterHeaders;
   authKey?: string;
+  identifierKey?:string;
   headers: any;
+  get: any
 }
 
 /**

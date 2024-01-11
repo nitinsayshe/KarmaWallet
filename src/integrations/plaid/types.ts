@@ -1,6 +1,7 @@
-import { AccountBase, Item, Transaction } from 'plaid';
+import { AccountBase, AccountIdentity, Item, Transaction } from 'plaid';
 import { ObjectId } from 'mongoose';
 import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
+import { CombinedPartialTransaction } from '../../types/transaction';
 
 export interface IPlaidInstitution {
   name: string;
@@ -36,6 +37,22 @@ export interface IPlaidItem {
   public_token?: string;
 }
 
+export interface IPlaidBankItem {
+  accounts: AccountIdentity[];
+  userId: string;
+  link_session_id?: string;
+  institution?: IPlaidInstitution;
+  transactions?: Transaction[];
+  fundingSourceToken?: string;
+  total_transactions?: number;
+  request_id?: string;
+  item?: Item;
+  access_token: string;
+  item_id?: string;
+  public_token?: string;
+  status: string;
+}
+
 export interface ICompanyMatchingResult {
   value: string;
   matchType: PlaidCompanyMatchType;
@@ -43,6 +60,6 @@ export interface ICompanyMatchingResult {
   company: ObjectId;
 }
 
-export interface IMatchedTransaction extends Transaction {
+export interface IMatchedTransaction extends CombinedPartialTransaction {
   company?: ObjectId;
 }

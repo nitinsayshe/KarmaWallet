@@ -80,6 +80,7 @@ export class Transaction {
       company: this._company,
       amount: this._amount,
       date: this._date,
+      sortableDate: this._date,
       integrations: this._transaction?.integrations || {
         rare: {
           ...this._rareTransaction,
@@ -109,7 +110,6 @@ export class Transaction {
         const now = dayjs().utc().toDate();
         transaction.createdOn = now;
         transaction.lastModified = now;
-
         this._transaction = await transaction.save();
       }
     } catch (err) {

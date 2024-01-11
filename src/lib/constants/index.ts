@@ -8,6 +8,16 @@ export enum ApiKeyStatus {
   Inactive = 'inactive',
 }
 
+export const IMapMarqetaCard = {
+  name: 'Karma Wallet Prepaid Reloadable Card',
+  type: 'depository',
+  subtype: 'reloadable',
+  status: 'linked',
+  institution: 'Karma Wallet',
+  initialTransactionsProcessing: false,
+  isEnrolledInAutomaticRewards: true,
+};
+
 export interface IErrorType {
   AUTHENTICATION: ICustomErrorBody;
   CONFLICT: ICustomErrorBody;
@@ -58,6 +68,7 @@ export enum CardStatus {
   Unlinked = 'unlinked',
   Error = 'error',
   Removed = 'removed',
+  Locked = 'locked',
 }
 
 export enum KardEnrollmentStatus {
@@ -75,6 +86,13 @@ export enum CardNetwork {
 export enum UnsdgNames {
   People = 'People',
   Planet = 'Planet',
+}
+
+export enum BankConnectionStatus {
+  Linked = 'linked',
+  Unlinked = 'unlinked',
+  Error = 'error',
+  Removed = 'removed',
 }
 
 export const ErrorTypes = {
@@ -95,6 +113,7 @@ export const ErrorTypes = {
 
 export const AUTHKEY_HEADER = 'authKey';
 export const TOKEN_REMOVE = 'remove_me';
+export const DEVICE_IDENTIFIER = 'identifierKey';
 
 // used for V2 api calls
 export const SERVICE_NAME_HEADER = 'serviceName';
@@ -315,3 +334,44 @@ export const enum StateAbbreviation {
 }
 
 export const CentsInUSD = 100;
+
+export const TransactionIntegrationTypesEnum = {
+  Plaid: 'plaid',
+  Marqeta: 'marqeta',
+  Rare: 'rare',
+  Kard: 'kard',
+} as const;
+export type TransactionIntegrationTypesEnumValues = (typeof TransactionIntegrationTypesEnum)[keyof typeof TransactionIntegrationTypesEnum];
+
+export const ChargebackTypeEnum = {
+  ARBITRATION: 'arbitration',
+  CASE_LOST: 'case.lost',
+  REGULATION_CASE_LOST: 'regulation.case.lost',
+  REGULATION_CASE_LOST_ACTION_REQUIRED: 'regulation.case.lost.action.required',
+  CASE_LOST_ACTION_REQUIRED: 'case.lost.action.required',
+  CASE_WON: 'case.won',
+  REGULATION_CASE_WON: 'regulation.case.won',
+  INITIATED: 'initiated',
+  REGULATION_INITIATED: 'regulation.initiated',
+  NETWORK_REJECTED: 'network.rejected',
+  PREARBITRATION: 'prearbitration',
+  PREARBITRATION_RESPONDED: 'prearbitration.responded',
+  REGULATION_PROVISIONAL_CREDIT_PERMANENT: 'regulation.provisional.credit.permanent',
+  PROVISIONAL_CREDIT_PERMANENT: 'provisional.credit.permanent',
+  REPRESENTMENT: 'representment',
+  WRITTEN_OFF_ISSUER: 'written.off.issuer',
+  WRITTEN_OFF_PROGRAM: 'written.off.program',
+} as const;
+export type ChargebackTypeEnumValues = (typeof ChargebackTypeEnum)[keyof typeof ChargebackTypeEnum];
+
+export const GroupTagsEnum = {
+  EmployerBeta: 'employer-beta',
+} as const;
+export type GroupTagsEnumValues = typeof GroupTagsEnum[keyof typeof GroupTagsEnum];
+
+export const AppVersionEnum = {
+  Beta: 'beta',
+  V1: 'v1',
+} as const;
+
+export const MiscAppVersionKey = 'AppVersion';

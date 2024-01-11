@@ -52,7 +52,7 @@ export class AwsClient extends SdkClient {
   }
 
   sendMail = ({
-    senderName = 'KarmaWallet',
+    senderName = 'Karma Wallet',
     senderEmail = EmailAddresses.NoReply,
     recipientEmail,
     template,
@@ -129,6 +129,22 @@ export class AwsClient extends SdkClient {
         url: process.env.S3_BUCKET === KarmaWalletCdnUrl ? rawUrl.replace('https://s3.amazonaws.com/', 'https://') : rawUrl,
         filename: result.Key,
       };
+    } catch (err) {
+      const error = asCustomError(err);
+      Logger.error(error);
+      throw error;
+    }
+  };
+
+  getS3ResourceStream = async (key: string, bucket = process.env.S3_BUCKET) => {
+    try {
+      const params = {
+        Bucket: bucket,
+        Key: key,
+      };
+
+      const stream = await this._client.s3.getObject(params).promise();
+      return stream;
     } catch (err) {
       const error = asCustomError(err);
       Logger.error(error);

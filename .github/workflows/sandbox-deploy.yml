@@ -90,6 +90,12 @@ jobs:
     - run: echo 'KARD_ONLINE_REWARD_ID=${{secrets.STAGING_KARD_ONLINE_REWARD_ID}}' >> .env
     - run: echo 'KARD_ISSUER_NAME=${{secrets.STAGING_KARD_ISSUER_NAME}}' >> .env
     - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_TRANSACTION_ID_ROOT}}' >> .env
+    - run: echo 'KARD_ISSUER_CLIENT_HASH=${{secrets.STAGING_KARD_ISSUER_CLIENT_HASH}}' >> .env
+    - run: echo 'KARD_ISSUER_WEBHOOK_KEY=${{secrets.STAGING_KARD_ISSUER_WEBHOOK_KEY}}' >> .env
+    - run: echo 'KARD_ISSUER_INSTORE_REWARD_ID=${{secrets.STAGING_KARD_ISSUER_INSTORE_REWARD_ID}}' >> .env
+    - run: echo 'KARD_ISSUER_ONLINE_REWARD_ID=${{secrets.STAGING_KARD_ISSUER_ONLINE_REWARD_ID}}' >> .env
+    - run: echo 'KARD_ISSUER_ISSUER_NAME=${{secrets.STAGING_KARD_ISSUER_ISSUER_NAME}}' >> .env
+    - run: echo 'KARD_ISSUER_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_ISSUER_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.SANDBOX_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
     - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.MARQETA_WEBHOOK_ID}}' >> .env
@@ -98,7 +104,7 @@ jobs:
     - run: echo 'MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN=${{secrets.MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN}}' >> .env
     - run: echo 'MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN=${{secrets.MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN}}' >> .env
     - run: echo 'MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN=${{secrets.MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN}}' >> .env
-    - run: echo 'FIREBASE_PROJECT_ID=${{secrets.PRODUCTION_FIREBASE_PROJECT_ID}}' >> .env
+    - run: echo 'FIREBASE_PROJECT_ID=${{secrets.SANDBOX_FIREBASE_PROJECT_ID}}' >> .env
     - run: echo 'FIREBASE_PRIVATE_KEY_ID=${{secrets.SANDBOX_FIREBASE_PRIVATE_KEY_ID}}' >> .env
     - run: echo 'FIREBASE_PRIVATE_KEY=${{secrets.SANDBOX_FIREBASE_PRIVATE_KEY}}' >> .env
     - run: echo 'FIREBASE_CLIENT_EMAIL=${{secrets.SANDBOX_FIREBASE_CLIENT_EMAIL}}' >> .env

@@ -49,6 +49,11 @@ export const iterateOverUsersAndExecWithDelay = async <Req, Res>(
   return report;
 };
 
+export const checkIfUserWithEmailExists = async (email: string) => {
+  const userExists = await UserModel.findOne({ 'emails.email': email });
+  return !!userExists;
+};
+
 export const unlockAccount = async (req: IRequest<{ user: IRef<ObjectId, IUser> }, {}, {}>): Promise<void> => {
   try {
     let { user } = req.params;

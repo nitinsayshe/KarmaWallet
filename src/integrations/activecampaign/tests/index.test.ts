@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import { randomUUID } from 'crypto';
-import { getActiveCampaignContactByEmail, removeDuplicateAutomations, removeDuplicateContactAutomaitons } from '..';
+import { getActiveCampaignContactByEmail, removeDuplicateAutomations, removeDuplicateContactAutomations } from '..';
 
 describe('active campaign logic tests', () => {
   afterEach(() => {
@@ -26,7 +26,7 @@ describe('active campaign logic tests', () => {
   // skipping to avoid hitting the active campaign api unintentionally
   it.skip('removeDuplicateContactAutomationsById removes a contacts dupe automations, keeping only the oldest', async () => {
     try {
-      const res = await removeDuplicateContactAutomaitons('jayant@theimpactkarma.com');
+      const res = await removeDuplicateContactAutomations('andy@theimpactkarma.com');
       expect(res).toBeDefined();
     } catch (err) {
       expect(err).toBeUndefined();

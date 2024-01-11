@@ -7,19 +7,20 @@ import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
+import { updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
-import { ALPHANUMERIC_REGEX } from '../../lib/constants/regex';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { isValidEmailFormat } from '../../lib/string';
+import { filterToValidQueryParams } from '../../lib/validation';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
-import { ILegacyUserDocument, LegacyUserModel } from '../../models/legacyUser';
+import { LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel } from '../../models/user';
+import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel, IDeviceInfo } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -29,71 +30,23 @@ import { VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendPasswordResetEmail } from '../email';
+import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { IActiveCampaignSubscribeData, cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
+import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest } from './types';
+import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
-import { resendEmailVerification } from './verification';
+import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
+import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
+import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
+import { generateRandomPasswordString } from '../../lib/misc';
+import { createKarmaCardWelcomeUserNotification } from '../user_notification';
+// eslint-disable-next-line import/no-cycle
+import { joinGroup } from '../groups';
+import { GroupModel } from '../../models/group';
 
 dayjs.extend(utc);
-
-export interface IVerifyTokenBody {
-  token: string;
-}
-
-export interface IEmail {
-  email: string;
-}
-
-export interface ILoginData {
-  email: string;
-  password?: string;
-  token?: string;
-}
-
-export interface IUpdatePasswordBody {
-  newPassword: string;
-  password: string;
-}
-
-export interface IUrlParam {
-  key: string;
-  value: string;
-}
-
-export interface IUserData extends ILoginData {
-  name: string;
-  zipcode?: string;
-  role?: UserRoles;
-  promo?: string;
-  pw?: string;
-  shareASaleId?: boolean;
-  referralParams?: IUrlParam[];
-}
-
-export interface IRegisterUserData {
-  name: string;
-  token: string;
-  password: string;
-  promo?: string;
-}
-
-export interface IEmailVerificationData {
-  email: string;
-  code: string;
-  tokenValue: string;
-}
-
-export interface IUpdateUserEmailParams {
-  user: IUserDocument;
-  email: string;
-  legacyUser: ILegacyUserDocument;
-  req: IRequest;
-  pw: string;
-}
-
-type UserKeys = keyof IUserData;
 
 export const handleCreateAccountPromo = async (userId: string, promo: IPromo) => {
   if (promo.type === IPromoTypes.CASHBACK && !promo.events.includes(IPromoEvents.LINK_CARD)) {
@@ -118,43 +71,63 @@ export const handleCreateAccountPromo = async (userId: string, promo: IPromo) =>
   }
 };
 
-export const storeNewLogin = async (userId: string, loginDate: Date) => {
-  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate }, { upsert: true }).sort({
+// Send an email to the user with a link to change their password after account/password were created internally
+export const initiateChangePasswordEmail = async (user: IUserDocument, email: string) => {
+  const days = 10;
+  email = email?.toLowerCase();
+  const token = await TokenService.createToken({ user, days, type: TokenTypes.Password, resource: { email } });
+  await sendChangePasswordEmail({ user: user._id, token: token.value, name: user.name, recipientEmail: email });
+  return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
+};
+
+export const storeNewLogin = async (userId: string, loginDate: Date, authKey: string) => {
+  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate, authKey }, { upsert: true }).sort({
     date: -1,
   });
 };
 
-export const register = async (req: IRequest, { password, name, token, promo }: IRegisterUserData) => {
+// Set isAutoGenerated to true if the user is being created internally (i.e. admin or in backend bypassing the email step)
+export const register = async ({ password, name, token, promo, visitorId, isAutoGenerated = false }: IRegisterUserData) => {
+  // !isAutoGenerated is regular signup path thru frontend, params will have a token from an email link
+  // isAutoGenerated if user is created internally (i.e. admin or in backend bypassing the email step), they will have a visitorId instead of a token
   let promoData;
-  // check that all required fields are present
+  // setting to visitorId if it is passed in
+  let _visitorId = visitorId;
+
+  // Check that all required fields are presentf
   if (!password) throw new CustomError('A password is required.', ErrorTypes.INVALID_ARG);
   if (!name) throw new CustomError('A name is required.', ErrorTypes.INVALID_ARG);
-  if (!token) throw new CustomError('A token is required.', ErrorTypes.INVALID_ARG);
-  // find token for account creationn and find associated visitor
-  const tokenInfo = await TokenModel.findOne({ value: token });
-  if (!tokenInfo) throw new CustomError('No valid token was found for this email.', ErrorTypes.INVALID_ARG);
-  const visitor = await VisitorModel.findOne({ _id: tokenInfo.visitor });
+  if (!visitorId && isAutoGenerated) throw new CustomError('A visitor_id is required.', ErrorTypes.INVALID_ARG);
+  if (!token && !isAutoGenerated) throw new CustomError('A visitor_id is required.', ErrorTypes.INVALID_ARG);
 
-  // check password is valid
+  // Check password is valid and convert to a hash
   const passwordValidation = validatePassword(password);
   if (!passwordValidation.valid) {
     throw new CustomError(`Invalid password. ${passwordValidation.message}`, ErrorTypes.INVALID_ARG);
   }
   const hash = await argon2.hash(password);
 
-  // check that email is valid (should have already checked when visitor was created, but just in case)
+  // Find the visitorId associated with the token that was pass in
+  if (!!token) {
+    const tokenInfo = await TokenModel.findOne({ value: token }).lean();
+    if (!tokenInfo) throw new CustomError('No valid token was found for this email.', ErrorTypes.INVALID_ARG);
+    _visitorId = tokenInfo.visitor.toString();
+  }
+
+  // Grab the email from the visitor objec and check that the email is valid
+  // (should have already checked when visitor was created, but just in case)
+  // and confirm email does not already belong to another user
+  const visitor = await VisitorModel.findOne({ _id: _visitorId });
   const email = visitor.email?.toLowerCase()?.trim();
   if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
+  const emailAlreadyInUse = await checkIfUserWithEmailExists(email);
+  if (!!emailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
 
-  // confirm email does not already belong to another user
-  const emailExists: IUserDocument = await UserModel.findOne({ 'emails.email': email });
-  if (!!emailExists) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
-
-  // start building the user information
-  const { urlParams, shareASale, groupCode } = visitor.integrations;
-  const emails = [{ email, verified: true, primary: true }];
-  name = name.replace(/\s/g, ' ').trim();
+  // Start building the user information, grabs the integrations information from the visitor object
   const integrations: IUserIntegrations = {};
+  const { urlParams, shareASale, groupCode, marqeta } = visitor.integrations;
+  const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
+  name = name.replace(/\s/g, ' ').trim();
 
   const newUserData: any = {
     name,
@@ -162,9 +135,11 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
     emails,
     password: hash,
     role: UserRoles.None,
+    // once user updates their password after clicking on a link from an email, set this to false and update their email status to verified
+    isAutoGeneratedPassword: !!isAutoGenerated,
   };
 
-  // if user is from shareASale, generate a unique tracking id to add to the user object
+  // If user is from shareASale, generate a unique tracking id to add to the user object
   if (!!shareASale) {
     let uniqueId = nanoid();
     let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
@@ -179,58 +154,154 @@ export const register = async (req: IRequest, { password, name, token, promo }: 
     };
   }
 
-  // save any params that the user came to our site
-  if (!!urlParams && urlParams.length > 0) {
-    const validParams: IUrlParam[] = urlParams.filter(
-      (param) => !!ALPHANUMERIC_REGEX.test(param.key) && !!ALPHANUMERIC_REGEX.test(param.value),
-    );
-    if (validParams.length > 0) integrations.referrals = { params: validParams };
-  }
+  // Save any params from the visitor object that are valid to the user object (this check should have already been performed when the visitor was created too)
+  const _validUrlParams = filterToValidQueryParams(urlParams);
+  if (_validUrlParams.length > 0) integrations.referrals = { params: _validUrlParams };
 
+  // Promos will have been saved on visitor object as well, save this info to the user
   if (promo) {
     const promoItem = await PromoModel.findOne({ _id: promo });
     promoData = promoItem;
     integrations.promos = [...(integrations.promos || []), promoItem];
   }
 
+  // if marqeta is present in visitor
+  integrations.marqeta = marqeta;
+
   newUserData.integrations = integrations;
+
   const newUser = await UserModel.create(newUserData);
   if (!newUser) throw new CustomError('Error creating user', ErrorTypes.SERVER);
 
   try {
     let authKey = '';
     authKey = await Session.createSession(newUser._id.toString());
-    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate());
-    await updateNewUserSubscriptions(newUser);
+    await storeNewLogin(newUser?._id.toString(), getUtcDate().toDate(), authKey);
+
     const responseInfo: any = {
       user: newUser,
       authKey,
     };
-    // return the groupCode to the front end so they can join the user to the group upon successful registration
-    if (!!groupCode) responseInfo.groupCode = groupCode;
+
+    // Auto created account for Karma Card applicant
+    if (!!isAutoGenerated) {
+      await initiateChangePasswordEmail(newUser, email);
+      const subscribeData: IActiveCampaignSubscribeData = { debitCardholder: true };
+
+      if (!!groupCode) {
+        const mockRequest = ({
+          requestor: newUser,
+          authKey: '',
+          body: {
+            code: groupCode,
+            email: newUser.emails[0].email,
+            userId: newUser._id.toString(),
+            skipSubscribe: true,
+          },
+        } as any);
+
+        const userGroup = await joinGroup(mockRequest);
+        if (!!userGroup) {
+          const group = await GroupModel.findById(userGroup.group);
+          subscribeData.groupName = group.name;
+          subscribeData.tags = [group.name];
+        }
+      }
+
+      if (!!urlParams) {
+        // employer beta card group
+        if (urlParams.find((param) => param.key === 'employerBeta')) {
+          subscribeData.employerBeta = true;
+        }
+
+        // beta card group
+        if (urlParams.find((param) => param.key === 'beta')) {
+          subscribeData.beta = true;
+        }
+      }
+
+      await updateNewUserSubscriptions(newUser, subscribeData);
+    } else {
+      await updateNewUserSubscriptions(newUser);
+    }
+
     if (!!promoData) handleCreateAccountPromo(newUser._id.toString(), promoData);
+    if (!!groupCode) responseInfo.groupCode = groupCode;
     return responseInfo;
   } catch (afterCreationError) {
     // undo user creation
     await UserModel.deleteOne({ _id: newUser?._id });
+    await UserGroupModel.deleteOne({ user: newUser?._id });
+    console.log(afterCreationError);
     throw new CustomError('Error creating user', ErrorTypes.SERVER);
   }
 };
 
-export const login = async (_: IRequest, { email, password }: ILoginData) => {
+export const addFCMAndDeviceInfo = async (user: IUserDocument, fcmToken: string, deviceInfo: IDeviceInfo) => {
+  // Add FCM token and device info of the user
+  try {
+    const { deviceId } = deviceInfo;
+    if (fcmToken && deviceId) {
+      // Check if the same FCM token is mapped with different user, if it is, make the token of that user NULL
+      const userWithSameToken = await UserModel.findOne(
+        { 'integrations.fcm.token': fcmToken },
+      );
+      if (userWithSameToken && userWithSameToken?._id.toString() !== user?._id.toString()) {
+        userWithSameToken.integrations.fcm.forEach((item) => {
+          if (item.token === fcmToken) {
+            item.token = null;
+          }
+        });
+        await userWithSameToken.save();
+      }
+      // Store the FCM token in current user's repo
+      const { fcm } = user.integrations;
+      const existingDeviceIndex = fcm.findIndex((item) => item.deviceId === deviceId);
+
+      if (existingDeviceIndex !== -1) {
+        // Device already exists, update the token
+        user.integrations.fcm[existingDeviceIndex].token = fcmToken;
+      } else {
+        // Device doesn't exist, add a new entry
+        user.integrations.fcm.push({ token: fcmToken, deviceId });
+        user.deviceInfo.push(deviceInfo);
+      }
+      await user.save();
+    }
+  } catch (error) {
+    console.log('Error in storing FCM token', error);
+  }
+};
+
+export const login = async (req: IRequest, { email, password, biometricSignature, fcmToken, deviceInfo }: ILoginData) => {
   email = email?.toLowerCase();
   const user = await UserModel.findOne({ emails: { $elemMatch: { email, primary: true } } });
   if (!user) {
     throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
   }
-  const passwordMatch = await argon2.verify(user.password, password);
-  if (!passwordMatch) {
-    throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
+
+  if (biometricSignature) {
+    const { identifierKey } = req;
+    const { biometrics } = user.integrations;
+    // get the publicKey to verify the signature
+    const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
+    const isVerified = await verifyBiometric(email, biometricSignature, biometricKey);
+    if (!isVerified) {
+      throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
+    }
+  } else {
+    const passwordMatch = await argon2.verify(user.password, password);
+    if (!passwordMatch) {
+      throw new CustomError('Invalid email or password', ErrorTypes.INVALID_ARG);
+    }
   }
+
   const authKey = await Session.createSession(user._id.toString());
 
-  await storeNewLogin(user._id.toString(), getUtcDate().toDate());
-
+  await storeNewLogin(user._id.toString(), getUtcDate().toDate(), authKey);
+  if (fcmToken && deviceInfo) {
+    await addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
+  }
   return { user, authKey };
 };
 
@@ -286,6 +357,8 @@ export const getShareableUser = ({
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
+  if (integrations?.marqeta) _integrations.marqeta = integrations.marqeta;
+  if (integrations?.fcm) _integrations.fcm = integrations.fcm;
   return {
     _id,
     email,
@@ -314,12 +387,20 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
     if (!!email && !isemail.validate(email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     return await UserModel.findByIdAndUpdate(
       user._id,
-      { ...updates, lastModified: dayjs().utc().toDate() },
+      { ...updates, lastModified: dayjs().utc().toDate(), isAutoGeneratedPassword: false },
       { new: true },
     );
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+// provides endpoint for UI to check if an email already exists on a user
+export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
+  const email = req.body.email?.toLowerCase();
+  const userExists = checkIfUserWithEmailExists(email);
+  if (!userExists) return 'User with this email does not exist';
+  throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
 };
 
 // used internally in multiple services to update a user's password
@@ -330,6 +411,8 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   }
   const hash = await argon2.hash(newPassword);
   const updatedUser = await updateUser(req, user, { password: hash });
+  updatedUser.emails.find(e => !!e.primary).status = UserEmailStatus.Verified;
+  await updatedUser.save();
   // TODO: email user to notify them that their password has been changed.
   // TODO: remove when legacy users are removed
   await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
@@ -375,6 +458,7 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
   const { requestor } = req;
+  const { userToken } = requestor.integrations.marqeta;
   const updates = req.body;
   const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
   if (!!updates?.email) {
@@ -382,7 +466,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
-  const allowedFields: UserKeys[] = ['name', 'zipcode'];
+  const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
@@ -395,6 +479,14 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
+        break;
+      case 'integrations':
+        // update the address data in marqeta and km Db
+        if (updates?.integrations?.marqeta) {
+          const { marqeta } = updates.integrations;
+          await updateMarqetaUser(userToken, marqeta);
+          requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, marqeta);
+        }
         break;
       default:
         break;
@@ -486,6 +578,44 @@ export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyToke
   return { message: 'OK' };
 };
 
+export const deleteAccountRequest = async (req: IRequest<{}, {}, IDeleteAccountRequest>) => {
+  try {
+    const { _id, name } = req.requestor;
+    const { reason } = req.body;
+    const { email } = req.requestor.emails.filter((e) => e.primary)[0];
+
+    const user = await UserModel.findById(_id);
+    if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+
+    const requestExists = await DeleteAccountRequestModel.findOne({ userId: _id });
+    if (!!requestExists) {
+      return { message: 'A request to delete your account has already been recieved and we are working on deleting your account.' };
+    }
+
+    const deleteAccountRequestDocument = new DeleteAccountRequestModel({
+      userName: name,
+      userEmail: email,
+      userId: _id,
+      reason,
+    });
+
+    const deleteAccountRequestSuccess = await deleteAccountRequestDocument.save();
+    if (!deleteAccountRequestSuccess) throw new CustomError('Unable to create your delete account request. Please email support@karmawallet.io.', ErrorTypes.UNPROCESSABLE);
+
+    sendDeleteAccountRequestEmail({
+      user,
+      deleteReason: reason,
+      deleteAccountRequestId: deleteAccountRequestSuccess._id.toString(),
+    });
+
+    if (!!deleteAccountRequestSuccess) {
+      return { message: 'Your account deletion request was successful and will be forwared to our support team.' };
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
 export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
   try {
     // validate user id
@@ -533,4 +663,36 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
   const user = await UserModel.findOne({ 'emails.email': email });
   if (!!user) throw new CustomError(`Email: ${email} already belongs to a user.`, ErrorTypes.CONFLICT);
   return true;
+};
+
+export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
+  const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
+  const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
+
+  if (!existingUser && !visitor) {
+    throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
+  }
+
+  if (!!existingUser) {
+    existingUser.integrations.marqeta.status = userTransition.status;
+    await existingUser.save();
+  }
+
+  if (!!visitor && !existingUser) {
+    visitor.integrations.marqeta.status = userTransition.status;
+    await visitor.save();
+    if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      const { user } = await register({
+        name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,
+        password: generateRandomPasswordString(14),
+        visitorId: visitor._id.toString(),
+        isAutoGenerated: true,
+      });
+
+      user.integrations.marqeta = visitor.integrations.marqeta;
+      await user.save();
+      await createKarmaCardWelcomeUserNotification(user, true);
+      console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');
+    }
+  }
 };

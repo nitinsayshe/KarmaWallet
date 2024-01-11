@@ -1,0 +1,982 @@
+mcc,sectorName
+7012,Accommodations
+7311,Advertising
+5965,Advertising and Public Relations
+5964,Advertising and Public Relations
+5968,Streaming Services
+5967,Advertising and Public Relations
+5969,Advertising and Public Relations
+5962,Advertising and Public Relations
+5960,Advertising and Public Relations
+5966,Advertising and Public Relations
+5963,Advertising and Public Relations
+763,"Agriculture, Forestry, Fishing and Hunting"
+3000,Airlines
+3001,Airlines
+3002,Airlines
+3003,Airlines
+3004,Airlines
+3005,Airlines
+3006,Airlines
+3007,Airlines
+3008,Airlines
+3009,Airlines
+3010,Airlines
+3011,Airlines
+3012,Airlines
+3013,Airlines
+3014,Airlines
+3015,Airlines
+3016,Airlines
+3017,Airlines
+3018,Airlines
+3019,Airlines
+3020,Airlines
+3021,Airlines
+3022,Airlines
+3023,Airlines
+3024,Airlines
+3025,Airlines
+3026,Airlines
+3027,Airlines
+3028,Airlines
+3029,Airlines
+3030,Airlines
+3031,Airlines
+3032,Airlines
+3033,Airlines
+3034,Airlines
+3035,Airlines
+3036,Airlines
+3037,Airlines
+3038,Airlines
+3039,Airlines
+3040,Airlines
+3041,Airlines
+3042,Airlines
+3043,Airlines
+3044,Airlines
+3045,Airlines
+3046,Airlines
+3047,Airlines
+3048,Airlines
+3049,Airlines
+3050,Airlines
+3051,Airlines
+3052,Airlines
+3053,Airlines
+3054,Airlines
+3055,Airlines
+3056,Airlines
+3057,Airlines
+3058,Airlines
+3059,Airlines
+3060,Airlines
+3061,Airlines
+3062,Airlines
+3063,Airlines
+3064,Airlines
+3065,Airlines
+3066,Airlines
+3067,Airlines
+3068,Airlines
+3069,Airlines
+3070,Airlines
+3071,Airlines
+3072,Airlines
+3073,Airlines
+3074,Airlines
+3075,Airlines
+3076,Airlines
+3077,Airlines
+3078,Airlines
+3079,Airlines
+3080,Airlines
+3081,Airlines
+3082,Airlines
+3083,Airlines
+3084,Airlines
+3085,Airlines
+3086,Airlines
+3087,Airlines
+3088,Airlines
+3089,Airlines
+3090,Airlines
+3091,Airlines
+3092,Airlines
+3093,Airlines
+3094,Airlines
+3095,Airlines
+3096,Airlines
+3097,Airlines
+3098,Airlines
+3099,Airlines
+3100,Airlines
+3101,Airlines
+3102,Airlines
+3103,Airlines
+3104,Airlines
+3105,Airlines
+3106,Airlines
+3107,Airlines
+3108,Airlines
+3109,Airlines
+3110,Airlines
+3111,Airlines
+3112,Airlines
+3113,Airlines
+3114,Airlines
+3115,Airlines
+3116,Airlines
+3117,Airlines
+3118,Airlines
+3119,Airlines
+3120,Airlines
+3121,Airlines
+3122,Airlines
+3123,Airlines
+3124,Airlines
+3125,Airlines
+3126,Airlines
+3127,Airlines
+3128,Airlines
+3129,Airlines
+3130,Airlines
+3131,Airlines
+3132,Airlines
+3133,Airlines
+3134,Airlines
+3135,Airlines
+3136,Airlines
+3137,Airlines
+3138,Airlines
+3139,Airlines
+3140,Airlines
+3141,Airlines
+3142,Airlines
+3143,Airlines
+3144,Airlines
+3145,Airlines
+3146,Airlines
+3147,Airlines
+3148,Airlines
+3149,Airlines
+3150,Airlines
+3151,Airlines
+3152,Airlines
+3153,Airlines
+3154,Airlines
+3155,Airlines
+3156,Airlines
+3157,Airlines
+3158,Airlines
+3159,Airlines
+3160,Airlines
+3161,Airlines
+3162,Airlines
+3163,Airlines
+3164,Airlines
+3165,Airlines
+3166,Airlines
+3167,Airlines
+3168,Airlines
+3169,Airlines
+3170,Airlines
+3171,Airlines
+3172,Airlines
+3173,Airlines
+3174,Airlines
+3175,Airlines
+3176,Airlines
+3177,Airlines
+3178,Airlines
+3179,Airlines
+3180,Airlines
+3181,Airlines
+3182,Airlines
+3183,Airlines
+3184,Airlines
+3185,Airlines
+3186,Airlines
+3187,Airlines
+3188,Airlines
+3189,Airlines
+3190,Airlines
+3191,Airlines
+3192,Airlines
+3193,Airlines
+3194,Airlines
+3195,Airlines
+3196,Airlines
+3197,Airlines
+3198,Airlines
+3199,Airlines
+3200,Airlines
+3201,Airlines
+3202,Airlines
+3203,Airlines
+3204,Airlines
+3205,Airlines
+3206,Airlines
+3207,Airlines
+3208,Airlines
+3209,Airlines
+3210,Airlines
+3211,Airlines
+3212,Airlines
+3213,Airlines
+3214,Airlines
+3215,Airlines
+3216,Airlines
+3217,Airlines
+3218,Airlines
+3219,Airlines
+3220,Airlines
+3221,Airlines
+3222,Airlines
+3223,Airlines
+3224,Airlines
+3225,Airlines
+3226,Airlines
+3227,Airlines
+3228,Airlines
+3229,Airlines
+3230,Airlines
+3231,Airlines
+3232,Airlines
+3233,Airlines
+3234,Airlines
+3235,Airlines
+3236,Airlines
+3237,Airlines
+3238,Airlines
+3239,Airlines
+3240,Airlines
+3241,Airlines
+3242,Airlines
+3243,Airlines
+3244,Airlines
+3245,Airlines
+3246,Airlines
+3247,Airlines
+3248,Airlines
+3249,Airlines
+3250,Airlines
+3251,Airlines
+3252,Airlines
+3253,Airlines
+3254,Airlines
+3255,Airlines
+3256,Airlines
+3257,Airlines
+3258,Airlines
+3259,Airlines
+3260,Airlines
+3261,Airlines
+3262,Airlines
+3263,Airlines
+3264,Airlines
+3265,Airlines
+3266,Airlines
+3267,Airlines
+3268,Airlines
+3269,Airlines
+3270,Airlines
+3271,Airlines
+3272,Airlines
+3273,Airlines
+3274,Airlines
+3275,Airlines
+3276,Airlines
+3277,Airlines
+3278,Airlines
+3279,Airlines
+3280,Airlines
+3281,Airlines
+3282,Airlines
+3283,Airlines
+3284,Airlines
+3285,Airlines
+3286,Airlines
+3287,Airlines
+3288,Airlines
+3289,Airlines
+3290,Airlines
+3291,Airlines
+3292,Airlines
+3293,Airlines
+3294,Airlines
+3295,Airlines
+3296,Airlines
+3297,Airlines
+3298,Airlines
+3299,Airlines
+4511,Airlines
+7994,Amusement Parks & Arcades
+7996,Amusement Parks & Arcades
+5137,Apparel
+7296,Apparel
+5611,Apparel
+5699,Jewelry & Other Accessories
+5621,Apparel
+8911,"Architecture, Engineering & Design"
+7333,Art & Digital Media
+7832,Art & Digital Media
+7829,Art & Digital Media
+5971,"Arts, Entertainment & Recreation"
+7932,"Arts, Entertainment & Recreation"
+7995,"Arts, Entertainment & Recreation"
+7998,"Arts, Entertainment & Recreation"
+7999,"Arts, Entertainment & Recreation"
+5511,Automobile Dealers
+5599,Automobile Dealers
+7531,Automotive Parts and Accessories Stores
+5533,Automotive Parts and Accessories Stores
+7535,Automotive Parts and Accessories Stores
+5935,Automotive Parts and Accessories Stores
+5013,"Automotive Parts, Accessories and Tire Stores"
+5531,"Automotive Parts, Accessories and Tire Stores"
+7538,"Automotive Parts, Accessories and Tire Stores"
+7542,"Automotive Parts, Accessories and Tire Stores"
+5462,Bakeries
+5813,"Bars, Breweries & Wineries"
+5211,Basic Resources
+5051,Basic Resources
+5094,Basic Resources
+5921,"Beer, Wine & Liquor Stores"
+5942,Bookstores
+4899,Cable Television Services
+5811,Catering Services
+5169,Chemicals
+5641,Children's Clothing
+2842,Cleaning Services
+7349,Cleaning Services
+5651,Clothing
+5691,Clothing
+7911,"Colleges, Universities & Schools"
+8211,"Colleges, Universities & Schools"
+8220,"Colleges, Universities & Schools"
+8241,"Colleges, Universities & Schools"
+8244,"Colleges, Universities & Schools"
+8249,"Colleges, Universities & Schools"
+1740,Construction
+1750,Construction
+1761,Construction
+1771,Construction
+1799,Construction
+7217,Construction
+5714,Construction
+5271,Construction
+5592,Construction
+5996,Construction
+5039,Construction & Related Materials
+5198,Construction & Related Materials
+5977,Cosmetics
+4411,Cruise Lines
+5451,Dairy
+8021,Dentists
+5311,Department Stores
+8299,Educational Services
+1731,Electrical Contractors
+7622,Electronic Repair Stores
+7629,Electronic Repair Stores
+5946,"Electronics, Gadgets & Accessories"
+5732,"Electronics, Gadgets & Accessories"
+5815,Entertainment
+7993,Entertainment
+7841,Entertainment
+5814,Fast Food
+4829,Financial Services
+9700,Financial Services
+9223,Financial Services
+7321,Financial Services
+6010,Financial Services
+6011,Financial Services
+6012,Financial Services
+9702,Financial Services
+9950,Financial Services
+6051,Financial Services
+9701,Financial Services
+8931,Financial Services
+4815,Financial Services
+7997,Fitness & Recreational Sports Centers
+7941,Fitness & Recreational Sports Centers
+5441,Food
+5499,Food
+5021,Furniture Stores
+5712,Furniture Stores
+7641,Furniture Stores
+1520,General Contractors
+5947,"Gift, Novelty & Souvenier Stores"
+5072,Hardware Stores
+5251,Hardware Stores
+7277,Healthcare Services
+5975,Healthcare Services
+8044,Healthcare Services
+8031,Healthcare Services
+8041,Healthcare Services
+8042,Healthcare Services
+8043,Healthcare Services
+8049,Healthcare Services
+8050,Healthcare Services
+8062,Healthcare Services
+8099,Healthcare Services
+5718,Home & Garden
+5713,Home & Garden
+5231,Home & Garden
+5200,Home & Garden
+5719,Home & Garden
+5937,Home Decor
+5932,Home Decor
+5832,Home Decor
+3501,Hotels & Motels
+3502,Hotels & Motels
+3503,Hotels & Motels
+3504,Hotels & Motels
+3505,Hotels & Motels
+3506,Hotels & Motels
+3507,Hotels & Motels
+3508,Hotels & Motels
+3509,Hotels & Motels
+3510,Hotels & Motels
+3511,Hotels & Motels
+3512,Hotels & Motels
+3513,Hotels & Motels
+3514,Hotels & Motels
+3515,Hotels & Motels
+3516,Hotels & Motels
+3517,Hotels & Motels
+3518,Hotels & Motels
+3519,Hotels & Motels
+3520,Hotels & Motels
+3521,Hotels & Motels
+3522,Hotels & Motels
+3523,Hotels & Motels
+3524,Hotels & Motels
+3525,Hotels & Motels
+3526,Hotels & Motels
+3527,Hotels & Motels
+3528,Hotels & Motels
+3529,Hotels & Motels
+3530,Hotels & Motels
+3531,Hotels & Motels
+3532,Hotels & Motels
+3533,Hotels & Motels
+3534,Hotels & Motels
+3535,Hotels & Motels
+3536,Hotels & Motels
+3537,Hotels & Motels
+3538,Hotels & Motels
+3539,Hotels & Motels
+3540,Hotels & Motels
+3541,Hotels & Motels
+3542,Hotels & Motels
+3543,Hotels & Motels
+3544,Hotels & Motels
+3545,Hotels & Motels
+3546,Hotels & Motels
+3547,Hotels & Motels
+3548,Hotels & Motels
+3549,Hotels & Motels
+3550,Hotels & Motels
+3551,Hotels & Motels
+3552,Hotels & Motels
+3553,Hotels & Motels
+3554,Hotels & Motels
+3555,Hotels & Motels
+3556,Hotels & Motels
+3557,Hotels & Motels
+3558,Hotels & Motels
+3559,Hotels & Motels
+3560,Hotels & Motels
+3561,Hotels & Motels
+3562,Hotels & Motels
+3563,Hotels & Motels
+3564,Hotels & Motels
+3565,Hotels & Motels
+3566,Hotels & Motels
+3567,Hotels & Motels
+3568,Hotels & Motels
+3569,Hotels & Motels
+3570,Hotels & Motels
+3571,Hotels & Motels
+3572,Hotels & Motels
+3573,Hotels & Motels
+3574,Hotels & Motels
+3575,Hotels & Motels
+3576,Hotels & Motels
+3577,Hotels & Motels
+3578,Hotels & Motels
+3579,Hotels & Motels
+3580,Hotels & Motels
+3581,Hotels & Motels
+3582,Hotels & Motels
+3583,Hotels & Motels
+3584,Hotels & Motels
+3585,Hotels & Motels
+3586,Hotels & Motels
+3587,Hotels & Motels
+3588,Hotels & Motels
+3589,Hotels & Motels
+3590,Hotels & Motels
+3591,Hotels & Motels
+3592,Hotels & Motels
+3593,Hotels & Motels
+3594,Hotels & Motels
+3595,Hotels & Motels
+3596,Hotels & Motels
+3597,Hotels & Motels
+3598,Hotels & Motels
+3599,Hotels & Motels
+3600,Hotels & Motels
+3601,Hotels & Motels
+3602,Hotels & Motels
+3603,Hotels & Motels
+3604,Hotels & Motels
+3605,Hotels & Motels
+3606,Hotels & Motels
+3607,Hotels & Motels
+3608,Hotels & Motels
+3609,Hotels & Motels
+3610,Hotels & Motels
+3611,Hotels & Motels
+3612,Hotels & Motels
+3613,Hotels & Motels
+3614,Hotels & Motels
+3615,Hotels & Motels
+3616,Hotels & Motels
+3617,Hotels & Motels
+3618,Hotels & Motels
+3619,Hotels & Motels
+3620,Hotels & Motels
+3621,Hotels & Motels
+3622,Hotels & Motels
+3623,Hotels & Motels
+3624,Hotels & Motels
+3625,Hotels & Motels
+3626,Hotels & Motels
+3627,Hotels & Motels
+3628,Hotels & Motels
+3629,Hotels & Motels
+3630,Hotels & Motels
+3631,Hotels & Motels
+3632,Hotels & Motels
+3633,Hotels & Motels
+3634,Hotels & Motels
+3635,Hotels & Motels
+3636,Hotels & Motels
+3637,Hotels & Motels
+3638,Hotels & Motels
+3639,Hotels & Motels
+3640,Hotels & Motels
+3641,Hotels & Motels
+3642,Hotels & Motels
+3643,Hotels & Motels
+3644,Hotels & Motels
+3645,Hotels & Motels
+3646,Hotels & Motels
+3647,Hotels & Motels
+3648,Hotels & Motels
+3649,Hotels & Motels
+3650,Hotels & Motels
+3651,Hotels & Motels
+3652,Hotels & Motels
+3653,Hotels & Motels
+3654,Hotels & Motels
+3655,Hotels & Motels
+3656,Hotels & Motels
+3657,Hotels & Motels
+3658,Hotels & Motels
+3659,Hotels & Motels
+3660,Hotels & Motels
+3661,Hotels & Motels
+3662,Hotels & Motels
+3663,Hotels & Motels
+3664,Hotels & Motels
+3665,Hotels & Motels
+3666,Hotels & Motels
+3667,Hotels & Motels
+3668,Hotels & Motels
+3669,Hotels & Motels
+3670,Hotels & Motels
+3671,Hotels & Motels
+3672,Hotels & Motels
+3673,Hotels & Motels
+3674,Hotels & Motels
+3675,Hotels & Motels
+3676,Hotels & Motels
+3677,Hotels & Motels
+3678,Hotels & Motels
+3679,Hotels & Motels
+3680,Hotels & Motels
+3681,Hotels & Motels
+3682,Hotels & Motels
+3683,Hotels & Motels
+3684,Hotels & Motels
+3685,Hotels & Motels
+3686,Hotels & Motels
+3687,Hotels & Motels
+3688,Hotels & Motels
+3689,Hotels & Motels
+3690,Hotels & Motels
+3691,Hotels & Motels
+3692,Hotels & Motels
+3693,Hotels & Motels
+3694,Hotels & Motels
+3695,Hotels & Motels
+3696,Hotels & Motels
+3697,Hotels & Motels
+3698,Hotels & Motels
+3699,Hotels & Motels
+3700,Hotels & Motels
+3701,Hotels & Motels
+3702,Hotels & Motels
+3703,Hotels & Motels
+3704,Hotels & Motels
+3705,Hotels & Motels
+3706,Hotels & Motels
+3707,Hotels & Motels
+3708,Hotels & Motels
+3709,Hotels & Motels
+3710,Hotels & Motels
+3711,Hotels & Motels
+3712,Hotels & Motels
+3713,Hotels & Motels
+3714,Hotels & Motels
+3715,Hotels & Motels
+3716,Hotels & Motels
+3717,Hotels & Motels
+3718,Hotels & Motels
+3719,Hotels & Motels
+3720,Hotels & Motels
+3721,Hotels & Motels
+3722,Hotels & Motels
+3723,Hotels & Motels
+3724,Hotels & Motels
+3725,Hotels & Motels
+3726,Hotels & Motels
+3727,Hotels & Motels
+3728,Hotels & Motels
+3729,Hotels & Motels
+3730,Hotels & Motels
+3731,Hotels & Motels
+3732,Hotels & Motels
+3733,Hotels & Motels
+3734,Hotels & Motels
+3735,Hotels & Motels
+3736,Hotels & Motels
+3737,Hotels & Motels
+3738,Hotels & Motels
+3739,Hotels & Motels
+3740,Hotels & Motels
+3741,Hotels & Motels
+3742,Hotels & Motels
+3743,Hotels & Motels
+3744,Hotels & Motels
+3745,Hotels & Motels
+3746,Hotels & Motels
+3747,Hotels & Motels
+3748,Hotels & Motels
+3749,Hotels & Motels
+3750,Hotels & Motels
+3751,Hotels & Motels
+3752,Hotels & Motels
+3753,Hotels & Motels
+3754,Hotels & Motels
+3755,Hotels & Motels
+3756,Hotels & Motels
+3757,Hotels & Motels
+3758,Hotels & Motels
+3759,Hotels & Motels
+3760,Hotels & Motels
+3761,Hotels & Motels
+3762,Hotels & Motels
+3763,Hotels & Motels
+3764,Hotels & Motels
+3765,Hotels & Motels
+3766,Hotels & Motels
+3767,Hotels & Motels
+3768,Hotels & Motels
+3769,Hotels & Motels
+3770,Hotels & Motels
+3771,Hotels & Motels
+3772,Hotels & Motels
+3773,Hotels & Motels
+3774,Hotels & Motels
+3775,Hotels & Motels
+3776,Hotels & Motels
+3777,Hotels & Motels
+3778,Hotels & Motels
+3779,Hotels & Motels
+3780,Hotels & Motels
+3781,Hotels & Motels
+3782,Hotels & Motels
+3783,Hotels & Motels
+3784,Hotels & Motels
+3785,Hotels & Motels
+3786,Hotels & Motels
+3787,Hotels & Motels
+3788,Hotels & Motels
+3789,Hotels & Motels
+3790,Hotels & Motels
+3816,Hotels & Motels
+3835,Hotels & Motels
+7011,Hotels & Motels
+5722,Household Appliances
+7929,"Independent Artists, Writers & Performers"
+5085,Industrial Goods
+6399,Insurance Carriers
+6381,Insurance Carriers
+6300,Insurance Carriers
+5944,Jewelry & Other Accessories
+5698,Jewelry & Other Accessories
+5631,Jewelry & Other Accessories
+780,Landscaping & Gardening Services
+9211,Legal Services
+8111,Legal Services
+5948,Luggage & Handbags
+2791,Manufacturing
+5046,Manufacturing
+5099,Manufacturing
+5199,Manufacturing
+5735,Media & Entertainment
+8071,Medical and Diagnostics Labs
+7991,"Museums, Historic Sites & National Parks"
+5561,New Car Dealers
+5571,New Car Dealers
+5994,News
+8398,Nonprofits
+5193,"Nursery, Lawn & Garden Stores"
+5261,"Nursery, Lawn & Garden Stores"
+5111,Office Supplies & Stationary Stores
+7332,Office Supplies & Stationary Stores
+5943,Office Supplies & Stationary Stores
+7338,Office Supplies & Stationary Stores
+5949,Office Supplies & Stationary Stores
+5978,Office Supplies & Stationary Stores
+5542,Gas Stations
+5983,Oil & Gas
+5172,Oil & Gas
+8641,Organizations & Associations
+8651,Organizations & Associations
+8661,Organizations & Associations
+8675,Organizations & Associations
+8699,Organizations & Associations
+5997,Personal Care
+5995,Pet & Pet Supply stores
+5122,Pharma & Biotech
+5047,Pharma & Biotech
+5976,Pharma & Biotech
+8734,Pharma & Biotech
+5912,Pharmacy
+7221,Photography
+5044,Photography
+7395,Photography
+8011,Physicians
+1711,"Plumbing, Heating and Air-Conditioning Contractors"
+5074,"Plumbing, Heating and Air-Conditioning Contractors"
+4215,Postal Services
+4582,Public Administration
+4784,Public Administration
+9222,Public Administration
+9311,Public Administration
+9399,Public Administration
+9402,Public Administration
+9405,Public Administration
+7392,Public Relations
+2741,Publishing
+5192,Publishing
+6513,Real Estate & Renting
+7992,Recreational Sports & Activities
+7802,Recreational Sports & Activities
+7801,Recreational Sports & Activities
+7800,Recreational Sports & Activities
+7032,Recreational Sports & Activities
+7033,Recreational Sports & Activities
+7933,Recreational Sports & Activities
+3351,Rental Services
+3352,Rental Services
+3353,Rental Services
+3354,Rental Services
+3355,Rental Services
+3356,Rental Services
+3357,Rental Services
+3358,Rental Services
+3359,Rental Services
+3360,Rental Services
+3361,Rental Services
+3362,Rental Services
+3363,Rental Services
+3364,Rental Services
+3365,Rental Services
+3366,Rental Services
+3367,Rental Services
+3368,Rental Services
+3369,Rental Services
+3370,Rental Services
+3371,Rental Services
+3372,Rental Services
+3373,Rental Services
+3374,Rental Services
+3375,Rental Services
+3376,Rental Services
+3377,Rental Services
+3378,Rental Services
+3379,Rental Services
+3380,Rental Services
+3381,Rental Services
+3382,Rental Services
+3383,Rental Services
+3384,Rental Services
+3385,Rental Services
+3386,Rental Services
+3387,Rental Services
+3388,Rental Services
+3389,Rental Services
+3390,Rental Services
+3391,Rental Services
+3392,Rental Services
+3393,Rental Services
+3394,Rental Services
+3395,Rental Services
+3396,Rental Services
+3397,Rental Services
+3398,Rental Services
+3399,Rental Services
+3400,Rental Services
+3401,Rental Services
+3402,Rental Services
+3403,Rental Services
+3404,Rental Services
+3405,Rental Services
+3406,Rental Services
+3407,Rental Services
+3408,Rental Services
+3409,Rental Services
+3410,Rental Services
+3411,Rental Services
+3412,Rental Services
+3413,Rental Services
+3414,Rental Services
+3415,Rental Services
+3416,Rental Services
+3417,Rental Services
+3418,Rental Services
+3419,Rental Services
+3420,Rental Services
+3421,Rental Services
+3422,Rental Services
+3423,Rental Services
+3424,Rental Services
+3425,Rental Services
+3426,Rental Services
+3427,Rental Services
+3428,Rental Services
+3429,Rental Services
+3430,Rental Services
+3431,Rental Services
+3432,Rental Services
+3433,Rental Services
+3434,Rental Services
+3435,Rental Services
+3436,Rental Services
+3437,Rental Services
+3438,Rental Services
+3439,Rental Services
+3440,Rental Services
+3441,Rental Services
+4457,Rental Services
+7512,Rental Services
+7519,Rental Services
+7513,Rental Services
+5812,Restaurants
+4468,Retail
+5970,Retail
+5309,Retail
+5310,Retail
+5993,Retail
+5817,Retail
+5065,Retail
+7394,Retail
+5681,Retail
+5950,Retail
+5973,Retail
+5992,Retail
+5961,Retail
+5399,Retail
+5999,Retail
+5733,Retail
+5933,Retail
+5131,Retail
+5972,Retail
+5931,Retail
+5331,Retail
+6211,Securities Brokerage
+742,Services
+7623,Services
+7230,Services
+7278,Services
+7379,Services
+4816,Services
+7273,Services
+7216,Services
+7361,Services
+7342,Services
+7261,Services
+7298,Services
+7375,Services
+7211,Services
+7210,Services
+7297,Services
+5422,Services
+7299,Services
+7393,Services
+4225,Services
+7699,Services
+7399,Services
+5541,Services
+7251,Services
+7523,Services
+7339,Services
+5697,Services
+7922,Services
+7549,Services
+7511,Services
+8351,Childcare Services
+8999,Services
+7631,Services
+7692,Services
+5139,Shoes
+5661,Shoes
+5940,Sports & Outdoors
+5551,Sports & Outdoors
+5941,Sports & Outdoors
+5598,Sports & Outdoors
+5655,Sports & Outdoors
+5998,Sports & Outdoors
+5411,Supermarkets & Grocery Stores
+7276,Tax Preparation Services
+4121,Taxicabs and Limousines
+7372,Technology
+5734,Technology
+5045,Technology
+5818,Technology
+4812,Telecommunications Services
+4814,Telecommunications Services
+4821,Telecommunications Services
+5532,Tire Dealers
+7534,Tire Dealers
+5945,Toy Stores
+4011,Transportation Services
+4111,Transportation Services
+4112,Transportation Services
+4119,Transportation Services
+4131,Transportation Services
+4214,Transportation Services
+4789,Transportation Services
+4722,Travel Agencies
+4723,Travel Services
+5521,Used Car Dealers
+4900,Utilities
+5816,Video Games
+5300,Wholesale Clubs

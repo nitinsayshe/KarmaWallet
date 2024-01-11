@@ -1,7 +1,6 @@
 /* eslint-disable no-restricted-syntax */
 import fs from 'fs';
 import { parse } from 'json2csv';
-import { Transaction } from 'plaid';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { CardStatus } from '../../lib/constants';
@@ -21,6 +20,7 @@ import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manua
 import { TransactionModel } from '../../models/transaction';
 import { saveTransactions } from '../../integrations/plaid/v2_transaction';
 import { UserModel } from '../../models/user';
+import { CombinedPartialTransaction } from '../../types/transaction';
 
 dayjs.extend(utc);
 
@@ -113,7 +113,7 @@ export const globalPlaidTransactionMapping = async ({
     const alreadyMatchedCompanies = await V2TransactionMatchedCompanyNameModel.find({});
 
     const matchedTransactions: IMatchedTransaction[] = [];
-    let remainingTransactions: Transaction[] = [];
+    let remainingTransactions: CombinedPartialTransaction[] = [];
 
     const user = await UserModel.findOne({ _id: card.user });
     if (!user) {
@@ -155,7 +155,7 @@ export const globalPlaidTransactionMapping = async ({
     }
 
     // filter out false positives
-    const foundFalsePositives: Transaction[] = [];
+    const foundFalsePositives: CombinedPartialTransaction[] = [];
     remainingTransactions = remainingTransactions.filter((t) => {
       if (falsePositives.find((fp) => fp.originalValue === t[fp.matchType])) {
         foundFalsePositives.push(t);

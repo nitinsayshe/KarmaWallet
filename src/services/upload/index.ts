@@ -110,6 +110,19 @@ export const downloadImageFromUrlAndStoreInS3 = async (req: IRequest<{}, {}, IDo
   return client.uploadToS3(imageData);
 };
 
+export const uploadPDF = async (PDF: any, id: string) => {
+  const pdfData = {
+    file: PDF,
+    name: `karma_card_statement_${id}.pdf`,
+    contentType: 'application/pdf',
+    bucket: 'karmacardstatements.karmawallet',
+    acl: 'private',
+  };
+
+  const client = new AwsClient();
+  return client.uploadToS3(pdfData);
+};
+
 export const uploadImage = async (req: IRequest<{}, {}, IUploadImageRequestBody>) => {
   const MAX_FILE_SIZE_IN_MB = 5 * 1024 * 1024;
 

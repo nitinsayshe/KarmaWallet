@@ -6,9 +6,10 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 import * as UserTestIdentityService from '../services/user/testIdentities';
+import * as UserServiceTypes from '../services/user/types';
 import { KWRateLimiterKeyPrefixes, setRateLimiterHeaders, unblockFromEmailLimiterOnSuccess } from '../middleware/rateLimiter';
 
-export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
+export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['password', 'token', 'name'];
@@ -26,23 +27,37 @@ export const register: IRequestHandler<{}, {}, UserService.IUserData> = async (r
       return;
     }
     const { password, name, token, promo } = body;
-    const { user, authKey, groupCode } = await UserService.register(req, { password, name, token, promo });
+    const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo });
     output.api(req, res, { user: UserService.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
 
-export const login: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
+export const login: IRequestHandler<{}, {}, UserServiceTypes.ILoginData> = async (req, res) => {
   try {
-    const { password, email } = req.body;
+    // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
+    const { password, email, biometricSignature, fcmToken, deviceInfo } = req.body;
     const { user, authKey } = await UserService.login(req, {
+      biometricSignature,
       password,
       email,
+      fcmToken,
+      deviceInfo,
     });
+
     output.api(req, res, UserService.getShareableUser(user), authKey);
   } catch (err) {
     setRateLimiterHeaders(req, res);
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDeleteAccountRequest> = async (req, res) => {
+  try {
+    const response = await UserService.deleteAccountRequest(req);
+    output.api(req, res, response);
+  } catch (err) {
     output.error(req, res, asCustomError(err));
   }
 };
@@ -64,7 +79,7 @@ export const logout: IRequestHandler = async (req, res) => {
   }
 };
 
-export const updateProfile: IRequestHandler<{}, {}, UserService.IUserData> = async (req, res) => {
+export const updateProfile: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = async (req, res) => {
   try {
     const user = await UserService.updateProfile(req);
     output.api(req, res, UserService.getShareableUser(user));
@@ -73,7 +88,7 @@ export const updateProfile: IRequestHandler<{}, {}, UserService.IUserData> = asy
   }
 };
 
-export const updatePassword: IRequestHandler<{}, {}, UserService.IUpdatePasswordBody> = async (req, res) => {
+export const updatePassword: IRequestHandler<{}, {}, UserServiceTypes.IUpdatePasswordBody> = async (req, res) => {
   try {
     const user = await UserService.updatePassword(req);
     output.api(req, res, UserService.getShareableUser(user));
@@ -82,7 +97,7 @@ export const updatePassword: IRequestHandler<{}, {}, UserService.IUpdatePassword
   }
 };
 
-export const createPasswordResetToken: IRequestHandler<{}, {}, UserService.ILoginData> = async (req, res) => {
+export const createPasswordResetToken: IRequestHandler<{}, {}, UserServiceTypes.ILoginData> = async (req, res) => {
   try {
     const data = await UserService.createPasswordResetToken(req);
     output.api(req, res, data);
@@ -92,7 +107,7 @@ export const createPasswordResetToken: IRequestHandler<{}, {}, UserService.ILogi
   }
 };
 
-export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVerifyTokenBody> = async (req, res) => {
+export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserServiceTypes.IVerifyTokenBody> = async (req, res) => {
   try {
     const data = await UserService.verifyPasswordResetToken(req);
     output.api(req, res, data);
@@ -101,7 +116,7 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserService.IVeri
   }
 };
 
-export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserService.IEmail> = async (req, res) => {
+export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserServiceTypes.IEmail> = async (req, res) => {
   try {
     const data = await UserVerificationService.verifyUserDoesNotAlreadyExist(req);
     output.api(req, res, data);
@@ -113,7 +128,7 @@ export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserService.IEmai
 export const resetPasswordFromToken: IRequestHandler<
 {},
 {},
-UserService.ILoginData & UserService.IUpdatePasswordBody
+UserServiceTypes.ILoginData & UserServiceTypes.IUpdatePasswordBody
 > = async (req, res) => {
   try {
     const user = await UserService.resetPasswordFromToken(req);
@@ -124,7 +139,7 @@ UserService.ILoginData & UserService.IUpdatePasswordBody
   }
 };
 
-export const resendEmailVerification: IRequestHandler<{}, {}, Partial<UserService.IEmailVerificationData>> = async (
+export const resendEmailVerification: IRequestHandler<{}, {}, Partial<UserServiceTypes.IEmailVerificationData>> = async (
   req,
   res,
 ) => {
@@ -136,7 +151,7 @@ export const resendEmailVerification: IRequestHandler<{}, {}, Partial<UserServic
   }
 };
 
-export const verifyEmail: IRequestHandler<{}, {}, Partial<UserService.IEmailVerificationData>> = async (req, res) => {
+export const verifyEmail: IRequestHandler<{}, {}, Partial<UserServiceTypes.IEmailVerificationData>> = async (req, res) => {
   try {
     const data = await UserVerificationService.verifyEmail(req);
     output.api(req, res, data);

@@ -27,12 +27,18 @@ import { CardStatus } from './constants';
 import { CompanyRating } from './constants/company';
 import { getUtcDate } from './date';
 import { getRandomInt } from './number';
+import { CommissionPayoutModel, ICommissionPayoutDocument, KarmaCommissionPayoutStatus } from '../models/commissionPayout';
 
 export type CreateTestUsersRequest = {
   users?: Partial<IUserDocument>[];
 };
+
 export type CreateTestCommissionsRequest = {
   commissions?: Partial<ICommissionDocument>[];
+};
+
+export type CreateTestCommissionPayoutsRequest = {
+  commissionPayouts?: Partial<ICommissionPayoutDocument>[];
 };
 
 export type CreateTestPromosRequest = {
@@ -63,44 +69,8 @@ export type CreateTestTransactionsRequest = {
   transactions?: Partial<ITransactionDocument>[];
 };
 
-export interface IRemoveableDocument {
-  remove: () => Promise<this>;
-}
-
-export interface ISaveableDocument {
-  save: () => Promise<this>;
-}
-
-export const saveDocument = async (document: ISaveableDocument): Promise<ISaveableDocument> => {
-  try {
-    if (!document?.save) {
-      throw new Error('Document does not have a save method');
-    }
-    return await document.save();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-export const saveDocuments = async (documents: ISaveableDocument[]): Promise<ISaveableDocument[]> => Promise.all(documents.map(async (d) => saveDocument(d)));
-
-export const cleanUpDocument = async (document: IRemoveableDocument) => {
-  try {
-    if (!document?.remove) {
-      throw new Error('Document does not have a remove method');
-    }
-    await document.remove();
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-export const cleanUpDocuments = async (document: IRemoveableDocument[]) => {
-  await Promise.all(
-    document.map(async (d) => {
-      await cleanUpDocument(d);
-    }),
-  );
+export type CreateTestSectorsRequest = {
+  sectors?: Partial<ISectorDocument>[];
 };
 
 export const createSomeCommissions = async (req: CreateTestCommissionsRequest): Promise<ICommissionDocument[]> => (await Promise.all(
@@ -116,6 +86,19 @@ export const createSomeCommissions = async (req: CreateTestCommissionsRequest): 
     newCommission.allocation = commission.allocation || { karma: newCommission.amount * 0.25, user: newCommission.amount * 0.75 };
     newCommission.integrations = commission.integrations || undefined;
     newCommission.lastStatusUpdate = commission.lastStatusUpdate || getUtcDate().toDate();
+    return newCommission.save();
+  }),
+)) || [];
+
+export const createSomeCommissionPayouts = async (req: CreateTestCommissionPayoutsRequest): Promise<ICommissionPayoutDocument[]> => (await Promise.all(
+  req.commissionPayouts?.map(async (commissionPayout) => {
+    const newCommission = new CommissionPayoutModel();
+    newCommission.amount = commissionPayout.amount || getRandomInt(1, 20);
+    newCommission.commissions = commissionPayout?.commissions || undefined;
+    newCommission.user = commissionPayout?.user || undefined;
+    newCommission.date = commissionPayout.date || getUtcDate().toDate();
+    newCommission.status = commissionPayout.status || KarmaCommissionPayoutStatus.Pending;
+    newCommission.integrations = commissionPayout.integrations || undefined;
     return newCommission.save();
   }),
 )) || [];
@@ -401,3 +384,26 @@ export const createNumMonthsOfTransactions = async (
     }),
   );
 };
+
+export const createSomeSectors = async (req: CreateTestSectorsRequest): Promise<ISectorDocument[]> => (await Promise.all(
+  req?.sectors?.map(async (s) => {
+    const newSector = new SectorModel();
+    newSector.name = s?.name || 'Test Sector';
+    newSector.tier = s?.tier || 1;
+    newSector.carbonMultiplier = s?.carbonMultiplier || 1;
+    newSector.icon = s?.icon || undefined;
+    newSector.averageScores = s?.averageScores || {
+      numCompanies: 0,
+      avgScore: 0,
+      avgPlanetScore: 0,
+      avgPeopleScore: 0,
+      avgSustainabilityScore: 0,
+      avgClimateActionScore: 0,
+      avgCommunityWelfareScore: 0,
+      avgDiversityInclusionScore: 0,
+    };
+    newSector.parentSectors = s?.parentSectors || [];
+    newSector.mccs = s?.mccs || undefined;
+    return newSector.save();
+  }),
+)) || [];

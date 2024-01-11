@@ -2,8 +2,9 @@ import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
 import { asCustomError } from '../../lib/customError';
 import * as TransactionService from '../../services/transaction';
+import * as TransactionTypes from '../../services/transaction/types';
 
-export const getFalsePositives: IRequestHandler<{}, TransactionService.IGetFalsePositivesQuery, {}> = async (req, res) => {
+export const getFalsePositives: IRequestHandler<{}, TransactionTypes.IGetFalsePositivesQuery, {}> = async (req, res) => {
   try {
     const message = await TransactionService.getFalsePositives(req);
     output.api(req, res, message);
@@ -12,7 +13,7 @@ export const getFalsePositives: IRequestHandler<{}, TransactionService.IGetFalse
   }
 };
 
-export const updateFalsePositive: IRequestHandler<TransactionService.IFalsePositiveIdParam, {}, TransactionService.IUpdateFalsePositiveRequest> = async (req, res) => {
+export const updateFalsePositive: IRequestHandler<TransactionTypes.IFalsePositiveIdParam, {}, TransactionTypes.IUpdateFalsePositiveRequest> = async (req, res) => {
   try {
     const data = await TransactionService.updateFalsePositive(req);
     output.api(req, res, data);
@@ -21,7 +22,7 @@ export const updateFalsePositive: IRequestHandler<TransactionService.IFalsePosit
   }
 };
 
-export const deleteFalsePositive: IRequestHandler<TransactionService.IFalsePositiveIdParam, {}, {}> = async (req, res) => {
+export const deleteFalsePositive: IRequestHandler<TransactionTypes.IFalsePositiveIdParam, {}, {}> = async (req, res) => {
   try {
     const data = await TransactionService.deleteFalsePositive(req);
     output.api(req, res, data);
@@ -30,7 +31,7 @@ export const deleteFalsePositive: IRequestHandler<TransactionService.IFalsePosit
   }
 };
 
-export const createFalsePositive: IRequestHandler<{}, {}, TransactionService.ICreateFalsePositiveRequest> = async (req, res) => {
+export const createFalsePositive: IRequestHandler<{}, {}, TransactionTypes.ICreateFalsePositiveRequest> = async (req, res) => {
   try {
     const data = await TransactionService.createFalsePositive(req);
     output.api(req, res, data);
@@ -39,7 +40,7 @@ export const createFalsePositive: IRequestHandler<{}, {}, TransactionService.ICr
   }
 };
 
-export const getManualMatches: IRequestHandler<{}, TransactionService.IGetManualMatchesQuery, {}> = async (req, res) => {
+export const getManualMatches: IRequestHandler<{}, TransactionTypes.IGetManualMatchesQuery, {}> = async (req, res) => {
   try {
     const message = await TransactionService.getManualMatches(req);
     output.api(req, res, message);
@@ -48,7 +49,7 @@ export const getManualMatches: IRequestHandler<{}, TransactionService.IGetManual
   }
 };
 
-export const updateManualMatch: IRequestHandler<TransactionService.IManualMatchIdParam, {}, TransactionService.IUpdateManualMatchRequest> = async (req, res) => {
+export const updateManualMatch: IRequestHandler<TransactionTypes.IManualMatchIdParam, {}, TransactionTypes.IUpdateManualMatchRequest> = async (req, res) => {
   try {
     const data = await TransactionService.updateManualMatch(req);
     output.api(req, res, data);
@@ -57,7 +58,7 @@ export const updateManualMatch: IRequestHandler<TransactionService.IManualMatchI
   }
 };
 
-export const deleteManualMatch: IRequestHandler<TransactionService.IManualMatchIdParam, {}, {}> = async (req, res) => {
+export const deleteManualMatch: IRequestHandler<TransactionTypes.IManualMatchIdParam, {}, {}> = async (req, res) => {
   try {
     const data = await TransactionService.deleteManualMatch(req);
     output.api(req, res, data);
@@ -66,7 +67,7 @@ export const deleteManualMatch: IRequestHandler<TransactionService.IManualMatchI
   }
 };
 
-export const createManualMatch: IRequestHandler<{}, {}, TransactionService.ICreateManualMatchRequest> = async (req, res) => {
+export const createManualMatch: IRequestHandler<{}, {}, TransactionTypes.ICreateManualMatchRequest> = async (req, res) => {
   try {
     const data = await TransactionService.createManualMatch(req);
     output.api(req, res, data);
@@ -75,7 +76,7 @@ export const createManualMatch: IRequestHandler<{}, {}, TransactionService.ICrea
   }
 };
 
-export const getMatchedCompanies: IRequestHandler<{}, TransactionService.IGetMatchedCompaniesQuery, {}> = async (req, res) => {
+export const getMatchedCompanies: IRequestHandler<{}, TransactionTypes.IGetMatchedCompaniesQuery, {}> = async (req, res) => {
   try {
     const message = await TransactionService.getMatchedCompanies(req);
     output.api(req, res, message);

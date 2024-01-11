@@ -225,6 +225,7 @@ export const getShareableSector = ({
   carbonMultiplier,
   parentSectors,
   averageScores,
+  mccs,
 }: ISectorDocument) => {
   const _parentSectors: IRef<Schema.Types.ObjectId, ISector>[] = parentSectors.filter(p => isValidObjectId(p)).length
     ? parentSectors
@@ -237,6 +238,7 @@ export const getShareableSector = ({
     carbonMultiplier,
     parentSectors: _parentSectors,
     averageScores,
+    mccs,
   };
 };
 

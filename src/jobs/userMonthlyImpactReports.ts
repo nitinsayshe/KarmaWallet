@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { FilterQuery } from 'mongoose';
-import { sectorsToExcludeFromTransactions } from '../lib/constants/transaction';
+import { sectorsToExcludeFromTransactions, transactionStatusesToExcludeFromImpactReports, transactionTypesToExcludeFromImpactReports } from '../lib/constants/transaction';
 import { CompanyModel } from '../models/company';
 import { SectorModel } from '../models/sector';
 import { ITransactionDocument, TransactionModel } from '../models/transaction';
@@ -92,6 +92,8 @@ export const getGroupedTransactionsAndMonthlyBreakdown = async (
       { sector: { $nin: sectorsToExcludeFromTransactions } },
       { amount: { $gt: 0 } },
       { reversed: { $ne: true } },
+      { type: { $nin: transactionTypesToExcludeFromImpactReports } },
+      { status: { $nin: transactionStatusesToExcludeFromImpactReports } },
     ],
   };
 

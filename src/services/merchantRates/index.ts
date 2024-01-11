@@ -32,11 +32,12 @@ export const getShareableMerchantRate = ({
   _id,
   integrations,
   merchant,
-}: IMerchantRate): Partial<IShareableMerchantRateWithEnrichedData> => {
+}: IMerchantRate) => {
   let maxDescription = '';
   let maxAmount = '';
   let name = '';
   let maxRateType = MerchantRateType.None;
+
   if (integrations?.wildfire) {
     const { Amount, Kind } = integrations.wildfire;
     // the cut that we are passing on to end user is 75%

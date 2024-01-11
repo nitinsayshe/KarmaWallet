@@ -6,8 +6,10 @@ import {
   AddCardToUserResponse,
   CardInfo,
   CreateUserRequest,
+  EarnedRewardWebhookBody,
   KardClient,
-  KardIssuer,
+  KardEnvironmentEnum,
+  KardIssuerName,
   QueueTransactionsRequest,
   Transaction,
 } from '../../clients/kard';
@@ -34,7 +36,7 @@ export const getCardInfo = (card: ICardDocument): CardInfo => {
   if (!last4 || !bin) {
     throw new Error('Missing card info');
   }
-  const issuer = KardIssuer;
+  const issuer = KardIssuerName;
   const network = getNetworkFromBin(bin) || '';
   if (!issuer || !network) {
     throw new Error('Missing card issuer or network info');
@@ -231,7 +233,7 @@ const sendTransactionsInBatches = async (
 
       console.log(`Kard API Request ${i} of ${batches.length}.`);
       responses.push(await kc.queueTransactionsForProcessing(req));
-      sleep(QueueTransactionBackoffMs);
+      await sleep(QueueTransactionBackoffMs);
     } catch (err) {
       console.error('Error queuing transactions: ', err);
     }
@@ -273,5 +275,23 @@ export const queueSettledTransactions = async (
     return sendTransactionsInBatches(batches, c);
   } catch (err) {
     console.error('Error queuing transactions: ', err);
+  }
+};
+
+export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Issuer);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    console.error('Error verifying webhook signature: ', err);
+  }
+};
+
+export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Aggregator);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    console.error('Error verifying webhook signature: ', err);
   }
 };

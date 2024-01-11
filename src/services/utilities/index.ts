@@ -41,3 +41,20 @@ export const validateHtml = async (req: IRequest<{}, {}, IValidateHtmlBody>) => 
 
   return result;
 };
+
+export const camelToSnakeCase: any = (data: any) => {
+  if (typeof data === 'object' && data !== null) {
+    if (Array.isArray(data)) {
+      return data.map((item) => camelToSnakeCase(item));
+    }
+    const snakeCaseData: any = {};
+    for (const key in data) {
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        const newKey = key.replace(/[A-Z]/g, (match) => `_${match.toLowerCase()}`);
+        snakeCaseData[newKey] = camelToSnakeCase(data[key]);
+      }
+    }
+    return snakeCaseData;
+  }
+  return data;
+};

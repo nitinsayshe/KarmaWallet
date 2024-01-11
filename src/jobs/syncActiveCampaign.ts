@@ -9,22 +9,20 @@ import {
   FieldIds,
   getUserGroups,
   prepareBackfillSyncFields,
+  prepareCardSignupBackfillSync,
   prepareDailyUpdatedFields,
   prepareInitialSyncFields,
   prepareLinkedAccountFields,
   prepareMonthlyUpdatedFields,
   prepareWeeklyUpdatedFields,
   prepareYearlyUpdatedFields,
-  removeDuplicateContactAutomaitons,
+  removeDuplicateContactAutomations,
   UserLists,
   UserSubscriptions,
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
-import {
-  ProviderProductIdToSubscriptionCode,
-  SubscriptionCodeToProviderProductId,
-} from '../lib/constants/subscription';
+import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
 import { IArticleDocument } from '../models/article';
 import { IUser, IUserDocument, UserModel } from '../models/user';
@@ -34,7 +32,7 @@ import {
   getArticlesForCompany,
   URLs,
 } from '../services/article/utils/recommendations';
-import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../services/subscription';
+import { getUserGroupSubscriptionsToUpdate, updateNewKWCardUserSubscriptions, updateUserSubscriptions } from '../services/subscription';
 import { IterationRequest } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
@@ -50,6 +48,7 @@ interface IJobData {
   syncType: ActiveCampaignSyncTypes;
   userSubscriptions?: UserSubscriptions[];
   httpClient?: AxiosInstance;
+  cardSignupUserId?: string;
 }
 
 interface ISubscriptionLists {
@@ -179,6 +178,9 @@ const prepareSyncUsersRequest = async (
           case ActiveCampaignSyncTypes.LINKED_ACCOUNTS:
             fields = await prepareLinkedAccountFields(userDocument, customFields, fields);
             break;
+          case ActiveCampaignSyncTypes.CARD_SIGNUP_BACKFILL:
+            fields = await prepareCardSignupBackfillSync(userDocument, customFields, fields);
+            break;
           case ActiveCampaignSyncTypes.BACKFILL:
             fields = await prepareBackfillSyncFields(userDocument, customFields, fields);
             lists = await getBackfillSubscriptionLists(userDocument);
@@ -300,9 +302,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
 
     await sleep(msBetweenBatches);
 
-    batchSize = lastItemInCurrentBatch + maxBatchSize >= userLists.length
-      ? userLists.length - lastItemInCurrentBatch
-      : maxBatchSize;
+    batchSize = lastItemInCurrentBatch + maxBatchSize >= userLists.length ? userLists.length - lastItemInCurrentBatch : maxBatchSize;
     firstItemInCurrentBatch = lastItemInCurrentBatch + 1;
     lastItemInCurrentBatch += batchSize;
   }
@@ -342,9 +342,7 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
   });
 
   // set the custom fields and update in active campaign
-  const missedDollarsFieldId = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastMonth,
-  );
+  const missedDollarsFieldId = customFields.find((field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastMonth);
   const missedCashbackTransactionCountFieldId = customFields.find(
     (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastMonth,
   );
@@ -407,9 +405,7 @@ const prepareWeeklyCashbackSimulationImportRequest = async (
   });
 
   // set the custom fields and update in active campaign
-  const missedDollarsFieldId = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastWeek,
-  );
+  const missedDollarsFieldId = customFields.find((field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastWeek);
   const missedCashbackTransactionCountFieldId = customFields.find(
     (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastWeek,
   );
@@ -453,11 +449,7 @@ const syncEstimatedCashbackFieldsWeekly = async (httpClient?: AxiosInstance) => 
     },
   };
 
-  await iterateOverUsersAndExecImportReqWithDelay(
-    req,
-    prepareWeeklyCashbackSimulationImportRequest,
-    msDelayBetweenBatches,
-  );
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareWeeklyCashbackSimulationImportRequest, msDelayBetweenBatches);
 };
 
 const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) => {
@@ -475,11 +467,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
     },
   };
 
-  await iterateOverUsersAndExecImportReqWithDelay(
-    req,
-    prepareMonthlyCashbackSimulationImportRequest,
-    msDelayBetweenBatches,
-  );
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareMonthlyCashbackSimulationImportRequest, msDelayBetweenBatches);
 };
 
 const prepareSpendingAnalysisImportRequest = async (
@@ -493,9 +481,7 @@ const prepareSpendingAnalysisImportRequest = async (
     positivePurchaseDollarsLastThirtyDays: number;
     numNegativePurchasesLastThirtyDays: number;
     negativePurchaseDollarsLastThirtyDays: number;
-  }[] = await Promise.all(
-    userBatch?.docs?.map(async (user) => getTransactionBreakdownByCompanyRating(user as unknown as IUserDocument)),
-  );
+  }[] = await Promise.all(userBatch?.docs?.map(async (user) => getTransactionBreakdownByCompanyRating(user as unknown as IUserDocument)));
   const emailSchema = z.string().email();
   spendingAnalysisMetrics = spendingAnalysisMetrics?.filter((metric) => {
     const validationResult = emailSchema.safeParse(metric.email);
@@ -573,9 +559,7 @@ const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
     email: string;
     unlinkedCardsPastThirtyDays: number;
     removedCardsPastThirtyDays: number;
-  }[] = await Promise.all(
-    userBatch?.docs?.map(async (user) => countUnlinkedAndRemovedAccounts(user as unknown as IUserDocument)),
-  );
+  }[] = await Promise.all(userBatch?.docs?.map(async (user) => countUnlinkedAndRemovedAccounts(user as unknown as IUserDocument)));
   const emailSchema = z.string().email();
   UnlinkedAndRemovedAccountMetrics = UnlinkedAndRemovedAccountMetrics?.filter((metric) => {
     const validationResult = emailSchema.safeParse(metric.email);
@@ -586,9 +570,7 @@ const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
   const unlinkedCardsPastThirtyDays = customFields.find(
     (field) => field.name === ActiveCampaignCustomFields.unlinkedAccountsPastThirtyDays,
   );
-  const removedCardsLastThirtyDays = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.removedAccountsPastThirtyDays,
-  );
+  const removedCardsLastThirtyDays = customFields.find((field) => field.name === ActiveCampaignCustomFields.removedAccountsPastThirtyDays);
 
   const contacts = UnlinkedAndRemovedAccountMetrics.map((metric) => {
     const contact: IContactsData = {
@@ -639,9 +621,7 @@ const prepareArticleRecommendationSyncRequest = async (
   });
 
   // set the custom fields and update in active campaign
-  const recommendedArticles = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.recommendedArticles,
-  );
+  const recommendedArticles = customFields.find((field) => field.name === ActiveCampaignCustomFields.recommendedArticles);
 
   if (!recommendedArticles) {
     return { contacts: [] };
@@ -674,11 +654,7 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
     batchLimit: 100,
   };
 
-  await iterateOverUsersAndExecImportReqWithDelay(
-    req,
-    prepareRemovedOrUnlinkedAccountsSyncRequest,
-    msDelayBetweenBatches,
-  );
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareRemovedOrUnlinkedAccountsSyncRequest, msDelayBetweenBatches);
 };
 
 const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
@@ -735,7 +711,7 @@ export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClien
           if (!(validationResult as SafeParseError<string>)?.error) {
             return null;
           }
-          await removeDuplicateContactAutomaitons(email);
+          await removeDuplicateContactAutomations(email);
         }),
       );
       console.log(`Processed ${userBatch.docs.length} contacts`);
@@ -754,12 +730,28 @@ export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClien
   }
 };
 
-export const exec = async ({ syncType, userSubscriptions, httpClient }: IJobData) => {
+export const cardSignupSync = async (cardSignupUserId: string, httpClient?: AxiosInstance) => {
+  const user = await UserModel.findById(cardSignupUserId);
+  await updateNewKWCardUserSubscriptions(user, httpClient);
+};
+
+export const exec = async ({ syncType, userSubscriptions, cardSignupUserId, httpClient }: IJobData) => {
   try {
     console.log(`Starting ${syncType} sync`);
     switch (syncType) {
       case ActiveCampaignSyncTypes.GROUP:
+        if (!userSubscriptions) {
+          console.error('No user subscriptions provided');
+          return;
+        }
         await syncUserSubsrciptionsAndTags(userSubscriptions, httpClient);
+        break;
+      case ActiveCampaignSyncTypes.CARD_SIGNUP:
+        if (!cardSignupUserId) {
+          console.error('No card signup user id provided');
+          return;
+        }
+        await cardSignupSync(cardSignupUserId, httpClient);
         break;
       case ActiveCampaignSyncTypes.CASHBACK_SIMULATION:
         await syncEstimatedCashbackFieldsMonthly(httpClient);

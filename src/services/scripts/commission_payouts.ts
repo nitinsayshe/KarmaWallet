@@ -203,18 +203,14 @@ export const fixStatusesOnFailedAndPaidCommissions = async () => {
   let paidCount = 0;
   let failedCount = 0;
 
-  console.log('//////// these are all the payouts', payouts);
   for (const payout of payouts) {
     for (const commission of payout.commissions) {
       const commissionModel = await CommissionModel.findById(commission);
       if (!commissionModel) continue;
-      console.log('//////// this is the commission', commissionModel);
       if (payout.status === KarmaCommissionPayoutStatus.Failed) {
-        console.log('///// should be marked failed');
         failedCount++;
         commissionModel.status = KarmaCommissionStatus.Failed;
       } else if (payout.status === KarmaCommissionPayoutStatus.Paid) {
-        console.log('///// should be marked paid');
         paidCount++;
         commissionModel.status = KarmaCommissionStatus.PaidToUser;
       }
@@ -245,7 +241,7 @@ export const resendFailedPayoutsonCommissionOverview = async (commissionOverview
     let commissionPayoutAmount = 0;
     const commissionOverview = await CommissionPayoutOverviewModel.findOne({ _id: commissionOverviewId });
     const commissionPayoutIds = commissionOverview.commissionPayouts;
-    const paypalClient = await new PaypalClient();
+    const paypalClient = new PaypalClient();
     const paypalPrimaryBalance = await paypalClient.getPrimaryBalance();
     const paypalPrimaryBalanceAmount = paypalPrimaryBalance?.available_balance?.value || 0;
 

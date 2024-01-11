@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { IRequest } from '../../types/request';
 import * as EmailService from '../email';
+import * as EmailTypes from '../email/types';
 import { MainBullClient } from '../../clients/bull/main';
 import { EmailBullClient } from '../../clients/bull/email';
 import CustomError from '../../lib/customError';
@@ -45,13 +46,7 @@ export const sendEmailVerification = async (req: IRequest<{}, {}, ISendVerificat
   return 'Job added to queue';
 };
 
-export const sendWelcomeEmail = async (req: IRequest<{}, {}, ISendEmailParams>) => {
-  const { name, domain, recipientEmail, user } = req.body;
-  await EmailService.sendWelcomeEmail({ name, domain, recipientEmail, user: new Types.ObjectId(user) });
-  return 'Job added to queue';
-};
-
-export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailService.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
+export const populateEmailTemplate = async (req: IRequest<{}, {}, Partial<EmailTypes.IPopulateEmailTemplateRequest>>) => EmailService.populateEmailTemplate(req);
 
 export const createJob = (req: IRequest<{}, {}, ICreateJobParams>) => {
   const { name, data, queue } = req.body;

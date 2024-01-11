@@ -5,6 +5,7 @@ import path from 'path';
 import {
   CommissionType,
   KardClient,
+  KardEnvironmentEnum,
   Merchant,
   Offer,
   OfferType,
@@ -143,7 +144,7 @@ const getKardOfferData = async (): Promise<{
   domains: Domain[];
 } | null> => {
   try {
-    const kc = new KardClient();
+    const kc = new KardClient(KardEnvironmentEnum.Issuer);
     const merchants = await kc.getRewardsMerchants();
     if (!merchants) return null;
 
@@ -414,7 +415,7 @@ export const removeDuplicateKardMerchants = async () => {
 
 // Updates existing merchants in database to ensure there are currently active domains
 export const updateKardMerchants = async () => {
-  const kc = new KardClient();
+  const kc = new KardClient(KardEnvironmentEnum.Issuer);
   const merchants = await kc.getRewardsMerchants();
   if (!merchants) {
     console.error('Error fetching data from Kard API');
@@ -488,7 +489,7 @@ export const updateKardMerchants = async () => {
 };
 
 export const updateKardMerchantRates = async () => {
-  const kc = new KardClient();
+  const kc = new KardClient(KardEnvironmentEnum.Issuer);
   const newOffers = (await kc.getRewardsMerchants())
     ?.map((merchant) => merchant.offers)
     .flat();

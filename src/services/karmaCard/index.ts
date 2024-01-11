@@ -26,6 +26,9 @@ import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { MainBullClient } from '../../clients/bull/main';
 import { ActiveCampaignSyncTypes } from '../../lib/constants/activecampaign';
 import { JobNames } from '../../lib/constants/jobScheduler';
+import { updateActiveCampaignData } from '../../integrations/activecampaign';
+import { SubscriptionCode } from '../../types/subscription';
+import { joinGroup } from '../groups';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -222,8 +225,44 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
   } else {
+    const existingParams = existingUser.integrations?.referrals?.params;
+    const combinedParams = !!existingParams ? [...existingParams, ...urlParams] : urlParams;
     existingUser.integrations.marqeta = marqeta;
+    existingUser.integrations.referrals = {
+      params: combinedParams,
+    };
     await existingUser.save();
+
+    const subscribe = [SubscriptionCode.debitCardHolders];
+    const unsubscribe: any = [];
+
+    if (!!urlParams && urlParams.find((param) => param.key === 'beta')) {
+      subscribe.push(SubscriptionCode.betaTesters);
+    }
+
+    if (!!urlParams && urlParams.find((param) => param.key === 'groupCode')) {
+      const mockRequest = ({
+        requestor: existingUser,
+        authKey: '',
+        body: {
+          code: urlParams.find((param) => param.key === 'groupCode').value,
+          email: existingUser.emails.find((e) => !!e.primary).email,
+          userId: existingUser._id.toString(),
+          skipSubscribe: false,
+        },
+      } as any);
+
+      await joinGroup(mockRequest);
+    }
+
+    await updateActiveCampaignData({
+      userId: existingUser._id,
+      email: existingUser.emails.find((e) => !!e.primary).email,
+      subscriptions: {
+        subscribe,
+        unsubscribe,
+      },
+    });
   }
   // prepare the data object for karmaCardApplication
   const karmaCardApplication: IKarmaCardApplication = {

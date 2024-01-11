@@ -158,6 +158,23 @@ export const getActiveCampaignSubscribedSubscriptionCodes = async (email: string
   return listIds.map((id) => ProviderProductIdToSubscriptionCode[id]);
 };
 
+export const subscribeToList = async (userId: Types.ObjectId, code: SubscriptionCode): Promise<void> => {
+  try {
+    await SubscriptionModel.findOneAndUpdate(
+      { user: userId, code },
+      {
+        user: userId,
+        code,
+        status: SubscriptionStatus.Active,
+        lastModified: getUtcDate(),
+      },
+      { upsert: true },
+    );
+  } catch (err) {
+    console.error('Error subscribing to list', err);
+    throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
+  }
+};
 // orchestrates reaching out to active campaign and transferring subscriptions
 export const updateSubscriptionsOnEmailChange = async (
   userId: Types.ObjectId,

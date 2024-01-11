@@ -1,7 +1,16 @@
+/* eslint-disable camelcase */
 import { isValidObjectId, Types } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { ErrorTypes } from '../../lib/constants';
-import { NotificationChannelEnum, NotificationChannelEnumValue, NotificationTypeEnum, NotificationTypeEnumValue } from '../../lib/constants/notification';
+import {
+  NotificationChannelEnum,
+  NotificationChannelEnumValue,
+  NotificationTypeEnum,
+  NotificationTypeEnumValue,
+  PushNotificationTypes,
+} from '../../lib/constants/notification';
 import {
   UserNotificationResourceTypeEnum,
   UserNotificationResourceTypeEnumValue,
@@ -12,6 +21,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors, getZodEnumScemaFromTypescriptEnum } from '../../lib/validation';
+import { IChargebackDocument } from '../../models/chargeback';
 import { CommissionPayoutModel, ICommissionPayoutDocument } from '../../models/commissionPayout';
 import { CommissionModel, ICommissionDocument } from '../../models/commissions';
 import { ICompanyDocument } from '../../models/company';
@@ -23,10 +33,18 @@ import {
   IPayoutNotificationData,
   IShareableUserNotification,
   IUserNotificationDocument,
+  IPushNotificationData,
   UserNotificationModel,
+  ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
+  IKarmaCardWelcomeData,
+  IBankLinkedConfirmationEmailData,
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
-import { executeUserNotificaitonEffects } from '../notification';
+import { executeUserNotificationEffects } from '../notification';
+import { IACHTransferEmailData } from '../email/types';
+import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
+
+dayjs.extend(utc);
 
 export type CreateNotificationRequest<T = undefined> = {
   type: NotificationTypeEnumValue;
@@ -35,6 +53,28 @@ export type CreateNotificationRequest<T = undefined> = {
   user: Types.ObjectId;
   resource?: Types.ObjectId;
   data?: T;
+};
+
+export const getExistingTransactionFromChargeback = async (c: IChargebackDocument) => {
+  const existingTransaction = await TransactionModel.findOne({
+    $or: [
+      {
+        $and: [
+          { 'integrations.marqeta.token': { $exists: true } },
+          { 'integrations.marqeta.token': c.integrations.marqeta.transaction_token },
+        ],
+      },
+      {
+        $and: [
+          { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+          { 'integrations.marqeta.relatedTransactions.token': c.integrations.marqeta.transaction_token },
+        ],
+      },
+    ],
+  });
+
+  if (!!existingTransaction) return existingTransaction;
+  return null;
 };
 
 export const getShareableUserNotification = (notification: IUserNotificationDocument): IShareableUserNotification => ({
@@ -77,9 +117,9 @@ const getZodDataSchemaFromData = <DataType>(data: DataType): z.ZodSchema => {
   if (!data) {
     return z.object({}).optional();
   }
-  const payoutNotificaitonDataFields = ['name', 'payoutAmount'];
+  const payoutNotificationDataFields = ['name', 'payoutAmount'];
   const isPayoutNotificationData = Object.keys(data)?.reduce((acc, curr) => {
-    if (!(curr in payoutNotificaitonDataFields)) {
+    if (!(curr in payoutNotificationDataFields)) {
       return false;
     }
     return acc;
@@ -156,8 +196,10 @@ const getUserById = async (id: Types.ObjectId): Promise<IUserDocument | null> =>
   }
 };
 
-const saveUserNotification = async (notification: IUserNotificationDocument): Promise<IUserNotificationDocument> => {
+export const saveUserNotification = async (notification: IUserNotificationDocument): Promise<IUserNotificationDocument> => {
   try {
+    if (!notification?.save) throw new CustomError('Error saving notification', ErrorTypes.SERVER);
+
     const savedNotification = await notification.save();
     if (!savedNotification || !savedNotification._id) {
       throw new CustomError('Error saving notification', ErrorTypes.SERVER);
@@ -216,45 +258,128 @@ export const createUserNotification = async <DataType>(
     createdOn: getUtcDate(),
   });
 
-  await executeUserNotificaitonEffects(type, userDoc, data, channel);
+  await executeUserNotificationEffects(notification, userDoc);
   return saveUserNotification(notification);
 };
 
-export const createEarnedCashbackUserNotificationFromCommission = async (
+const getNotificationTypeFromPushNotificationType = (pushNotificationType: PushNotificationTypes): NotificationTypeEnumValue | '' => {
+  switch (pushNotificationType) {
+    case PushNotificationTypes.EARNED_CASHBACK:
+      return NotificationTypeEnum.EarnedCashback;
+    case PushNotificationTypes.EMPLOYER_GIFT:
+      return NotificationTypeEnum.EmployerGift;
+    case PushNotificationTypes.REWARD_DEPOSIT:
+      return NotificationTypeEnum.Payout;
+    case PushNotificationTypes.FUNDS_AVAILABLE:
+      return NotificationTypeEnum.FundsAvailable;
+    case PushNotificationTypes.TRANSACTION_COMPLETE:
+      return NotificationTypeEnum.TransactionComplete;
+    case PushNotificationTypes.CARD_TRANSITION:
+      return NotificationTypeEnum.CardTransition;
+    case PushNotificationTypes.BALANCE_THRESHOLD:
+      return NotificationTypeEnum.BalanceThreshold;
+    case PushNotificationTypes.RELOAD_SUCCESS:
+      return NotificationTypeEnum.ReloadSuccess;
+    case PushNotificationTypes.TRANSACTION_OF_DINING:
+      return NotificationTypeEnum.DiningTransaction;
+    case PushNotificationTypes.TRANSACTION_OF_GAS:
+      return NotificationTypeEnum.GasTransaction;
+    default:
+      return '';
+  }
+};
+
+export const createPushUserNotificationFromUserAndPushData = async (
+  user: IUserDocument,
+  data: IPushNotificationData,
+  disablePush = false,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    // make sure this data is a push notification type
+    const { pushNotificationType, body, title } = data;
+
+    if (!pushNotificationType || !body || !title) {
+      throw Error(`Error creating notification for user: ${user}. Missing data: ${data}`);
+    }
+
+    const mockRequest = {
+      body: {
+        type: getNotificationTypeFromPushNotificationType(pushNotificationType),
+        status: UserNotificationStatusEnum.Unread,
+        channel: disablePush ? undefined : NotificationChannelEnum.Push,
+        user: user?._id?.toString(),
+        data,
+      } as CreateNotificationRequest<IPushNotificationData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPushNotificationData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating notification: ${e}`);
+  }
+};
+
+export const createEmployerGiftEmailUserNotification = async (
+  user: IUserDocument,
+  transaction: ITransactionDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.EmployerGift,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: transaction.amount,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating notification: ${e}`);
+  }
+};
+
+export const getCommissionWithPopulatedUserAndCompany = async (commission: ICommissionDocument) => {
+  const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await CommissionModel.aggregate()
+    .match({
+      _id: commission._id,
+    })
+    .lookup({
+      from: 'companies',
+      localField: 'company',
+      foreignField: '_id',
+      as: 'company',
+    })
+    .unwind({ path: '$company' })
+    .lookup({
+      from: 'users',
+      localField: 'user',
+      foreignField: '_id',
+      as: 'user',
+    })
+    .unwind({ path: '$user' });
+
+  if (
+    !commissionWithPopulatedUserAndCompany
+      || !commissionWithPopulatedUserAndCompany.length
+      || !commissionWithPopulatedUserAndCompany[0]
+      || !(commissionWithPopulatedUserAndCompany[0]?.company as ICompanyDocument)?.companyName
+      || !(commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument)?.name
+  ) {
+    throw Error(`Error creating notification for commission: ${commission}`);
+  }
+
+  return commissionWithPopulatedUserAndCompany;
+};
+
+export const createEarnedCashbackEmailNotificationFromCommission = async (
   commission: ICommissionDocument,
   disableEmail = false,
 ): Promise<IUserNotificationDocument | void> => {
   // get user and company data
   try {
-    const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await CommissionModel.aggregate()
-      .match({
-        _id: commission._id,
-      })
-      .lookup({
-        from: 'companies',
-        localField: 'company',
-        foreignField: '_id',
-        as: 'company',
-      })
-      .unwind({ path: '$company' })
-      .lookup({
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      })
-      .unwind({ path: '$user' });
-
-    if (
-      !commissionWithPopulatedUserAndCompany
-      || !commissionWithPopulatedUserAndCompany.length
-      || !commissionWithPopulatedUserAndCompany[0]
-      || !(commissionWithPopulatedUserAndCompany[0]?.company as ICompanyDocument)?.companyName
-      || !(commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument)?.name
-    ) {
-      throw Error(`Error creating notificaiton for commission: ${commission}`);
-    }
-
+    const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await getCommissionWithPopulatedUserAndCompany(commission);
     const company = commissionWithPopulatedUserAndCompany[0].company as ICompanyDocument;
     const user = commissionWithPopulatedUserAndCompany[0].user as IUserDocument;
 
@@ -273,36 +398,78 @@ export const createEarnedCashbackUserNotificationFromCommission = async (
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IEarnedCashbackNotificationData>>;
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating earned cashback notification: ${e}`);
+    console.log(`Error creating earned cashback email notification: ${e}`);
   }
 };
 
-export const createPayoutUserNotificationFromCommissionPayout = async (
+export const createEarnedCashbackPushNotificationFromCommission = async (commission: ICommissionDocument) => {
+  try {
+    const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await getCommissionWithPopulatedUserAndCompany(commission);
+    const user = commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument;
+
+    if (!user?.integrations?.marqeta) {
+      throw new CustomError(`User with commission: ${commission} does not have a marqeta integration.`);
+    }
+
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.EARNED_CASHBACK,
+      body: `You earned $${roundToPercision(commission.amount, 2)} in Karma Cash`,
+      title: 'You earned Karma Cash!',
+    });
+  } catch (e) {
+    console.log(`Error creating earned cashback push notification: ${e}`);
+  }
+};
+
+export const createEarnedCashbackNotificationsFromCommission = async (
+  commission: ICommissionDocument,
+  channels: NotificationChannelEnumValue[],
+): Promise<(IUserNotificationDocument | void
+  )[]> => (
+  await Promise.all(
+    channels.map(async (channel) => {
+      switch (channel) {
+        case NotificationChannelEnum.Email:
+          return createEarnedCashbackEmailNotificationFromCommission(commission);
+        case NotificationChannelEnum.Push:
+          return createEarnedCashbackPushNotificationFromCommission(commission);
+        default:
+          return null;
+      }
+    }),
+  )
+).filter((notification) => !!notification);
+
+export const getCommissionPayoutWithPopulatedUser = async (commissionPayout: ICommissionPayoutDocument): Promise<ICommissionPayoutDocument[]> => {
+  const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await CommissionPayoutModel.aggregate()
+    .match({
+      _id: commissionPayout._id,
+    })
+    .lookup({
+      from: 'users',
+      localField: 'user',
+      foreignField: '_id',
+      as: 'user',
+    })
+    .unwind({ path: '$user' });
+
+  if (
+    !commissionPayoutWithPopulatedUser
+      || !commissionPayoutWithPopulatedUser.length
+      || !commissionPayoutWithPopulatedUser[0]
+      || !(commissionPayoutWithPopulatedUser[0]?.user as IUserDocument)?.name
+  ) {
+    throw Error(`Error creating notification for commission payout: ${commissionPayout}`);
+  }
+  return commissionPayoutWithPopulatedUser;
+};
+
+export const createPayoutEmailNotificationFromCommissionPayout = async (
   commissionPayout: ICommissionPayoutDocument,
 ): Promise<IUserNotificationDocument | void> => {
   // get user and company data
   try {
-    const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await CommissionPayoutModel.aggregate()
-      .match({
-        _id: commissionPayout._id,
-      })
-      .lookup({
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-      })
-      .unwind({ path: '$user' });
-
-    if (
-      !commissionPayoutWithPopulatedUser
-      || !commissionPayoutWithPopulatedUser.length
-      || !commissionPayoutWithPopulatedUser[0]
-      || !(commissionPayoutWithPopulatedUser[0]?.user as IUserDocument)?.name
-    ) {
-      throw Error(`Error creating notificaiton for commission payout: ${commissionPayout}`);
-    }
-
+    const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await getCommissionPayoutWithPopulatedUser(commissionPayout);
     const user = commissionPayoutWithPopulatedUser[0].user as IUserDocument;
 
     const mockRequest = {
@@ -320,6 +487,420 @@ export const createPayoutUserNotificationFromCommissionPayout = async (
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
     return createUserNotification(mockRequest);
   } catch (e) {
+    console.log(`Error creating payout email notification: ${e}`);
+  }
+};
+
+export const createPayoutPushNotificationFromCommissionPayout = async (commissionPayout: ICommissionPayoutDocument) => {
+  try {
+    const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await getCommissionPayoutWithPopulatedUser(commissionPayout);
+    const user = commissionPayoutWithPopulatedUser[0]?.user as IUserDocument;
+
+    if (!user?.integrations?.marqeta) {
+      throw new CustomError(`User with commission payout: ${commissionPayout} does not have a marqeta integration.`);
+    }
+
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
+      body: `$${roundToPercision(commissionPayout.amount, 2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      title: 'Karma Cash Was Deposited',
+    });
+  } catch (e) {
+    console.log(`Error creating payout push notification: ${e}`);
+  }
+};
+
+export const createPayoutNotificationsFromCommissionPayout = async (
+  commissionPayout: ICommissionPayoutDocument,
+  channels: NotificationChannelEnumValue[],
+): Promise<(IUserNotificationDocument | void
+  )[]> => (
+  await Promise.all(
+    channels.map(async (channel) => {
+      switch (channel) {
+        case NotificationChannelEnum.Email:
+          return createPayoutEmailNotificationFromCommissionPayout(commissionPayout);
+        case NotificationChannelEnum.Push:
+          return createPayoutPushNotificationFromCommissionPayout(commissionPayout);
+        default:
+          return null;
+      }
+    }),
+  )
+).filter((notification) => !!notification);
+
+export const createProvisionalCreditPermanentNotification = async (
+  chargebackTransition: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    // use aggreagte pipeline to include the whole user document
+    const transaction = (await TransactionModel.aggregate()
+      .match({
+        'integrations.marqeta.token': chargebackTransition.integrations.marqeta.transaction_token,
+      })
+      .lookup({
+        from: 'users',
+        localField: 'user',
+        foreignField: '_id',
+        as: 'user',
+      })
+      .unwind({
+        path: '$user',
+      })) as unknown as ITransactionDocument & { user: IUserDocument };
+
+    if (!transaction || !transaction?.user?._id) {
+      throw Error(`Error creating notification for chargeback transition: ${chargebackTransition}`);
+    }
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseWonProvisionalCreditAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: transaction?.user?.id?.toString(),
+        data: {
+          name: transaction?.user?.name,
+          submittedClaimDate: `${chargebackTransition.integrations.marqeta.created_time}`,
+          amount: `${transaction.amount}`,
+          chargebackToken: chargebackTransition.integrations.marqeta.token,
+          merchantName: transaction?.integrations?.marqeta?.card_acceptor?.name || transaction?.integrations?.marqeta?.merchant?.name,
+        },
+      } as CreateNotificationRequest<ICaseWonProvisionalCreditAlreadyIssuedNotificationData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
     console.log(`Error creating payout notification: ${e}`);
+  }
+};
+
+export const createKarmaCardWelcomeUserNotification = async (
+  user: IUserDocument,
+  newUser: boolean,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.KarmaCardWelcome,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          newUser,
+        },
+      } as CreateNotificationRequest<IKarmaCardWelcomeData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IKarmaCardWelcomeData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating karma card welcome notification: ${e}`);
+  }
+};
+
+export const createACHInitiationUserNotification = async (
+  transferData: IACHTransferEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user, amount, accountMask, accountType, date } = transferData;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ACHTransferInitiation,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH initiation notification: ${e}`);
+  }
+};
+
+export const createNoChargebackRightsUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const merchantName = transaction.integrations.marqeta.card_acceptor.name;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.NoChargebackRights,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          merchantName,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating no chargeback rights user notification: ${e}`);
+  }
+};
+
+export const createCaseLostProvisionalCreditNotAlreadyIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const companyName = transaction.integrations.marqeta.card_acceptor.name;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseLostProvisionalCreditNotAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          companyName,
+          date: dayjs(transaction.date).utc().format('MM/DD/YYYY'),
+          reason: chargebackDocument.integrations.marqeta.reason,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating case lost provisional credit not already issued notification: ${e}`);
+  }
+};
+
+export const createCaseLostProvisionalCreditIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const companyName = transaction.integrations.marqeta.card_acceptor.name;
+    const reversalDate = dayjs(transaction.date).utc().add(5, 'days').format('MM/DD/YYYY');
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          companyName,
+          date: dayjs(transaction.date).utc().format('MM/DD/YYYY'),
+          reversalDate,
+          reason: chargebackDocument.integrations.marqeta.reason,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating case lost provisional credit issued notification: ${e}`);
+  }
+};
+
+export const createProvisionalCreditIssuedUserNotification = async (
+  transaction: ITransactionDocument,
+): Promise<IUserNotificationDocument | void> => {
+  const user = await UserModel.findById(transaction.user);
+  if (!user) throw new CustomError(`User not found for transaction: ${transaction._id}`);
+  const todayDate = dayjs().utc().format('MM/DD/YYYY');
+
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ProvisionalCreditIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user._id.toString(),
+        data: {
+          name: user.name,
+          amount: `$${transaction.amount}`,
+          date: todayDate,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating Provisional Credit Issued notification: ${e}`);
+  }
+};
+
+export const createBankLinkedConfirmationNotification = async (
+  user: IUserDocument,
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.BankLinkedConfirmation,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          instituteName,
+          lastDigitsOfBankAccountNumber,
+        },
+      } as CreateNotificationRequest<IBankLinkedConfirmationEmailData>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IBankLinkedConfirmationEmailData>>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating bank linked confirmation notification: ${e}`);
+  }
+};
+
+export const createCaseWonProvisionalCreditNotAlreadyIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const { name } = user;
+    const companyName = transaction.integrations.marqeta.card_acceptor.name;
+    const { date, amount } = transaction;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name,
+          amount,
+          companyName,
+          date,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating case won provisional credit not already issued notification: ${e}`);
+  }
+};
+
+export const createDisputeReceivedNoProvisionalCreditIssuedUserNotification = async (
+  chargebackDocument: IChargebackDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const transactionToken = chargebackDocument?.integrations?.marqeta.transaction_token;
+    if (!transactionToken) {
+      throw new CustomError(`Transaction token not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const transaction = await getExistingTransactionFromChargeback(chargebackDocument);
+    if (!transaction) {
+      throw new CustomError(`Transaction not found for chargeback: ${chargebackDocument._id}`);
+    }
+    const user = await UserModel.findById(transaction.user);
+    const { name } = user;
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name,
+        },
+      },
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating dispute received no provisional credit issued: ${err}`);
+  }
+};
+
+export const createCardShippedUserNotification = async (
+  webhookData: IMarqetaWebhookCardsEvent,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user_token } = webhookData;
+    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
+    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CardShipped,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating card shipped notification: ${e}`);
+  }
+};
+
+export const createCardDeliveredUserNotification = async (
+  webhookData: IMarqetaWebhookCardsEvent,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user_token } = webhookData;
+    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
+    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.CardDelivered,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as unknown as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating card delivered notification: ${e}`);
   }
 };

@@ -1,19 +1,19 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import { updateActiveCampaignListStatus } from '../../integrations/activecampaign';
+import { updateActiveCampaignListStatusForEmail } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
-import * as TokenService from '../token';
 import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constants';
 import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IUserDocument, UserModel } from '../../models/user';
-import { IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
+import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
-import { IUrlParam, IVerifyTokenBody } from '../user';
+import * as TokenService from '../token';
+import { IVerifyTokenBody } from '../user/types';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -30,6 +30,7 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
   shareASale?: boolean;
+  marqeta?: IMarqetaVisitorData
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -41,7 +42,7 @@ const getUserByEmail = async (email: string): Promise<IUserDocument> => {
   }
 };
 
-const getVisitorByEmail = async (email: string): Promise<IVisitorDocument> => {
+export const getVisitorByEmail = async (email: string): Promise<IVisitorDocument> => {
   try {
     return await VisitorModel.findOne({ email });
   } catch (err) {
@@ -70,7 +71,7 @@ const getSubscriptionsByQuery = async (query: FilterQuery<ISubscription>): Promi
 
 const enrollInMonthlyNewsletterCampaign = async (email: string, subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]) => {
   try {
-    await updateActiveCampaignListStatus(email, subscribe, unsubscribe);
+    await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe);
   } catch (err) {
     console.error(`Error updating active campaign list subscriptions for visitor with email ${email}:`, err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
@@ -92,8 +93,8 @@ export const sendAccountCreationEmail = async (visitor: IVisitorDocument, email:
   }
 };
 
-// Endpoint for user to request account creation
-const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+// Create a visitor with the provided email and params, first step before creating the user
+export const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
     const visitorInfo: any = {
       email: info.email,
@@ -101,8 +102,15 @@ const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
       visitorInfo.integrations = {};
-      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
-      if (!!info.params) visitorInfo.integrations.urlParams = info.params;
+      if (!!info.groupCode) {
+        visitorInfo.integrations.groupCode = info.groupCode;
+      }
+      if (!!info.params) {
+        visitorInfo.integrations.urlParams = info.params;
+        if (info.params.find(p => p.key === 'groupCode')) {
+          visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
+        }
+      }
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
     }
     const visitor = await VisitorModel.create(visitorInfo);
@@ -112,13 +120,19 @@ const createCreateAccountVisitor = async (info: ICreateAccountRequest): Promise<
   }
 };
 
-const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
-    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
+    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale || !!info.marqeta) {
       visitor.integrations = {};
       if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-      if (!!info.params) visitor.integrations.urlParams = info.params;
+      if (!!info.params) {
+        visitor.integrations.urlParams = info.params;
+        if (info.params.find(p => p.key === 'groupCode')) {
+          visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
+        }
+      }
       if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+      if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     }
     visitor.save();
     return visitor;
@@ -160,16 +174,18 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
   const query: FilterQuery<ISubscription> = { $or: [] };
   codes.forEach((code) => {
     query.$or.push(
-      { $and: [
-        { visitor: visitorId },
-        { code },
-      ] },
+      {
+        $and: [
+          { visitor: visitorId },
+          { code },
+        ],
+      },
     );
   });
   return query;
 };
 
-export const createAccountForm = async (_:IRequest, data: ICreateAccountRequest) => {
+export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest) => {
   const { groupCode, shareASale, params } = data;
   let { email } = data;
 
@@ -313,13 +329,17 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
     }
 
     const previousSubscription = await getSubscriptionByQuery(
-      { $and: [
-        { $or: [
-          { visitor: visitor?._id },
-          { user: user?._id },
-        ] },
-        { code },
-      ] },
+      {
+        $and: [
+          {
+            $or: [
+              { visitor: visitor?._id },
+              { user: user?._id },
+            ],
+          },
+          { code },
+        ],
+      },
     );
     if (!!previousSubscription) {
       throw new CustomError(shareableInterestFormSubmitError, ErrorTypes.GEN);

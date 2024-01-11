@@ -1,30 +1,40 @@
 import { InterestCategory } from '../../integrations/hubspot';
-import { SubscriptionCode, ActiveCampaignListId, ProviderProductName, HubspotFormId } from '../../types/subscription';
-
-export const SubscriptionCodeToProviderProductName = {
-  [SubscriptionCode.accountUpdates]: ProviderProductName.AccountUpdates,
-  [SubscriptionCode.monthlyNewsletters]: ProviderProductName.MonthlyNewsletters,
-  [SubscriptionCode.generalUpdates]: ProviderProductName.GeneralUpdates,
-};
+import { SubscriptionCode, ActiveCampaignListId, HubspotFormId } from '../../types/subscription';
 
 export const SubscriptionCodeToProviderProductId = {
   [SubscriptionCode.accountUpdates]: ActiveCampaignListId.AccountUpdates,
-  [SubscriptionCode.monthlyNewsletters]: ActiveCampaignListId.MonthyNewsletters,
+  [SubscriptionCode.betaTesterInvite]: ActiveCampaignListId.BetaTesterInvite,
+  [SubscriptionCode.betaTesters]: ActiveCampaignListId.BetaTesters,
+  [SubscriptionCode.brandContacts]: ActiveCampaignListId.BrandContacts,
+  [SubscriptionCode.debitCardHolders]: ActiveCampaignListId.DebitCardHolders,
+  [SubscriptionCode.debitCardWaitlist]: ActiveCampaignListId.DebitCardWaitlist,
+  [SubscriptionCode.employerProgramBeta]: ActiveCampaignListId.EmployerProgramBeta,
   [SubscriptionCode.generalUpdates]: ActiveCampaignListId.GeneralUpdates,
-  [SubscriptionCode.groupMembers]: ActiveCampaignListId.GroupMembers,
   [SubscriptionCode.groupAdmins]: ActiveCampaignListId.GroupAdmins,
   [SubscriptionCode.groupInterestsEmployerBenefit]: HubspotFormId.groupsInterest,
   [SubscriptionCode.groupInterestsNonProfit]: HubspotFormId.groupsInterest,
-  [SubscriptionCode.groupInterestsSocialMediaCommunity]: HubspotFormId.groupsInterest,
   [SubscriptionCode.groupInterestsOther]: HubspotFormId.groupsInterest,
+  [SubscriptionCode.groupInterestsSocialMediaCommunity]: HubspotFormId.groupsInterest,
+  [SubscriptionCode.groupMembers]: ActiveCampaignListId.GroupMembers,
+  [SubscriptionCode.internalTestGroup]: ActiveCampaignListId.InternalTestGroup,
+  [SubscriptionCode.monthlyNewsletters]: ActiveCampaignListId.MonthyNewsletters,
+  [SubscriptionCode.q2Payout]: ActiveCampaignListId.Q2Payout,
 };
 
 export const ProviderProductIdToSubscriptionCode = {
   [ActiveCampaignListId.AccountUpdates]: SubscriptionCode.accountUpdates,
-  [ActiveCampaignListId.MonthyNewsletters]: SubscriptionCode.monthlyNewsletters,
+  [ActiveCampaignListId.BetaTesterInvite]: SubscriptionCode.betaTesterInvite,
+  [ActiveCampaignListId.BetaTesters]: SubscriptionCode.betaTesters,
+  [ActiveCampaignListId.BrandContacts]: SubscriptionCode.brandContacts,
+  [ActiveCampaignListId.DebitCardHolders]: SubscriptionCode.debitCardHolders,
+  [ActiveCampaignListId.DebitCardWaitlist]: SubscriptionCode.debitCardWaitlist,
+  [ActiveCampaignListId.EmployerProgramBeta]: SubscriptionCode.employerProgramBeta,
   [ActiveCampaignListId.GeneralUpdates]: SubscriptionCode.generalUpdates,
-  [ActiveCampaignListId.GroupMembers]: SubscriptionCode.groupMembers,
   [ActiveCampaignListId.GroupAdmins]: SubscriptionCode.groupAdmins,
+  [ActiveCampaignListId.GroupMembers]: SubscriptionCode.groupMembers,
+  [ActiveCampaignListId.InternalTestGroup]: SubscriptionCode.internalTestGroup,
+  [ActiveCampaignListId.MonthyNewsletters]: SubscriptionCode.monthlyNewsletters,
+  [ActiveCampaignListId.Q2Payout]: SubscriptionCode.q2Payout,
 };
 
 export const InterestCategoryToSubscriptionCode = {

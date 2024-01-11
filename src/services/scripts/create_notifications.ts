@@ -1,43 +1,132 @@
-import { NotificationChannelEnum, NotificationEffectsEnum, NotificationTypeEnum, NotificationTypeEnumValue } from '../../lib/constants/notification';
+import { NotificationTypeEnum, NotificationChannelEnum, NotificationEffectsEnum } from '../../lib/constants/notification';
+import { IUpdateableDocument, updateDocumentsWithUpsert } from '../../lib/model';
 import { INotificationDocument, NotificationModel } from '../../models/notification';
 
-const template: { [key in NotificationTypeEnumValue]: Partial<INotificationDocument> } = {
-  [NotificationTypeEnum.Group]: {
-    type: NotificationTypeEnum.Group,
-    channels: [],
-  },
-  [NotificationTypeEnum.Payout]: {
-    type: NotificationTypeEnum.Payout,
-    channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendPayoutIssuedEmail],
-  },
-  [NotificationTypeEnum.Marketing]: {
-    type: NotificationTypeEnum.Marketing,
-    channels: [],
-  },
-  [NotificationTypeEnum.EarnedCashback]: {
-    type: NotificationTypeEnum.EarnedCashback,
-    channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendEarnedCashbackEmail],
+const template: { [key: string]: Partial<INotificationDocument> } = {
+  // [NotificationTypeEnum.Group]: {
+  //   type: NotificationTypeEnum.Group,
+  //   channels: [],
+  // },
+  // [NotificationTypeEnum.Payout]: {
+  //   type: NotificationTypeEnum.Payout,
+  //   channels: [NotificationChannelEnum.Email, NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPayoutIssuedEmail, NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.Marketing]: {
+  //   type: NotificationTypeEnum.Marketing,
+  //   channels: [],
+  // },
+  // [NotificationTypeEnum.EarnedCashback]: {
+  //   type: NotificationTypeEnum.EarnedCashback,
+  //   channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendEarnedCashbackEmail],
+  // },
+  // [NotificationTypeEnum.CardTransition]: {
+  //   type: NotificationTypeEnum.CardTransition,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.BalanceThreshold]: {
+  //   type: NotificationTypeEnum.BalanceThreshold,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.FundsAvailable]: {
+  //   type: NotificationTypeEnum.FundsAvailable,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.ReloadSuccess]: {
+  //   type: NotificationTypeEnum.ReloadSuccess,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.TransactionComplete]: {
+  //   type: NotificationTypeEnum.TransactionComplete,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.DiningTransaction]: {
+  //   type: NotificationTypeEnum.DiningTransaction,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.GasTransaction]: {
+  //   type: NotificationTypeEnum.GasTransaction,
+  //   channels: [NotificationChannelEnum.Push],
+  //   effects: [NotificationEffectsEnum.SendPushNotification],
+  // },
+  // [NotificationTypeEnum.CaseWonProvisionalCreditAlreadyIssued]: {
+  //   type: NotificationTypeEnum.CaseWonProvisionalCreditAlreadyIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail],
+  // },
+  // [NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued]: {
+  //   type: NotificationTypeEnum.CaseLostProvisionalCreditAlreadyIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail],
+  // },
+  // [NotificationTypeEnum.ProvisionalCreditIssued]: {
+  //   type: NotificationTypeEnum.ProvisionalCreditIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendProvisionalCreditIssuedEmail],
+  // },
+  // [NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued]: {
+  //   type: NotificationTypeEnum.CaseWonProvisionalCreditNotAlreadyIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail],
+  // },
+  // [NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued]: {
+  //   type: NotificationTypeEnum.DisputeReceivedNoProvisionalCreditIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendDisputeReceivedNoProvisionalCreditIssuedEmail],
+  // },
+  // [NotificationTypeEnum.CardShipped]: {
+  //   type: NotificationTypeEnum.CardShipped,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCardShippedEmail],
+  // },
+  // [NotificationTypeEnum.CaseLostProvisionalCreditNotAlreadyIssued]: {
+  //   type: NotificationTypeEnum.CaseLostProvisionalCreditNotAlreadyIssued,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued],
+  // },
+  [NotificationTypeEnum.EmployerGift]: {
+    type: NotificationTypeEnum.EmployerGift,
+    channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
+    effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendEmployerGiftEmail],
   },
 };
+
 export const createNotifications = async () => {
-  const notifications = await NotificationModel.find({});
-  const notificationsMap = notifications.reduce(
-    (acc, notification) => {
-      acc[notification.type] = notification;
-      return acc;
-    },
-    {} as { [key in NotificationTypeEnumValue]: INotificationDocument },
-  );
-  const notificationsToCreate = Object.entries(template)
-    .map(([type, notification]) => {
-      // @ts-ignore
-      if (!!notificationsMap[type.toString()]) {
-        return null;
-      }
-      return notification;
-    })
-    .filter((notification) => !!notification);
-  await NotificationModel.insertMany(notificationsToCreate);
+  const notifications: INotificationDocument[] = Object.values(template).map((notification) => {
+    const newNotification = new NotificationModel();
+    console.log('notification', notification);
+    try {
+      newNotification.set(notification);
+    } catch (err) {
+      console.log('!!!!!Error Setting notification data', err);
+      console.log(JSON.stringify(notification));
+    }
+    return newNotification as INotificationDocument;
+  });
+
+  await updateDocumentsWithUpsert(notifications as unknown as IUpdateableDocument[]);
+};
+
+export const deleteAllNotifications = async () => {
+  try {
+    await NotificationModel.deleteMany({});
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+export const recreateNotifications = async () => {
+  console.log('///// deleting notifications...');
+  await deleteAllNotifications();
+  console.log('///// done deleting notifications');
+  console.log('///// creating notifications...');
+  await createNotifications();
+  console.log('///// done recreating notifications');
 };

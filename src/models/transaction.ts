@@ -1,7 +1,13 @@
 import { Document, model, ObjectId, Schema } from 'mongoose';
 import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { EarnedRewardTransaction, TransactionStatus } from '../clients/kard';
+import { TransactionStatus, EarnedRewardTransaction } from '../clients/kard';
+import {
+  TransactionModel as MarqetaTransactionModel,
+  TransactionModelStateEnum,
+  TransactionModelStateEnumValues,
+} from '../clients/marqeta/types';
+import { TransactionTypeEnumValues, TransactionTypeEnum, TransactionSubtypeEnumValues, TransactionSubtypeEnum } from '../lib/constants/transaction';
 import { getUtcDate } from '../lib/date';
 import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 import { IModel, IRef } from '../types/model';
@@ -73,7 +79,7 @@ export interface IPlaidTransactionIntegration {
 export interface IKardTransactionIntegration {
   id?: string;
   status?: TransactionStatus;
-  rewardData?: Partial<EarnedRewardTransaction>
+  rewardData?: Partial<EarnedRewardTransaction>;
 }
 
 export interface IRareTransactionIntegration {
@@ -92,10 +98,13 @@ export interface IRareTransactionIntegration {
   tonnes_amt?: number;
 }
 
+export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel> & {relatedTransactions?: Partial<MarqetaTransactionModel>[]};
+
 export interface ITransactionIntegrations {
   plaid?: IPlaidTransactionIntegration;
   rare?: IRareTransactionIntegration;
   kard?: IKardTransactionIntegration;
+  marqeta?: IMarqetaTransactionIntegration;
 }
 
 export interface ITransactionAssociation {
@@ -122,12 +131,18 @@ export interface IShareableTransaction {
   card: IRef<ObjectId, IShareableCard>;
   sector: IRef<ObjectId, ISector>;
   amount: number;
+  status: TransactionModelStateEnumValues;
+  type?: TransactionTypeEnumValues;
+  subType?: TransactionSubtypeEnumValues;
   reversed: boolean;
   date: Date;
+  settledDate?: Date;
   integrations?: ITransactionIntegrations;
   createdOn: Date;
   lastModified: Date;
   matchType: MatchTypes;
+  sortableDate?: Date;
+  group?: ObjectId;
 }
 
 export interface ITransaction extends IShareableTransaction {
@@ -142,6 +157,7 @@ export interface ITransaction extends IShareableTransaction {
   transactionAssociations: ITransactionAssociation[];
   user: IRef<ObjectId, IUserDocument>;
   userId: IRef<ObjectId, IUserDocument>;
+  group?: ObjectId;
 }
 
 export interface ITransactionAggregate extends ITransaction {
@@ -150,15 +166,6 @@ export interface ITransactionAggregate extends ITransaction {
 
 export interface ITransactionDocument extends ITransaction, Document {}
 export type ITransactionModel = IModel<ITransaction>;
-
-// TODO: remove the following after tongass is launched and
-// transactions have been cleaned:
-//   - userId
-//   - companyId
-//   - cardId
-//   - category
-//   - subCategory
-//   - carbonMultiplier
 
 export const transactionSchemaDefinition = {
   user: {
@@ -196,11 +203,20 @@ export const transactionSchemaDefinition = {
     type: Schema.Types.ObjectId,
     ref: 'plaid_category_mapping',
   },
+  group: {
+    type: Schema.Types.ObjectId,
+    ref: 'group',
+  },
   amount: { type: Number },
+  status: { type: String, enum: Object.values(TransactionModelStateEnum) },
   date: { type: Date },
+  type: { type: String, enum: Object.values(TransactionTypeEnum) },
+  subType: { type: String, enum: Object.values(TransactionSubtypeEnum) },
   // if true, means this transaction was cancelled, bounced
   // refunded, or otherwise not processed.
   reversed: { type: Boolean },
+  settledDate: { type: Date },
+  sortableDate: { type: Date },
   // use this to "link" 2 transactions together because they
   // are related in some way. Like a negative transaction
   // linked to the positive transaction because it was
@@ -286,6 +302,7 @@ export const transactionSchemaDefinition = {
         },
       },
     },
+    marqeta: Schema.Types.Mixed,
   },
   createdOn: { type: Date, default: () => getUtcDate() },
   /**

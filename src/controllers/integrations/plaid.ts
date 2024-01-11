@@ -4,7 +4,7 @@ import { asCustomError } from '../../lib/customError';
 import * as output from '../../services/output';
 import { IRequestHandler } from '../../types/request';
 
-export const createLinkToken: IRequestHandler<{}, {}, PlaidService.ICreateLinkTokenBody> = async (req, res) => {
+export const createLinkToken: IRequestHandler<{}, { app: boolean, device: string }, PlaidService.ICreateLinkTokenBody> = async (req, res) => {
   try {
     const linkToken = await PlaidService.createLinkToken(req);
     output.api(req, res, linkToken);

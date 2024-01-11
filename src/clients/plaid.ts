@@ -6,14 +6,16 @@ import jsonwebtoken from 'jsonwebtoken';
 import jwkToPem from 'jwk-to-pem';
 import pino from 'pino';
 import {
+  AccountSubtype,
   Configuration, CountryCode, ItemPublicTokenExchangeRequest, LinkTokenCreateRequest, PlaidApi,
-  PlaidEnvironments, Products, SandboxItemFireWebhookRequestWebhookCodeEnum,
+  PlaidEnvironments, ProcessorTokenCreateRequestProcessorEnum, Products, SandboxItemFireWebhookRequestWebhookCodeEnum,
   SandboxPublicTokenCreateRequest, Transaction, TransactionsGetRequest, WebhookVerificationKeyGetRequest,
 } from 'plaid';
 import { getCustomFieldIDsAndUpdateSetFields, setLinkedCardData } from '../integrations/activecampaign';
 import { IPlaidLinkOnSuccessMetadata } from '../integrations/plaid/types';
 import PlaidUser from '../integrations/plaid/user';
-import { CardStatus, ErrorTypes } from '../lib/constants';
+import { BankConnectionStatus, CardStatus, ErrorTypes } from '../lib/constants';
+import { plaidAndroidPackage, sourceDevice } from '../lib/constants/plaid';
 import CustomError, { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { CardModel } from '../models/card';
@@ -54,9 +56,12 @@ export interface IPlaidWebhookJWTPayload {
   'iat': number;
   'request_body_sha256': string;
 }
+
 export interface ICreateLinkTokenParams {
   userId: string;
   access_token?: string;
+  app?: boolean;
+  device?: string
 }
 
 export interface ISandboxItemFireWebhookRequest {
@@ -107,7 +112,35 @@ export class PlaidClient extends SdkClient {
     }
   };
 
-  createLinkToken = async ({ userId, access_token }: ICreateLinkTokenParams) => {
+  getProcessorTokens = async (accessToken: string) => {
+    try {
+      const { data } = await this._client.accountsGet({ access_token: accessToken });
+      // array of processor tokens only for checking & savings
+      const processorTokens = [];
+      const PlaidAccountAllowList = [AccountSubtype.Savings, AccountSubtype.Checking];
+      for (const account of data.accounts) {
+        if (!!PlaidAccountAllowList.includes(account.subtype as AccountSubtype)) {
+          const config = {
+            access_token: accessToken,
+            account_id: account.account_id,
+            processor: ProcessorTokenCreateRequestProcessorEnum.Marqeta,
+          };
+          // Get the processor token from plaid
+          const processorTokenResponse = await this._client.processorTokenCreate(config);
+          processorTokens.push({ accountId: account.account_id, processorToken: processorTokenResponse.data.processor_token });
+        }
+      }
+      if (!processorTokens.length) {
+        throw new CustomError('user must provide checking or savings account ', ErrorTypes.FORBIDDEN);
+      }
+      return processorTokens;
+    } catch (e) {
+      // Handle the error here or throw it to be handled elsewhere
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
+  };
+
+  createLinkToken = async ({ userId, access_token, app, device }: ICreateLinkTokenParams) => {
     if (!userId) throw new CustomError('A userId is required to create a link token', ErrorTypes.INVALID_ARG);
     const configs: LinkTokenCreateRequest = {
       user: {
@@ -116,7 +149,6 @@ export class PlaidClient extends SdkClient {
       client_name: 'Karma Wallet',
       country_codes: [CountryCode.Us],
       language: 'en',
-      redirect_uri: process.env.PLAID_REDIRECT_URI,
       webhook: process.env.PLAID_WEBHOOK_URI,
     };
     // accessToken provided if launching link in update mode
@@ -125,8 +157,20 @@ export class PlaidClient extends SdkClient {
     }
     // products should be excluded if launching link in update mode
     if (!access_token) {
-      configs.products = [Products.Transactions];
+      configs.products = [Products.Transactions, Products.Auth];
+      // if request is coming from web set products to Transactions only
+      if (!app) {
+        configs.products = [Products.Transactions];
+      }
     }
+
+    // if request is comming from mobile/app and source is Android set android_package else set rediredct_url
+    if (app && device === sourceDevice.android) {
+      configs.android_package_name = plaidAndroidPackage;
+    } else {
+      configs.redirect_uri = process.env.PLAID_REDIRECT_URI;
+    }
+
     try {
       const response = await this._client.linkTokenCreate(configs);
       return { userId, ...response.data };
@@ -143,7 +187,28 @@ export class PlaidClient extends SdkClient {
       const itemId = response.data.item_id;
       const plaidItem = { ...metadata, public_token, item_id: itemId, access_token: accessToken, userId };
       const plaidUserInstance = new PlaidUser(plaidItem);
+      let processorTokens;
+      let accounts;
+      let item;
+
       await plaidUserInstance.load();
+      // if accounts is empty generete a preocessor token
+      if (!plaidItem.accounts) {
+        [processorTokens, { accounts, item }] = await Promise.all([
+          await this.getProcessorTokens(accessToken), // get the processor token from plaid
+          await this.getIdentity(accessToken), // get user identity through plaid
+        ]);
+        const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
+        const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };
+        await plaidUserInstance.addBanks(data, processorTokens);
+
+        return {
+          message: 'Processor token successfully generated',
+          itemId,
+          accessToken,
+          processorTokens,
+        };
+      }
       await plaidUserInstance.addCards(plaidItem, true);
       return {
         message: 'Successfully linked plaid account',
@@ -168,6 +233,27 @@ export class PlaidClient extends SdkClient {
   getItem = async (accessToken: string) => {
     const response = await this._client.itemGet({ access_token: accessToken });
     return response.data.item;
+  };
+
+  getIdentity = async (accessToken: string) => {
+    try {
+      const response = await this._client.identityGet({ access_token: accessToken });
+      return response.data;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
+  };
+
+  getInstitutionsById = async (institutionId: string) => {
+    try {
+      const response = await this._client.institutionsGetById({
+        institution_id: institutionId,
+        country_codes: [CountryCode.Us],
+      });
+      return response.data.institution;
+    } catch (e) {
+      this.handlePlaidError(e as IPlaidErrorResponse);
+    }
   };
 
   removeItem = async ({ access_token }: { access_token: string }) => {

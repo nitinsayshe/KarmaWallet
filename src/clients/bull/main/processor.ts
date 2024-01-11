@@ -9,6 +9,7 @@ import * as CalculateAverageSectorScores from '../../../jobs/calculateAverageSec
 import * as CalculateCompanyScores from '../../../jobs/calculateCompanyScores';
 import * as CreateBatchCompanies from '../../../jobs/createBatchCompanies';
 import * as CreateBatchedDataSources from '../../../jobs/createBatchDataSources';
+import * as MarqetaTransactionSync from '../../../jobs/marqetaSync';
 import * as GenerateGroupStatements from '../../../jobs/generateGroupStatements';
 import * as GenerateUserImpactTotals from '../../../jobs/generateUserImpactTotals';
 import * as GenerateUserReport from '../../../jobs/generateUserReport';
@@ -28,6 +29,7 @@ import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayo
 import * as GenerateAdminSummaryReport from '../../../jobs/generateAdminSummaryReport';
 import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
 import * as SyncActiveCampaign from '../../../jobs/syncActiveCampaign';
+import * as GenerateKarmaCardStatements from '../../../jobs/generateKarmaCardStatements';
 import { INextJob } from '../base';
 import { globalPlaidTransactionMapping } from '../../../services/scripts/global_plaid_transaction_mapping';
 
@@ -159,6 +161,12 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateKardMerchantsAndData:
       result = await UpdateKardMerchantsAndData.exec();
+      break;
+    case JobNames.MarqetaDataSync:
+      result = await MarqetaTransactionSync.exec(data);
+      break;
+    case JobNames.GenerateKarmaCardStatements:
+      result = await GenerateKarmaCardStatements.exec();
       break;
     case JobNames.GenerateCommissionPayouts:
       result = await GenerateCommissionPayouts.exec();

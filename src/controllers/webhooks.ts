@@ -1,7 +1,6 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
 import { MainBullClient } from '../clients/bull/main';
-import { EarnedRewardWebhookBody, KardInvalidSignatureError, verifyWebhookSignature } from '../clients/kard';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
 import { processPaypalWebhook } from '../integrations/paypal';
@@ -15,15 +14,32 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
 import { UserModel } from '../models/user';
-import { _getCard } from '../services/card';
+import { _getCard, handleMarqetaCardWebhook } from '../services/card';
 import { mapWildfireCommissionToKarmaCommission, processKardWebhook } from '../services/commission/utils';
 import { getGroup, IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
 import { Logger } from '../services/logger';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { IRequestHandler } from '../types/request';
+import { CardModel } from '../models/card';
+import { ACHTransferModel } from '../models/achTransfer';
+import * as output from '../services/output';
+import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
+import { PushNotificationTypes } from '../lib/constants/notification';
+import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
+import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
+import { handleTransactionDisputeMacros, handleTransactionNotifications } from '../services/transaction';
+import {
+  IMarqetaWebhookBody,
+  IMarqetaWebhookHeader,
+  InsufficientFundsConstants,
+  MarqetaWebhookConstants,
+} from '../integrations/marqeta/types';
+import { handleMarqetaUserTransitionWebhook } from '../services/user';
+import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard';
+import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 
-const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY } = process.env;
+const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
 // these are query parameters that were sent
 // from the karma frontend to the rare transactions
@@ -221,11 +237,7 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
       } catch (e) {
         console.log('Error mapping wildfire commission to karma commission');
         console.log(e);
-        return error(
-          req,
-          res,
-          new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE),
-        );
+        return error(req, res, new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE));
       }
       api(req, res, { message: 'Wildfire comission processed successfully.' });
     } catch (e) {
@@ -272,10 +284,16 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('A token is required for authentication', ErrorTypes.FORBIDDEN));
     }
+    let kardEnv: KardEnvironmentEnumValues = '';
 
-    const errorVerifyingSignature = verifyWebhookSignature(req.body, headers['notify-signature']);
-    if (errorVerifyingSignature) {
-      if (errorVerifyingSignature === KardInvalidSignatureError) {
+    const errorVerifyingAggregatorEnvSignature = await verifyAggregatorEnvWebhookSignature(req.body, headers['notify-signature']);
+    const errorVerifyingIssuerEnvSignature = await verifyIssuerEnvWebhookSignature(req.body, headers['notify-signature']);
+
+    if (errorVerifyingIssuerEnvSignature && errorVerifyingAggregatorEnvSignature) {
+      if (
+        errorVerifyingIssuerEnvSignature === KardInvalidSignatureError
+        || errorVerifyingAggregatorEnvSignature === KardInvalidSignatureError
+      ) {
         console.log('\n KARD WEBHOOK: Invalid Token Provided \n');
         console.log(`Event ID: ${eventId}`);
         return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.AUTHENTICATION));
@@ -284,8 +302,9 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
     }
+    kardEnv = !!errorVerifyingAggregatorEnvSignature ? KardEnvironmentEnum.Issuer : KardEnvironmentEnum.Aggregator;
 
-    const processingError = await processKardWebhook(req.body);
+    const processingError = await processKardWebhook(kardEnv, req.body);
     if (!!processingError) {
       return error(req, res, processingError);
     }
@@ -293,5 +312,112 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
     api(req, res, { message: 'Kard webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
+  }
+};
+
+export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
+  try {
+    console.log('////////// RECEIVED MARQETA WEBHOOK ////////// ');
+    const marqetaAuthBuffer = Buffer.from(`${MARQETA_WEBHOOK_ID}:${MARQETA_WEBHOOK_PASSWORD}`).toString('base64');
+    const { headers } = <{ headers: IMarqetaWebhookHeader }>req;
+
+    if (headers?.authorization !== `Basic ${marqetaAuthBuffer}`) {
+      return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+    }
+
+    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
+
+    // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
+    if (!!cards) {
+      console.log('////////// PROCESSING MARQETA CARD WEBHOOK ////////// ');
+      for (const card of cards) {
+        await handleMarqetaCardWebhook(card);
+      }
+    }
+
+    // Card action events include PIN set, PIN change, and PIN reveal actions
+    if (!!cardactions) {
+      console.log('////////// PROCESSING MARQETA CARD ACTION WEBHOOK ////////// ');
+      for (const cardaction of cardactions) {
+        if (cardaction.type === MarqetaWebhookConstants.PIN_SET) {
+          await CardModel.findOneAndUpdate(
+            { 'integrations.marqeta.card_token': cardaction?.card_token },
+            { 'integrations.marqeta.pin_is_set': true },
+            { new: true },
+          );
+        }
+      }
+    }
+
+    // User transitions events include activities such as a user being created, activated, suspended, or closed
+    if (!!usertransitions) {
+      console.log('////////// PROCESSING MARQETA USERTRANSITION WEBHOOK ////////// ');
+      for (const usertransition of usertransitions) {
+        await handleMarqetaUserTransitionWebhook(usertransition);
+      }
+    }
+
+    // ACH Origination transition events include activities such as bank transfer being transitioned to a pending, processing, submitted, completed, returned, or cancelled state
+    if (!!banktransfertransitions) {
+      console.log('////////// PROCESSING MARQETA BANKTRANSFERTRANSITION WEBHOOK ////////// ');
+      for (const banktransfertransition of banktransfertransitions) {
+        const userTransitions = await ACHTransferModel.findOneAndUpdate(
+          {
+            token: banktransfertransition.bank_transfer_token,
+          },
+          {
+            $set: { status: banktransfertransition.status },
+            $push: { transitions: banktransfertransition },
+          },
+        );
+        // Send push notification of funds available for use
+        if (banktransfertransition.status === MarqetaWebhookConstants.COMPLETED && userTransitions?.userId) {
+          const user = await UserModel.findById(userTransitions?.userId);
+          if (user) {
+            await createPushUserNotificationFromUserAndPushData(user, {
+              pushNotificationType: PushNotificationTypes.RELOAD_SUCCESS,
+              body: 'Your Karma Wallet Card has been reloaded. Click to check your updated account balance!',
+              title: 'Reload Success',
+            });
+
+            await createPushUserNotificationFromUserAndPushData(user, {
+              pushNotificationType: PushNotificationTypes.FUNDS_AVAILABLE,
+              body: 'Your funds are now available on your Karma Wallet Card!',
+              title: 'Deposit Alert',
+            });
+          }
+        }
+      }
+    }
+
+    if (!!transactions) {
+      console.log('////////// PROCESSING MARQETA TRANSACTION WEBHOOK ////////// ');
+      for (const transaction of transactions) {
+        // Handle any code that tees off of the transaction code here before mapping to a transaction
+        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
+        const { code } = transaction.response as any;
+        // Insufficent funds from code
+        if (InsufficientFundsConstants.CODES.includes(code)) {
+          await createPushUserNotificationFromUserAndPushData(user, {
+            pushNotificationType: PushNotificationTypes.BALANCE_THRESHOLD,
+            body: 'Your account has a low balance. Click to reload your Karma Wallet Card.',
+            title: 'Low Balance Alert',
+          });
+        }
+      }
+      const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
+      await handleTransactionDisputeMacros(savedTransactions);
+      await handleTransactionNotifications(savedTransactions);
+    }
+
+    if (!!chargebacktransitions) {
+      console.log('////////// PROCESSING MARQETA CHARGEBACKTRANSITION WEBHOOK ////////// ');
+      const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
+      await handleDisputeMacros(savedChargebacks);
+    }
+
+    output.api(req, res, { message: 'Marqeta webhook processed successfully.' });
+  } catch (err) {
+    error(req, res, asCustomError(err));
   }
 };

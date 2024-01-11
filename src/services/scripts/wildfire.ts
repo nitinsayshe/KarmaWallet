@@ -369,7 +369,7 @@ export const updateWildfireMerchantRates = async () => {
       // if the current rate is still active,
         if (!!newRatesForMerchant.find((r) => r.ID === currentRate.integrations.wildfire.ID)) continue;
         await currentRate.delete();
-        console.log('[+] deleted merchant rate for ', merchant.name);
+        console.log('[+] deleted merchant rate for ', merchant.name, merchant._id);
       }
     } catch (err: any) {
       console.log('Error updating merchant rates for merchant', merchantId, err);

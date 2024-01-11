@@ -1,5 +1,11 @@
 import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
-import { NotificationChannelEnum, NotificationTypeEnum, NotificationTypeEnumValue } from '../lib/constants/notification';
+import {
+  NotificationChannelEnum,
+  NotificationChannelEnumValue,
+  NotificationTypeEnum,
+  NotificationTypeEnumValue,
+  PushNotificationTypes,
+} from '../lib/constants/notification';
 import {
   UserNotificationResourceTypeEnum,
   UserNotificationStatusEnum,
@@ -9,13 +15,30 @@ import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IUserDocument } from './user';
 
-type UserNotificationData = {
+export type UserNotificationData = {
   body: string;
 };
+
+export interface IPushNotificationData extends UserNotificationData {
+  title: string;
+  pushNotificationType: PushNotificationTypes;
+}
+
+export interface ICardTransitionNotificationData extends UserNotificationData {
+  cardStatus: string;
+}
 
 export interface IEarnedCashbackNotificationData extends UserNotificationData {
   name: string;
   companyName: string;
+}
+
+export interface ICaseWonProvisionalCreditAlreadyIssuedNotificationData extends UserNotificationData {
+  name: string;
+  amount: string;
+  submittedClaimDate: string;// MM/DD/YYYY
+  merchantName: string;
+  chargebackToken: string;
 }
 
 export interface IPayoutNotificationData extends UserNotificationData {
@@ -23,7 +46,53 @@ export interface IPayoutNotificationData extends UserNotificationData {
   payoutAmount: string;
 }
 
-type NotificaitonData = IEarnedCashbackNotificationData | IPayoutNotificationData;
+export interface IKarmaCardWelcomeData extends UserNotificationData {
+  name: string;
+  newUser: boolean;
+}
+
+export interface ICaseLostProvisionalCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+  reversalDate: string;
+  companyName: string;
+  reason: string;
+}
+
+export interface ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData extends UserNotificationData {
+  name: string;
+  amount: string;
+  companyName: string;
+  date: string;
+}
+
+export interface ICardShippedNotificationData {
+  name: string;
+}
+
+export interface IEmployerGiftData {
+  name: string;
+  amount: string;
+}
+
+export interface IProvisialCreditIssuedData extends UserNotificationData {
+  name: string;
+  amount: string;
+  date: string;
+}
+
+export interface IBankLinkedConfirmationEmailData extends UserNotificationData {
+  name: string;
+  instituteName: string,
+  lastDigitsOfBankAccountNumber: string
+}
+
+export type NotificationData =
+  | IEarnedCashbackNotificationData
+  | IPayoutNotificationData
+  | IPushNotificationData
+  | IKarmaCardWelcomeData
 
 export interface IShareableUserNotification {
   createdOn: Date;
@@ -38,10 +107,11 @@ export interface IUserNotification extends IShareableUserNotification {
   lastModified: Date;
   status: UserNotificationStatusEnumValue;
   type: NotificationTypeEnumValue;
+  channel: NotificationChannelEnumValue;
   user: IRef<ObjectId, IUserDocument>;
   resource?: IRef<ObjectId, Document>;
   resourceType?: NotificationTypeEnumValue;
-  data?: NotificaitonData;
+  data?: NotificationData;
 }
 
 export type IUserNotificationModel = IModel<IUserNotification>;

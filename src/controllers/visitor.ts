@@ -3,7 +3,7 @@ import { ErrorTypes } from '../lib/constants';
 import CustomError, { asCustomError } from '../lib/customError';
 import { verifyRequiredFields } from '../lib/requestData';
 import * as output from '../services/output';
-import { IVerifyTokenBody } from '../services/user';
+import { IVerifyTokenBody } from '../services/user/types';
 import * as VisitorService from '../services/visitor';
 import { IRequestHandler } from '../types/request';
 

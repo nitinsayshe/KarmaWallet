@@ -5,7 +5,6 @@ import { Types } from 'mongoose';
 import dayjs from 'dayjs';
 import { MongoClient } from '../../../clients/mongo';
 import {
-  cleanUpDocuments,
   createSomeCompanies,
   createSomeMerchantRates,
   createSomeMerchants,
@@ -23,6 +22,7 @@ import {
 } from '../kardMerchantUpdate';
 import { MerchantSource, CardNetwork, CommissionType, OfferType } from '../../../clients/kard';
 import { IMerchantRateDocument, MerchantRateModel } from '../../../models/merchantRate';
+import { cleanUpDocuments } from '../../../lib/model';
 
 describe.skip('tests kardMerchantUpdate logic', () => {
   let testCompanyNameMatchWithNoMerchant: ICompanyDocument;

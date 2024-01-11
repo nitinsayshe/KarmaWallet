@@ -1,6 +1,8 @@
 export enum ActiveCampaignSyncTypes {
   ARTICLE_RECOMMENDATION = 'articleRecommendations',
   BACKFILL = 'backfill',
+  CARD_SIGNUP = 'cardSignup',
+  CARD_SIGNUP_BACKFILL = 'cardSignupBackfill',
   CASHBACK_SIMULATION = 'cashbackSimulation',
   CASHBACK_SIMULATION_WEEKLY = 'cashbackSimulationWeekly',
   REMOVE_DUPLICATE_CONTACT_AUTOMAITONS = 'removeDuplicateContactAutomations',
@@ -25,6 +27,7 @@ export enum ActiveCampaignCustomFields {
   cashbackDollarsEarnedMonthly = 'cashbackDollarsEarnedMonthly',
   cashbackDollarsEarnedYearly = 'cashbackDollarsEarnedYearly',
   dateJoined = 'dateJoined',
+  existingWebAppUser = 'existingWebAppUser',
   firstLinkedCardDate = 'firstLinkedCardDate',
   hasLinkedCard = 'hasLinkedCard',
   hasLinkedPaypal = 'hasLinkedPaypal',

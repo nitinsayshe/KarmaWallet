@@ -30,7 +30,7 @@ export const getWebAnalyticsLocations = async (_req: IRequest) => {
 
 export const getWebAnalyticsByPage = async (_req: IRequest<IWebAnalyticsRequestParams, {}, {}>) => {
   const { location } = _req.params;
-  const webAnalytics = await WebAnalyticsModel.find({ location });
+  const webAnalytics = await WebAnalyticsModel.find({ location }).sort({ subLocation: 1 });
   return webAnalytics;
 };
 

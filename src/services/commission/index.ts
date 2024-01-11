@@ -11,7 +11,7 @@ import {
 } from '../../models/commissions';
 import { IRequest } from '../../types/request';
 import { CommissionPayoutModel, ICommissionPayoutDocument, KarmaCommissionPayoutStatus } from '../../models/commissionPayout';
-import { currentAccrualsQuery, getNextPayoutDate, getUserCurrentAccrualsBalance, getUserLifetimeCashbackPayoutsTotal } from './utils';
+import { currentAccrualsQuery, getNextPayoutDate, getUserCurrentAccrualsBalance, getUserLifetimeCashbackPayoutsTotal, updateCommissionPayoutStatus } from './utils';
 import { CommissionPayoutDayForUser, ErrorTypes, UserRoles, ImpactKarmaCompanyData } from '../../lib/constants';
 import { IUserDocument, UserModel } from '../../models/user';
 import {
@@ -330,8 +330,10 @@ export const sendPayoutsToKarmaCard = async (payouts: ICommissionPayoutDocument[
     console.log(`Sending Commission Payout: ${i} of ${payouts.length}`);
     const marqetaResponse = await addFundsToGPAFromProgramFundingSource(marqetaFormattedPayout);
     if (!marqetaResponse) {
+      await updateCommissionPayoutStatus(payouts[i]._id.toString(), KarmaCommissionPayoutStatus.Failed);
       console.log(`failed to send payout: ${i} of ${payouts.length}`);
     } else {
+      await updateCommissionPayoutStatus(payouts[i]._id.toString(), KarmaCommissionPayoutStatus.Paid);
       await createPayoutNotificationsFromCommissionPayout(payouts[i], ['email', 'push']);
     }
     await sleep(1000);

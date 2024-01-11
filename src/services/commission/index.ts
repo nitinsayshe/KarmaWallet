@@ -178,8 +178,6 @@ export const generateCommissionPayoutForUsers = async (min: number) => {
     ],
   });
 
-  console.log('///// found this many users', users.length);
-
   for (const user of users) {
     const hasKarmaCard = !!user.integrations?.marqeta?.userToken;
     const hasPaypal = !!user.integrations?.paypal?.payerId;

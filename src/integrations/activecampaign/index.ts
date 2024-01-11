@@ -497,6 +497,8 @@ export const updateActiveCampaignGroupListsAndTags = async (
 }> => {
   try {
     const ac = new ActiveCampaignClient();
+    const userData = await UserModel.findById(user);
+
     ac.withHttpClient(client);
     if (!subscriptions) {
       return;
@@ -510,7 +512,7 @@ export const updateActiveCampaignGroupListsAndTags = async (
 
     const contacts = [
       {
-        email: user.emails?.find((e) => e.primary).email,
+        email: userData.emails?.find((e) => e.primary).email,
         subscribe,
         unsubscribe,
         tags: (await getActiveCampaignTags(!!subscriptions.userId ? subscriptions.userId : '')) || [],
@@ -670,6 +672,7 @@ export const updateActiveCampaignListStatusForEmail = async (
   email: string,
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
+  tags?: string[],
   client?: AxiosInstance,
 ) => {
   const ac = new ActiveCampaignClient();
@@ -683,9 +686,9 @@ export const updateActiveCampaignListStatusForEmail = async (
       email,
       subscribe: sub,
       unsubscribe: unsub,
+      tags,
     },
   ];
-
   await ac.importContacts({ contacts });
 };
 

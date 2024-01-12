@@ -60,7 +60,7 @@ export const getShareableIntegrationFromKardIntegration = (
     maxRate: {
       type: getMerchantRateTypeFromString(kardIntegration?.maxOffer?.commissionType),
       amount: kardIntegration?.maxOffer?.totalCommission
-        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
+        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage * 100) / 100
         : 0,
     },
   };

@@ -1,4 +1,5 @@
 import { UserCommissionPercentage } from '../../lib/constants';
+import { roundToPercision } from '../../lib/misc';
 import { IMerchantRate, IShareableMerchantRate } from '../../models/merchantRate';
 import { getMerchantRateDescription } from '../merchant/utils';
 
@@ -41,7 +42,7 @@ export const getShareableMerchantRate = ({
   if (integrations?.wildfire) {
     const { Amount, Kind } = integrations.wildfire;
     // the cut that we are passing on to end user is 75%
-    const maxAmountNumber = Math.round(Amount * UserCommissionPercentage * 100) / 100;
+    const maxAmountNumber = !!Amount ? roundToPercision((Amount * UserCommissionPercentage * 100) / 100, 2) : 0;
     const descriptions = getMerchantRateDescription(Kind.toLowerCase(), maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxDescription = descriptions.maxDescription;
@@ -49,8 +50,9 @@ export const getShareableMerchantRate = ({
     maxRateType = getMerchantRateTypeFromString(Kind);
   }
   if (integrations?.kard) {
+    const amount = integrations.kard?.totalCommission;
     // the cut that we are passing on to end user is 75%
-    const maxAmountNumber = Math.round((integrations.kard?.totalCommission || 0) * UserCommissionPercentage);
+    const maxAmountNumber = !!amount ? roundToPercision((amount * UserCommissionPercentage * 100) / 100, 2) : 0;
     const descriptions = getMerchantRateDescription(integrations.kard?.commissionType, maxAmountNumber);
     maxAmount = descriptions.maxAmount;
     maxDescription = descriptions.maxDescription;

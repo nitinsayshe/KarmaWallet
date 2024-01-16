@@ -393,8 +393,8 @@ export const handleMarqetaCardNotificationFromWebhook = async (
 
   if (Object.values(MarqetaCardState)?.includes(newCardStatus as MarqetaCardState)) {
     let cardType = '';
-    if (cardFromWebhook?.card_product_token.includes('phys')) cardType = 'physical ';
-    if (cardFromWebhook?.card_product_token.includes('virt')) cardType = 'digital ';
+    if (cardFromWebhook?.card_product_token.includes('phys')) cardType = 'physical';
+    if (cardFromWebhook?.card_product_token.includes('virt')) cardType = 'digital';
 
     // Notification for the first-time activation of a card, for example, when a card is activated using the widget.
     if (

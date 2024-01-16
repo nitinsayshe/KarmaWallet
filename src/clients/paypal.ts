@@ -19,7 +19,7 @@ export interface ISendPayoutBatchHeader {
 }
 // https://developer.paypal.com/docs/api/payments.payouts-batch/v1/#definition-payout_item
 export interface ISendPayoutBatchItem {
-  recipient_type: 'PAYPAL_ID';
+  recipient_type: 'PAYPAL_ID' | 'MARQETA_ID';
   amount: {
     value: string;
     currency: string;

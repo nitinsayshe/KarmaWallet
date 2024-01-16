@@ -46,14 +46,13 @@ export const exec = async ({
   if (!user && !visitor) throw new Error('Must provide either user or visitor');
   let _user;
   let userEmailObject;
-
-  if (!!user) {
+  if (!!user && type !== EmailTemplateTypes.Support) {
     _user = await UserModel.findOne({ _id: user });
     userEmailObject = _user.emails.find(u => u.email === recipientEmail);
     if (!userEmailObject) return;
     // no emails should be sent with these statuses
     if (userEmailObject.status === UserEmailStatus.Bounced || userEmailObject.status === UserEmailStatus.Complained) return;
-    if (type !== EmailTemplateTypes.Essential && type !== EmailTemplateTypes.CashbackNotificaiton) {
+    if (type !== EmailTemplateTypes.Essential && type !== EmailTemplateTypes.CashbackNotification) {
       // marketing check for subscribed updates
       if (type === EmailTemplateTypes.Marketing) return;
       // any email other than verification or essential, check verification status

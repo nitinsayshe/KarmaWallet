@@ -19,6 +19,11 @@ export interface IUpdateContactData {
   contact: Partial<ICreateContactData>;
 }
 
+export const UpdateContactListStatusEnum = {
+  subscribe: 1,
+  unsubscribe: 2,
+} as const;
+
 export interface IGetContactsData {
   ids?: string; // could be repeated for multiple ids (e.g. ids[]=1&ids[]=2&ids[]=3)
   email?: string;
@@ -95,6 +100,14 @@ export interface IContactsData {
 export interface IContactsImportData {
   contacts: Array<IContactsData>;
   callback?: ICallbackData; // lets you know when the import is complete
+}
+
+export interface ContactListUpdateRequest {
+  contactList: {
+    contact: number;
+    list: number;
+    status: number;
+  };
 }
 
 export interface IContact {
@@ -176,7 +189,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.post('/contacts', { contact });
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -189,7 +206,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.put(`/contacts/${id}`, { ...contact });
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -200,7 +221,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.delete(`/contacts/${id}`);
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -212,11 +237,10 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.post('/import/bulk_import', contactImportData);
       return data;
     } catch (err) {
-      console.log(err);
       if (axios.isAxiosError(err)) {
-        console.log(
-          `Bulk contact import request failed: ${JSON.stringify((err as AxiosError)?.response?.data?.failureReasons)}`,
-        );
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
       }
       throw asCustomError(err);
     }
@@ -228,7 +252,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.get('/import/bulk_import');
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -239,7 +267,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.get('/fields', { params: { limit: customFieldsLimit } });
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -250,7 +282,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.get('/import/info', { params: { batchId } });
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -261,7 +297,11 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.get(`/contacts/${id}`);
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -274,7 +314,11 @@ export class ActiveCampaignClient extends SdkClient {
       });
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -289,7 +333,11 @@ export class ActiveCampaignClient extends SdkClient {
       }));
       return fields;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }
@@ -299,7 +347,25 @@ export class ActiveCampaignClient extends SdkClient {
       const { data } = await this._client.delete(`/contactAutomations/${id}`);
       return data;
     } catch (err) {
-      console.log(err);
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
+      throw asCustomError(err);
+    }
+  }
+
+  public async updateContactListStatus(contactListUpdateRequest: ContactListUpdateRequest): Promise<AxiosResponse<undefined, undefined>> {
+    try {
+      const { data } = await this._client.post('/contactLists', contactListUpdateRequest);
+      return data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
       throw asCustomError(err);
     }
   }

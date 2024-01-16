@@ -17,9 +17,11 @@ import transaction from './transaction';
 import bannerRouter from './banner';
 import articleRouter from './article';
 import utilitiesRouter from './utilities';
-import userNotificationRouter from './user_notification';
+import faqRouter from './faq';
+import karmaCardRouter from './karmaCard';
 import emailTesting from './emailTesting';
 import webAnalyticsRouter from './webAnalytics';
+import notificationRouter from './user_notification';
 
 const adminRouter = Router();
 
@@ -42,7 +44,10 @@ adminRouter.use('/banner', bannerRouter);
 adminRouter.use('/article', articleRouter);
 adminRouter.use('/web-analytics', webAnalyticsRouter);
 adminRouter.use('/utilities', utilitiesRouter);
-adminRouter.use('/user-notification', userNotificationRouter);
+adminRouter.use('/notification', notificationRouter);
+adminRouter.use('/faq', faqRouter);
+adminRouter.use('/karma-card', karmaCardRouter);
+adminRouter.use('/user-notification', notificationRouter);
 adminRouter.use('/email-testing', emailTesting);
 
 export default (app: Express) => app.use('/admin', adminRouter);

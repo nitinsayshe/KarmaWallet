@@ -1,18 +1,27 @@
 /* eslint-disable no-restricted-syntax */
+import fs from 'fs';
 import Fuse from 'fuse.js';
 import { parse, transforms } from 'json2csv';
-import fs from 'fs';
-import path from 'path';
-import { Transaction } from 'plaid';
 import { Schema } from 'mongoose';
-import { CompanyModel, ICompany } from '../../models/company';
+import path from 'path';
 import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
-import { IV2TransactionMatchedCompanyName, V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
-import { ICompanyMatchingResult, IMatchedTransaction } from './types';
+import { CompanyModel, ICompany } from '../../models/company';
 import { PlaidCategoriesToSectorMappingModel } from '../../models/plaidCategoriesToKarmaSectorMapping';
-import { IRef } from '../../types/model';
 import { ISector } from '../../models/sector';
+import {
+  IV2TransactionMatchedCompanyName,
+  V2TransactionMatchedCompanyNameModel,
+} from '../../models/v2_transaction_matchedCompanyName';
+import { IRef } from '../../types/model';
+import { ICompanyMatchingResult, IMatchedTransaction } from './types';
+import { CombinedPartialTransaction } from '../../types/transaction';
 
+interface ICompanyWithCleanedName extends ICompany {
+  companyCleanedName: string;
+  _id: Schema.Types.ObjectId;
+}
+
+type FuseCleanedCompanyNameResult = Fuse.FuseResult<ICompanyWithCleanedName>[];
 const stringReplacements = [
   ' W/D',
   ' INC',
@@ -45,12 +54,8 @@ const regexReplacements = [/[0-9]+/gi, /\.$/, /-$/, /,$/];
 
 const THRESHOLD = 0.000000101;
 
-interface ICompanyWithCleanedName extends ICompany {
-  companyCleanedName: string;
-}
-
 interface IMatchTransactionsToCompaniesParams {
-  transactions: Transaction[];
+  transactions: CombinedPartialTransaction[];
   cleanedCompanies: ICompanyWithCleanedName[];
   writeToDisk?: boolean;
   saveMatches?: boolean;
@@ -63,7 +68,9 @@ export const getCleanCompanies = async () => {
     // TODO: fix these to adjust company names from QA
     // https://docs.google.com/spreadsheets/d/1llrGNNRHOUpkieyGW-HpV0mRSbouTBKQwsu-7mH_3uw/edit?usp=sharing
     let companyCleanedName = company.companyName;
-    for (const replacement of stringReplacements) companyCleanedName = companyCleanedName.replace(new RegExp(replacement, 'gi'), '');
+    for (const replacement of stringReplacements) {
+      companyCleanedName = companyCleanedName.replace(new RegExp(replacement, 'gi'), '');
+    }
     for (const replacement of regexReplacements) companyCleanedName = companyCleanedName.replace(replacement, '');
     const companyCleaned = {
       ...company,
@@ -163,8 +170,8 @@ export const getMatchResults = async ({
       keys: ['companyCleanedName'],
     };
     const fuse = new Fuse(cleanedCompanies, fuseOptions);
-    const nameResult = fuse.search(name);
-    let merchantNameResult: any[] = [];
+    const nameResult: FuseCleanedCompanyNameResult = fuse.search(name);
+    let merchantNameResult: FuseCleanedCompanyNameResult = [];
     if (merchantName) merchantNameResult = fuse.search(merchantName);
     // END SEARCH ALL COMPANIES FOR MATCHES
 
@@ -219,15 +226,16 @@ export const getMatchResults = async ({
     }
   }
   console.timeEnd(timeString);
+
   return results;
 };
 
 export const matchTransactionsToCompanies = (
-  transactions: Transaction[],
+  transactions: CombinedPartialTransaction[],
   results: ICompanyMatchingResult[] | IV2TransactionMatchedCompanyName[],
 ) => {
   const matchedTransactions: IMatchedTransaction[] = [];
-  const nonMatchedTransactions: Transaction[] = [];
+  const nonMatchedTransactions: CombinedPartialTransaction[] = [];
   transactions.forEach((transaction) => {
     const alreadyMatchedCompany = results.find((amc) => amc.originalValue === transaction[amc.matchType]);
     if (alreadyMatchedCompany) {

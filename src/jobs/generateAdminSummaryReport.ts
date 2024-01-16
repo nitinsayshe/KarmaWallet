@@ -13,6 +13,7 @@ import { IAdminSummary, ReportModel } from '../models/report';
 import { TransactionModel } from '../models/transaction';
 import { UserModel } from '../models/user';
 import { UserLogModel } from '../models/userLog';
+import { getPendingPayoutDisbursementBreakdown, getPendingPayoutsWithUsersOnCommissions } from '../services/commissionPayout';
 
 dayjs.extend(utc);
 
@@ -189,6 +190,10 @@ export const exec = async () => {
       return partialSum;
     }, 0);
 
+    // get all pending payouts and populate with commissions and users
+    const pendingPayoutsWithUsersOnCommissions = await getPendingPayoutsWithUsersOnCommissions();
+    const pendingPayoutBreakdown = getPendingPayoutDisbursementBreakdown(pendingPayoutsWithUsersOnCommissions);
+
     const loggedInLastSevenDays = await UserLogModel.aggregate()
       .match({
         date: { $gte: dayjs().subtract(7, 'days').utc().toDate() },
@@ -304,6 +309,14 @@ export const exec = async () => {
           : 0,
         totalKard: totalKardCommissions || 0,
         totalKardDollars: totalKardCommissionDollars ? roundToPercision(totalKardCommissionDollars, 0) : 0,
+      },
+      payouts: {
+        pending: {
+          total: pendingPayoutBreakdown.total,
+          marqeta: pendingPayoutBreakdown.marqeta,
+          paypal: pendingPayoutBreakdown.paypal,
+          unknown: pendingPayoutBreakdown.unknown,
+        },
       },
     };
 

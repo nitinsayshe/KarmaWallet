@@ -9,6 +9,7 @@ import { UserGroupStatus } from '../types/groups';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser } from './user';
 import { getUtcDate } from '../lib/date';
+import { GroupTagsEnumValues, GroupTagsEnum } from '../lib/constants';
 
 export enum GroupPrivacyStatus {
   Protected = 'protected',
@@ -62,6 +63,7 @@ export interface IShareableGroup {
   owner: IRef<Schema.Types.ObjectId, (IShareableOwner | IShareableUser)>;
   status: GroupStatus;
   totalMembers: number;
+  tags: GroupTagsEnumValues[];
   createdOn: Date;
   lastModified: Date;
 }
@@ -124,6 +126,7 @@ const groupSchema = new Schema({
   },
   domains: [{ type: String }],
   invites: [{ type: String }],
+  tags: [{ type: String, enum: Object.values(GroupTagsEnum) }],
   name: { type: String },
   code: {
     type: String,

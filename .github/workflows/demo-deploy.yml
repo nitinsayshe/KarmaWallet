@@ -90,6 +90,12 @@ jobs:
     - run: echo 'KARD_ONLINE_REWARD_ID=${{secrets.STAGING_KARD_ONLINE_REWARD_ID}}' >> .env
     - run: echo 'KARD_ISSUER_NAME=${{secrets.STAGING_KARD_ISSUER_NAME}}' >> .env
     - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_TRANSACTION_ID_ROOT}}' >> .env
+    - run: echo 'KARD_ISSUER_CLIENT_HASH=${{secrets.STAGING_KARD_ISSUER_CLIENT_HASH}}' >> .env
+    - run: echo 'KARD_ISSUER_WEBHOOK_KEY=${{secrets.STAGING_KARD_ISSUER_WEBHOOK_KEY}}' >> .env
+    - run: echo 'KARD_ISSUER_INSTORE_REWARD_ID=${{secrets.STAGING_KARD_ISSUER_INSTORE_REWARD_ID}}' >> .env
+    - run: echo 'KARD_ISSUER_ONLINE_REWARD_ID=${{secrets.STAGING_KARD_ISSUER_ONLINE_REWARD_ID}}' >> .env
+    - run: echo 'KARD_ISSUER_ISSUER_NAME=${{secrets.STAGING_KARD_ISSUER_ISSUER_NAME}}' >> .env
+    - run: echo 'KARD_ISSUER_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_ISSUER_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'MARQETA_BASE_URL=${{secrets.PRODUCTION_MARQETA_BASE_URL}}' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.PRODUCTION_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.PRODUCTION_MARQETA_ACCESS_TOKEN}}' >> .env

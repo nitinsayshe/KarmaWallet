@@ -16,6 +16,7 @@ import commission from './commission';
 import comparisonGame from './comparisonGame';
 import { group, groups } from './group';
 import card from './card';
+import bankConnections from './bankConnections';
 import notFound from './404';
 import subscription from './subscription';
 import upload from './upload';
@@ -25,10 +26,16 @@ import values from './values';
 import visitor from './visitor';
 import promo from './promo';
 import banner from './banner';
+import karmaCard from './karmaCard';
+import supportTicket from './supportTicket';
+import faqs from './faq';
+import achTransfer from './achTransfer';
+import karmaCardStatement from './karmaCardStatement';
 
 const routers = (app: Express) => {
   admin(app);
   card(app);
+  bankConnections(app);
   article(app);
   company(app);
   comparisonGame(app);
@@ -53,6 +60,11 @@ const routers = (app: Express) => {
   webhook(app);
   promo(app);
   banner(app);
+  karmaCard(app);
+  supportTicket(app);
+  faqs(app);
+  achTransfer(app);
+  karmaCardStatement(app);
   // notFound is a catch all and should be last
   notFound(app);
   return app;

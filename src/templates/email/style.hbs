@@ -9,6 +9,16 @@
     font-family: Arial;
   }
 
+  p {
+    font-size: 16px;
+    font-style: normal;
+    color: {{colors.dark}};
+  }
+
+  span {
+    color: {{colors.dark}};
+  }
+
   h3 {
     font-size: 18px;
     font-weight: bold;
@@ -32,6 +42,15 @@
   }
 
   .bold {
+    font-weight: 700 !important;
+  }
+
+  .italic {
+    font-style: italic;
+  }
+
+  .uppercase {
+    text-transform: uppercase;
     font-weight: 700;
   }
 
@@ -78,8 +97,14 @@
     font-style: normal;
     font-weight: 500;
     line-height: 26px;
-    margin-bottom: 40px;
+    margin-bottom: 24px;
     color: {{colors.dark}};
+  }
+
+  .body-text a {
+    color: {{colors.blue}};
+    text-decoration-line: underline;
+    text-decoration-color: {{colors.blue}};
   }
 
   .support-text {
@@ -135,5 +160,12 @@
     color: {{colors.blue}};
     text-decoration-line: underline;
     text-decoration-color: {{colors.blue}};
+  }
+
+  .dispute-signature-container .body-text {
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 16px;
+    font-style: italic;
   }
 </style>

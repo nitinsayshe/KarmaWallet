@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { MongoClient } from '../../../clients/mongo';
-import { cleanUpDocuments } from '../../../lib/testingUtils';
+import { cleanUpDocuments } from '../../../lib/model';
 import { createCompaniesFromKardMerchants } from '../create_test_data';
 
 describe.skip('tests create companies from kard data logic', () => {

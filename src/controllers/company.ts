@@ -123,3 +123,17 @@ export const getPartner: IRequestHandler<{}, CompanyService.IGetPartnerQuery, {}
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getFeaturedCashbackCompanies: IRequestHandler = async (req, res) => {
+  try {
+    const query = aqp(req.query, { skipKey: 'page' });
+    const companies = await CompanyService.getFeaturedCashbackCompanies(req, query);
+    const sharableCompanies = {
+      ...companies,
+      docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),
+    };
+    output.api(req, res, !companies.docs.length ? companies : sharableCompanies);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

@@ -6,8 +6,10 @@ import {
   AddCardToUserResponse,
   CardInfo,
   CreateUserRequest,
+  EarnedRewardWebhookBody,
   KardClient,
-  KardIssuer,
+  KardEnvironmentEnum,
+  KardIssuerName,
   QueueTransactionsRequest,
   Transaction,
 } from '../../clients/kard';
@@ -34,7 +36,7 @@ export const getCardInfo = (card: ICardDocument): CardInfo => {
   if (!last4 || !bin) {
     throw new Error('Missing card info');
   }
-  const issuer = KardIssuer;
+  const issuer = KardIssuerName;
   const network = getNetworkFromBin(bin) || '';
   if (!issuer || !network) {
     throw new Error('Missing card issuer or network info');
@@ -214,29 +216,24 @@ const sendTransactionsInBatches = async (
   for (let i = 0; i < batches.length; i++) {
     try {
       const batch = batches[i];
-      const req: QueueTransactionsRequest = batch.map((t): Transaction => {
-        const description = `Transaction with ${(t.company as ICompanyDocument)?.companyName} on ${t.date.toISOString()} for ${
-          t.amount * CentsInUSD
-        } USD cents`;
-        return {
-          transactionId: t.integrations?.kard?.id,
-          referringPartnerUserId: card?.integrations?.kard?.userId,
-          amount: floorToPercision(t.amount * CentsInUSD, 0),
-          status: t?.integrations?.kard?.status,
-          currency: t?.integrations?.plaid?.iso_currency_code,
-          description,
-          settledDate: t?.date?.toISOString(),
-          merchantName: (t.company as ICompanyDocument)?.companyName,
-          mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
-          cardBIN: decrypt((t?.card as ICard)?.binToken),
-          cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
-          authorizationDate: t?.date?.toISOString(),
-        };
-      });
+      const req: QueueTransactionsRequest = batch.map((t): Transaction => ({
+        transactionId: t.integrations?.kard?.id,
+        referringPartnerUserId: card?.integrations?.kard?.userId,
+        amount: floorToPercision(t.amount * CentsInUSD, 0),
+        status: t?.integrations?.kard?.status,
+        currency: t?.integrations?.plaid?.iso_currency_code,
+        description: (t.company as ICompanyDocument)?.companyName,
+        settledDate: t?.date?.toISOString(),
+        merchantName: (t.company as ICompanyDocument)?.companyName,
+        mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
+        cardBIN: decrypt((t?.card as ICard)?.binToken),
+        cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
+        authorizationDate: t?.date?.toISOString(),
+      }));
 
       console.log(`Kard API Request ${i} of ${batches.length}.`);
       responses.push(await kc.queueTransactionsForProcessing(req));
-      sleep(QueueTransactionBackoffMs);
+      await sleep(QueueTransactionBackoffMs);
     } catch (err) {
       console.error('Error queuing transactions: ', err);
     }
@@ -278,5 +275,23 @@ export const queueSettledTransactions = async (
     return sendTransactionsInBatches(batches, c);
   } catch (err) {
     console.error('Error queuing transactions: ', err);
+  }
+};
+
+export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Issuer);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    console.error('Error verifying webhook signature: ', err);
+  }
+};
+
+export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+  try {
+    const client = new KardClient(KardEnvironmentEnum.Aggregator);
+    return client.verifyWebhookSignature(body, signature);
+  } catch (err) {
+    console.error('Error verifying webhook signature: ', err);
   }
 };

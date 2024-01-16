@@ -4,6 +4,7 @@ import { mapKardCommissionToKarmaCommisison } from '..';
 import {
   CardNetwork,
   EarnedRewardWebhookBody,
+  KardEnvironmentEnum,
   MerchantSource,
   RewardStatus,
   RewardType,
@@ -14,9 +15,9 @@ import { CardStatus, KardEnrollmentStatus } from '../../../../lib/constants';
 import { NotificationTypeEnum } from '../../../../lib/constants/notification';
 import { UserNotificationStatusEnum } from '../../../../lib/constants/user_notification';
 import { getUtcDate } from '../../../../lib/date';
+import { cleanUpDocuments } from '../../../../lib/model';
 import { getRandomInt } from '../../../../lib/number';
 import {
-  cleanUpDocuments,
   createSomeCards,
   createSomeCommissions,
   createSomeCompanies,
@@ -31,7 +32,7 @@ import { IMerchantDocument } from '../../../../models/merchant';
 import { ITransactionDocument } from '../../../../models/transaction';
 import { IUserDocument, UserEmailStatus } from '../../../../models/user';
 import { IUserNotificationDocument } from '../../../../models/user_notification';
-import { createEarnedCashbackUserNotificationFromCommission } from '../../../user_notification';
+import { createEarnedCashbackEmailNotificationFromCommission } from '../../../user_notification';
 
 describe('tests commission utils logic', () => {
   let testUserWithLinkedCard: IUserDocument;
@@ -178,8 +179,8 @@ describe('tests commission utils logic', () => {
     });
   });
 
-  it('createEarnedCashbackNotificaiton creates a valid EarnedCashbackNotification', async () => {
-    const earnedRewardNotification = await createEarnedCashbackUserNotificationFromCommission(testCommission, true);
+  it('createEarnedCashbackNotification creates a valid EarnedCashbackNotification', async () => {
+    const earnedRewardNotification = await createEarnedCashbackEmailNotificationFromCommission(testCommission, true);
     expect(earnedRewardNotification).toBeDefined();
     expect(earnedRewardNotification).not.toBeNull();
     const n = earnedRewardNotification as IUserNotificationDocument;
@@ -196,7 +197,7 @@ describe('tests commission utils logic', () => {
   });
 
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
-    const karmaCommission = (await mapKardCommissionToKarmaCommisison(testEarnedWebhookBody)) as ICommissionDocument;
+    const karmaCommission = (await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Aggregator, testEarnedWebhookBody)) as ICommissionDocument;
     expect(karmaCommission).toBeDefined();
     expect(karmaCommission).not.toBeNull();
     expect(karmaCommission).toHaveProperty('allocation');

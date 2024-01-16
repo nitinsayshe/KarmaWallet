@@ -9,8 +9,8 @@ import {
   createSomeUsers,
   CreateTestCardsRequest,
   createSomeCards,
-  cleanUpDocuments,
 } from '../../../../lib/testingUtils';
+import { cleanUpDocuments } from '../../../../lib/model';
 
 describe('active campaign sync jobs logic', () => {
   let testUser: IUserDocument;

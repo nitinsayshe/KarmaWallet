@@ -1,7 +1,9 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
+import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUserDocument } from './user';
+import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../integrations/marqeta/types';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -28,10 +30,31 @@ export interface IKardIntegration {
   enrollmentStatus: KardEnrollmentStatus;
 }
 
+export interface IMarqetaCardIntegration {
+  barcode?: string;
+  card_product_token: string;
+  // we save as card_token in our db
+  card_token: string,
+  // from marqeta it comes in as token
+  token?: string;
+  created_time: Date;
+  expiration_time: Date;
+  expr_month: number;
+  expr_year: number;
+  fulfillment_status: MarqetaCardFulfillmentStatus;
+  instrument_type?: string;
+  last_four: string;
+  pan: string;
+  pin_is_set: boolean;
+  state: MarqetaCardState;
+  user_token: string;
+}
+
 export interface ICardIntegrations {
   plaid?: IPlaidCardIntegration;
   rare?: IRareCardIntegration;
   kard?: IKardIntegration;
+  marqeta?: IMarqetaCardIntegration;
 }
 
 export interface IShareableCard {
@@ -50,16 +73,16 @@ export interface IShareableCard {
   lastTransactionSync: Date;
   institutionId?: string;
   isEnrolledInAutomaticRewards?: boolean;
+  integrations: ICardIntegrations;
 }
 
 export interface ICard extends IShareableCard {
   userId: IRef<ObjectId, IUserDocument>;
-  integrations: ICardIntegrations;
   lastFourDigitsToken?: string;
   binToken?: string;
 }
 
-export interface ICardDocument extends ICard, Document {}
+export interface ICardDocument extends ICard, Document { }
 export type ICardModel = IModel<ICard>;
 
 const cardSchema = new Schema({
@@ -110,10 +133,11 @@ const cardSchema = new Schema({
         },
       },
     },
+    marqeta: Schema.Types.Mixed,
   },
   initialTransactionsProcessing: { type: Boolean },
-  createdOn: { type: Date },
-  lastModified: { type: Date },
+  createdOn: { type: Date, default: () => getUtcDate().toDate() },
+  lastModified: { type: Date, default: () => getUtcDate().toDate() },
   lastTransactionSync: { type: Date },
   lastFourDigitsToken: { type: String },
   binToken: { type: String },

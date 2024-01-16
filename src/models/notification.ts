@@ -10,6 +10,11 @@ import {
 import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
 
+// Card Transition notification is added for testing purpose only
+export type CardTransitionNotificationData = {
+  cardStatus: string;
+};
+
 export interface IShareableNotification {
   _id: ObjectId;
   createdOn: Date;
@@ -32,12 +37,15 @@ export interface INotificationDocument extends INotification, Document {
 }
 
 const notification = new Schema({
-  type: { required: true, type: String, enum: Object.values(NotificationTypeEnum) },
-  channels: {
-    required: true,
-    type: [Object.values(NotificationChannelEnum)],
-  },
-  effects: { type: [Object.values(NotificationEffectsEnum)] },
+  type: { required: true, unique: true, type: String, enum: Object.values(NotificationTypeEnum) },
+  channels: [
+    {
+      required: true,
+      type: String,
+      enum: Object.values(NotificationChannelEnum),
+    },
+  ],
+  effects: [{ type: String, enum: Object.values(NotificationEffectsEnum) }],
   createdOn: { required: true, type: Date, default: () => getUtcDate().toDate() },
   lastModified: { required: true, type: Date, default: () => getUtcDate().toDate() },
 });

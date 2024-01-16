@@ -1,10 +1,4 @@
-import {
-  Schema,
-  model,
-  Document,
-  PaginateModel,
-  ObjectId,
-} from 'mongoose';
+import { Schema, model, Document, PaginateModel, ObjectId } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 
 export enum KarmaCommissionPayoutOverviewStatus {
@@ -22,6 +16,12 @@ export interface ICommissionsBreakdown {
   kard?: number;
 }
 
+export interface IPayoutDestination {
+  paypal?: number;
+  marqeta?: number;
+  unknown?: number;
+}
+
 export interface IShareableCommissionPayoutOverview {
   _id: ObjectId;
   createdOn: Date;
@@ -30,6 +30,7 @@ export interface IShareableCommissionPayoutOverview {
   status: KarmaCommissionPayoutOverviewStatus;
   commissionPayouts: ObjectId[];
   breakdown: ICommissionsBreakdown;
+  disbursementBreakdown: IPayoutDestination;
 }
 
 export interface ICommissionPayoutOverview extends IShareableCommissionPayoutOverview {
@@ -47,6 +48,13 @@ const commissionPayoutOverview = new Schema({
   // amountPaid: { type: Number },
   status: { type: String, enum: Object.values(KarmaCommissionPayoutOverviewStatus) },
   breakdown: { type: Object },
+  disbursementBreakdown: {
+    type: {
+      paypal: { type: Number },
+      marqeta: { type: Number },
+      unknown: { type: Number },
+    },
+  },
   commissionPayouts: { type: [Schema.Types.ObjectId], ref: 'commissionPayouts' },
   // vendorPayments: { type: [Schema.Types.ObjectId], ref: 'vendorPayments' },
 });

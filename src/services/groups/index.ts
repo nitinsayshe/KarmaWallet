@@ -8,8 +8,7 @@ import {
 import { nanoid } from 'nanoid';
 import { MainBullClient } from '../../clients/bull/main';
 import { updateActiveCampaignGroupListsAndTags } from '../../integrations/activecampaign';
-import {
-  emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
+import { emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
 import { ActiveCampaignSyncTypes } from '../../lib/constants/activecampaign';
 import { JobNames } from '../../lib/constants/jobScheduler';
@@ -27,13 +26,15 @@ import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { createCachedData, getCachedData } from '../cachedData';
 import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
-import { sendGroupVerificationEmail } from '../email';
+// eslint-disable-next-line import/no-cycle
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import { getEquivalencies, getOffsetTransactionsTotal, getRareOffsetAmount, IEquivalencyObject } from '../impact/utils/carbon';
 import { getStatements } from '../statements';
 import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
-import * as TokenService from '../token';
+// eslint-disable-next-line import/no-cycle
 import { getUser } from '../user';
+import * as TokenService from '../token';
+import { sendGroupVerificationEmail } from '../email';
 
 dayjs.extend(utc);
 
@@ -89,6 +90,7 @@ export interface IJoinGroupRequest {
   code: string;
   email: string;
   userId: string;
+  skipSubscribe?: boolean;
 }
 
 export interface IGetGroupOffsetRequestParams {
@@ -151,6 +153,11 @@ export const verifyDomains = (domains: string[], allowDomainRestriction: boolean
   const _domains = new Set(domains);
 
   return Array.from(_domains);
+};
+
+export const checkIfUserInGroup = async (userId: string, groupId: string) => {
+  const userGroup = await UserGroupModel.findOne({ user: userId, group: groupId });
+  return userGroup;
 };
 
 export const verifyGroupSettings = (settings: IGroupSettings, previousSettings?: IGroupSettings) => {
@@ -598,6 +605,7 @@ export const getShareableGroup = ({
   domains,
   logo,
   settings,
+  tags,
   members,
   owner,
   status,
@@ -617,6 +625,7 @@ export const getShareableGroup = ({
     domains,
     logo,
     settings,
+    tags,
     status,
     owner: _owner,
     totalMembers: members?.length || null,
@@ -810,7 +819,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
   try {
     if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
-    const membersPromise = getAllGroupMembers(req);
+    const membersPromise = getAllGroupMembers({ ...req, params: { groupId: req.params.groupId } });
     const [userGroup, members] = await Promise.all([userGroupPromise, membersPromise]);
 
     const memberDonations = {
@@ -831,6 +840,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
           // exclude matches from the member donation count
           matchType: { $exists: false },
         };
+
         const donationsTotalDollarsPromise = getOffsetTransactionsTotal(query);
         const donationsTotalTonnesPromise = getRareOffsetAmount(query);
 
@@ -889,7 +899,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
 
   try {
-    const { code, email, userId } = req.body;
+    const { code, email, userId, skipSubscribe } = req.body;
 
     if (!code) throw new CustomError('A group code is required.', ErrorTypes.INVALID_ARG);
     if (!userId) throw new CustomError('No user specified to join this group.', ErrorTypes.INVALID_ARG);
@@ -900,7 +910,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     let user: IUserDocument;
     if (userId === req.requestor._id.toString()) {
-      user = req.requestor;
+      user = await getUser(req, { _id: userId });
     } else {
       // requestor must be a Karma member to add another user to a group
       if (!karmaAllowList.includes(req.requestor.role as UserRoles)) throw new CustomError('You are not authorized to add another user to a group.', ErrorTypes.UNAUTHORIZED);
@@ -919,20 +929,21 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         },
       ]);
 
-    if (usersUserGroup?.status === UserGroupStatus.Banned) {
-      throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
+    if (!!usersUserGroup) {
+      if (usersUserGroup?.status === UserGroupStatus.Banned) {
+        throw new CustomError('You are not authorized to join this group.', ErrorTypes.UNAUTHORIZED);
+      }
+
+      if (
+        usersUserGroup?.status === UserGroupStatus.Unverified
+        || usersUserGroup?.status === UserGroupStatus.Verified
+        || usersUserGroup?.status === UserGroupStatus.Approved
+      ) {
+        throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
+      }
     }
 
     // TODO: status === Removed, check if needs approval to join again
-
-    if (
-      usersUserGroup?.status === UserGroupStatus.Unverified
-      || usersUserGroup?.status === UserGroupStatus.Verified
-      || usersUserGroup?.status === UserGroupStatus.Approved
-    ) {
-      throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
-    }
-
     let validEmail: string;
     const hasDomainRestrictions = group.settings.allowDomainRestriction && group.domains.length > 0;
     if (hasDomainRestrictions) {
@@ -944,7 +955,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
       // meet the groups requirements???
       // const validEmail = [groupEmail, user.email, ...(user.altEmails || [])].find(email => {
       const _validEmail = [email].find(e => !!group.domains.find(domain => e.split('@')[1] === domain));
-
       if (!_validEmail) throw new CustomError(`A valid email from ${group.domains.length > 1 ? 'one of ' : ''}the following domain${group.domains.length > 1 ? 's' : ''} is required to join this group: ${group.domains.join(', ')}`);
       validEmail = _validEmail;
     }
@@ -983,16 +993,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     // if the email used already exists and has been verified
     // the role to Verified.
-    const defaultStatus = existingEmail?.status === UserEmailStatus.Verified || !group.settings.allowDomainRestriction
-      ? UserGroupStatus.Verified
-      : UserGroupStatus.Unverified;
-
-    let userUserGroupDocument:IUserGroupDocument = null;
+    let userUserGroupDocument: IUserGroupDocument = null;
 
     if (!!usersUserGroup) {
       usersUserGroup.email = validEmail;
       usersUserGroup.role = UserGroupRole.Member;
-      usersUserGroup.status = defaultStatus;
+      usersUserGroup.status = UserGroupStatus.Verified;
       userUserGroupDocument = await usersUserGroup.save();
     } else {
       const userGroup = new UserGroupModel({
@@ -1000,16 +1006,17 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         group,
         email: validEmail,
         role: UserGroupRole.Member,
-        status: defaultStatus,
+        status: UserGroupStatus.Verified,
       });
 
       userUserGroupDocument = await userGroup.save();
     }
-    await user.save();
 
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupListsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
-    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
+    if (!skipSubscribe) {
+      const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
+      await updateActiveCampaignGroupListsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
+      await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
+    }
 
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });

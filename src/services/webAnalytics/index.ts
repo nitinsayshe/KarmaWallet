@@ -57,7 +57,7 @@ export const createWebAnalytics = async (_req: IRequest<{}, {}, IWebAnalyticsReq
 };
 
 export const updateWebAnalytics = async (_req: IRequest<IWebAnalyticsRequestParams, {}, Partial<IWebAnalyticsRequestBody>>) => {
-  const { name, description } = _req.body;
+  const { name, description, subLocation } = _req.body;
   const { id } = _req.params;
 
   if (!id) throw new CustomError('Missing required field: id', ErrorTypes.NOT_FOUND);
@@ -73,6 +73,7 @@ export const updateWebAnalytics = async (_req: IRequest<IWebAnalyticsRequestPara
     {
       name,
       description,
+      subLocation,
       lastModifiedOn: new Date(),
     },
     { new: true },

@@ -69,6 +69,7 @@
   },
   "dependencies": {
     "@socket.io/redis-adapter": "7.1.0",
+    "@vgs/api-client": "^0.0.33",
     "api-query-params": "5.3.1",
     "argon2": "0.28.3",
     "aws-sdk": "2.1066.0",

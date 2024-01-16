@@ -42,7 +42,7 @@ export const getShareableIntegrationFromWildfireIntegration = (
     maxRate: {
       type: getMerchantRateTypeFromString(domain?.Merchant?.MaxRate?.Kind),
       amount: !!domain?.Merchant?.MaxRate?.Amount
-        ? Math.round(domain.Merchant.MaxRate.Amount * UserCommissionPercentage * 100) / 100
+        ? roundToPercision(domain.Merchant.MaxRate.Amount * UserCommissionPercentage, 2)
         : 0,
     },
   };
@@ -60,7 +60,7 @@ export const getShareableIntegrationFromKardIntegration = (
     maxRate: {
       type: getMerchantRateTypeFromString(kardIntegration?.maxOffer?.commissionType),
       amount: kardIntegration?.maxOffer?.totalCommission
-        ? Math.round((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage)
+        ? roundToPercision((kardIntegration.maxOffer?.totalCommission || 0) * UserCommissionPercentage, 2)
         : 0,
     },
   };

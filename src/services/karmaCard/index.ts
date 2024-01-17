@@ -333,14 +333,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
     const applyResponse = userObject?.integrations?.marqeta;
 
-    // sync user in active campaign
-    if (process.env.NODE_ENV === 'production') {
-      MainBullClient.createJob(
-        JobNames.SyncActiveCampaign,
-        { syncType: ActiveCampaignSyncTypes.CARD_SIGNUP, cardSignupUserId: userObject._id.toString() },
-        { jobId: `${JobNames.SyncActiveCampaign}-kw-card-signup-user-${userObject._id}` },
-      );
-    }
     return applyResponse;
   }
 };

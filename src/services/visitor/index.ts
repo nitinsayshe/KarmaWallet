@@ -71,7 +71,7 @@ const getSubscriptionsByQuery = async (query: FilterQuery<ISubscription>): Promi
 
 const enrollInMonthlyNewsletterCampaign = async (email: string, subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]) => {
   try {
-    await updateActiveCampaignListStatusForEmail(email, subscribe, unsubscribe);
+    await updateActiveCampaignListStatusForEmail({ email }, subscribe, unsubscribe);
   } catch (err) {
     console.error(`Error updating active campaign list subscriptions for visitor with email ${email}:`, err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);

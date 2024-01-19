@@ -673,11 +673,16 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
+  // Existing user with Marqeta integration already saved
   if (!!existingUser) {
     existingUser.integrations.marqeta.status = userTransition.status;
+    await createKarmaCardWelcomeUserNotification(existingUser, true);
     await existingUser.save();
   }
 
+  // Marqeta integration is saved on the visitor object,
+  // Could be just a visitor (if they didn't create an account later with that same email)
+  // Could be a visitor that later created an account with that same email
   if (!!visitor && !existingUser) {
     visitor.integrations.marqeta.status = userTransition.status;
     await visitor.save();

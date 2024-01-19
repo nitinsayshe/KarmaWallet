@@ -8,7 +8,7 @@ import {
 import { nanoid } from 'nanoid';
 import { MainBullClient } from '../../clients/bull/main';
 import { updateActiveCampaignGroupListsAndTags } from '../../integrations/activecampaign';
-import { emailVerificationDays, ErrorTypes, TokenTypes, UserGroupRole, UserRoles,
+import { ErrorTypes, UserGroupRole, UserRoles,
 } from '../../lib/constants';
 import { ActiveCampaignSyncTypes } from '../../lib/constants/activecampaign';
 import { JobNames } from '../../lib/constants/jobScheduler';
@@ -33,8 +33,6 @@ import { getStatements } from '../statements';
 import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
 // eslint-disable-next-line import/no-cycle
 import { getUser } from '../user';
-import * as TokenService from '../token';
-import { sendGroupVerificationEmail } from '../email';
 
 dayjs.extend(utc);
 
@@ -978,18 +976,18 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // group has domain restriction AND
     // email exists and is unverified or
     // doesnt already exist
-    if (hasDomainRestrictions && ((existingEmail?.status === UserEmailStatus.Unverified) || !existingEmail)) {
-      const token = await TokenService.createToken({
-        user, days: emailVerificationDays, type: TokenTypes.Email, resource: { email: validEmail },
-      });
-      await sendGroupVerificationEmail({
-        name: user.name,
-        token: token.value,
-        groupName: group.name,
-        recipientEmail: validEmail,
-        user: user._id,
-      });
-    }
+    // if (hasDomainRestrictions && ((existingEmail?.status === UserEmailStatus.Unverified) || !existingEmail)) {
+    //   const token = await TokenService.createToken({
+    //     user, days: emailVerificationDays, type: TokenTypes.Email, resource: { email: validEmail },
+    //   });
+    //   await sendGroupVerificationEmail({
+    //     name: user.name,
+    //     token: token.value,
+    //     groupName: group.name,
+    //     recipientEmail: validEmail,
+    //     user: user._id,
+    //   });
+    // }
 
     // if the email used already exists and has been verified
     // the role to Verified.

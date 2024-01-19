@@ -1581,21 +1581,3 @@ export const getGroupOffsetEquivalency = async (req: IRequest<IGetGroupOffsetReq
     throw asCustomError(e);
   }
 };
-
-export const manuallyAddUserToAGroup = async (req: IRequest<{}, {}, { userId: string, groupId: string }>) => {
-  const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
-  const { requestor } = req;
-  const { userId, groupId } = req.body;
-
-  if (!karmaAllowList.includes(requestor.role as UserRoles)) {
-    throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
-  }
-  if (!userId) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-  if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-
-  const group = await GroupModel.findById(groupId);
-  if (!group) throw new CustomError(`Group with id: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
-
-  const user = await UserModel.findById(userId);
-  if (!user) throw new CustomError(`User with id: ${userId} not found.`, ErrorTypes.NOT_FOUND);
-};

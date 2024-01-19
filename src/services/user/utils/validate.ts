@@ -7,7 +7,7 @@ export const validatePassword = (password: string) => {
     return { valid: false, errorType: 'lowercase', message: 'Please provide a password containing at least 1 lowercase letter.' };
   } if (!/[0-9]+/.test(password)) {
     return { valid: false, errorType: 'number', message: 'Please provide a password containing at least 1 number.' };
-  } if (!/[@$!%*?&]+/.test(password)) {
+  } if (!/[@$!%*?&-]+/.test(password)) {
     return { valid: false, errorType: 'special', message: 'Please provide a password containing at least 1 special character (@$!%*?&).' };
   }
   return { valid: true, errorType: null, message: 'Password Valid' };

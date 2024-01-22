@@ -357,7 +357,23 @@ export const getShareableUser = ({
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
-  if (integrations?.marqeta) _integrations.marqeta = integrations.marqeta;
+  if (integrations?.marqeta) {
+    _integrations.marqeta = {
+      userToken: integrations.marqeta.userToken,
+      email: integrations.marqeta.email,
+      first_name: integrations.marqeta.first_name,
+      last_name: integrations.marqeta.last_name,
+      city: integrations.marqeta.city,
+      postal_code: integrations.marqeta.postal_code,
+      state: integrations.marqeta.state,
+      address1: integrations.marqeta.address1,
+      created_time: integrations.marqeta.created_time,
+      country: integrations.marqeta.country,
+      account_holder_group_token: integrations.marqeta.account_holder_group_token,
+      status: integrations.marqeta.status,
+      _id: integrations.marqeta._id,
+    };
+  }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;
   return {
     _id,

@@ -259,8 +259,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       await joinGroup(mockRequest);
     }
 
-    console.log('///// this is the exisitng user', existingUser._id);
-
     await updateActiveCampaignData({
       userId: existingUser._id,
       email: existingUser.emails.find((e) => !!e.primary).email,

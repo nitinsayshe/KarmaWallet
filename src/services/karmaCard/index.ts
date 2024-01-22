@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
-import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserStatus } from '../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { generateRandomPasswordString } from '../../lib/misc';
 import {
@@ -259,6 +259,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       await joinGroup(mockRequest);
     }
 
+    console.log('///// this is the exisitng user', existingUser._id);
+
     await updateActiveCampaignData({
       userId: existingUser._id,
       email: existingUser.emails.find((e) => !!e.primary).email,
@@ -331,10 +333,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
     // store the karma card application log
     await storeKarmaCardApplication({ ...karmaCardApplication, userId: userObject._id, status: ApplicationStatus.SUCCESS });
-    userObject.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: [] };
-    userObject.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
     await userObject.save();
-
     const applyResponse = userObject?.integrations?.marqeta;
 
     return applyResponse;

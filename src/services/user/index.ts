@@ -692,6 +692,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     await visitor.save();
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      console.log('///// IN WEBHOOK CODE: no existing user create new user');
       if (!visitor.user) {
         const { user } = await register({
           name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,

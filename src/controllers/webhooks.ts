@@ -353,6 +353,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!usertransitions) {
       console.log('////////// PROCESSING MARQETA USERTRANSITION WEBHOOK ////////// ');
       for (const usertransition of usertransitions) {
+        console.log('////// WEBHOOK DATA', usertransition);
         await handleMarqetaUserTransitionWebhook(usertransition);
       }
     }

@@ -223,6 +223,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
   } else {
+    console.log('Existing user applying for Karma Card', existingUser);
     const existingParams = existingUser.integrations?.referrals?.params;
     const subscribe = [SubscriptionCode.debitCardHolders];
     const unsubscribe: any = [];
@@ -236,15 +237,15 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       await existingUser.save();
     }
 
-    if (!!urlParams && urlParams.find((param) => param.key === 'beta')) {
+    if (!!urlParams.find((param) => param.key === 'beta')) {
       subscribe.push(SubscriptionCode.betaTesters);
     }
 
-    if (!!urlParams && urlParams.find((param) => param.key === 'employerBeta')) {
+    if (!!urlParams.find((param) => param.key === 'employerBeta')) {
       subscribe.push(SubscriptionCode.employerProgramBeta);
     }
 
-    if (!!urlParams && urlParams.find((param) => param.key === 'groupCode')) {
+    if (!!urlParams.find((param) => param.key === 'groupCode')) {
       const mockRequest = ({
         requestor: existingUser,
         authKey: '',
@@ -260,7 +261,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     }
 
     await updateActiveCampaignData({
-      userId: existingUser._id,
+      userId: existingUser?._id,
       email: existingUser.emails.find((e) => !!e.primary).email,
       subscriptions: {
         subscribe,

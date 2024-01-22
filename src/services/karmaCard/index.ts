@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
-import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserStatus } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { generateRandomPasswordString } from '../../lib/misc';
 import {
@@ -23,9 +23,6 @@ import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
-import { MainBullClient } from '../../clients/bull/main';
-import { ActiveCampaignSyncTypes } from '../../lib/constants/activecampaign';
-import { JobNames } from '../../lib/constants/jobScheduler';
 import { updateActiveCampaignData } from '../../integrations/activecampaign';
 import { SubscriptionCode } from '../../types/subscription';
 import { joinGroup } from '../groups';
@@ -219,6 +216,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     email,
     ...marqetaUserResponse,
   };
+
   const kycStatus = status;
 
   if (!existingUser) {
@@ -330,6 +328,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
     // store the karma card application log
     await storeKarmaCardApplication({ ...karmaCardApplication, userId: userObject._id, status: ApplicationStatus.SUCCESS });
+    userObject.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: [] };
+    userObject.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
+    await userObject.save();
 
     const applyResponse = userObject?.integrations?.marqeta;
 

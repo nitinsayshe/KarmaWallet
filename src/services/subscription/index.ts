@@ -76,6 +76,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
       visitor: visitor._id,
       code: SubscriptionCode.generalUpdates,
     });
+
     // add them to general update if they are not receiving yet
     if (!(sub?.status === SubscriptionStatus.Active)) {
       subscribe.push(ActiveCampaignListId.GeneralUpdates);
@@ -90,7 +91,9 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
       // Debit Card Holder flow
       subscribe.push(ActiveCampaignListId.DebitCardHolders);
       if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
-      if (!!employerBeta) subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
+      if (!!employerBeta) {
+        subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
+      }
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
       await updateActiveCampaignListStatusForEmail({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
     }
@@ -141,6 +144,17 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
         {},
         { upsert: true },
       );
+    } else {
+      const subscribe = [];
+      const unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
+      subscribe.push(ActiveCampaignListId.GeneralUpdates);
+      subscribe.push(ActiveCampaignListId.DebitCardHolders);
+      if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
+      if (!!employerBeta) {
+        subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
+      }
+      if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
+      await updateActiveCampaignListStatusForEmail({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
     }
   }
 };

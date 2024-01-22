@@ -314,7 +314,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     if (!!userObject) {
       // send karma welcome email to user
       await createKarmaCardWelcomeUserNotification(userObject, false);
-      const applyResponse = userObject?.integrations?.marqeta;
+      const applyResponse = marqeta;
       return applyResponse;
     }
     console.log('///// IN KARMA CARD APPLICATION CODE: no existing user create new user');

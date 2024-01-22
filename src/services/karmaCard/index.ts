@@ -304,12 +304,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   // if marqeta Kyc Approved/success
   if (kycStatus === IMarqetaKycState.success) {
-    let userObject;
+    let userObject = await UserModel.findOne({ 'integrations.marqeta.userToken': marqetaUserResponse.token });
     // if there is an existing user, add the marqeta integration to the existing user
-    if (!!existingUser) {
-      userObject = existingUser;
+    if (!!userObject) {
       // send karma welcome email to user
-      await createKarmaCardWelcomeUserNotification(existingUser, false);
+      await createKarmaCardWelcomeUserNotification(userObject, false);
     } else {
       console.log('///// IN KARMA CARD APPLICATION CODE: no existing user create new user');
       // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
@@ -324,11 +323,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       await createKarmaCardWelcomeUserNotification(userObject, true);
     }
     // store marqeta card in DB
-    await mapMarqetaCardtoCard(userObject._id, virtualCardResponse); // map virtual card
-    await mapMarqetaCardtoCard(userObject._id, physicalCardResponse); // map physical card
+    await mapMarqetaCardtoCard(userObject._id.toString(), virtualCardResponse); // map virtual card
+    await mapMarqetaCardtoCard(userObject._id.toString(), physicalCardResponse); // map physical card
 
     // store the karma card application log
-    await storeKarmaCardApplication({ ...karmaCardApplication, userId: userObject._id, status: ApplicationStatus.SUCCESS });
+    await storeKarmaCardApplication({ ...karmaCardApplication, userId: userObject._id.toString(), status: ApplicationStatus.SUCCESS });
     userObject.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: [] };
     userObject.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
     await userObject.save();

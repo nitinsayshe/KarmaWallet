@@ -129,7 +129,7 @@ export interface IGetContactsResponse {
   meta: Metadata;
 }
 
-interface ContactAutomation {
+interface _ContactAutomation {
   contact: string;
   seriesid: string;
   startid: string;

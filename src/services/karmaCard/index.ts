@@ -234,30 +234,31 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       existingUser.integrations.referrals = {
         params: combinedParams,
       };
+
+      if (!!urlParams.find((param) => param.key === 'beta')) {
+        subscribe.push(SubscriptionCode.betaTesters);
+      }
+
+      if (!!urlParams.find((param) => param.key === 'employerBeta')) {
+        subscribe.push(SubscriptionCode.employerProgramBeta);
+      }
+
+      if (!!urlParams.find((param) => param.key === 'groupCode')) {
+        const mockRequest = ({
+          requestor: existingUser,
+          authKey: '',
+          body: {
+            code: urlParams.find((param) => param.key === 'groupCode').value,
+            email: existingUser.emails.find((e) => !!e.primary).email,
+            userId: existingUser._id.toString(),
+            skipSubscribe: false,
+          },
+        } as any);
+
+        await joinGroup(mockRequest);
+      }
+
       await existingUser.save();
-    }
-
-    if (!!urlParams.find((param) => param.key === 'beta')) {
-      subscribe.push(SubscriptionCode.betaTesters);
-    }
-
-    if (!!urlParams.find((param) => param.key === 'employerBeta')) {
-      subscribe.push(SubscriptionCode.employerProgramBeta);
-    }
-
-    if (!!urlParams.find((param) => param.key === 'groupCode')) {
-      const mockRequest = ({
-        requestor: existingUser,
-        authKey: '',
-        body: {
-          code: urlParams.find((param) => param.key === 'groupCode').value,
-          email: existingUser.emails.find((e) => !!e.primary).email,
-          userId: existingUser._id.toString(),
-          skipSubscribe: false,
-        },
-      } as any);
-
-      await joinGroup(mockRequest);
     }
 
     await updateActiveCampaignData({

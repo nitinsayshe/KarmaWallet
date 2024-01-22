@@ -678,9 +678,11 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   }
 
   // Existing user with Marqeta integration already saved
-  if (!!existingUser) {
+  if (!!existingUser && existingUser.integrations.marqeta.status !== userTransition.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
-    await createKarmaCardWelcomeUserNotification(existingUser, true);
+    if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      await createKarmaCardWelcomeUserNotification(existingUser, true);
+    }
     await existingUser.save();
   }
 

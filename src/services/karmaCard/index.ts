@@ -308,7 +308,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   // if marqeta Kyc Approved/success
   if (kycStatus === IMarqetaKycState.success) {
-    let userObject = await UserModel.findOne({ 'integrations.marqeta.userToken': marqetaUserResponse.token });
+    let userObject = await UserModel.findOne({ 'emails.email': email });
+
     // if there is an existing user, add the marqeta integration to the existing user
     if (!!userObject) {
       // send karma welcome email to user

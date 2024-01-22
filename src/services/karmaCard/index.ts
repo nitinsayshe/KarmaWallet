@@ -311,6 +311,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       // send karma welcome email to user
       await createKarmaCardWelcomeUserNotification(existingUser, false);
     } else {
+      console.log('///// IN KARMA CARD APPLICATION CODE: no existing user create new user');
       // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
       // add the marqeta integration to the newly created user or the existing user (userObject)
       const { user } = await UserService.register({

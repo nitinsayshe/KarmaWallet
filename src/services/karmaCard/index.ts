@@ -205,7 +205,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   if (address2) marqetaKYCInfo.address2 = address2;
   // perform the KYC logic and Marqeta stuff here
   const marqetaResponse = await performMarqetaCreateAndKYC(marqetaKYCInfo);
-  console.log('///// mareta response', marqetaResponse);
 
   const { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse } = marqetaResponse;
   // get the kyc result code
@@ -218,14 +217,12 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     ...marqetaUserResponse,
   };
 
-  console.log('///// marqeta data', marqeta, status);
   const kycStatus = status;
 
   if (!existingUser) {
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
   } else {
-    console.log('//// going to create a new user');
     const existingParams = existingUser.integrations?.referrals?.params;
     const combinedParams = !!existingParams ? [...existingParams, ...urlParams] : urlParams;
     existingUser.integrations.marqeta = marqeta;

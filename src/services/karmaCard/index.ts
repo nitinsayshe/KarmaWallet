@@ -224,15 +224,17 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
   } else {
     const existingParams = existingUser.integrations?.referrals?.params;
-    const combinedParams = !!existingParams ? [...existingParams, ...urlParams] : urlParams;
-    existingUser.integrations.marqeta = marqeta;
-    existingUser.integrations.referrals = {
-      params: combinedParams,
-    };
-    await existingUser.save();
-
     const subscribe = [SubscriptionCode.debitCardHolders];
     const unsubscribe: any = [];
+
+    if (!!urlParams) {
+      const combinedParams = !!existingParams ? [...existingParams, ...urlParams] : urlParams;
+      existingUser.integrations.marqeta = marqeta;
+      existingUser.integrations.referrals = {
+        params: combinedParams,
+      };
+      await existingUser.save();
+    }
 
     if (!!urlParams && urlParams.find((param) => param.key === 'beta')) {
       subscribe.push(SubscriptionCode.betaTesters);

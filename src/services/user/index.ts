@@ -45,6 +45,7 @@ import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { joinGroup } from '../groups';
 import { GroupModel } from '../../models/group';
 import { generateRandomPasswordString } from '../../lib/misc';
+import { ApplicationStatus } from '../../models/karmaCardApplication';
 
 dayjs.extend(utc);
 
@@ -700,6 +701,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         });
 
         user.integrations.marqeta = visitor.integrations.marqeta;
+        user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS, codes: [] };
         await user.save();
         await createKarmaCardWelcomeUserNotification(user, true);
       } else {

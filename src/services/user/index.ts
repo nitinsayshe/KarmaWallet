@@ -367,11 +367,8 @@ export const getShareableUser = ({
       postal_code: integrations.marqeta.postal_code,
       state: integrations.marqeta.state,
       address1: integrations.marqeta.address1,
-      created_time: integrations.marqeta.created_time,
       country: integrations.marqeta.country,
-      account_holder_group_token: integrations.marqeta.account_holder_group_token,
       status: integrations.marqeta.status,
-      _id: integrations.marqeta._id,
     };
   }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;

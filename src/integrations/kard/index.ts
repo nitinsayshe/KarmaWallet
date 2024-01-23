@@ -20,6 +20,7 @@ import { decrypt } from '../../lib/encryption';
 import { floorToPercision, sleep } from '../../lib/misc';
 import { CardModel, ICard, ICardDocument, IKardIntegration } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
+import { IMerchantDocument, MerchantModel } from '../../models/merchant';
 import { ITransaction } from '../../models/transaction';
 import { IUserDocument, UserModel } from '../../models/user';
 import { getNetworkFromBin } from '../../services/card/utils';
@@ -190,7 +191,7 @@ export const deleteKardUsersForUser = async (user: IUserDocument | Types.ObjectI
   }
 };
 
-const populateCompaniesOnTransactions = async (
+const populateCompaniesAndMerchantsOnTransactions = async (
   transactions: Partial<ITransaction & { _id: Types.ObjectId }>[],
 ): Promise<Partial<ITransaction & { _id: Types.ObjectId }>[]> => {
   const companies: { [key: string]: ICompanyDocument } = {};
@@ -201,7 +202,16 @@ const populateCompaniesOnTransactions = async (
         company = await CompanyModel.findById(t.company);
         companies[t.company.toString()] = company;
       }
+      if (!!company?.merchant) {
+        try {
+          const merchant = await MerchantModel.findById(company.merchant);
+          company.merchant = merchant;
+        } catch (err) {
+          console.error('Error populating merchant: ', err);
+        }
+      }
       t.company = company;
+      // lookup the merchant on the company
       return t;
     }),
   );
@@ -216,20 +226,26 @@ const sendTransactionsInBatches = async (
   for (let i = 0; i < batches.length; i++) {
     try {
       const batch = batches[i];
-      const req: QueueTransactionsRequest = batch.map((t): Transaction => ({
-        transactionId: t.integrations?.kard?.id,
-        referringPartnerUserId: card?.integrations?.kard?.userId,
-        amount: floorToPercision(t.amount * CentsInUSD, 0),
-        status: t?.integrations?.kard?.status,
-        currency: t?.integrations?.plaid?.iso_currency_code,
-        description: (t.company as ICompanyDocument)?.companyName,
-        settledDate: t?.date?.toISOString(),
-        merchantName: (t.company as ICompanyDocument)?.companyName,
-        mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
-        cardBIN: decrypt((t?.card as ICard)?.binToken),
-        cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
-        authorizationDate: t?.date?.toISOString(),
-      }));
+      const req: QueueTransactionsRequest = batch.map((t): Transaction => {
+        const merchantName = ((t.company as ICompanyDocument)?.merchant as IMerchantDocument)?.integrations?.kard?.name
+          || ((t.company as ICompanyDocument)?.merchant as IMerchantDocument)?.name
+          || (t.company as ICompanyDocument)?.companyName;
+
+        return {
+          transactionId: t.integrations?.kard?.id,
+          referringPartnerUserId: card?.integrations?.kard?.userId,
+          amount: floorToPercision(t.amount * CentsInUSD, 0),
+          status: t?.integrations?.kard?.status,
+          currency: t?.integrations?.plaid?.iso_currency_code,
+          description: merchantName,
+          settledDate: t?.date?.toISOString(),
+          merchantName,
+          mcc: (t.company as ICompanyDocument)?.mcc?.toString(),
+          cardBIN: decrypt((t?.card as ICard)?.binToken),
+          cardLastFour: decrypt((t?.card as ICard)?.lastFourDigitsToken),
+          authorizationDate: t?.date?.toISOString(),
+        };
+      });
 
       console.log(`Kard API Request ${i} of ${batches.length}.`);
       responses.push(await kc.queueTransactionsForProcessing(req));
@@ -256,7 +272,7 @@ export const queueSettledTransactions = async (
     }
 
     // populate companies
-    transactions = await populateCompaniesOnTransactions(transactions);
+    transactions = await populateCompaniesAndMerchantsOnTransactions(transactions);
 
     // filter out transactions that don't have a company match
     transactions = transactions.filter((t) => !!t.company);

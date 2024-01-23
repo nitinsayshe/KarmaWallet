@@ -35,6 +35,7 @@ export interface IMarqetaCreateUser {
   email: string;
   identifications: Identification[];
   birthDate: string;
+  phone: string;
   address1: string;
   address2?: string;
   city: string;

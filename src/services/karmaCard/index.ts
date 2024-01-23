@@ -33,6 +33,7 @@ export interface IKarmaCardRequestBody {
   address1: string;
   address2?: string;
   birthDate: string;
+  phone: string;
   city: string;
   email?: string;
   firstName: string;
@@ -62,6 +63,7 @@ export const getShareableKarmaCardApplication = ({
   address1,
   address2,
   birthDate,
+  phone,
   city,
   postalCode,
   state,
@@ -79,6 +81,7 @@ export const getShareableKarmaCardApplication = ({
   address1,
   address2,
   birthDate,
+  phone,
   city,
   postalCode,
   state,
@@ -142,9 +145,9 @@ export const getKarmaCardApplications = async () => _getKarmaCardApplications({}
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
   let _visitor;
   let { requestor } = req;
-  const { firstName, lastName, address1, address2, birthDate, postalCode, state, ssn, email, city, urlParams } = req.body;
+  const { firstName, lastName, address1, address2, birthDate, phone, postalCode, state, ssn, email, city, urlParams } = req.body;
 
-  if (!firstName || !lastName || !address1 || !birthDate || !postalCode || !state || !ssn || !city) { throw new Error('Missing required fields'); }
+  if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) { throw new Error('Missing required fields'); }
   if (!requestor && !email) throw new Error('Missing required fields');
 
   if (!!requestor && requestor?.emails[0].email !== email) {
@@ -188,6 +191,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     lastName,
     address1,
     birthDate,
+    phone,
     postalCode,
     state,
     // hard coded to the US for all applications for now
@@ -279,6 +283,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     address1,
     address2,
     birthDate,
+    phone,
     city,
     postalCode,
     state,

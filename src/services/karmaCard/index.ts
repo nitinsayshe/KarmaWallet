@@ -26,6 +26,7 @@ import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { updateActiveCampaignData } from '../../integrations/activecampaign';
 import { SubscriptionCode } from '../../types/subscription';
 import { joinGroup } from '../groups';
+import { validatePhoneNumber } from '../user/utils/validate';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -149,6 +150,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) { throw new Error('Missing required fields'); }
   if (!requestor && !email) throw new Error('Missing required fields');
+
+  const phoneValidation = validatePhoneNumber(phone);
+  if (!phoneValidation.valid) {
+    throw new CustomError(`Invalid phone number. ${phoneValidation.message}`, ErrorTypes.INVALID_ARG);
+  }
 
   if (!!requestor && requestor?.emails[0].email !== email) {
     requestor = null;

@@ -396,6 +396,7 @@ export type MarqetaUserModel = {
   postal_code?: string;
   country?: string;
   birth_date?: string;
+  phone?: string;
   uses_parent_account?: boolean;
   corporate_card_holder?: boolean;
   created_time?: string;

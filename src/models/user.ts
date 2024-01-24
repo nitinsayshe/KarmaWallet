@@ -84,6 +84,7 @@ export interface IMarqetaUserIntegrations {
   first_name?: string;
   last_name?: string;
   birth_date?: string;
+  phone?: string;
   address1?: string;
   address2?: string;
   city?: string;
@@ -205,6 +206,7 @@ const userSchema = new Schema({
         first_name: { type: String },
         last_name: { type: String },
         birth_date: { type: String },
+        phone: { type: String },
         address1: { type: String },
         address2: { type: String },
         city: { type: String },

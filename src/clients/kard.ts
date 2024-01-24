@@ -13,6 +13,9 @@ const {
   KARD_ISSUER_WEBHOOK_KEY,
   KARD_ISSUER_CLIENT_HASH,
   KARD_ISSUER_ISSUER_NAME,
+  KARD_KARMAWALLET_AWS_ROLE,
+  KARD_AWS_ROLE,
+  KARD_AWS_ENV,
 } = process.env;
 
 export enum RewardType {
@@ -263,10 +266,26 @@ const validateEnvironmentVariables = (): Error | null => {
   if (!KARD_ISSUER_ISSUER_NAME) {
     return new Error(`${loadingErrorPrefix}KARD_ISSUER_ISSUER_NAME not found`);
   }
+  if (!KARD_KARMAWALLET_AWS_ROLE) {
+    return new Error(`${loadingErrorPrefix}KARD_KARMAWALLET_AWS_ROLE not found`);
+  }
+  if (!KARD_AWS_ROLE) {
+    return new Error(`${loadingErrorPrefix}KARD_AWS_ROLE not found`);
+  }
+  if (!KARD_AWS_ENV) {
+    return new Error(`${loadingErrorPrefix}KARD_AWS_ENV not found`);
+  }
+
   return null;
 };
 
 export const KardIssuerName = KARD_ISSUER_NAME;
+export const KardIssuerIssuerName = KARD_ISSUER_ISSUER_NAME;
+export const KardIssuerClientHash = KARD_ISSUER_CLIENT_HASH;
+export const KardIssuerWebhookKey = KARD_ISSUER_WEBHOOK_KEY;
+export const KardKarmaWalletAwsRole = KARD_KARMAWALLET_AWS_ROLE;
+export const KardAwsRole = KARD_AWS_ROLE;
+export const KardAwsEnv = KARD_AWS_ENV;
 
 export class KardClient extends SdkClient {
   private _client: AxiosInstance;

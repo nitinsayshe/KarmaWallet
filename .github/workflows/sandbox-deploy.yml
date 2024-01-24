@@ -96,6 +96,9 @@ jobs:
     - run: echo 'KARD_ISSUER_ONLINE_REWARD_ID=${{secrets.STAGING_KARD_ISSUER_ONLINE_REWARD_ID}}' >> .env
     - run: echo 'KARD_ISSUER_ISSUER_NAME=${{secrets.STAGING_KARD_ISSUER_ISSUER_NAME}}' >> .env
     - run: echo 'KARD_ISSUER_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_ISSUER_TRANSACTION_ID_ROOT}}' >> .env
+    - run: echo 'KARD_KARMAWALLET_AWS_ROLE=${{secrets.STAGING_KARD_KARMAWALLET_AWS_ROLE}}' >> .env
+    - run: echo 'KARD_AWS_ROLE=${{secrets.STAGING_KARD_AWS_ROLE}}' >> .env
+    - run: echo 'KARD_AWS_ENV=test' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.SANDBOX_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
     - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.MARQETA_WEBHOOK_ID}}' >> .env

@@ -35,6 +35,7 @@ export interface IMarqetaCreateUser {
   email: string;
   identifications: Identification[];
   birthDate: string;
+  phone: string;
   address1: string;
   address2?: string;
   city: string;
@@ -395,6 +396,7 @@ export type MarqetaUserModel = {
   postal_code?: string;
   country?: string;
   birth_date?: string;
+  phone?: string;
   uses_parent_account?: boolean;
   corporate_card_holder?: boolean;
   created_time?: string;

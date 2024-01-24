@@ -20,6 +20,7 @@ export interface IShareableCardApplication {
   address1: string;
   address2: string;
   birthDate: string;
+  phone: string;
   city: string;
   postalCode: string;
   state: string;
@@ -40,15 +41,16 @@ const karmaCardApplication = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'visitor',
   },
-  firstName: { type: String },
-  lastName: { type: String },
-  email: { type: String },
-  address1: { type: String },
+  firstName: { type: String, required: true },
+  lastName: { type: String, required: true },
+  email: { type: String, required: true },
+  address1: { type: String, required: true },
   address2: { type: String },
-  birthDate: { type: String },
-  city: { type: String },
-  postalCode: { type: String },
-  state: { type: String },
+  birthDate: { type: String, required: true },
+  phone: { type: String, required: true },
+  city: { type: String, required: true },
+  postalCode: { type: String, required: true },
+  state: { type: String, required: true },
   userToken: { type: String },
   kycResult: {
     status: { type: String },

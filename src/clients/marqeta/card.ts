@@ -61,7 +61,7 @@ export class Card {
   async tokenizeCard(cardToken: string) {
     try {
       const vgsClient = new VgsClient();
-      const data = await this._marqetaClient._client.get(`/cards/${cardToken}`, { proxy: false, httpsAgent: new HttpsProxyAgent(vgsClient.outboundProxy, { rejectUnauthorized: false }) });
+      const data = await this._marqetaClient._client.get(`/cards/${cardToken}`, { proxy: false, httpsAgent: new HttpsProxyAgent(vgsClient.outboundProxy) });
       return data;
     } catch (err) {
       console.log(err);

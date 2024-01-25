@@ -669,7 +669,7 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
 };
 
 export const updateActiveCampaignListStatusForEmail = async (
-  email: string,
+  userData: {email: string, name?: string},
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
   tags?: string[],
@@ -678,12 +678,17 @@ export const updateActiveCampaignListStatusForEmail = async (
   const ac = new ActiveCampaignClient();
   ac.withHttpClient(client);
 
+  const firstName = userData.name?.split(' ')?.[0];
+  const lastName = userData.name?.split(' ')?.pop();
+
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
   const contacts = [
     {
-      email,
+      first_name: firstName,
+      last_name: lastName,
+      email: userData.email,
       subscribe: sub,
       unsubscribe: unsub,
       tags,

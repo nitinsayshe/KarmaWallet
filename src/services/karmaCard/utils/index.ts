@@ -121,7 +121,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
   };
 
   const transformed: TransformedResponse = {
-    status: kycResult.status as IMarqetaKycState,
+    status: kycResult?.status as IMarqetaKycState || IMarqetaKycState.failure,
     reason: kycResult.codes[0] as ReasonCode,
     message: messages[kycResult.codes[0] as ReasonCode],
   };

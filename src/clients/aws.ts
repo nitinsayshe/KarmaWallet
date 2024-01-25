@@ -1,17 +1,23 @@
-import aws from 'aws-sdk';
+import aws, { Credentials, S3, STS } from 'aws-sdk';
 import { Express } from 'express';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import { Types } from 'mongoose';
 import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
+import { KardKarmaWalletAwsRole, KardAwsRole, EarnedRewardWebhookBody } from './kard';
+import { sleep } from '../lib/misc';
 
 dayjs.extend(utc);
+
+const awsBackoffInervalMS = 500;
 
 interface IAwsClient {
   s3: aws.S3,
   sesV2: aws.SESV2
+  sts: aws.STS
 }
 
 interface ISendEmailRequest {
@@ -48,6 +54,7 @@ export class AwsClient extends SdkClient {
     this._client = {
       sesV2: new aws.SESV2({ apiVersion: '2019-09-27' }),
       s3: new aws.S3(),
+      sts: new aws.STS(),
     };
   }
 
@@ -135,7 +142,6 @@ export class AwsClient extends SdkClient {
       throw error;
     }
   };
-
   getS3ResourceStream = async (key: string, bucket = process.env.S3_BUCKET) => {
     try {
       const params = {
@@ -150,5 +156,117 @@ export class AwsClient extends SdkClient {
       Logger.error(error);
       throw error;
     }
+  };
+
+  listObjectsInBucket = async (bucketUrl: string) => {
+    try {
+      const bucket = bucketUrl.split('s3://')[1].split('/')[0];
+      const prefix = bucketUrl.split('s3://')[1].split(`${bucket}/`)[1];
+      const params = {
+        Bucket: bucket,
+        Prefix: prefix,
+      };
+
+      const response = await this._client.s3.listObjectsV2(params).promise();
+      return response?.Contents;
+    } catch (err) {
+      const error = asCustomError(err);
+      Logger.error(error);
+      throw error;
+    }
+  };
+
+  assumeRole = async (roleArn: string, roleSessionName: string) => {
+    try {
+      const params = {
+        RoleArn: roleArn,
+        RoleSessionName: roleSessionName,
+        DurationSeconds: 3600,
+      };
+      const response = await this._client.sts.assumeRole(params).promise();
+      return response?.Credentials;
+    } catch (err) {
+      const error = asCustomError(err);
+      Logger.error(error);
+      throw error;
+    }
+  };
+
+  private getKardBucketClient = async (): Promise<aws.S3> => {
+    // assume correct role at karma wallet
+    const creds = await this.assumeRole(KardKarmaWalletAwsRole, `session-KardKarmaWalletAwsRole-${(new Types.ObjectId()).toString()}`);
+    const { AccessKeyId, SecretAccessKey, SessionToken } = creds;
+
+    const client = new STS({
+      credentials: new Credentials({ accessKeyId: AccessKeyId, secretAccessKey: SecretAccessKey, sessionToken: SessionToken }),
+    });
+
+    // assume correct role at kard
+    const kardCredSTSClient = await client
+      .assumeRole({
+        RoleArn: KardAwsRole,
+        RoleSessionName: `session-KardAwsRole-${(new Types.ObjectId()).toString()}`,
+        DurationSeconds: 3600,
+      })
+      .promise();
+
+    return new S3({
+      credentials: new Credentials({
+        accessKeyId: kardCredSTSClient.Credentials?.AccessKeyId,
+        secretAccessKey: kardCredSTSClient.Credentials?.SecretAccessKey,
+        sessionToken: kardCredSTSClient.Credentials?.SessionToken,
+      }),
+    });
+  };
+
+  assumeKardRoleAndGetBucketContents = async (bucket: string, prefix: string, startDate?: Date): Promise<EarnedRewardWebhookBody[]> => {
+    const s3Client = await this.getKardBucketClient();
+
+    const params = {
+      Bucket: bucket,
+      Prefix: prefix,
+    };
+
+    const objectNames = await s3Client.listObjectsV2(params).promise();
+
+    const contents = objectNames?.Contents;
+    let objects: EarnedRewardWebhookBody[] = [];
+
+    await sleep(awsBackoffInervalMS);
+    for (let i = 0; i < contents?.length; i++) {
+      const content = contents[i];
+      if (!content?.Key) continue;
+      if (content?.StorageClass === 'GLACIER') {
+        console.log(`skipping ${content.Key} because it is in GLACIER`);
+        continue; // got to restore these before we can download them
+      }
+
+      if (!!content?.LastModified && !!startDate && dayjs(startDate).isBefore(content.LastModified)) {
+        console.log(`skipping ${content.Key} because it is before ${startDate}`);
+        continue;
+      }
+
+      const downloadFileParams = {
+        Key: content?.Key,
+        Bucket: bucket,
+      };
+
+      // get webhooks from S3
+      const webhookFile = await s3Client.getObject(downloadFileParams).promise();
+
+      let data: EarnedRewardWebhookBody[] = [];
+      try {
+        data = JSON.parse(webhookFile.Body.toString())?.data;
+      } catch (err) {
+        console.log(err);
+        continue;
+      }
+      if (!!data?.length) {
+        objects = [...objects, ...data];
+        console.log(`found ${data.length} objects in ${downloadFileParams.Key}`);
+      }
+      await sleep(awsBackoffInervalMS);
+    }
+    return objects;
   };
 }

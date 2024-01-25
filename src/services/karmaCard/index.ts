@@ -179,7 +179,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (
         authKey: '',
         body: {
           code: groupCode,
-          email: userObject.emails[0].email,
+          email: userObject?.emails?.find((e) => e.primary)?.email,
           userId: userObject._id.toString(),
           skipSubscribe: true,
         },

@@ -4,7 +4,7 @@ export const getMerchantRateDescription = (
   Kind: string | CommissionType,
   Amount: number,
 ): { maxDescription: string; maxAmount: string; amount: number } => {
-  const kind = Kind.toLowerCase();
+  const kind = Kind ? Kind.toLowerCase() : null;
   const maxDescription = kind === 'percentage' || kind === 'percent'
     ? `Up to ${Amount}%`
     : `Up to ${Amount}`;

@@ -28,6 +28,7 @@ import * as UpdateKardMerchantsAndData from '../../../jobs/updateKardMerchantsAn
 import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayouts';
 import * as GenerateAdminSummaryReport from '../../../jobs/generateAdminSummaryReport';
 import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissions';
+import * as KardCommissionReconciliation from '../../../jobs/kardCommissionReconciliation';
 import * as SyncActiveCampaign from '../../../jobs/syncActiveCampaign';
 import * as GenerateKarmaCardStatements from '../../../jobs/generateKarmaCardStatements';
 import { INextJob } from '../base';
@@ -164,6 +165,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.MarqetaDataSync:
       result = await MarqetaTransactionSync.exec(data);
+      break;
+    case JobNames.KardCommissionReconciliation:
+      result = await KardCommissionReconciliation.exec(data);
       break;
     case JobNames.GenerateKarmaCardStatements:
       result = await GenerateKarmaCardStatements.exec();

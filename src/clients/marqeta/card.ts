@@ -1,6 +1,8 @@
+import { HttpsProxyAgent } from 'https-proxy-agent';
 import { IMarqetaCardTransition, IMarqetaCreateCard } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
+import { VgsClient } from '../vgs';
 import { MarqetaClient } from './marqetaClient';
 
 export class Card {
@@ -48,6 +50,18 @@ export class Card {
   async getCardDetails(cardToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/cards/${cardToken}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  // tokenize card through VGS
+  async tokenizeCard(cardToken: string) {
+    try {
+      const vgsClient = new VgsClient();
+      const data = await this._marqetaClient._client.get(`/cards/${cardToken}`, { proxy: false, httpsAgent: new HttpsProxyAgent(vgsClient.outboundProxy, { rejectUnauthorized: false }) });
       return data;
     } catch (err) {
       console.log(err);

@@ -937,7 +937,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         || usersUserGroup?.status === UserGroupStatus.Verified
         || usersUserGroup?.status === UserGroupStatus.Approved
       ) {
-        throw new CustomError('You have already joined this group.', ErrorTypes.UNPROCESSABLE);
+        return usersUserGroup;
       }
     }
 

@@ -1,3 +1,4 @@
+/* eslint-disable import/no-cycle */
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
@@ -12,20 +13,23 @@ import {
   IShareableCardApplication,
   KarmaCardApplicationModel,
 } from '../../models/karmaCardApplication';
-import { IUrlParam, UserModel } from '../../models/user';
+import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
 import { VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { IMarqetaUserState, ReasonCode } from './utils';
+import { IMarqetaUserState, ReasonCode, hasKarmaWalletCards } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
-import { updateActiveCampaignData } from '../../integrations/activecampaign';
-import { SubscriptionCode } from '../../types/subscription';
 import { joinGroup } from '../groups';
+import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../subscription';
+import { GroupModel } from '../../models/group';
+import { updateUserUrlParams } from '../user';
+import { updateCustomFields } from '../../integrations/activecampaign';
+import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -41,6 +45,16 @@ export interface IKarmaCardRequestBody {
   ssn: string;
   state: string;
   urlParams?: IUrlParam[];
+}
+
+interface IApplySuccessData {
+  email: string;
+  firstName: string;
+  lastName: string;
+  urlParams?: IUrlParam[];
+  virtualCardResponse: any;
+  physicalCardResponse: any;
+  visitorId?: string;
 }
 
 export interface INewLegalTextRequestBody {
@@ -139,6 +153,106 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
+export const updateActiveCampaignDataAndJoinGroupForApplicant = async (
+  userObject: IUserDocument,
+  urlParams?: IUrlParam[],
+) => {
+  const subscribeData: IActiveCampaignSubscribeData = {
+    debitCardholder: true,
+  };
+
+  if (!!urlParams) {
+    const groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
+    // employer beta card group
+    if (!!urlParams.find((param) => param.key === 'employerBeta')) {
+      subscribeData.employerBeta = true;
+    }
+
+    // beta card group
+    if (!!urlParams.find((param) => param.key === 'beta')) {
+      subscribeData.beta = true;
+    }
+
+    if (!!groupCode) {
+      const mockRequest = ({
+        requestor: userObject,
+        authKey: '',
+        body: {
+          code: groupCode,
+          email: userObject.emails[0].email,
+          userId: userObject._id.toString(),
+          skipSubscribe: true,
+        },
+      } as any);
+
+      const userGroup = await joinGroup(mockRequest);
+      if (!!userGroup) {
+        const group = await GroupModel.findById(userGroup.group);
+        subscribeData.groupName = group.name;
+        subscribeData.tags = [group.name];
+      }
+    }
+  }
+  await updateNewUserSubscriptions(userObject, subscribeData);
+};
+
+export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
+  const userEmail = userObject.emails.find(email => !!email.primary).email;
+  if (!!urlParams) {
+    await updateUserUrlParams(userObject, urlParams);
+    await updateActiveCampaignDataAndJoinGroupForApplicant(userObject, urlParams);
+  } else {
+    await updateActiveCampaignDataAndJoinGroupForApplicant(userObject);
+  }
+  // add existingUser flag to active campaign
+  await updateCustomFields(
+    userEmail,
+    [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }],
+  );
+  await createKarmaCardWelcomeUserNotification(userObject, false);
+};
+
+export const handleKarmaCardApplySuccess = async ({
+  email,
+  firstName,
+  lastName,
+  urlParams,
+  virtualCardResponse,
+  physicalCardResponse,
+  visitorId,
+}: IApplySuccessData): Promise<IUserDocument> => {
+  // find the user again since there is a potential race condition
+  let userObject = await UserModel.findOne({ 'emails.email': email });
+  // EXISTING USER
+  if (!!userObject) {
+    await handleExistingUserApplySuccess(userObject, urlParams);
+    userObject.name = `${firstName} ${lastName}`;
+  }
+
+  // NEW USER
+  if (!userObject) {
+    // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
+    // add the marqeta integration to the newly created user or the existing user (userObject)
+    const { user } = await UserService.register({
+      name: `${firstName} ${lastName}`,
+      password: generateRandomPasswordString(14),
+      visitorId,
+      isAutoGenerated: true,
+    });
+
+    userObject = user;
+    await createKarmaCardWelcomeUserNotification(userObject, true);
+  }
+
+  // store marqeta card in DB
+  await mapMarqetaCardtoCard(userObject._id.toString(), virtualCardResponse); // map virtual card
+  await mapMarqetaCardtoCard(userObject._id.toString(), physicalCardResponse); // map physical card
+
+  // store the karma card application log
+  await userObject.save();
+  return userObject;
+};
+
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
   let _visitor;
   let { requestor } = req;
@@ -156,10 +270,12 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)
-  if (!!existingVisitor && !existingUser) {
-    _visitor = existingVisitor;
-    if (_visitor?.integrations?.marqeta?.kycResult?.status === IMarqetaKycState.success) {
-      // if user is already having a marqeta aka Karma wallet card
+  if (!!existingVisitor && !existingUser) _visitor = existingVisitor;
+
+  // Existing user, check if already has cards
+  if (!!existingUser) {
+    const hasKarmaCards = await hasKarmaWalletCards(existingUser);
+    if (!!hasKarmaCards) {
       const applyResponse = {
         kycResult: {
           status: IMarqetaKycState.failure,
@@ -168,15 +284,20 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       };
       return applyResponse;
     }
-    // if is first time applying for the card or visiting site
-  } else if (!existingVisitor && !existingUser) {
+  }
+
+  // New user/visitor/applicant
+  if (!existingVisitor && !existingUser) {
     const visitorData: any = {
       email,
-      params: urlParams,
     };
 
-    if (!!urlParams && urlParams.find((param) => param.key === 'groupCode')) {
-      visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
+    if (!!urlParams) {
+      visitorData.params = urlParams;
+      const groupCode = urlParams.find((param) => param.key === 'groupCode');
+      if (!!groupCode) {
+        visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
+      }
     }
 
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
@@ -222,55 +343,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   if (!existingUser) {
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
-  } else {
-    console.log('Existing user applying for Karma Card', existingUser);
-    const existingParams = existingUser.integrations?.referrals?.params;
-    const subscribe = [SubscriptionCode.debitCardHolders];
-    const unsubscribe: any = [];
-
-    if (!!urlParams) {
-      const combinedParams = !!existingParams ? [...existingParams, ...urlParams] : urlParams;
-      existingUser.integrations.marqeta = marqeta;
-      existingUser.integrations.referrals = {
-        params: combinedParams,
-      };
-
-      if (!!urlParams.find((param) => param.key === 'beta')) {
-        subscribe.push(SubscriptionCode.betaTesters);
-      }
-
-      if (!!urlParams.find((param) => param.key === 'employerBeta')) {
-        subscribe.push(SubscriptionCode.employerProgramBeta);
-      }
-
-      if (!!urlParams.find((param) => param.key === 'groupCode')) {
-        const mockRequest = ({
-          requestor: existingUser,
-          authKey: '',
-          body: {
-            code: urlParams.find((param) => param.key === 'groupCode').value,
-            email: existingUser.emails.find((e) => !!e.primary).email,
-            userId: existingUser._id.toString(),
-            skipSubscribe: false,
-          },
-        } as any);
-
-        await joinGroup(mockRequest);
-      }
-
-      await existingUser.save();
-    }
-
-    await updateActiveCampaignData({
-      userId: existingUser?._id,
-      email: existingUser.emails.find((e) => !!e.primary).email,
-      subscriptions: {
-        subscribe,
-        unsubscribe,
-      },
-    });
   }
-  // prepare the data object for karmaCardApplication
+
   const karmaCardApplication: IKarmaCardApplication = {
     userToken: marqetaUserResponse?.userToken,
     firstName,
@@ -290,56 +364,42 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     lastModified: dayjs().utc().toDate(),
   };
 
-  if (_visitor) {
-    karmaCardApplication.visitorId = _visitor._id;
-  }
-
-  if (!!existingUser) {
-    karmaCardApplication.userId = existingUser._id.toString();
-  }
-
-  // if marqeta Kyc failed / pending
+  // FAILED OR PENDING KYC, already saved to user or visitor object
   if (kycStatus !== IMarqetaKycState.success) {
-    const applyResponse = marqeta;
+  // prepare the data object for karmaCardApplication
+
+    if (_visitor) karmaCardApplication.visitorId = _visitor._id;
+    if (!!existingUser) karmaCardApplication.userId = existingUser._id.toString();
     // store the karma card application log
     await storeKarmaCardApplication(karmaCardApplication);
-    return applyResponse;
+    return marqeta;
   }
 
-  // if marqeta Kyc Approved/success
-  if (kycStatus === IMarqetaKycState.success) {
-    let userObject = await UserModel.findOne({ 'emails.email': email });
+  // KYC SUCCESS
+  const successData: IApplySuccessData = {
+    email,
+    firstName,
+    lastName,
+    virtualCardResponse,
+    physicalCardResponse,
+    visitorId: _visitor?._id || '',
+  };
 
-    // if there is an existing user, add the marqeta integration to the existing user
-    if (!!userObject) {
-      // send karma welcome email to user
-      await createKarmaCardWelcomeUserNotification(userObject, false);
-      const applyResponse = marqeta;
-      return applyResponse;
-    }
-    console.log('///// IN KARMA CARD APPLICATION CODE: no existing user create new user');
-    // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
-    // add the marqeta integration to the newly created user or the existing user (userObject)
-    const { user } = await UserService.register({
-      name: `${firstName} ${lastName}`,
-      password: generateRandomPasswordString(14),
-      visitorId: _visitor._id,
-      isAutoGenerated: true,
-    });
-    userObject = user;
-    await createKarmaCardWelcomeUserNotification(userObject, true);
+  if (!!urlParams) successData.urlParams = urlParams;
 
-    // store marqeta card in DB
-    await mapMarqetaCardtoCard(userObject._id.toString(), virtualCardResponse); // map virtual card
-    await mapMarqetaCardtoCard(userObject._id.toString(), physicalCardResponse); // map physical card
+  const userDocument = await handleKarmaCardApplySuccess(successData);
 
-    // store the karma card application log
-    await storeKarmaCardApplication({ ...karmaCardApplication, userId: userObject._id.toString(), status: ApplicationStatus.SUCCESS });
-    await userObject.save();
-    const applyResponse = userObject?.integrations?.marqeta;
-
-    return applyResponse;
-  }
+  karmaCardApplication.status = ApplicationStatus.SUCCESS;
+  karmaCardApplication.kycResult = {
+    status: IMarqetaKycState.success,
+    codes: [],
+  };
+  karmaCardApplication.userId = userDocument._id.toString();
+  userDocument.integrations.marqeta = marqeta;
+  await userDocument.save();
+  await storeKarmaCardApplication(karmaCardApplication);
+  const applyResponse = userDocument?.integrations?.marqeta;
+  return applyResponse;
 };
 
 export const getKarmaCardLegalText = async (_req: IRequest) => {

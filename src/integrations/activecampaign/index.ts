@@ -678,8 +678,15 @@ export const updateActiveCampaignListStatusForEmail = async (
   const ac = new ActiveCampaignClient();
   ac.withHttpClient(client);
 
-  const firstName = userData.name?.split(' ')?.[0];
-  const lastName = userData.name?.split(' ')?.pop();
+  let firstName = '';
+  let lastName = '';
+
+  if (userData?.name.includes(' ')) {
+    firstName = userData.name?.split(' ')?.[0];
+    lastName = userData.name?.split(' ')?.pop();
+  } else {
+    firstName = userData.name;
+  }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
@@ -694,7 +701,12 @@ export const updateActiveCampaignListStatusForEmail = async (
       tags,
     },
   ];
-  await ac.importContacts({ contacts });
+
+  try {
+    await ac.importContacts({ contacts });
+  } catch (err) {
+    console.log('Error updating active campaign list status for email', err);
+  }
 };
 
 export const deleteContact = async (email: string, client?: AxiosInstance) => {

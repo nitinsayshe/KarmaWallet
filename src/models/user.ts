@@ -80,7 +80,7 @@ export interface IMarqetaKycResult {
 export interface IMarqetaUserIntegrations {
   userToken: string;
   email?: string;
-  kycResult: IMarqetaKycResult;
+  kycResult?: IMarqetaKycResult;
   first_name?: string;
   last_name?: string;
   birth_date?: string;
@@ -95,6 +95,7 @@ export interface IMarqetaUserIntegrations {
   identifications?: IMarqetaIdentification[];
   status?: IMarqetaUserStatus;
   created_time?: string;
+  _id?: string;
 }
 
 export interface IFCMTokenIntegration {

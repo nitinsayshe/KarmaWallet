@@ -702,11 +702,7 @@ export const updateActiveCampaignListStatusForEmail = async (
     },
   ];
 
-  try {
-    await ac.importContacts({ contacts });
-  } catch (err) {
-    console.log('Error updating active campaign list status for email', err);
-  }
+  await ac.importContacts({ contacts });
 };
 
 export const deleteContact = async (email: string, client?: AxiosInstance) => {

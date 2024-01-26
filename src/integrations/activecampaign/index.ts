@@ -679,8 +679,15 @@ export const updateActiveCampaignContactData = async (
   const ac = new ActiveCampaignClient();
   ac.withHttpClient(client);
 
-  const firstName = userData.name?.split(' ')?.[0];
-  const lastName = userData.name?.split(' ')?.pop();
+  let firstName = '';
+  let lastName = '';
+
+  if (userData?.name.includes(' ')) {
+    firstName = userData.name?.split(' ')?.[0];
+    lastName = userData.name?.split(' ')?.pop();
+  } else {
+    firstName = userData.name;
+  }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
@@ -696,6 +703,7 @@ export const updateActiveCampaignContactData = async (
       fields,
     },
   ];
+
   await ac.importContacts({ contacts });
 };
 

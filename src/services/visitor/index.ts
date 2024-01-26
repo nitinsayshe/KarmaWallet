@@ -122,18 +122,15 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
 export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
-    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale || !!info.marqeta) {
-      visitor.integrations = {};
-      if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-      if (!!info.params) {
-        visitor.integrations.urlParams = info.params;
-        if (info.params.find(p => p.key === 'groupCode')) {
-          visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
-        }
+    if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
+    if (!!info.params) {
+      visitor.integrations.urlParams = info.params;
+      if (info.params.find(p => p.key === 'groupCode')) {
+        visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
-      if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
-      if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     }
+    if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+    if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     visitor.save();
     return visitor;
   } catch (err) {

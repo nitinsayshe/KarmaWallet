@@ -32,7 +32,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest, IUrlParam } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -626,7 +626,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
 
     // delete user from active campaign
     if (email) await deleteContact(email);
-    await cancelUserSubscriptions(user._id.toString());
+    await cancelAllUserSubscriptions(user._id.toString());
     await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
 
     await deleteUserData(user._id);

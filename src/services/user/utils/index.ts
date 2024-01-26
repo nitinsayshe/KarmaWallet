@@ -41,7 +41,7 @@ export const iterateOverUsersAndExecWithDelay = async <Req, Res>(
     console.log(`Prepared ${userReports.length} user reports`);
     report = report.concat(userReports);
 
-    sleep(msDelayBetweenBatches);
+    await sleep(msDelayBetweenBatches);
 
     hasNextPage = userBatch?.hasNextPage || false;
     page++;

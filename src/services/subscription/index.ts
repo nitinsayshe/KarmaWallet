@@ -95,7 +95,11 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
         subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
       }
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
-      await updateActiveCampaignListStatusForEmail({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
+      try {
+        await updateActiveCampaignListStatusForEmail({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
+      } catch (err) {
+        console.error('Error subscribing user to lists', err);
+      }
     }
 
     await SubscriptionModel.findOneAndUpdate(
@@ -154,7 +158,11 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
         subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
       }
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
-      await updateActiveCampaignListStatusForEmail({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
+      try {
+        await updateActiveCampaignListStatusForEmail({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
+      } catch (err) {
+        console.error('Error subscribing user to lists', err);
+      }
     }
   }
 };

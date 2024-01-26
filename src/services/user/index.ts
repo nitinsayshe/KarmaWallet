@@ -32,7 +32,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { IActiveCampaignSubscribeData, cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { IActiveCampaignSubscribeData, cancelAllUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -202,11 +202,12 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
           },
         } as any);
 
+        // maybe call function that gets the tags and makes sure to not drop any
         const userGroup = await joinGroup(mockRequest);
         if (!!userGroup) {
           const group = await GroupModel.findById(userGroup.group);
           subscribeData.groupName = group.name;
-          subscribeData.tags = [group.name];
+          subscribeData.tags = [group.name]; // user could be in multiple groups, but we only want to tag one
         }
       }
 
@@ -661,7 +662,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
 
     // delete user from active campaign
     if (email) await deleteContact(email);
-    await cancelUserSubscriptions(user._id.toString());
+    await cancelAllUserSubscriptions(user._id.toString());
     await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
 
     await deleteUserData(user._id);

@@ -578,6 +578,13 @@ export const createKarmaCardWelcomeUserNotification = async (
   newUser: boolean,
 ): Promise<IUserNotificationDocument | void> => {
   try {
+    const existingNotification = await UserNotificationModel.findOne({
+      user: user._id,
+      type: NotificationTypeEnum.KarmaCardWelcome,
+      status: UserNotificationStatusEnum.Unread,
+      channel: NotificationChannelEnum.Email,
+    });
+    if (existingNotification) return;
     const mockRequest = {
       body: {
         type: NotificationTypeEnum.KarmaCardWelcome,

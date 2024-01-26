@@ -1,4 +1,6 @@
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
+import { CardModel } from '../../../models/card';
+import { IUserDocument } from '../../../models/user';
 
 export enum IMarqetaUserState {
   active = 'ACTIVE',
@@ -128,4 +130,12 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
   if (solutionText[kycResult.codes[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes[0] as ReasonCode];
   if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode];
   return transformed;
+};
+
+export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta': { $exists: true },
+  });
+  return !!karmaCards.length;
 };

@@ -91,10 +91,10 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued],
   // },
-  [NotificationTypeEnum.KarmaCardWelcome]: {
-    type: NotificationTypeEnum.KarmaCardWelcome,
+  [NotificationTypeEnum.ACHTransferInitiation]: {
+    type: NotificationTypeEnum.ACHTransferInitiation,
     channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
+    effects: [NotificationEffectsEnum.SendACHInitiationEmail],
   },
 };
 

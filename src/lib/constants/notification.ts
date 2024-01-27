@@ -8,6 +8,7 @@ export type NotificationChannelEnumValue = (typeof NotificationChannelEnum)[keyo
 
 export const NotificationTypeEnum = {
   ACHTransferInitiation: 'achTransferInitiation',
+  ACHTransferCancelled: 'achTransferCancelled',
   BalanceThreshold: 'balanceThreshold',
   CardTransition: 'cardTransition',
   CaseWonProvisionalCreditAlreadyIssued: 'caseWonProvisionalCreditAlreadyIssued',
@@ -57,6 +58,7 @@ export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyo
 export enum PushNotificationTypes {
   BALANCE_THRESHOLD = 'BALANCE_THRESHOLD',
   ACH_TRANSFER_INITIATION = 'ACH_TRANSFER_INITIATION',
+  ACH_TRANSFER_CANCELLED = 'ACH_TRANSFER_CANCELLED',
   CARD_TRANSITION = 'CARD_TRANSITION',
   EARNED_CASHBACK = 'EARNED_CASHBACK',
   EMPLOYER_GIFT = 'EMPLOYER_GIFT',

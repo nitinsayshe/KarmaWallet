@@ -284,6 +284,8 @@ const getNotificationTypeFromPushNotificationType = (pushNotificationType: PushN
       return NotificationTypeEnum.DiningTransaction;
     case PushNotificationTypes.TRANSACTION_OF_GAS:
       return NotificationTypeEnum.GasTransaction;
+    case PushNotificationTypes.ACH_TRANSFER_CANCELLED:
+      return NotificationTypeEnum.ACHTransferCancelled;
     default:
       return '';
   }

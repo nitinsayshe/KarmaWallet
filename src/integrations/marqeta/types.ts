@@ -589,7 +589,8 @@ export interface IMarqetaBankTransferTransitionEvent {
   token: string;
   bank_transfer_token: string;
   status: string;
-  reason: string;
+  return_reason: string;
+  return_code: string;
   channel: string;
   created_time: Date;
   last_modified_time: Date;
@@ -617,6 +618,16 @@ export enum MarqetaWebhookConstants {
   GPA_CREDIT = 'gpa.credit',
   PIN_DEBIT = 'pindebit',
   COMPLETION = 'COMPLETION',
+}
+
+export enum MarqetaBankTransitionStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  SUBMITTED = 'SUBMITTED',
+  COMPLETED = 'COMPLETED',
+  RETURNED = 'RETURNED',
+  CANCELLED = 'CANCELLED',
+  ERROR = 'ERROR',
 }
 
 export const MCCStandards = {

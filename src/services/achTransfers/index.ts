@@ -1,17 +1,20 @@
+/* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { createACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
-import { ACHTransferTransitionStatusEnum, IACHBankTransfer, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition } from '../../integrations/marqeta/types';
+import { ACHTransferTransitionStatusEnum, IACHBankTransfer, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaBankTransferTransitionEvent, MarqetaBankTransitionStatus } from '../../integrations/marqeta/types';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
-import { createACHInitiationUserNotification } from '../user_notification';
+import { createACHInitiationUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { BankConnectionModel } from '../../models/bankConnection';
+import { UserModel } from '../../models/user';
+import { PushNotificationTypes } from '../../lib/constants/notification';
 
 dayjs.extend(utc);
 
@@ -150,18 +153,69 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   // Store ACH transfer in karma database
   const savedACHTransfer = await mapACHBankTransfer(_id, data);
   if (!savedACHTransfer) throw new CustomError('Error saving the ACH Transfer to the database.', ErrorTypes.GEN);
-  const transferBankData = await ACHFundingSourceModel.findOne({
-    token: fundingSourceToken,
-  });
-  const bankName = await getACHSourceBankName(transferBankData.accessToken);
-  // Create user notification
-  await createACHInitiationUserNotification({
-    user: req.requestor,
-    amount,
-    accountMask: transferBankData.account_suffix.toString(),
-    accountType: `${bankName} ${transferBankData.account_type.toString()}`,
-    date: dayjs(data.created_time).utc().format('MMMM DD, YYYY'),
-  });
+
+  console.log('///// ACHTrander Status', achTransferData.data.status);
+
+  if (achTransferData.data.status === ACHTransferTransitionStatusEnum.Pending) {
+    console.log('///// in pending state should send notif');
+    const transferBankData = await ACHFundingSourceModel.findOne({
+      token: fundingSourceToken,
+    });
+    const bankName = await getACHSourceBankName(transferBankData.accessToken);
+    // Create user notification
+    await createACHInitiationUserNotification({
+      user: req.requestor,
+      amount,
+      accountMask: transferBankData.account_suffix.toString(),
+      accountType: `${bankName} ${transferBankData.account_type.toString()}`,
+      date: dayjs(data.created_time).utc().format('MMMM DD, YYYY'),
+    });
+  }
 
   return getShareableACHTransfer(savedACHTransfer);
+};
+
+export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: IMarqetaBankTransferTransitionEvent) => {
+  const userTransitions = await ACHTransferModel.findOneAndUpdate(
+    {
+      token: banktransfertransition.bank_transfer_token,
+    },
+    {
+      $set: { status: banktransfertransition.status },
+      $push: { transitions: banktransfertransition },
+    },
+  );
+
+  const user = await UserModel.findById(userTransitions?.userId);
+  if (!user) throw new CustomError('User not found.', ErrorTypes.GEN);
+
+  const { status, return_reason } = banktransfertransition;
+
+  switch (status) {
+    case MarqetaBankTransitionStatus.COMPLETED:
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.FUNDS_AVAILABLE,
+        body: 'Your funds are now available on your Karma Wallet Card!',
+        title: 'Deposit Alert',
+      });
+      break;
+    case MarqetaBankTransitionStatus.CANCELLED:
+      // To do: add email
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
+        body: 'Your deposit was cancelled. Please contact support@karmawallet.io if you have questions.',
+        title: 'ACH Transfer Alert',
+      });
+      break;
+    case MarqetaBankTransitionStatus.RETURNED:
+      // To do: add email
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
+        body: `Your deposit was returned because: ${return_reason}.`,
+        title: 'ACH Transfer Alert',
+      });
+      break;
+    default:
+      break;
+  }
 };

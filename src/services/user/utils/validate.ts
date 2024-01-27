@@ -14,3 +14,13 @@ export const validatePassword = (password: string) => {
 };
 
 export const isValidPassword = (password: string) => validatePassword(password).valid;
+
+export const validatePhoneNumber = (phone: string) => {
+  const phonePattern = /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/i;
+  if (!phonePattern.test(phone)) {
+    return { valid: false, message: 'Please provide a valid 10 digit phone number.' };
+  }
+  return { valid: true, message: 'Phone Number Valid' };
+};
+
+export const isvalidPhoneNumber = (phone: string) => validatePhoneNumber(phone).valid;

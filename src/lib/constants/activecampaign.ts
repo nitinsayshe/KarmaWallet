@@ -11,6 +11,7 @@ export enum ActiveCampaignSyncTypes {
   INITIAL = 'initial',
   MONTHLY = 'monthly',
   QUARTERLY = 'quarterly',
+  RECONCILE_SUBSCRIPTIONS = 'reconcileSubscriptions',
   SPENDING_ANALYSIS = 'spendingAnalysis',
   UNLINKED_AND_REMOVED_ACCOUNTS = 'unlinkedAndRemovedAccounts',
   WEEKLY = 'weekly',

@@ -154,10 +154,7 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   const savedACHTransfer = await mapACHBankTransfer(_id, data);
   if (!savedACHTransfer) throw new CustomError('Error saving the ACH Transfer to the database.', ErrorTypes.GEN);
 
-  console.log('///// ACHTrander Status', achTransferData.data.status);
-
   if (achTransferData.data.status === ACHTransferTransitionStatusEnum.Pending) {
-    console.log('///// in pending state should send notif');
     const transferBankData = await ACHFundingSourceModel.findOne({
       token: fundingSourceToken,
     });

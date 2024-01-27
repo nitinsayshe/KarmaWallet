@@ -1,4 +1,3 @@
-import { NotificationTypeEnum, NotificationChannelEnum, NotificationEffectsEnum } from '../../lib/constants/notification';
 import { IUpdateableDocument, updateDocumentsWithUpsert } from '../../lib/model';
 import { INotificationDocument, NotificationModel } from '../../models/notification';
 
@@ -91,11 +90,16 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued],
   // },
-  [NotificationTypeEnum.ACHTransferInitiation]: {
-    type: NotificationTypeEnum.ACHTransferInitiation,
-    channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendACHInitiationEmail],
-  },
+  // [NotificationTypeEnum.ACHTransferInitiation]: {
+  //   type: NotificationTypeEnum.ACHTransferInitiation,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendACHInitiationEmail],
+  // },
+  // [NotificationTypeEnum.KarmaCardWelcome]: {
+  //   type: NotificationTypeEnum.KarmaCardWelcome,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
+  // },
 };
 
 export const createNotifications = async () => {

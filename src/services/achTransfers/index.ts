@@ -197,6 +197,8 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
     throw new CustomError('ACH Transfer not found.', ErrorTypes.GEN);
   }
 
+  console.log('////// RECEIVED ACH TRANSFER WEBHOOK', banktransfertransition);
+
   switch (status) {
     case MarqetaBankTransitionStatus.COMPLETED:
       await createPushUserNotificationFromUserAndPushData(user, {
@@ -206,6 +208,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
       });
       break;
     case MarqetaBankTransitionStatus.CANCELLED:
+      console.log('////// ACH Transfer was cancelled', banktransfertransition.bank_transfer_token);
       // To do: add email
       await createPushUserNotificationFromUserAndPushData(user, {
         pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
@@ -222,6 +225,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
       });
       break;
     case MarqetaBankTransitionStatus.RETURNED:
+      console.log('////// ACH Transfer was returned', banktransfertransition.bank_transfer_token);
       // To do: add email
       await createPushUserNotificationFromUserAndPushData(user, {
         pushNotificationType: PushNotificationTypes.ACH_TRANSFER_RETURNED,

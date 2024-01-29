@@ -32,7 +32,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest, IUrlParam } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -324,7 +324,20 @@ export const getShareableUser = ({
   const _integrations: Partial<IUserIntegrations> = {};
   if (integrations?.paypal) _integrations.paypal = integrations.paypal;
   if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
-  if (integrations?.marqeta) _integrations.marqeta = integrations.marqeta;
+  if (integrations?.marqeta) {
+    _integrations.marqeta = {
+      userToken: integrations.marqeta.userToken,
+      email: integrations.marqeta.email,
+      first_name: integrations.marqeta.first_name,
+      last_name: integrations.marqeta.last_name,
+      city: integrations.marqeta.city,
+      postal_code: integrations.marqeta.postal_code,
+      state: integrations.marqeta.state,
+      address1: integrations.marqeta.address1,
+      country: integrations.marqeta.country,
+      status: integrations.marqeta.status,
+    };
+  }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;
   return {
     _id,
@@ -613,7 +626,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
 
     // delete user from active campaign
     if (email) await deleteContact(email);
-    await cancelUserSubscriptions(user._id.toString());
+    await cancelAllUserSubscriptions(user._id.toString());
     await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
 
     await deleteUserData(user._id);

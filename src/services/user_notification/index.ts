@@ -406,6 +406,7 @@ export const createEarnedCashbackPushNotificationFromCommission = async (commiss
   try {
     const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await getCommissionWithPopulatedUserAndCompany(commission);
     const user = commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument;
+    const amountToUser = commission.allocation.user.toFixed(2);
 
     if (!user?.integrations?.marqeta) {
       throw new CustomError(`User with commission: ${commission} does not have a marqeta integration.`);
@@ -413,7 +414,7 @@ export const createEarnedCashbackPushNotificationFromCommission = async (commiss
 
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.EARNED_CASHBACK,
-      body: `You earned $${roundToPercision(commission.amount, 2)} in Karma Cash`,
+      body: `You earned $${amountToUser} in Karma Cash`,
       title: 'You earned Karma Cash!',
     });
   } catch (e) {
@@ -471,6 +472,7 @@ export const createPayoutEmailNotificationFromCommissionPayout = async (
   try {
     const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await getCommissionPayoutWithPopulatedUser(commissionPayout);
     const user = commissionPayoutWithPopulatedUser[0].user as IUserDocument;
+    const payoutAmount = commissionPayout.amount.toFixed(2);
 
     const mockRequest = {
       body: {
@@ -480,8 +482,8 @@ export const createPayoutEmailNotificationFromCommissionPayout = async (
         user: user?._id?.toString(),
         data: {
           name: user.name,
-          body: `You were sent $${roundToPercision(commissionPayout.amount, 2)} in cashback rewards!`,
-          payoutAmount: `${commissionPayout.amount}`,
+          body: `You were sent $${payoutAmount} in cashback rewards!`,
+          payoutAmount: `${payoutAmount}`,
         },
       } as CreateNotificationRequest<IPayoutNotificationData>,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
@@ -502,7 +504,7 @@ export const createPayoutPushNotificationFromCommissionPayout = async (commissio
 
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${roundToPercision(commissionPayout.amount, 2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      body: `$${commissionPayout.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
       title: 'Karma Cash Was Deposited',
     });
   } catch (e) {

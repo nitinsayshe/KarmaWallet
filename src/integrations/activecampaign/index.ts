@@ -668,11 +668,12 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
   }
 };
 
-export const updateActiveCampaignListStatusForEmail = async (
+export const updateActiveCampaignContactData = async (
   userData: {email: string, name?: string},
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
   tags?: string[],
+  fields?: FieldValues,
   client?: AxiosInstance,
 ) => {
   const ac = new ActiveCampaignClient();
@@ -699,6 +700,7 @@ export const updateActiveCampaignListStatusForEmail = async (
       subscribe: sub,
       unsubscribe: unsub,
       tags,
+      fields,
     },
   ];
 

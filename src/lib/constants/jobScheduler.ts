@@ -52,6 +52,7 @@ export enum JobNames {
   SyncActiveCampaign = 'sync-active-campaign',
   SendAccountCreationReminderEmail = 'send-account-creation-reminder-email',
   GenerateKarmaCardStatements = 'generate-karma-card-statements',
+  KardCommissionReconciliation = 'kard-commission-reconciliation',
 }
 
 export const MarqetaDataSyncTypeEnum = {

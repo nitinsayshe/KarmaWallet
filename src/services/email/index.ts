@@ -576,8 +576,6 @@ export const sendACHCancelledEmail = async ({
   const senderEmail = EmailAddresses.NoReply;
   const replyToAddresses = [EmailAddresses.ReplyTo];
   const recipientEmail = user.emails.find(e => !!e.primary)?.email;
-  console.log('//// this is the name', name);
-
   const { isValid, missingFields } = verifyRequiredFields(['amount', 'accountMask', 'accountType', 'date', 'name'], { amount, accountMask, accountType, date, name });
 
   if (!isValid) {

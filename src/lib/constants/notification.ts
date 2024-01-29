@@ -7,8 +7,9 @@ export const NotificationChannelEnum = {
 export type NotificationChannelEnumValue = (typeof NotificationChannelEnum)[keyof typeof NotificationChannelEnum];
 
 export const NotificationTypeEnum = {
-  ACHTransferInitiation: 'achTransferInitiation',
   ACHTransferCancelled: 'achTransferCancelled',
+  ACHTransferInitiation: 'achTransferInitiation',
+  ACHTransferReturned: 'achTransferReturned',
   BalanceThreshold: 'balanceThreshold',
   CardTransition: 'cardTransition',
   CaseWonProvisionalCreditAlreadyIssued: 'caseWonProvisionalCreditAlreadyIssued',
@@ -30,7 +31,6 @@ export const NotificationTypeEnum = {
   CaseWonProvisionalCreditNotAlreadyIssued: 'caseWonProvisionalCreditNotAlreadyIssued',
   DisputeReceivedNoProvisionalCreditIssued: 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped: 'cardShipped',
-  CardDelivered: 'cardDelivered',
   CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
@@ -43,6 +43,7 @@ export const NotificationEffectsEnum = {
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditAlreadyIssuedEmail',
   SendACHInitiationEmail: 'SendACHInitiationEmail',
   SendACHCancelledEmail: 'SendACHCancelledEmail',
+  SendACHReturnedEmail: 'SendACHReturnedEmail',
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: 'SendCaseLostProvisionalCreditAlreadyIssuedEmail',
@@ -51,7 +52,6 @@ export const NotificationEffectsEnum = {
   SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditNotAlreadyIssuedEmail',
   SendDisputeReceivedNoProvisionalCreditIssuedEmail: 'SendDisputeReceivedNoProvisionalCreditIssuedEmail',
   SendCardShippedEmail: 'SendCardShippedEmail',
-  SendCardDeliveredEmail: 'SendCardDeliveredEmail',
   SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];

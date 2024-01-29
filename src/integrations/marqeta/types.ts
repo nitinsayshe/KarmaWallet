@@ -2,6 +2,7 @@ import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
 import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
+import { NACHAACHReturnCodeEnumValues } from '../../services/achTransfers/types';
 
 interface Identification {
   type: string;
@@ -590,7 +591,7 @@ export interface IMarqetaBankTransferTransitionEvent {
   bank_transfer_token: string;
   status: string;
   return_reason: string;
-  return_code: string;
+  return_code: NACHAACHReturnCodeEnumValues;
   channel: string;
   created_time: Date;
   last_modified_time: Date;

@@ -17,6 +17,7 @@ export interface IACHTransferEmailData {
   accountType: string;
   date: string;
   name?: string;
+  reason?: string;
 }
 
 interface IBaseEmailParams {

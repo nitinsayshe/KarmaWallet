@@ -11,7 +11,7 @@ import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
-import { createACHInitiationUserNotification, createACHTransferCancelledUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { createACHInitiationUserNotification, createACHTransferCancelledUserNotification, createACHTransferReturnedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { BankConnectionModel } from '../../models/bankConnection';
 import { UserModel } from '../../models/user';
 import { PushNotificationTypes } from '../../lib/constants/notification';
@@ -204,6 +204,14 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         body: 'Your funds are now available on your Karma Wallet Card!',
         title: 'Deposit Alert',
       });
+      break;
+    case MarqetaBankTransitionStatus.CANCELLED:
+      // To do: add email
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
+        body: 'Your deposit was cancelled. Please contact support@karmawallet.io if you have questions.',
+        title: 'ACH Transfer Alert',
+      });
 
       await createACHTransferCancelledUserNotification({
         user,
@@ -213,20 +221,21 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         date: dayjs(achTransfer.created_time).utc().format('MMMM DD, YYYY'),
       });
       break;
-    case MarqetaBankTransitionStatus.CANCELLED:
-      // To do: add email
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
-        body: 'Your deposit was cancelled. Please contact support@karmawallet.io if you have questions.',
-        title: 'ACH Transfer Alert',
-      });
-      break;
     case MarqetaBankTransitionStatus.RETURNED:
       // To do: add email
       await createPushUserNotificationFromUserAndPushData(user, {
         pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
         body: `Your deposit was returned because: ${return_reason}.`,
         title: 'ACH Transfer Alert',
+      });
+
+      await createACHTransferReturnedUserNotification({
+        user,
+        amount: achTransfer.amount.toFixed(2),
+        accountMask: transferBankData.account_suffix.toString(),
+        accountType: `${bankName} ${transferBankData.account_type.toString()}`,
+        date: dayjs(achTransfer.created_time).utc().format('MMMM DD, YYYY'),
+        reason: return_reason,
       });
       break;
     default:

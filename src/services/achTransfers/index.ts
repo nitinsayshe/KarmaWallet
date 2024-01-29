@@ -173,6 +173,7 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
 };
 
 export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: IMarqetaBankTransferTransitionEvent) => {
+  console.log('//// handle Marqeta webhook');
   const userTransitions = await ACHTransferModel.findOneAndUpdate(
     {
       token: banktransfertransition.bank_transfer_token,

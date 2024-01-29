@@ -350,6 +350,8 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendPayoutIssuedEmail,
     NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
     NotificationEffectsEnum.SendACHInitiationEmail,
+    NotificationEffectsEnum.SendACHCancelledEmail,
+    NotificationEffectsEnum.SendACHReturnedEmail,
     NotificationEffectsEnum.SendNoChargebackRightsEmail,
     NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail,

@@ -362,6 +362,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!banktransfertransitions) {
       console.log('////////// PROCESSING MARQETA BANKTRANSFERTRANSITION WEBHOOK ////////// ');
       for (const banktransfertransition of banktransfertransitions) {
+        console.log('////// in bank transfer');
         await handleMarqetaACHTransitionWebhook(banktransfertransition);
       }
     }

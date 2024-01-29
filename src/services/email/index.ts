@@ -563,6 +563,49 @@ export const sendDeleteAccountRequestEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+export const sendACHCancelledEmail = async ({
+  user,
+  amount,
+  accountMask,
+  accountType,
+  date,
+  name,
+}: IACHTransferEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ACHTransferCancelled;
+  const subject = 'An ACH Transfer Has Been Cancelled';
+  const senderEmail = EmailAddresses.NoReply;
+  const replyToAddresses = [EmailAddresses.ReplyTo];
+  const recipientEmail = user.emails.find(e => !!e.primary)?.email;
+
+  const { isValid, missingFields } = verifyRequiredFields(['amount', 'accountMask', 'accountType', 'date', 'name'], { amount, accountMask, accountType, date, name });
+
+  if (!isValid) {
+    throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  }
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { amount, accountMask, accountType, date, name },
+  });
+
+  const jobData: IEmailJobData = {
+    template,
+    recipientEmail,
+    subject,
+    senderEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user: user._id,
+    amount,
+    accountMask,
+    accountType,
+    date,
+    name,
+  };
+
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const sendACHInitiationEmail = async ({
   user,
   amount,

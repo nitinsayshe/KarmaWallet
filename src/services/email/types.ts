@@ -9,6 +9,7 @@ export interface ICreateSentEmailParams {
   user?: Types.ObjectId;
   visitor?: Types.ObjectId;
 }
+
 export interface IACHTransferEmailData {
   user: IUserDocument;
   amount: string;

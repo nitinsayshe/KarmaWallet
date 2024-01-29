@@ -16,7 +16,7 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail, sendACHCancelledEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -104,6 +104,25 @@ export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDo
   } catch (err) {
     console.error(err);
     throw new CustomError('Error sending ach initiation email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleSendACHCancelledEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IACHTransferEmailData;
+  const { date, amount, accountMask, accountType, name } = d;
+  if (!d) throw new Error('Invalid ach initiation notification data');
+  try {
+    await sendACHCancelledEmail({
+      user,
+      amount,
+      accountMask,
+      accountType,
+      date,
+      name,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending ach cancelled email', ErrorTypes.SERVER);
   }
 };
 
@@ -307,6 +326,7 @@ export const NotificationEffectsFunctions: {
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
+  SendACHCancelledEmail: handleSendACHInitiationEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,

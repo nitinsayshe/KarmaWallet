@@ -913,3 +913,30 @@ export const createCardDeliveredUserNotification = async (
     console.log(`Error creating card delivered notification: ${e}`);
   }
 };
+
+export const createACHTransferCancelledUserNotification = async (
+  transferData: IACHTransferEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user, amount, accountMask, accountType, date } = transferData;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ACHTransferCancelled,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH cancelled email notification: ${e}`);
+  }
+};

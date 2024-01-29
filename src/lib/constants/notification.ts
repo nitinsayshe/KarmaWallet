@@ -42,6 +42,7 @@ export const NotificationEffectsEnum = {
   SendEmployerGiftEmail: 'SendEmployerGiftEmail',
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditAlreadyIssuedEmail',
   SendACHInitiationEmail: 'SendACHInitiationEmail',
+  SendACHCancelledEmail: 'SendACHCancelledEmail',
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: 'SendCaseLostProvisionalCreditAlreadyIssuedEmail',

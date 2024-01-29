@@ -16,6 +16,7 @@ import {
   sendCardDeliveredEmail,
   sendCaseLostProvisionalCreditNotAlreadyIssuedEmail,
   sendEmployerGiftEmail,
+  sendACHCancelledEmail,
 } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -100,6 +101,30 @@ export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendACHInitiationEmail({
+      user: req.requestor,
+      amount: '100.00',
+      accountMask: '1234',
+      accountType: 'Checking',
+      date: '12/14/2023',
+      name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testACHCancelledEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find((e) => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendACHCancelledEmail({
       user: req.requestor,
       amount: '100.00',
       accountMask: '1234',

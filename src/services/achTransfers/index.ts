@@ -11,7 +11,7 @@ import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
-import { createACHInitiationUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
+import { createACHInitiationUserNotification, createACHTransferCancelledUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { BankConnectionModel } from '../../models/bankConnection';
 import { UserModel } from '../../models/user';
 import { PushNotificationTypes } from '../../lib/constants/notification';
@@ -187,6 +187,15 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
   if (!user) throw new CustomError('User not found.', ErrorTypes.GEN);
 
   const { status, return_reason } = banktransfertransition;
+  const achTransfer = await ACHTransferModel.findOne({ token: banktransfertransition.bank_transfer_token });
+  const transferBankData = await ACHFundingSourceModel.findOne({
+    token: achTransfer.funding_source_token,
+  });
+  const bankName = await getACHSourceBankName(transferBankData.accessToken);
+
+  if (!achTransfer) {
+    throw new CustomError('ACH Transfer not found.', ErrorTypes.GEN);
+  }
 
   switch (status) {
     case MarqetaBankTransitionStatus.COMPLETED:
@@ -194,6 +203,14 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         pushNotificationType: PushNotificationTypes.FUNDS_AVAILABLE,
         body: 'Your funds are now available on your Karma Wallet Card!',
         title: 'Deposit Alert',
+      });
+
+      await createACHTransferCancelledUserNotification({
+        user,
+        amount: achTransfer.amount.toFixed(2),
+        accountMask: transferBankData.account_suffix.toString(),
+        accountType: `${bankName} ${transferBankData.account_type.toString()}`,
+        date: dayjs(achTransfer.created_time).utc().format('MMMM DD, YYYY'),
       });
       break;
     case MarqetaBankTransitionStatus.CANCELLED:

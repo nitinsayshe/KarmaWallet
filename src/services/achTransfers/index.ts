@@ -224,7 +224,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
     case MarqetaBankTransitionStatus.RETURNED:
       // To do: add email
       await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.ACH_TRANSFER_CANCELLED,
+        pushNotificationType: PushNotificationTypes.ACH_TRANSFER_RETURNED,
         body: `Your deposit was returned because: ${return_reason}.`,
         title: 'ACH Transfer Alert',
       });

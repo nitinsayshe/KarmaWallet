@@ -284,6 +284,8 @@ const getNotificationTypeFromPushNotificationType = (pushNotificationType: PushN
       return NotificationTypeEnum.DiningTransaction;
     case PushNotificationTypes.TRANSACTION_OF_GAS:
       return NotificationTypeEnum.GasTransaction;
+    case PushNotificationTypes.ACH_TRANSFER_CANCELLED:
+      return NotificationTypeEnum.ACHTransferCancelled;
     default:
       return '';
   }
@@ -889,27 +891,57 @@ export const createCardShippedUserNotification = async (
   }
 };
 
-export const createCardDeliveredUserNotification = async (
-  webhookData: IMarqetaWebhookCardsEvent,
+export const createACHTransferCancelledUserNotification = async (
+  transferData: IACHTransferEmailData,
 ): Promise<IUserNotificationDocument | void> => {
   try {
-    const { user_token } = webhookData;
-    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
-    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const { user, amount, accountMask, accountType, date } = transferData;
+
     const mockRequest = {
       body: {
-        type: NotificationTypeEnum.CardDelivered,
+        type: NotificationTypeEnum.ACHTransferCancelled,
         status: UserNotificationStatusEnum.Unread,
         channel: NotificationChannelEnum.Email,
         user: user?._id?.toString(),
         data: {
           name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
         },
-      } as unknown as CreateNotificationRequest,
+      } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
-
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating card delivered notification: ${e}`);
+    console.log(`Error creating ACH cancelled email notification: ${e}`);
+  }
+};
+
+export const createACHTransferReturnedUserNotification = async (
+  transferData: IACHTransferEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user, amount, accountMask, accountType, date, reason } = transferData;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ACHTransferReturned,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
+          reason,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH returned email notification: ${e}`);
   }
 };

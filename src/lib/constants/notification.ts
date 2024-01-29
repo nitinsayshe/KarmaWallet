@@ -7,7 +7,9 @@ export const NotificationChannelEnum = {
 export type NotificationChannelEnumValue = (typeof NotificationChannelEnum)[keyof typeof NotificationChannelEnum];
 
 export const NotificationTypeEnum = {
+  ACHTransferCancelled: 'achTransferCancelled',
   ACHTransferInitiation: 'achTransferInitiation',
+  ACHTransferReturned: 'achTransferReturned',
   BalanceThreshold: 'balanceThreshold',
   CardTransition: 'cardTransition',
   CaseWonProvisionalCreditAlreadyIssued: 'caseWonProvisionalCreditAlreadyIssued',
@@ -29,7 +31,6 @@ export const NotificationTypeEnum = {
   CaseWonProvisionalCreditNotAlreadyIssued: 'caseWonProvisionalCreditNotAlreadyIssued',
   DisputeReceivedNoProvisionalCreditIssued: 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped: 'cardShipped',
-  CardDelivered: 'cardDelivered',
   CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
@@ -41,6 +42,8 @@ export const NotificationEffectsEnum = {
   SendEmployerGiftEmail: 'SendEmployerGiftEmail',
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditAlreadyIssuedEmail',
   SendACHInitiationEmail: 'SendACHInitiationEmail',
+  SendACHCancelledEmail: 'SendACHCancelledEmail',
+  SendACHReturnedEmail: 'SendACHReturnedEmail',
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: 'SendCaseLostProvisionalCreditAlreadyIssuedEmail',
@@ -49,7 +52,6 @@ export const NotificationEffectsEnum = {
   SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: 'SendCaseWonProvisionalCreditNotAlreadyIssuedEmail',
   SendDisputeReceivedNoProvisionalCreditIssuedEmail: 'SendDisputeReceivedNoProvisionalCreditIssuedEmail',
   SendCardShippedEmail: 'SendCardShippedEmail',
-  SendCardDeliveredEmail: 'SendCardDeliveredEmail',
   SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
@@ -57,6 +59,8 @@ export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyo
 export enum PushNotificationTypes {
   BALANCE_THRESHOLD = 'BALANCE_THRESHOLD',
   ACH_TRANSFER_INITIATION = 'ACH_TRANSFER_INITIATION',
+  ACH_TRANSFER_CANCELLED = 'ACH_TRANSFER_CANCELLED',
+  ACH_TRANSFER_RETURNED = 'ACH_TRANSFER_RETURNED',
   CARD_TRANSITION = 'CARD_TRANSITION',
   EARNED_CASHBACK = 'EARNED_CASHBACK',
   EMPLOYER_GIFT = 'EMPLOYER_GIFT',

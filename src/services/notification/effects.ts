@@ -330,7 +330,7 @@ export const NotificationEffectsFunctions: {
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
-  SendACHCancelledEmail: handleSendACHInitiationEmailEffect,
+  SendACHCancelledEmail: handleSendACHCancelledEmailEffect,
   SendACHReturnedEmail: handleSendACHReturnedEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,

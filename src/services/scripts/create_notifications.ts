@@ -1,4 +1,4 @@
-import { NotificationTypeEnum, NotificationChannelEnum, NotificationEffectsEnum } from '../../lib/constants/notification';
+import { NotificationChannelEnum, NotificationEffectsEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import { IUpdateableDocument, updateDocumentsWithUpsert } from '../../lib/model';
 import { INotificationDocument, NotificationModel } from '../../models/notification';
 
@@ -91,10 +91,25 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued],
   // },
-  [NotificationTypeEnum.KarmaCardWelcome]: {
-    type: NotificationTypeEnum.KarmaCardWelcome,
+  [NotificationTypeEnum.ACHTransferInitiation]: {
+    type: NotificationTypeEnum.ACHTransferInitiation,
     channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
+    effects: [NotificationEffectsEnum.SendACHInitiationEmail],
+  },
+  // [NotificationTypeEnum.KarmaCardWelcome]: {
+  //   type: NotificationTypeEnum.KarmaCardWelcome,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
+  // },
+  [NotificationTypeEnum.ACHTransferCancelled]: {
+    type: NotificationTypeEnum.ACHTransferCancelled,
+    channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
+    effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHCancelledEmail],
+  },
+  [NotificationTypeEnum.ACHTransferReturned]: {
+    type: NotificationTypeEnum.ACHTransferReturned,
+    channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
+    effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHReturnedEmail],
   },
 };
 

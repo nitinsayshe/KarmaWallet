@@ -2,6 +2,8 @@
 export enum EmailTemplateKeys {
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
+  ACHTransferCancelled = 'achTransferCancelled',
+  ACHTransferReturned = 'achTransferReturned',
   CashbackPayoutNotification = 'cashbackPayoutNotification',
   ChangePassword = 'changePassword',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
@@ -24,7 +26,6 @@ export enum EmailTemplateKeys {
   ProvisionalCreditIssued = 'provisionalCreditIssued',
   BankLinkedConfirmation = 'bankLinkedConfirmation',
   CaseWonProvisionalCreditNotAlreadyIssued = 'caseWonProvisionalCreditNotAlreadyIssued',
-  CardDelivered = 'cardDelivered',
   DisputeReceivedNoProvisionalCreditIssued = 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped = 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued = 'caseLostProvisionalCreditNotAlreadyIssued',
@@ -54,6 +55,14 @@ export interface IEmailTemplateConfig {
 export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   ACHTransferInitiation: {
     name: EmailTemplateKeys.ACHTransferInitiation,
+    type: EmailTemplateTypes.ACHTransferInitiation,
+  },
+  ACHTransferCancelled: {
+    name: EmailTemplateKeys.ACHTransferCancelled,
+    type: EmailTemplateTypes.ACHTransferInitiation,
+  },
+  ACHTransferReturned: {
+    name: EmailTemplateKeys.ACHTransferReturned,
     type: EmailTemplateTypes.ACHTransferInitiation,
   },
   NoChargebackRights: {
@@ -151,10 +160,6 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   },
   CardShipped: {
     name: EmailTemplateKeys.CardShipped,
-    type: EmailTemplateTypes.Essential,
-  },
-  CardDelivered: {
-    name: EmailTemplateKeys.CardDelivered,
     type: EmailTemplateTypes.Essential,
   },
   CaseLostProvisionalCreditNotAlreadyIssued: {

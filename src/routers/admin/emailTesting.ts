@@ -20,6 +20,20 @@ router.route('/ach-initiation-email')
     AdminEmailTestingController.testACHInitiationEmail,
   );
 
+router.route('/ach-cancel-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testACHCancellationEmail,
+  );
+
+router.route('/ach-return-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testACHReturnedEmail,
+  );
+
 router.route('/case-won-provisional-credit-already-issued-email')
   .post(
     authenticate,
@@ -95,13 +109,6 @@ router.route('/card-shipped-email')
     authenticate,
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testCardShippedEmail,
-  );
-
-router.route('/card-delivered-email')
-  .post(
-    authenticate,
-    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
-    AdminEmailTestingController.testCardDeliveredEmail,
   );
 
 router.route('/case-lost-provisional-credit-not-already-issued-email')

@@ -301,7 +301,15 @@ export const updateWildfireMerchantRates = async () => {
   const wildfireClient = new WildfireClient();
   const merchants: IMerchantDocument[] = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
   const res = await wildfireClient.getMerchantRates();
-  const newRates: { [key: string]: { ID: number; Name: string; Kind: string; Amount: string; Currency?: string }[] } = res.data;
+  const newRates: {
+    [key: string]: {
+      ID: number;
+      Name: string;
+      Kind: string;
+      Amount: string;
+      Currency?: string
+    }[]
+  } = res.data;
   // caching date for cleanup purposes
   const lastModifiedDate = new Date();
   let count = 0;
@@ -427,8 +435,8 @@ export const matchWildfireCompanies = async () => {
       const topDomainMatch: any = topDomainMatches[0];
       const topMerchantMatch: any = topMerchantMatches[0];
 
-      console.log(`[+] top domain match: ${topDomainMatch.item.Domain}`);
-      console.log(`[+] top merchant match: ${topMerchantMatch.item.Merchant.Name}`);
+      console.log(`[+] top domain match: ${topDomainMatch?.item?.Domain}`);
+      console.log(`[+] top merchant match: ${topMerchantMatch?.item.Merchant.Name}`);
 
       let matchObj: any = {
         _id: company._id,

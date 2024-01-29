@@ -2,6 +2,7 @@ import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
 import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
+import { NACHAACHReturnCodeEnumValues } from '../../services/achTransfers/types';
 
 interface Identification {
   type: string;
@@ -589,7 +590,8 @@ export interface IMarqetaBankTransferTransitionEvent {
   token: string;
   bank_transfer_token: string;
   status: string;
-  reason: string;
+  return_reason: string;
+  return_code: NACHAACHReturnCodeEnumValues;
   channel: string;
   created_time: Date;
   last_modified_time: Date;
@@ -617,6 +619,16 @@ export enum MarqetaWebhookConstants {
   GPA_CREDIT = 'gpa.credit',
   PIN_DEBIT = 'pindebit',
   COMPLETION = 'COMPLETION',
+}
+
+export enum MarqetaBankTransitionStatus {
+  PENDING = 'PENDING',
+  PROCESSING = 'PROCESSING',
+  SUBMITTED = 'SUBMITTED',
+  COMPLETED = 'COMPLETED',
+  RETURNED = 'RETURNED',
+  CANCELLED = 'CANCELLED',
+  ERROR = 'ERROR',
 }
 
 export const MCCStandards = {

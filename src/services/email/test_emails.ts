@@ -13,9 +13,10 @@ import {
   sendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
   sendDisputeReceivedNoProvisionalCreditIssuedEmail,
   sendCardShippedEmail,
-  sendCardDeliveredEmail,
   sendCaseLostProvisionalCreditNotAlreadyIssuedEmail,
   sendEmployerGiftEmail,
+  sendACHCancelledEmail,
+  sendACHReturnedEmail,
 } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -106,6 +107,55 @@ export const testACHInitiationEmail = async (req: IRequest<{}, {}, {}>) => {
       accountType: 'Checking',
       date: '12/14/2023',
       name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testACHCancelledEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find((e) => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendACHCancelledEmail({
+      user: req.requestor,
+      amount: '100.00',
+      accountMask: '1234',
+      accountType: 'Checking',
+      date: '12/14/2023',
+      name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testACHReturnedEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find((e) => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+
+    const emailResponse = await sendACHReturnedEmail({
+      user: req.requestor,
+      amount: '100.00',
+      accountMask: '1234',
+      accountType: 'Checking',
+      date: '12/14/2023',
+      name: user.name,
+      reason: 'Insufficient funds',
     });
 
     if (!!emailResponse) {
@@ -327,28 +377,6 @@ export const testCardShippedEmail = async (req: IRequest<{}, {}, {}>) => {
     const { email } = user.emails.find(e => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
     const emailResponse = await sendCardShippedEmail({
-      user: _id,
-      name: user.name,
-      recipientEmail: email,
-    });
-
-    if (!!emailResponse) {
-      return 'Email sent successfully';
-    }
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
-export const testCardDeliveredEmail = async (req: IRequest<{}, {}, {}>) => {
-  try {
-    const { _id } = req.requestor;
-    if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const user = await UserModel.findById(_id);
-    if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find(e => !!e.primary);
-    if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
-    const emailResponse = await sendCardDeliveredEmail({
       user: _id,
       name: user.name,
       recipientEmail: email,

@@ -352,7 +352,7 @@ export const mapKardCommissionToKarmaCommisison = async (
   const karmaAllocation = reward.commissionToIssuer / CentsInUSD - userAllocation;
 
   const commissionData: Partial<IShareableCommission> = {
-    amount: reward.commissionToIssuer,
+    amount: reward.commissionToIssuer / CentsInUSD,
     lastStatusUpdate: getUtcDate().toDate(),
     integrations: {
       kard: kardCommission,

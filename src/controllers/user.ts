@@ -7,6 +7,7 @@ import { IRequestHandler } from '../types/request';
 import * as UserVerificationService from '../services/user/verification';
 import * as UserTestIdentityService from '../services/user/testIdentities';
 import * as UserServiceTypes from '../services/user/types';
+import * as SupportTicketService from '../services/supportTicket';
 import { KWRateLimiterKeyPrefixes, setRateLimiterHeaders, unblockFromEmailLimiterOnSuccess } from '../middleware/rateLimiter';
 
 export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = async (req, res) => {
@@ -56,6 +57,15 @@ export const login: IRequestHandler<{}, {}, UserServiceTypes.ILoginData> = async
 export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDeleteAccountRequest> = async (req, res) => {
   try {
     const response = await UserService.deleteAccountRequest(req);
+    output.api(req, res, response);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const submitSupportTicket: IRequestHandler<{}, {}, SupportTicketService.ISubmitSupportTicketRequest> = async (req, res) => {
+  try {
+    const response = await SupportTicketService.submitSupportTicket(req);
     output.api(req, res, response);
   } catch (err) {
     output.error(req, res, asCustomError(err));

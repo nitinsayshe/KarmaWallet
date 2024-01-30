@@ -268,7 +268,7 @@ export const getKarmaCommissionStatusFromKardStatus = (kardStatus: RewardStatus,
   }
   switch (kardStatus) {
     case RewardStatus.APPROVED:
-      return KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment;
+      return KarmaCommissionStatus.Pending;
     case RewardStatus.SETTLED:
       return KarmaCommissionStatus.ReceivedFromVendor;
     default:

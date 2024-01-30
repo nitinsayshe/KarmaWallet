@@ -1,7 +1,12 @@
+import fs from 'fs';
+import path from 'path';
 import { GroupModel } from '../../models/group';
 import { UserModel } from '../../models/user';
 import { joinGroup } from '../groups';
 import { updateNewUserSubscriptions } from '../subscription';
+import { CardModel } from '../../models/card';
+import { UserGroupModel } from '../../models/userGroup';
+import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';
 
 export interface IEmployerBetaUserInfo {
   code: string;
@@ -26,16 +31,18 @@ export const fixMissedAddToEmployerBetaAndGroup = async (data: IEmployerBetaUser
             email: user.emails.find((email) => !!email.primary).email,
             userId: user._id.toString(),
           },
+          skipSubscribe: true,
         } as any);
 
-        await joinGroup(mockRequest);
-        const subscribeData: any = { debitCardholder: true };
-        // console.log('////// this is the response of joining the user', !!userGroup);
-        subscribeData.groupName = group.name;
-        subscribeData.tags = [group.name];
-        subscribeData.employerBeta = true;
-        console.log('////// this is the subscribe data', subscribeData);
-        await updateNewUserSubscriptions(user, subscribeData);
+        const joinResponse = await joinGroup(mockRequest);
+        console.log('//// response', joinResponse);
+        // const subscribeData: any = { debitCardholder: true };
+        // // console.log('////// this is the response of joining the user', !!userGroup);
+        // subscribeData.groupName = group.name;
+        // subscribeData.tags = [group.name];
+        // subscribeData.employerBeta = true;
+        // console.log('////// this is the subscribe data', subscribeData);
+        // await updateNewUserSubscriptions(user, subscribeData);
       }
       console.log('///// success fully updated for', item.email);
     }
@@ -69,4 +76,100 @@ export const updateActiveCampaign = async (data: IActiveCampaignUpdateData[]) =>
   } catch (err) {
     console.log('////// error', err);
   }
+};
+
+export const checkEmployeeList = async () => {
+  const rawEmployees = fs.readFileSync(path.resolve(__dirname, './.tmp', 'howden_tiger.json'), 'utf8');
+  const employees = JSON.parse(rawEmployees);
+  const errors = [];
+  const employeeData = [];
+
+  for (const employee of employees) {
+    console.log('///// Checking Employee:', employee.email);
+    const user = await UserModel.findOne({ 'emails.email': employee.email });
+
+    if (!user) {
+      console.log('///// No User found');
+      errors.push({
+        email: employee.email,
+        error: 'No user found',
+      });
+      continue;
+    } else {
+      employeeData.push({
+        userId: user._id,
+        email: employee.email,
+        amount: 200,
+      });
+    }
+
+    const cards = await CardModel.find({
+      'integrations.marqeta': { $ne: null },
+      userId: user._id,
+    });
+
+    if (cards.length < 2) {
+      console.log('////// User has fewer than two Marqeta Cards');
+      errors.push({
+        email: employee.email,
+        error: `Has ${cards.length} cards only`,
+      });
+    }
+
+    if (cards.length > 2) {
+      console.log('////// User has more than two Marqeta Cards');
+      errors.push({
+        email: employee.email,
+        error: `Has ${cards.length} cards`,
+      });
+    }
+
+    const userGroups = await UserGroupModel.findOne({ user: user._id });
+    if (!userGroups) {
+      console.log('////// User is not in a group');
+      errors.push({
+        email: employee.email,
+        error: 'Employee not in a group',
+      });
+    }
+
+    if (!user.integrations.marqeta) {
+      console.log('///// User does not hav marqeta integration');
+    }
+
+    console.log('///// user is in this state', user.email, user?.integrations?.marqeta?.status);
+
+    if (!!user && user?.integrations?.marqeta?.status !== 'ACTIVE') {
+      console.log('///// User not in Active State');
+      errors.push({
+        email: employee.email,
+        error: 'Employee not in active user state',
+      });
+    }
+  }
+
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'howdenTigerEmployeeErrors.json'), JSON.stringify(errors));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'howdenTigerEmployeeFormated.json'), JSON.stringify(employeeData));
+};
+
+export const buildEmployerDepositData = async () => {
+  const rawEmployees = fs.readFileSync(path.resolve(__dirname, './.tmp', 'howdenTigerEmployeeFormated.json'), 'utf8');
+  const employees = JSON.parse(rawEmployees);
+  const gpaDepositArray = [];
+
+  for (const employee of employees) {
+    gpaDepositArray.push({
+      userId: employee.userId,
+      amount: 200,
+    });
+  }
+
+  console.log(`Added ${gpaDepositArray.length} employees to this gpaDepositArray`);
+
+  return {
+    type: TransactionCreditSubtypeEnum.Employer,
+    gpaDeposits: gpaDepositArray,
+    groupId: '659ff2a259a7708003088843',
+    memo: 'Howden Tiger employee gift',
+  };
 };

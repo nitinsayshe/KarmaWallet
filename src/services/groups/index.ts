@@ -895,6 +895,7 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
 export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   const karmaAllowList = [UserRoles.Admin, UserRoles.SuperAdmin];
+  console.log('//// joining group!');
 
   try {
     const { code, email, userId, skipSubscribe } = req.body;

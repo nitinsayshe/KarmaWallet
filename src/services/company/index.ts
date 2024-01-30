@@ -1229,6 +1229,12 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
     ],
   };
 
+  const hiddenStatusFilter: any = {
+    'hidden.status': {
+      $ne: true,
+    },
+  };
+
   const merchantLookup = {
     $lookup: {
       from: 'merchants',
@@ -1252,6 +1258,7 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
         ...sectorQuery,
         ...merchantQuery,
         ...excludeNegativeCompanies,
+        ...hiddenStatusFilter,
       },
     },
     merchantLookup,

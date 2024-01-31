@@ -25,7 +25,7 @@ export const exec = async (data: IJobData) => {
     console.log('upload file webhooks', uploadFileWebhooks);
 
     let mappedFromBackup = 0;
-    Promise.all(
+    await Promise.all(
       backupFileWebhooks.map(async (webhook) => {
         try {
           const backupFileCommission = await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Issuer, webhook);
@@ -42,11 +42,12 @@ export const exec = async (data: IJobData) => {
     console.log('mapped from backup', mappedFromBackup);
 
     let mappedFromUpdate = 0;
-    Promise.all(
+    await Promise.all(
       uploadFileWebhooks.map(async (webhook) => {
         try {
           const uploadFileCommission = await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Issuer, webhook);
           if (!uploadFileCommission.previouslyExisting) {
+            console.error(`this commission was expected to already exist, but was not found: ${uploadFileCommission.commission}`);
             await createEarnedCashbackNotificationsFromCommission(uploadFileCommission.commission, ['email', 'push']);
           }
           mappedFromUpdate++;

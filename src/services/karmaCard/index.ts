@@ -127,7 +127,6 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   } else {
     // if not register then register user to marqeta
     marqetaUserResponse = await createMarqetaUser(userData);
-    if (!marqetaUserResponse) throw new Error('Unable to create user in Marqeta');
     userToken = marqetaUserResponse.token;
   }
 
@@ -137,7 +136,6 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   // perform the kyc through marqeta & create the card
   if (!isUserKYCVerified(marqetaUserResponse.status, kycResponse)) {
     kycResponse = await processUserKyc(marqetaUserResponse.token);
-    if (!kycResponse) throw new Error('Unable to process KYC in Marqeta');
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
       marqetaUserResponse.status = IMarqetaUserStatus.ACTIVE;
       [virtualCardResponse, physicalCardResponse] = await Promise.all([

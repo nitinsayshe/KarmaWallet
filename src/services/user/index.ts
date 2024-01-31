@@ -654,7 +654,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
-  const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+  let existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
     user: existingUser._id,
     type: 'karmaCardWelcome',
   });
@@ -690,18 +690,26 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         user.integrations.marqeta = visitor.integrations.marqeta;
         user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS, codes: [] };
         await user.save();
-        if (!existingKarmaWelcomeNotification) {
-          await createKarmaCardWelcomeUserNotification(user, true);
-        }
+
+        existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+          user: user._id,
+          type: 'karmaCardWelcome',
+        });
+
+        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(user, true);
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
         if (!!visitorUser) {
           visitorUser.integrations.marqeta = visitor.integrations.marqeta;
           await visitorUser.save();
         }
-        if (!existingKarmaWelcomeNotification) {
-          await createKarmaCardWelcomeUserNotification(existingUser, true);
-        }
+
+        existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+          user: visitorUser._id,
+          type: 'karmaCardWelcome',
+        });
+
+        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(existingUser, true);
       }
 
       console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');

@@ -1,4 +1,4 @@
-import { IMarqetaCreateGPAorder, IMarqetaLoadGpaFromProgramFundingSource } from '../../../integrations/marqeta/types';
+import { IMarqetaCreateGPAorder, IMarqetaLoadGpaFromProgramFundingSource, IMarqetaUnloadGPAOrder } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
@@ -50,6 +50,16 @@ export const getGPAbalance: IRequestHandler<{}, {}, IMarqetaCreateGPAorder> = as
 export const getProgramFundingBalance: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const { data } = await GPAService.getProgramFundingBalance();
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const unloadGPAFundsFromUser: IRequestHandler<{}, {}, IMarqetaUnloadGPAOrder> = async (req, res) => {
+  try {
+    const { amount, orderToken } = req.body;
+    const { data } = await GPAService.unloadGPAFundsFromUser({ amount, orderToken });
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

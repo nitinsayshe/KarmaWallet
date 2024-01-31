@@ -993,6 +993,8 @@ export const handleTransactionDisputeMacros = async (transactions: ITransactionD
 export const handleCreditNotification = async (transaction: ITransactionDocument) => {
   if (transaction.status !== TransactionModelStateEnum.Completion) return;
   const user = await UserModel.findById(transaction.user);
+  // This is a reversal do not send a notification
+  if (!!transaction?.integrations?.marqeta?.relatedTransactions && transaction.integrations.marqeta.relatedTransactions.length) return;
   if (transaction.subType === TransactionCreditSubtypeEnum.Employer) {
     // add notifiction here?
     await createPushUserNotificationFromUserAndPushData(user, {

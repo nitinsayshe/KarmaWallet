@@ -39,7 +39,7 @@ import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 // eslint-disable-next-line import/no-cycle
 import { generateRandomPasswordString } from '../../lib/misc';
@@ -681,12 +681,15 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
         user.integrations.marqeta = visitor.integrations.marqeta;
         user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS, codes: [] };
+        user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
         await user.save();
         await createKarmaCardWelcomeUserNotification(user, true);
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
         if (!!visitorUser) {
           visitorUser.integrations.marqeta = visitor.integrations.marqeta;
+          visitorUser.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
+          visitorUser.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: ['Approved'] };
           await visitorUser.save();
         }
         await createKarmaCardWelcomeUserNotification(existingUser, true);

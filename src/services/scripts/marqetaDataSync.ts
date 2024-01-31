@@ -233,15 +233,31 @@ export const updateMarqetaUser = async (user: MarqetaUserModel, usersWithMarqeta
   try {
     // update the existing user with the marqeta user info
     const existingIntegration = existingUser?.integrations?.marqeta;
-    existingUser.set({
+    const userDataToSet: any = {
       lastModified: dayjs().utc().toDate(),
       'integrations.marqeta': {
         userToken: user.token,
         kycResult: existingIntegration?.kycResult,
-        email: existingIntegration?.email,
-        ...user,
+        email: user?.email,
+        address1: user?.address1,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        birth_date: user.birth_date,
+        city: user.city,
+        state: user.state,
+        country: user.country,
+        postal_code: user.postal_code,
+        account_holder_group_token: existingUser.integrations.marqeta.account_holder_group_token,
+        identifications: existingUser.integrations.marqeta.identifications,
+        status: user.status,
+        created_time: user.created_time,
       },
-    });
+    };
+
+    if (!!user.address2) userDataToSet.address2 = user.address2;
+    if (!!user.phone) userDataToSet.phone_number = user.phone;
+
+    existingUser.set(userDataToSet);
     return existingUser.save();
   } catch (err) {
     console.error(`error saving user ${existingUser._id}: ${err}`);

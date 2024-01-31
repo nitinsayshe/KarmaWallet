@@ -34,17 +34,14 @@ export const fixMissedAddToEmployerBetaAndGroup = async (data: IEmployerBetaUser
           skipSubscribe: true,
         } as any);
 
-        const joinResponse = await joinGroup(mockRequest);
-        console.log('//// response', joinResponse);
-        // const subscribeData: any = { debitCardholder: true };
-        // // console.log('////// this is the response of joining the user', !!userGroup);
-        // subscribeData.groupName = group.name;
-        // subscribeData.tags = [group.name];
-        // subscribeData.employerBeta = true;
-        // console.log('////// this is the subscribe data', subscribeData);
-        // await updateNewUserSubscriptions(user, subscribeData);
+        await joinGroup(mockRequest);
+        const subscribeData: any = { debitCardholder: true };
+        subscribeData.groupName = group.name;
+        subscribeData.tags = [group.name];
+        subscribeData.employerBeta = true;
+        await updateNewUserSubscriptions(user, subscribeData);
       }
-      console.log('///// success fully updated for', item.email);
+      console.log('///// successfully updated for', item.email);
     }
   } catch (error) {
     console.log('////// error', error);
@@ -71,14 +68,15 @@ export const updateActiveCampaign = async (data: IActiveCampaignUpdateData[]) =>
       subscribeData.tags = [item.groupName];
       subscribeData.employerBeta = true;
       await updateNewUserSubscriptions(user, subscribeData);
-      console.log('/////// success fully updated for', item.name);
+      console.log('/////// successfully updated for', item.name);
     }
   } catch (err) {
     console.log('////// error', err);
   }
 };
 
-export const checkEmployeeList = async () => {
+export const checkEmployeeListBeforeDeposit = async () => {
+  // change with the list of employees you want to run checks on
   const rawEmployees = fs.readFileSync(path.resolve(__dirname, './.tmp', 'howden_tiger.json'), 'utf8');
   const employees = JSON.parse(rawEmployees);
   const errors = [];
@@ -134,10 +132,8 @@ export const checkEmployeeList = async () => {
     }
 
     if (!user.integrations.marqeta) {
-      console.log('///// User does not hav marqeta integration');
+      console.log('///// User does not have marqeta integration');
     }
-
-    console.log('///// user is in this state', user.email, user?.integrations?.marqeta?.status);
 
     if (!!user && user?.integrations?.marqeta?.status !== 'ACTIVE') {
       console.log('///// User not in Active State');
@@ -148,12 +144,12 @@ export const checkEmployeeList = async () => {
     }
   }
 
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'howdenTigerEmployeeErrors.json'), JSON.stringify(errors));
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'howdenTigerEmployeeFormated.json'), JSON.stringify(employeeData));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'employeeErrors.json'), JSON.stringify(errors));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'employeesFormatted.json'), JSON.stringify(employeeData));
 };
 
-export const buildEmployerDepositData = async () => {
-  const rawEmployees = fs.readFileSync(path.resolve(__dirname, './.tmp', 'howdenTigerEmployeeFormated.json'), 'utf8');
+export const buildEmployerDepositData = async (memo: string, groupId: string) => {
+  const rawEmployees = fs.readFileSync(path.resolve(__dirname, './.tmp', 'employeesFormatted.json'), 'utf8');
   const employees = JSON.parse(rawEmployees);
   const gpaDepositArray = [];
 
@@ -169,7 +165,7 @@ export const buildEmployerDepositData = async () => {
   return {
     type: TransactionCreditSubtypeEnum.Employer,
     gpaDeposits: gpaDepositArray,
-    groupId: '659ff2a259a7708003088843',
-    memo: 'Enjoy this Holliday gift from Howden Tiger',
+    groupId,
+    memo,
   };
 };

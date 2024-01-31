@@ -170,6 +170,6 @@ export const buildEmployerDepositData = async () => {
     type: TransactionCreditSubtypeEnum.Employer,
     gpaDeposits: gpaDepositArray,
     groupId: '659ff2a259a7708003088843',
-    memo: 'Howden Tiger employee gift',
+    memo: 'Enjoy this Holliday gift from Howden Tiger',
   };
 };

@@ -681,6 +681,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
         user.integrations.marqeta = visitor.integrations.marqeta;
         user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS, codes: [] };
+        user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
         await user.save();
         await createKarmaCardWelcomeUserNotification(user, true);
       } else {

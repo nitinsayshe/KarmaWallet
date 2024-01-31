@@ -392,6 +392,7 @@ export type MarqetaUserModel = {
   last_name?: string;
   email?: string;
   address1?: string;
+  address2?: string;
   city?: string;
   state?: string;
   postal_code?: string;

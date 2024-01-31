@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
-import { IMarqetaCreateUser, IMarqetaKycState } from '../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserStatus } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { generateRandomPasswordString } from '../../lib/misc';
 import {
@@ -19,7 +19,7 @@ import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { IMarqetaUserState, ReasonCode, hasKarmaWalletCards } from './utils';
+import { ReasonCode, hasKarmaWalletCards } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
@@ -31,6 +31,7 @@ import { GroupModel } from '../../models/group';
 import { updateUserUrlParams } from '../user';
 import { updateCustomFields } from '../../integrations/activecampaign';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { IMarqetaListKYCResponse } from '../../clients/marqeta/types';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -105,6 +106,11 @@ export const getShareableKarmaCardApplication = ({
   lastModified,
 });
 
+export const isUserKYCVerified = (userStatus: IMarqetaUserStatus, kycResponse: IMarqetaListKYCResponse) => {
+  const hasSuccessfulKYC = kycResponse.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
+  return userStatus === IMarqetaUserStatus.ACTIVE && !!hasSuccessfulKYC;
+};
+
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   // find the email is already register with marqeta or not
   const { data } = await getMarqetaUserByEmail({ email: userData.email });
@@ -121,6 +127,7 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   } else {
     // if not register then register user to marqeta
     marqetaUserResponse = await createMarqetaUser(userData);
+    if (!marqetaUserResponse) throw new Error('Unable to create user in Marqeta');
     userToken = marqetaUserResponse.token;
   }
 
@@ -128,13 +135,10 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   kycResponse = await listUserKyc(userToken);
 
   // perform the kyc through marqeta & create the card
-  if (
-    !!marqetaUserResponse
-    && (marqetaUserResponse?.status !== IMarqetaUserState.active || kycResponse.data[0].result.status === IMarqetaKycState.success)
-  ) {
+  if (!isUserKYCVerified(marqetaUserResponse.status, kycResponse)) {
     kycResponse = await processUserKyc(marqetaUserResponse.token);
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
-      marqetaUserResponse.status = IMarqetaUserState.active;
+      marqetaUserResponse.status = IMarqetaUserStatus.ACTIVE;
       [virtualCardResponse, physicalCardResponse] = await Promise.all([
         await createCard({ userToken: marqetaUserResponse.token, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN }),
         await createCard({ userToken: marqetaUserResponse.token, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN }),

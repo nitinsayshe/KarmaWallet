@@ -21,7 +21,7 @@ export const getTransactions: IRequestHandler = async (req, res) => {
     const transactions = await TransactionService.getTransactions(req as IRequest<{}, TransactionTypes.ITransactionsRequestQuery>, query);
     const sharableTransactions = {
       ...transactions,
-      docs: transactions.docs.map((t: ITransactionDocument) => TransactionService.getShareableTransaction(t)),
+      docs: await Promise.all(transactions.docs.map(async (t: ITransactionDocument) => TransactionService.getShareableTransaction(t))),
     };
 
     output.api(req, res, sharableTransactions);
@@ -35,7 +35,7 @@ export const getCarbonOffsetTransactions: IRequestHandler = async (req, res) => 
     const transactions = await TransactionService.getCarbonOffsetTransactions(req);
     const carbonOffsetTransactions = {
       company: { companyName: 'Rare.org' },
-      transactions: transactions.map(t => TransactionService.getShareableTransaction(t)),
+      transactions: await Promise.all(transactions.map(async (t) => TransactionService.getShareableTransaction(t))),
     };
     output.api(req, res, carbonOffsetTransactions);
   } catch (err) {
@@ -46,7 +46,7 @@ export const getCarbonOffsetTransactions: IRequestHandler = async (req, res) => 
 export const getMostRecentTransactions: IRequestHandler = async (req, res) => {
   try {
     const mostRecentTransactions = await TransactionService.getMostRecentTransactions(req as IRequest<{}, TransactionTypes.IGetRecentTransactionsRequestQuery>);
-    output.api(req, res, mostRecentTransactions.map(t => TransactionService.getShareableTransaction(t)));
+    output.api(req, res, await Promise.all(mostRecentTransactions.map(t => TransactionService.getShareableTransaction(t))));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -58,7 +58,7 @@ export const getRatedTransactions: IRequestHandler = async (req, res) => {
 
     const sharableTransactions = {
       ...transactions,
-      docs: transactions.docs.map((t: ITransactionDocument) => TransactionService.getShareableTransaction(t)),
+      docs: await Promise.all(transactions.docs.map((t: ITransactionDocument) => TransactionService.getShareableTransaction(t))),
     };
 
     output.api(req, res, sharableTransactions);

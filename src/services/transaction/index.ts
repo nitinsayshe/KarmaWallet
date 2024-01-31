@@ -16,7 +16,12 @@ import {
   UserRoles,
 } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
-import { AdjustmentTransactionTypeEnum, TransactionCreditSubtypeEnum, TransactionTypeEnum, sectorsToExcludeFromTransactions } from '../../lib/constants/transaction';
+import {
+  AdjustmentTransactionTypeEnum,
+  TransactionCreditSubtypeEnum,
+  TransactionTypeEnum,
+  sectorsToExcludeFromTransactions,
+} from '../../lib/constants/transaction';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { roundToPercision } from '../../lib/misc';
 import { formatZodFieldErrors } from '../../lib/validation';
@@ -72,6 +77,7 @@ import { createEmployerGiftEmailUserNotification, createPushUserNotificationFrom
 import { MCCStandards } from '../../integrations/marqeta/types';
 // eslint-disable-next-line import/no-cycle
 import { checkIfUserInGroup } from '../groups';
+import { CommissionModel } from '../../models/commissions';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -341,10 +347,7 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
     const query: FilterQuery<ITransactionDocument> = {
-      $and: [
-        { sector: { $nin: sectorsToExcludeFromTransactions } },
-        { status: { $ne: TransactionModelStateEnum.Declined } },
-      ],
+      $and: [{ sector: { $nin: sectorsToExcludeFromTransactions } }, { status: { $ne: TransactionModelStateEnum.Declined } }],
     };
 
     if (!!userId) {
@@ -442,7 +445,7 @@ export const getMarqetaTransactionType = (marqetaData: IMarqetaTransactionIntegr
   return 'authorization';
 };
 
-export const getShareableTransaction = ({
+export const getShareableTransaction = async ({
   _id,
   user,
   company,
@@ -505,7 +508,24 @@ export const getShareableTransaction = ({
     };
   }
 
+  let earnedCommission;
+
   if (!!integrations?.kard) {
+    // does a commission exist for this transaction?
+    if (!!integrations?.kard?.rewardData) {
+      // if so, add it to the shareable transaction
+      const associatedCommission = await CommissionModel.findOne({ transaction: _id });
+      if (!!associatedCommission?._id) {
+        earnedCommission = {
+          id: associatedCommission._id.toString(),
+          amount: associatedCommission.amount,
+          karmaAllocation: associatedCommission.allocation.karma,
+          userAllocation: associatedCommission.allocation.user,
+        };
+      }
+    }
+    shareableTransaction.earnedCommission = earnedCommission;
+
     const kardIntegration = {
       id: integrations.kard.id,
       status: integrations.kard.status,
@@ -942,7 +962,7 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
   return {
     carbonEmissionsMetricTonnes,
     groupName,
-    transaction: getShareableTransaction(matchedTransaction),
+    transaction: await getShareableTransaction(matchedTransaction),
   };
 };
 
@@ -1002,7 +1022,10 @@ export const handleDebitNotification = async (transaction: ITransactionDocument)
   const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
 
   // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
-  if (status === TransactionModelStateEnum.Pending || (status === TransactionModelStateEnum.Completion && !transaction.integrations.marqeta.relatedTransactions)) {
+  if (
+    status === TransactionModelStateEnum.Pending
+    || (status === TransactionModelStateEnum.Completion && !transaction.integrations.marqeta.relatedTransactions)
+  ) {
     // any notification
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,

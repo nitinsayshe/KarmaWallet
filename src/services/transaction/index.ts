@@ -1089,7 +1089,6 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
       console.log(`Successfully funded user ${deposit.userId}`);
     }
   }
-  console.log('///// Finished funding');
 };
 
 export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {

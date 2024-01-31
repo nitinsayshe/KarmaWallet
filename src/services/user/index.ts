@@ -46,6 +46,7 @@ import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus } from '../../models/karmaCardApplication';
 // eslint-disable-next-line import/no-cycle
 import { updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
+import { UserNotificationModel } from '../../models/user_notification';
 
 dayjs.extend(utc);
 
@@ -653,11 +654,19 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
+  let existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+    user: existingUser._id,
+    type: 'karmaCardWelcome',
+  });
+
   // Existing user with Marqeta integration already saved
   if (!!existingUser && existingUser.integrations.marqeta.status !== userTransition.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
-      await createKarmaCardWelcomeUserNotification(existingUser, true);
+      // Ensure that the Welcome email has not already been sent
+      if (!existingKarmaWelcomeNotification) {
+        await createKarmaCardWelcomeUserNotification(existingUser, true);
+      }
     }
     await existingUser.save();
   }
@@ -670,7 +679,6 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     await visitor.save();
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
-      console.log('///// IN WEBHOOK CODE: no existing user create new user');
       if (!visitor.user) {
         const { user } = await register({
           name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,
@@ -683,7 +691,13 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS, codes: [] };
         user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
         await user.save();
-        await createKarmaCardWelcomeUserNotification(user, true);
+
+        existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+          user: user._id,
+          type: 'karmaCardWelcome',
+        });
+
+        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(user, true);
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
         if (!!visitorUser) {
@@ -692,7 +706,13 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           visitorUser.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: ['Approved'] };
           await visitorUser.save();
         }
-        await createKarmaCardWelcomeUserNotification(existingUser, true);
+
+        existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+          user: visitorUser._id,
+          type: 'karmaCardWelcome',
+        });
+
+        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(existingUser, true);
       }
 
       console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');

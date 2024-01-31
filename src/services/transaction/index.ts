@@ -1109,7 +1109,7 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
+      console.error(`Failed to fund user GPA ${deposit.userId} from program funding source: ${JSON.stringify(gpaFundResponse)}`);
     } else {
       console.log(`Successfully funded user ${deposit.userId}`);
     }

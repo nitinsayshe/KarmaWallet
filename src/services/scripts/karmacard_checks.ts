@@ -5,6 +5,7 @@ import { CardModel, ICard } from '../../models/card';
 import { IUser, UserModel } from '../../models/user';
 
 export const activeVirtualCards = (cards: ICard[]) => cards.filter(c => c.integrations.marqeta.instrument_type === 'VIRTUAL_PAN' && (c.integrations.marqeta.state === MarqetaCardState.ACTIVE || c.integrations.marqeta.state === MarqetaCardState.LIMITED));
+
 export const activePhysicalCards = (cards: ICard[]) => cards.filter(c => c.integrations.marqeta.instrument_type === 'PHYSICAL_ICC'
     && (c.integrations.marqeta.state !== MarqetaCardState.TERMINATED && c.integrations.marqeta.state !== MarqetaCardState.SUSPENDED));
 

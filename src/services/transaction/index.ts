@@ -993,6 +993,8 @@ export const handleTransactionDisputeMacros = async (transactions: ITransactionD
 export const handleCreditNotification = async (transaction: ITransactionDocument) => {
   if (transaction.status !== TransactionModelStateEnum.Completion) return;
   const user = await UserModel.findById(transaction.user);
+  // This is a reversal do not send a notification
+  if (!!transaction?.integrations?.marqeta?.relatedTransactions && transaction.integrations.marqeta.relatedTransactions.length) return;
   if (transaction.subType === TransactionCreditSubtypeEnum.Employer) {
     // add notifiction here?
     await createPushUserNotificationFromUserAndPushData(user, {
@@ -1107,7 +1109,7 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
+      console.error(`Failed to fund user GPA ${deposit.userId} from program funding source: ${JSON.stringify(gpaFundResponse)}`);
     } else {
       console.log(`Successfully funded user ${deposit.userId}`);
     }

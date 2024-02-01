@@ -80,6 +80,11 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
   cardProductToken: string;
 }
 
+export interface IMarqetaUnloadGPAOrder {
+  amount: number;
+  orderToken: string;
+}
+
 export interface IMarqetaLoadGpaFromProgramFundingSource {
   amount: number;
   userId: string;
@@ -392,6 +397,7 @@ export type MarqetaUserModel = {
   last_name?: string;
   email?: string;
   address1?: string;
+  address2?: string;
   city?: string;
   state?: string;
   postal_code?: string;

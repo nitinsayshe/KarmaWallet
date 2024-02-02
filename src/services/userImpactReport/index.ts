@@ -36,10 +36,17 @@ export interface IUserImpactReportParams {
   reportId: string;
 }
 
-export const getShareableUserMonthlyImpactReport = (report: IUserMonthlyImpactReportWithEquivalencies | IUserMonthlyImpactReport) => ({
-  ...report,
-  transactions: report.transactions.map(t => getShareableTransaction(t)),
-});
+export const getShareableUserMonthlyImpactReport = async (report: IUserMonthlyImpactReportWithEquivalencies | IUserMonthlyImpactReport) => {
+  const transactions = [];
+  for (const transaction of report.transactions) {
+    const shareableTransaction = await getShareableTransaction(transaction);
+    transactions.push(shareableTransaction);
+  }
+  return {
+    ...report,
+    transactions,
+  };
+};
 
 // retrieve an individual impact report, that will take a month and year as params and pull report based on that
 export const getUserImpactReport = async (req: IRequest<IUserImpactReportParams>): Promise<IUserMonthlyImpactReportWithEquivalencies> => {
@@ -56,6 +63,8 @@ export const getUserImpactReport = async (req: IRequest<IUserImpactReportParams>
       .findOne({ _id: reportId, user: requestor._id })
       .populate({ path: 'transactions.company', model: CompanyModel })
       .lean() as Partial<IUserMonthlyImpactReportWithEquivalencies>;
+
+    console.log('////// this is the report', report);
   } catch {
     throw new CustomError('Error retrieving report. Please try again.', ErrorTypes.SERVER);
   }

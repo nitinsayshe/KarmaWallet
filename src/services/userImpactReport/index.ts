@@ -63,8 +63,6 @@ export const getUserImpactReport = async (req: IRequest<IUserImpactReportParams>
       .findOne({ _id: reportId, user: requestor._id })
       .populate({ path: 'transactions.company', model: CompanyModel })
       .lean() as Partial<IUserMonthlyImpactReportWithEquivalencies>;
-
-    console.log('////// this is the report', report);
   } catch {
     throw new CustomError('Error retrieving report. Please try again.', ErrorTypes.SERVER);
   }

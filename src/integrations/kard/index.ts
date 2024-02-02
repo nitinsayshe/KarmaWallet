@@ -197,22 +197,22 @@ const populateCompaniesAndMerchantsOnTransactions = async (
   const companies: { [key: string]: ICompanyDocument } = {};
   return Promise.all(
     transactions.map(async (t) => {
-      let company = companies[t.company?.toString()];
-      if (!company) {
-        company = await CompanyModel.findById(t.company);
-        companies[t.company.toString()] = company;
-      }
-      if (!!company?.merchant) {
-        try {
+      try {
+        let company = companies[t.company?.toString()];
+        if (!company) {
+          company = await CompanyModel.findById(t.company);
+          companies[t.company.toString()] = company;
+        }
+        if (!!company?.merchant) {
           const merchant = await MerchantModel.findById(company.merchant);
           company.merchant = merchant;
-        } catch (err) {
-          console.error('Error populating merchant: ', err);
         }
+        t.company = company;
+        // lookup the merchant on the company
+        return t;
+      } catch (err) {
+        console.error('Error populating company and merchant: ', err);
       }
-      t.company = company;
-      // lookup the merchant on the company
-      return t;
     }),
   );
 };

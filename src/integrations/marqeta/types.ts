@@ -581,6 +581,15 @@ export interface IMarqetaCardActionEvent {
   user_token: string;
 }
 
+export enum MarqetaUserTransitionReasonCode = {
+  // object activated for first time
+  '00' = '00',
+  // request by you
+  '01' = '01',
+  // request by user
+
+}
+
 export interface IMarqetaUserTransitionsEvent {
   token: string;
   status: IMarqetaUserStatus;

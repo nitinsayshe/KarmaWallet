@@ -3,7 +3,7 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { UserModel } from '../../models/user';
-import { IMarqetaCreateGPAorder, IMarqetaLoadGpaFromProgramFundingSource } from './types';
+import { IMarqetaCreateGPAorder, IMarqetaLoadGpaFromProgramFundingSource, IMarqetaUnloadGPAOrder } from './types';
 
 export const { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } = process.env;
 
@@ -60,5 +60,10 @@ export const getGPABalance = async (userToken: string) => {
 // get program funding balance
 export const getProgramFundingBalance = async () => {
   const response = await gpa.getProgramFundingBalance();
+  return { data: response };
+};
+
+export const unloadGPAFundsFromUser = async (gpaUnloadData: IMarqetaUnloadGPAOrder) => {
+  const response = await gpa.unloadGPA(gpaUnloadData);
   return { data: response };
 };

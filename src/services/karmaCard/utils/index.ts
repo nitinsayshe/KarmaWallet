@@ -2,12 +2,6 @@ import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardModel } from '../../../models/card';
 import { IUserDocument } from '../../../models/user';
 
-export enum IMarqetaUserState {
-  active = 'ACTIVE',
-  unverified = 'UNVERIFIED',
-  limited = 'LIMITED'
-}
-
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
   NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',

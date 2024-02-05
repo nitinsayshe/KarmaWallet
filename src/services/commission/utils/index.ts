@@ -1,12 +1,7 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
-import {
-  EarnedRewardWebhookBody,
-  KardEnvironmentEnum,
-  KardEnvironmentEnumValues,
-  RewardStatus,
-} from '../../../clients/kard';
+import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, RewardStatus } from '../../../clients/kard';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
 import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
 import CustomError from '../../../lib/customError';
@@ -44,6 +39,8 @@ export type IWildfireCommission = {
   MerchantSKU: string;
   TrackingCode: string;
 };
+
+export type CommissionAndPreviouslyExistingData = { commission: ICommissionDocument, previouslyExisting: boolean }
 
 export const getNextPayoutDate = (date: Date = getUtcDate().toDate()) => {
   const currentMonth = getUtcDate(date).month();
@@ -283,19 +280,16 @@ const getAssociatedTransaction = async (kardEnv: KardEnvironmentEnumValues, tran
     case KardEnvironmentEnum.Issuer:
       return TransactionModel.findOne({
         $or: [
-
           {
-            $and: [
-              { 'integrations.marqeta.token': { $exists: true } },
-              { 'integrations.marqeta.token': transaction.issuerTransactionId },
-            ],
+            $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': transaction.issuerTransactionId }],
           },
           {
             $and: [
               { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
               { 'integrations.marqeta.relatedTransactions.token': transaction.issuerTransactionId },
             ],
-          }],
+          },
+        ],
       });
     default:
   }
@@ -315,7 +309,7 @@ const getUserCard = async (kardEnv: KardEnvironmentEnumValues, kardUser: EarnedR
 export const mapKardCommissionToKarmaCommisison = async (
   kardEnv: KardEnvironmentEnumValues,
   kardCommission: EarnedRewardWebhookBody,
-): Promise<ICommissionDocument | void> => {
+): Promise<CommissionAndPreviouslyExistingData> => {
   const { user: kardUser, reward, transaction, error } = kardCommission;
   if (!!error && Object.keys(error)?.length > 0) {
     console.error('Error in kard commission: ', JSON.stringify(error, null, 2));
@@ -388,7 +382,7 @@ export const mapKardCommissionToKarmaCommisison = async (
       await updateMadeCashBackEligiblePurchaseStatus(user.emails.find((e) => e.primary).email);
     }
 
-    return newCommission.save();
+    return { commission: await newCommission.save(), previouslyExisting: false };
   }
 
   if (existingCommission.status === KarmaCommissionStatus.PaidToUser || existingCommission.status === KarmaCommissionStatus.Failed) {
@@ -403,7 +397,7 @@ export const mapKardCommissionToKarmaCommisison = async (
 
   if (newStatus !== existingCommission?.status) updates.lastStatusUpdate = getUtcDate().toDate();
 
-  return CommissionModel.findByIdAndUpdate(existingCommission?._id, updates, { new: true });
+  return { commission: await CommissionModel.findByIdAndUpdate(existingCommission?._id, updates, { new: true }), previouslyExisting: true };
 };
 
 export const processKardWebhook = async (
@@ -411,7 +405,7 @@ export const processKardWebhook = async (
   body: EarnedRewardWebhookBody,
 ): Promise<CustomError | void> => {
   try {
-    const commission = await mapKardCommissionToKarmaCommisison(kardEnv, body);
+    const commission = (await mapKardCommissionToKarmaCommisison(kardEnv, body) as CommissionAndPreviouslyExistingData)?.commission;
     if (!commission) throw Error('Error creating karma commisison');
     await createEarnedCashbackNotificationsFromCommission(commission, ['email', 'push']);
   } catch (e) {

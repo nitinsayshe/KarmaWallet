@@ -183,20 +183,22 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
       $push: { transitions: banktransfertransition },
     },
   );
+  if (!userTransitions?._id) throw new CustomError(`User transition not found for token: ${banktransfertransition.bank_transfer_token}`, ErrorTypes.GEN);
 
   const user = await UserModel.findById(userTransitions?.userId);
-  if (!user) throw new CustomError('User not found.', ErrorTypes.GEN);
+  if (!user?._id) throw new CustomError('User not found.', ErrorTypes.GEN);
 
   const { status, return_reason } = banktransfertransition;
   const achTransfer = await ACHTransferModel.findOne({ token: banktransfertransition.bank_transfer_token });
+  if (!achTransfer) throw new CustomError(`ACH Transfer not found for token ${banktransfertransition.bank_transfer_token}`, ErrorTypes.GEN);
+
   const transferBankData = await ACHFundingSourceModel.findOne({
     token: achTransfer.funding_source_token,
   });
-  const bankName = await getACHSourceBankName(transferBankData.accessToken);
+  if (!transferBankData) throw new CustomError(`Funding source not found for token ${achTransfer?.funding_source_token}`, ErrorTypes.GEN);
 
-  if (!achTransfer) {
-    throw new CustomError('ACH Transfer not found.', ErrorTypes.GEN);
-  }
+  const bankName = await getACHSourceBankName(transferBankData.accessToken);
+  if (!bankName) throw new CustomError(`Bank name not found for accessToken: ${transferBankData.accessToken}`, ErrorTypes.GEN);
 
   console.log('////// RECEIVED ACH TRANSFER WEBHOOK', banktransfertransition);
 

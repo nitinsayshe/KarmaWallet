@@ -1,4 +1,4 @@
-import { IMarqetaCreateGPAorder } from '../../integrations/marqeta/types';
+import { IMarqetaCreateGPAorder, IMarqetaUnloadGPAOrder } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
@@ -36,6 +36,19 @@ export class GPA {
   async getProgramFundingBalance() {
     try {
       const { data } = await this._marqetaClient._client.get('/programreserve/balances');
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  async unloadGPA(params: IMarqetaUnloadGPAOrder) {
+    try {
+      const { data } = await this._marqetaClient._client.post('gpaorders/unloads', {
+        amount: params.amount,
+        original_order_token: params.orderToken,
+      });
       return data;
     } catch (err) {
       console.log(err);

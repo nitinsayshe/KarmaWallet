@@ -39,7 +39,7 @@ import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
+import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 // eslint-disable-next-line import/no-cycle
 import { generateRandomPasswordString } from '../../lib/misc';
@@ -656,6 +656,12 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Existing user with Marqeta integration already saved
   if (!!existingUser && existingUser.integrations.marqeta.status !== userTransition.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
+    // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
+    const { reason, reason_code: resonCode } = userTransition;
+    const marqetaIntegration = existingUser.integrations.marqeta;
+    marqetaIntegration.reason = reason || IMarqetaReasonCodesEnum[resonCode] || '';
+    marqetaIntegration.reason_code = resonCode;
+
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
       await createKarmaCardWelcomeUserNotification(existingUser, true);
     }

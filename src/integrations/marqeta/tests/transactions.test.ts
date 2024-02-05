@@ -124,6 +124,8 @@ describe('tests marqeta integration transaction logic', () => {
               pin_is_set: true,
               instrument_type: 'VIRTUAL_PAN',
               barcode: 'barcode',
+              reason: 'initiated',
+              reason_code: '00',
             },
           },
         },

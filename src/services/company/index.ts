@@ -830,7 +830,7 @@ export const getShareableCompany = ({
     : parentCompany as ObjectId;
 
   const _merchant: IRef<ObjectId, IShareableMerchant> = (!!merchant && !!Object.keys(merchant).length) ? getShareableMerchant(merchant as IMerchantDocument)
-    : merchant as ObjectId;
+    : null;
 
   const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
     ? {
@@ -1181,6 +1181,12 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
 
   return partner;
 };
+
+export const sortByMaxRate = (companies: any[]) => companies.sort((a, b) => {
+  const aRate = parseFloat(a.merchant.maxAmount.slice(0, -1));
+  const bRate = parseFloat(b.merchant.maxAmount.slice(0, -1));
+  return bRate - aRate;
+});
 
 export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackCompaniesRequest, query: FilterQuery<ICompany>) => {
   const { location } = req.query;

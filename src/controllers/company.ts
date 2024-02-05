@@ -128,11 +128,14 @@ export const getFeaturedCashbackCompanies: IRequestHandler = async (req, res) =>
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const companies = await CompanyService.getFeaturedCashbackCompanies(req, query);
-    const sharableCompanies = {
+    const shareableCompanies = companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c));
+    const sortedShareable = CompanyService.sortByMaxRate(shareableCompanies);
+    const toReturn = {
       ...companies,
-      docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),
+      docs: sortedShareable,
     };
-    output.api(req, res, !companies.docs.length ? companies : sharableCompanies);
+
+    output.api(req, res, !companies.docs.length ? companies : toReturn);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

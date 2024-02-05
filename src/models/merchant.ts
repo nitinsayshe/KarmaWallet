@@ -86,6 +86,9 @@ export interface IShareableMerchant {
   name: string;
   integrations: IMerchantIntegrations;
   karmaCollectiveMember?: boolean;
+  maxRateType?: string;
+  maxAmount?: string;
+  maxDescription?: string;
 }
 
 export interface IMerchant extends IShareableMerchant {

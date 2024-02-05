@@ -372,6 +372,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       for (const transaction of transactions) {
         // Handle any code that tees off of the transaction code here before mapping to a transaction
         const user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
+        if (!user) throw new CustomError('User not found', ErrorTypes.SERVER);
         const { code } = transaction.response as any;
         // Insufficent funds from code
         if (InsufficientFundsConstants.CODES.includes(code)) {

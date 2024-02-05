@@ -650,7 +650,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
 
-  if (!existingUser && !visitor) {
+  if (!existingUser?._id && !visitor?._id) {
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
@@ -660,7 +660,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   });
 
   // Existing user with Marqeta integration already saved
-  if (!!existingUser && existingUser.integrations.marqeta.status !== userTransition.status) {
+  if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== userTransition?.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
       // Ensure that the Welcome email has not already been sent
@@ -674,7 +674,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Marqeta integration is saved on the visitor object,
   // Could be just a visitor (if they didn't create an account later with that same email)
   // Could be a visitor that later created an account with that same email
-  if (!!visitor && !existingUser) {
+  if (!!visitor?._id && !existingUser?._id) {
     visitor.integrations.marqeta.status = userTransition.status;
     await visitor.save();
 
@@ -700,7 +700,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(user, true);
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
-        if (!!visitorUser) {
+        if (!!visitorUser?._id) {
           visitorUser.integrations.marqeta = visitor.integrations.marqeta;
           visitorUser.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
           visitorUser.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: ['Approved'] };

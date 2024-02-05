@@ -830,7 +830,7 @@ export const getShareableCompany = ({
     : parentCompany as ObjectId;
 
   const _merchant: IRef<ObjectId, IShareableMerchant> = (!!merchant && !!Object.keys(merchant).length) ? getShareableMerchant(merchant as IMerchantDocument)
-    : null;
+    : merchant as ObjectId;
 
   const _categoryScores = (categoryScores || []).map(cs => ((!!cs && !!Object.values(cs).length)
     ? {

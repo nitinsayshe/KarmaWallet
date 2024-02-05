@@ -377,7 +377,6 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
   card.status = getCardStatusFromMarqetaCardState(cardData.state);
-  console.log('cardItem', cardItem);
   // Save the updated card document
   await card.save();
 };

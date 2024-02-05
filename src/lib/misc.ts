@@ -42,3 +42,5 @@ export const floorToPercision = (value: number, precision: number) => {
   const multiplier = 10 ** (precision || 0);
   return Math.floor(value * multiplier) / multiplier;
 };
+
+export const formatName = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();

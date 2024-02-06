@@ -20,6 +20,7 @@ import utilitiesRouter from './utilities';
 import faqRouter from './faq';
 import karmaCardRouter from './karmaCard';
 import emailTesting from './emailTesting';
+import webAnalyticsRouter from './webAnalytics';
 import notificationRouter from './user_notification';
 
 const adminRouter = Router();
@@ -41,6 +42,7 @@ adminRouter.use('/campaign', campaignRouter);
 adminRouter.use('/transaction', transaction);
 adminRouter.use('/banner', bannerRouter);
 adminRouter.use('/article', articleRouter);
+adminRouter.use('/web-analytics', webAnalyticsRouter);
 adminRouter.use('/utilities', utilitiesRouter);
 adminRouter.use('/notification', notificationRouter);
 adminRouter.use('/faq', faqRouter);

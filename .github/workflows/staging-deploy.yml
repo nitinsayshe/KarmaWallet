@@ -98,6 +98,7 @@ jobs:
     - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.STAGING_KARD_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'KARD_KARMAWALLET_AWS_ROLE=${{secrets.STAGING_KARD_KARMAWALLET_AWS_ROLE}}' >> .env
     - run: echo 'KARD_AWS_ROLE=${{secrets.STAGING_KARD_AWS_ROLE}}' >> .env
+    - run: echo 'KARD_ISSUER_AWS_ROLE=${{secrets.STAGING_KARD_ISSUER_AWS_ROLE}}' >> .env
     - run: echo 'KARD_AWS_ENV=test' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.SANDBOX_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
@@ -113,6 +114,7 @@ jobs:
     - run: echo 'FIREBASE_CLIENT_EMAIL=${{secrets.SANDBOX_FIREBASE_CLIENT_EMAIL}}' >> .env
     - run: echo 'FIREBASE_CLIENT_ID=${{secrets.SANDBOX_FIREBASE_CLIENT_ID}}' >> .env
     - run: echo 'FIREBASE_CLIENT_X509_CERT_URL=${{secrets.SANDBOX_FIREBASE_CLIENT_X509_CERT_URL}}' >> .env
+    - run: echo 'COMPLYADVANTAGE_KEY=${{secrets.COMPLYADVANTAGE_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

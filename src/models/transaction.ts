@@ -7,7 +7,12 @@ import {
   TransactionModelStateEnum,
   TransactionModelStateEnumValues,
 } from '../clients/marqeta/types';
-import { TransactionTypeEnumValues, TransactionTypeEnum, TransactionSubtypeEnumValues, TransactionSubtypeEnum } from '../lib/constants/transaction';
+import {
+  TransactionTypeEnumValues,
+  TransactionTypeEnum,
+  TransactionSubtypeEnumValues,
+  TransactionSubtypeEnum,
+} from '../lib/constants/transaction';
 import { getUtcDate } from '../lib/date';
 import { IAggregatePaginateModel } from '../sockets/types/aggregations';
 import { IModel, IRef } from '../types/model';
@@ -98,7 +103,9 @@ export interface IRareTransactionIntegration {
   tonnes_amt?: number;
 }
 
-export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel> & {relatedTransactions?: Partial<MarqetaTransactionModel>[]};
+export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel> & {
+  relatedTransactions?: Partial<MarqetaTransactionModel>[];
+};
 
 export interface ITransactionIntegrations {
   plaid?: IPlaidTransactionIntegration;
@@ -138,6 +145,12 @@ export interface IShareableTransaction {
   date: Date;
   settledDate?: Date;
   integrations?: ITransactionIntegrations;
+  earnedCommission?: {
+    id: string;
+    amount: number;
+    karmaAllocation: number;
+    userAllocation: number;
+  };
   createdOn: Date;
   lastModified: Date;
   matchType: MatchTypes;
@@ -373,5 +386,5 @@ transactionSchema.plugin(mongooseAggregatePaginate);
 
 export const TransactionModel = model<ITransactionDocument, IAggregatePaginateModel<ITransactionDocument>>(
   'transaction',
-  transactionSchema,
+  transactionSchema
 );

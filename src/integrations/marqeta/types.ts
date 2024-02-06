@@ -80,6 +80,11 @@ export interface IMarqetaCreateCard extends IMarqetaUserToken {
   cardProductToken: string;
 }
 
+export interface IMarqetaUnloadGPAOrder {
+  amount: number;
+  orderToken: string;
+}
+
 export interface IMarqetaLoadGpaFromProgramFundingSource {
   amount: number;
   userId: string;
@@ -428,6 +433,7 @@ export type MarqetaUserModel = {
   last_name?: string;
   email?: string;
   address1?: string;
+  address2?: string;
   city?: string;
   state?: string;
   postal_code?: string;
@@ -609,6 +615,73 @@ export interface IMarqetaCardActionEvent {
   token: string;
   type: string;
   user_token: string;
+}
+
+export enum MarqetaUserTransitionReasonCode {
+  // object activated for first time
+  'firstTimeActivation' = '00',
+  // request by you
+  'requestedByYou' = '01',
+  // inactivity over time
+  'inactivity' = '02',
+  // This address cannot accept mail or the addressee is unknown.
+  'addressUnknown' = '03',
+  // Negative account balance
+  'negativeBalance' = '04',
+  // Account under review
+  'accountUnderReview' = '05',
+  // Suspicious activity identified
+  'suspiciousActivity' = '06',
+  // Activity outside of program parameters identified
+  'activityOutsideProgram' = '07',
+  // Confirmed fraud was identified
+  'confirmedFraud' = '08',
+  // Matched with an Office of Foreign Assets Control list
+  'matchedOFAC' = '09',
+  // Card was reported lost
+  'cardReportedLost' = '10',
+  // Card information was cloned
+  'cardInfoCloned' = '11',
+  // Account or card information was compromised
+  'infoCompromised' = '12',
+  // Temporary status change while on hold/leave
+  'temporaryHold' = '13',
+  // Initiated by Marqeta
+  'initiatedByMarqeta' = '14',
+  // Initiated by issuerrea
+  'initiatedByIssuer' = '15',
+  // cardExpired
+  'cardExpired' = '16',
+  // failedKYC
+  'failedKYC' = '17',
+  // Changed to ACTIVE because information was properly validated.
+  'changedToActiveInfoValid' = '18',
+  // Changed to ACTIVE because account activity was properly validated
+  'changedToActiveActivityValid' = '19',
+  //  Change occurred prior to the normalization of reason codes.
+  'changeOccurredPriorToNormalization' = '20',
+  // Initiated by a third party, often a digital wallet provider.
+  'initiatedByThirdParty' = '21',
+  // Pin retry limit reached
+  'pinRetryLimitReached' = '22',
+  // Card was reported stolen
+  'cardReportedStolen' = '23',
+  // address issue
+  'addressIssue' = '24',
+  // name issue
+  'nameIssue' = '25',
+  // ssn issue
+  'ssnIssue' = '26',
+  // dob issue
+  'dobIssue' = '27',
+  // email issue
+  'emailIssue' = '28',
+  // phone issue
+  'phoneIssue' = '29',
+  // account fullfillment mismatch
+  'accountFulfillmentMismatch' = '30',
+  // other reason
+  'other' = '31',
 }
 
 export interface IMarqetaUserTransitionsEvent {

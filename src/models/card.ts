@@ -48,7 +48,7 @@ export interface IMarqetaCardIntegration {
   pin_is_set: boolean;
   state: MarqetaCardState;
   user_token: string;
-  reason: string;
+  reason?: string;
   reason_code:string;
 }
 

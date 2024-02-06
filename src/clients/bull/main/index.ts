@@ -50,7 +50,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.GlobalPlaidTransactionMapper, null, { jobId: `${JobNames.GlobalPlaidTransactionMapper}-daily`, repeat: { cron: '0 3 * * *' } });
     this.createJob(JobNames.TotalOffsetsForAllUsers, null, { jobId: `${JobNames.TotalOffsetsForAllUsers}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     this.createJob(JobNames.UpdateRareProjectAverage, null, { jobId: `${JobNames.UpdateRareProjectAverage}-daily`, repeat: { cron: '0 17 * * *' } });
-    this.createJob(JobNames.UserMonthlyImpactReport, { generateFullHistory: false }, { jobId: `${JobNames.UserMonthlyImpactReport}-monthly`, repeat: { cron: '0 3 1 * *' } });
+    this.createJob(JobNames.UserMonthlyImpactReport, { generateFullHistory: false }, { jobId: `${JobNames.UserMonthlyImpactReport}-monthly`, repeat: { cron: '0 4 1 * *' } });
     this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
     this.createJob(JobNames.UpdateKardMerchantsAndData, null, { jobId: `${JobNames.UpdateKardMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
     this.createJob(JobNames.GenerateUserImpactTotals, null, { jobId: `${JobNames.GenerateUserImpactTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } });
@@ -58,7 +58,7 @@ export class _MainBullClient extends _BullClient {
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
     this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 *' } });
     this.createJob(JobNames.UpdateWildfireCommissions, null, { jobId: `${JobNames.UpdateWildfireCommissions}-daily`, repeat: { cron: '0 5 * * *' } });
-    this.createJob(JobNames.GenerateKarmaCardStatements, null, { jobId: `${JobNames.GenerateKarmaCardStatements}-monthly`, repeat: { cron: '0 5 1 * *' } });
+    this.createJob(JobNames.GenerateKarmaCardStatements, null, { jobId: `${JobNames.GenerateKarmaCardStatements}-monthly`, repeat: { cron: '0 7 1 * *' } });
 
     if (process.env.NODE_ENV === 'production') {
       // active campaign sync
@@ -68,7 +68,7 @@ export class _MainBullClient extends _BullClient {
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.SPENDING_ANALYSIS }, { jobId: `${JobNames.SyncActiveCampaign}-spending-analysis`, repeat: { cron: '0 4 28 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.DAILY }, { jobId: `${JobNames.SyncActiveCampaign}-daily`, repeat: { cron: '0 7 * * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.WEEKLY }, { jobId: `${JobNames.SyncActiveCampaign}-weekly`, repeat: { cron: '0 7 * * 0' } });
-      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 7 1 * *' } });
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 12 2 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
 

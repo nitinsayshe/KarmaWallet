@@ -666,9 +666,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     existingUser.integrations.marqeta.status = userTransition.status;
     // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
     const { reason, reason_code: reasonCode } = userTransition;
-    const marqetaIntegration = existingUser.integrations.marqeta;
-    marqetaIntegration.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
-    marqetaIntegration.reason_code = reasonCode;
+    existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
+    existingUser.integrations.marqeta.reason_code = reasonCode;
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
       // Ensure that the Welcome email has not already been sent

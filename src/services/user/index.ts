@@ -39,11 +39,7 @@ import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
-<<<<<<< HEAD
-import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
-=======
-import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
->>>>>>> 19d6d06eece5babdf0a68a5e0fd207ca9747ec84
+import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 // eslint-disable-next-line import/no-cycle
 import { generateRandomPasswordString } from '../../lib/misc';
@@ -341,6 +337,8 @@ export const getShareableUser = ({
       address1: integrations.marqeta.address1,
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
+      reason: integrations?.marqeta?.reason || '',
+      reason_code: integrations?.marqeta?.reason_code || '',
     };
   }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;

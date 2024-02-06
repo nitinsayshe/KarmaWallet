@@ -43,4 +43,9 @@ export const floorToPercision = (value: number, precision: number) => {
   return Math.floor(value * multiplier) / multiplier;
 };
 
-export const formatName = (str: string) => str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+export const formatName = (str: string) => {
+  const words = str.split(' ');
+  const formattedWords = words.map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase());
+  const formattedStr = formattedWords.join(' ');
+  return formattedStr;
+};

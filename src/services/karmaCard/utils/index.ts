@@ -1,4 +1,5 @@
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
+import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { IUserDocument } from '../../../models/user';
 
@@ -130,6 +131,7 @@ export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
   const karmaCards = await CardModel.find({
     userId: userObject._id.toString(),
     'integrations.marqeta': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
   });
   return !!karmaCards.length;
 };

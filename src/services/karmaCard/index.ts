@@ -5,7 +5,7 @@ import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
 import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserStatus } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
-import { generateRandomPasswordString } from '../../lib/misc';
+import { formatName, generateRandomPasswordString } from '../../lib/misc';
 import {
   ApplicationStatus,
   IKarmaCardApplication,
@@ -263,7 +263,8 @@ export const handleKarmaCardApplySuccess = async ({
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
   let _visitor;
   let { requestor } = req;
-  const { firstName, lastName, address1, address2, birthDate, phone, postalCode, state, ssn, email, city, urlParams } = req.body;
+  let { firstName, lastName, email } = req.body;
+  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) { throw new Error('Missing required fields'); }
   if (!requestor && !email) throw new Error('Missing required fields');
@@ -277,8 +278,12 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     requestor = null;
   }
 
-  const existingVisitor = await VisitorModel.findOne({ email: email.toLowerCase() });
-  const existingUser = await UserModel.findOne({ 'emails.email': email.toLocaleLowerCase() });
+  firstName = formatName(firstName);
+  lastName = formatName(lastName);
+  email = email.toLowerCase();
+
+  const existingVisitor = await VisitorModel.findOne({ email });
+  const existingUser = await UserModel.findOne({ 'emails.email': email });
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)

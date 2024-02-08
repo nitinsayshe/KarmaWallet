@@ -1,3 +1,46 @@
+export enum MarqetaKYCCode {
+  AddressIssue = 'AddressIssue',
+  DateOfBirthIssue = 'DateOfBirthIssue',
+  EmailIssue = 'EmailIssue',
+  NameIssue = 'NameIssue',
+  NoRecordFound = 'NoRecordFound',
+  OFAC = 'OFAC',
+  PhoneIssue = 'PhoneIssue',
+  RiskIssue = 'RiskIssue',
+  SSNIssue = 'SSNIssue',
+  SSNFail = 'SSNFail',
+  Approved = 'Approved',
+}
+
+export enum MarqetaKYCStatus {
+  FAILURE = 'FAILURE',
+  SUCCESS = 'SUCCESS',
+  PENDING = 'PENDING',
+}
+
+export interface IMarqetaKYCResult {
+  status: string;
+  codes: MarqetaKYCCode;
+}
+
+export interface IMarqetaListKYCData {
+  create_time: string;
+  last_modified_time: string;
+  token: string;
+  user_token: string;
+  result: IMarqetaKYCResult[];
+  manual_override: boolean;
+  referenceid: string;
+}
+
+export interface IMarqetaListKYCResponse {
+  count: number;
+  start_index: number;
+  end_index: number;
+  is_more: boolean;
+  data: IMarqetaListKYCData[] | [];
+}
+
 export const AccountFundingTransactionTypeEnum = {
   AccountToAccount: 'ACCOUNT_TO_ACCOUNT',
   PersonToPerson: 'PERSON_TO_PERSON',

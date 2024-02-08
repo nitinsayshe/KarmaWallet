@@ -33,11 +33,12 @@ import {
   IPayoutNotificationData,
   IShareableUserNotification,
   IUserNotificationDocument,
-  IPushNotificationData,
   UserNotificationModel,
   ICaseWonProvisionalCreditAlreadyIssuedNotificationData,
   IKarmaCardWelcomeData,
   IBankLinkedConfirmationEmailData,
+  IPushNotificationData,
+  IEarnedCashbackPushNotificationData,
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
@@ -284,19 +285,21 @@ const getNotificationTypeFromPushNotificationType = (pushNotificationType: PushN
       return NotificationTypeEnum.DiningTransaction;
     case PushNotificationTypes.TRANSACTION_OF_GAS:
       return NotificationTypeEnum.GasTransaction;
+    case PushNotificationTypes.ACH_TRANSFER_CANCELLED:
+      return NotificationTypeEnum.ACHTransferCancelled;
     default:
       return '';
   }
 };
 
-export const createPushUserNotificationFromUserAndPushData = async (
+export const createPushUserNotificationFromUserAndPushData = async <NotificationDataType>(
   user: IUserDocument,
-  data: IPushNotificationData,
+  data: NotificationDataType,
   disablePush = false,
 ): Promise<IUserNotificationDocument | void> => {
   try {
     // make sure this data is a push notification type
-    const { pushNotificationType, body, title } = data;
+    const { pushNotificationType, body, title } = data as unknown as IPushNotificationData;
 
     if (!pushNotificationType || !body || !title) {
       throw Error(`Error creating notification for user: ${user}. Missing data: ${data}`);
@@ -309,8 +312,8 @@ export const createPushUserNotificationFromUserAndPushData = async (
         channel: disablePush ? undefined : NotificationChannelEnum.Push,
         user: user?._id?.toString(),
         data,
-      } as CreateNotificationRequest<IPushNotificationData>,
-    } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPushNotificationData>>;
+      } as CreateNotificationRequest<NotificationDataType>,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest<NotificationDataType>>;
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating notification: ${e}`);
@@ -393,6 +396,7 @@ export const createEarnedCashbackEmailNotificationFromCommission = async (
           name: user.name,
           body: `You just earned $${roundToPercision(commission.amount, 2)} in cashback from ${company.companyName}`,
           companyName: company.companyName,
+          commissionId: commission._id,
         },
       } as CreateNotificationRequest<IEarnedCashbackNotificationData>,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IEarnedCashbackNotificationData>>;
@@ -406,6 +410,7 @@ export const createEarnedCashbackPushNotificationFromCommission = async (commiss
   try {
     const commissionWithPopulatedUserAndCompany: ICommissionDocument[] = await getCommissionWithPopulatedUserAndCompany(commission);
     const user = commissionWithPopulatedUserAndCompany[0]?.user as IUserDocument;
+    const amountToUser = commission.allocation.user.toFixed(2);
 
     if (!user?.integrations?.marqeta) {
       throw new CustomError(`User with commission: ${commission} does not have a marqeta integration.`);
@@ -413,9 +418,10 @@ export const createEarnedCashbackPushNotificationFromCommission = async (commiss
 
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.EARNED_CASHBACK,
-      body: `You earned $${roundToPercision(commission.amount, 2)} in Karma Cash`,
+      body: `You earned $${amountToUser} in Karma Cash`,
       title: 'You earned Karma Cash!',
-    });
+      commissionId: commission._id,
+    } as IEarnedCashbackPushNotificationData);
   } catch (e) {
     console.log(`Error creating earned cashback push notification: ${e}`);
   }
@@ -428,6 +434,28 @@ export const createEarnedCashbackNotificationsFromCommission = async (
   )[]> => (
   await Promise.all(
     channels.map(async (channel) => {
+      const existingNotification = await UserNotificationModel.findOne({
+        $and: [
+          {
+            user: commission.user,
+            type: NotificationTypeEnum.EarnedCashback,
+            'data.commissionId': { $exists: true },
+            channel,
+          },
+          {
+            user: commission.user,
+            type: NotificationTypeEnum.EarnedCashback,
+            'data.commissionId': commission._id,
+            channel,
+          },
+        ] });
+
+      if (!!existingNotification?._id) {
+        console.log(`Notification already exists for commission: ${commission._id} and user: ${commission.user}`);
+        console.log(`Notification: ${JSON.stringify(existingNotification)}`);
+        return;
+      }
+
       switch (channel) {
         case NotificationChannelEnum.Email:
           return createEarnedCashbackEmailNotificationFromCommission(commission);
@@ -471,6 +499,7 @@ export const createPayoutEmailNotificationFromCommissionPayout = async (
   try {
     const commissionPayoutWithPopulatedUser: ICommissionPayoutDocument[] = await getCommissionPayoutWithPopulatedUser(commissionPayout);
     const user = commissionPayoutWithPopulatedUser[0].user as IUserDocument;
+    const payoutAmount = commissionPayout.amount.toFixed(2);
 
     const mockRequest = {
       body: {
@@ -480,8 +509,8 @@ export const createPayoutEmailNotificationFromCommissionPayout = async (
         user: user?._id?.toString(),
         data: {
           name: user.name,
-          body: `You were sent $${roundToPercision(commissionPayout.amount, 2)} in cashback rewards!`,
-          payoutAmount: `${commissionPayout.amount}`,
+          body: `You were sent $${payoutAmount} in cashback rewards!`,
+          payoutAmount: `${payoutAmount}`,
         },
       } as CreateNotificationRequest<IPayoutNotificationData>,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest<IPayoutNotificationData>>;
@@ -502,7 +531,7 @@ export const createPayoutPushNotificationFromCommissionPayout = async (commissio
 
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${roundToPercision(commissionPayout.amount, 2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      body: `$${commissionPayout.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
       title: 'Karma Cash Was Deposited',
     });
   } catch (e) {
@@ -578,6 +607,13 @@ export const createKarmaCardWelcomeUserNotification = async (
   newUser: boolean,
 ): Promise<IUserNotificationDocument | void> => {
   try {
+    const existingNotification = await UserNotificationModel.findOne({
+      user: user._id,
+      type: NotificationTypeEnum.KarmaCardWelcome,
+      status: UserNotificationStatusEnum.Unread,
+      channel: NotificationChannelEnum.Email,
+    });
+    if (existingNotification) return;
     const mockRequest = {
       body: {
         type: NotificationTypeEnum.KarmaCardWelcome,
@@ -880,27 +916,57 @@ export const createCardShippedUserNotification = async (
   }
 };
 
-export const createCardDeliveredUserNotification = async (
-  webhookData: IMarqetaWebhookCardsEvent,
+export const createACHTransferCancelledUserNotification = async (
+  transferData: IACHTransferEmailData,
 ): Promise<IUserNotificationDocument | void> => {
   try {
-    const { user_token } = webhookData;
-    const user = await UserModel.findOne({ 'integrations.marqeta.userToken': user_token });
-    if (!user) throw new CustomError(`User not found for webhook data: ${webhookData}`);
+    const { user, amount, accountMask, accountType, date } = transferData;
+
     const mockRequest = {
       body: {
-        type: NotificationTypeEnum.CardDelivered,
+        type: NotificationTypeEnum.ACHTransferCancelled,
         status: UserNotificationStatusEnum.Unread,
         channel: NotificationChannelEnum.Email,
         user: user?._id?.toString(),
         data: {
           name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
         },
-      } as unknown as CreateNotificationRequest,
+      } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
-
     return createUserNotification(mockRequest);
   } catch (e) {
-    console.log(`Error creating card delivered notification: ${e}`);
+    console.log(`Error creating ACH cancelled email notification: ${e}`);
+  }
+};
+
+export const createACHTransferReturnedUserNotification = async (
+  transferData: IACHTransferEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const { user, amount, accountMask, accountType, date, reason } = transferData;
+
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ACHTransferReturned,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+          amount: `$${amount}`,
+          accountMask,
+          accountType,
+          date,
+          reason,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating ACH returned email notification: ${e}`);
   }
 };

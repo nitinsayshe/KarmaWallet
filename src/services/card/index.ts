@@ -13,16 +13,16 @@ import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegratio
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
-import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
-import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
+import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import {
-  createCardDeliveredUserNotification,
   createCardShippedUserNotification,
   createPushUserNotificationFromUserAndPushData,
 } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
+// eslint-disable-next-line import/no-cycle
+import { getShareableUser } from '../user';
 
 dayjs.extend(utc);
 
@@ -334,6 +334,8 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     instrument_type,
     pin_is_set,
     state,
+    reason,
+    reason_code,
     card_token,
   } = cardData;
 
@@ -367,13 +369,14 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     pin_is_set,
     user_token,
     state,
+    reason,
+    reason_code,
   };
   // Set lastModified date
   card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
   card.status = getCardStatusFromMarqetaCardState(cardData.state);
-
   // Save the updated card document
   await card.save();
 };
@@ -462,6 +465,8 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
     state: cardFromWebhook?.state,
     fulfillment_status: cardFromWebhook?.fulfillment_status,
+    reson: cardFromWebhook.reason,
+    reson_code: cardFromWebhook.reason_code,
   };
 
   if (existingCard?.integrations?.marqeta?.instrument_type) {
@@ -484,17 +489,19 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
     case MarqetaCardWebhookType.SHIPPED:
       await createCardShippedUserNotification(cardFromWebhook);
       break;
-    case MarqetaCardWebhookType.DELIVERED:
-      await createCardDeliveredUserNotification(cardFromWebhook);
-      break;
     default:
       console.log('///// No action needed for this webhook type');
   }
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
+  // if reason attribute is missing in cardWebhookData then populate the reson based on reson_code
+  if (!cardWebhookData.reason) {
+    const { reason_code } = cardWebhookData;
+    cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+  }
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
-  if (!user) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
+  if (!user?._id) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
   if (!prevCardData) {
     await mapMarqetaCardtoCard(user._id.toString(), cardWebhookData);

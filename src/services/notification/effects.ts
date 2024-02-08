@@ -16,7 +16,7 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendCardDeliveredEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail, sendACHCancelledEmail, sendACHReturnedEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData } from '../email/types';
 
 export const handlePushEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
@@ -104,6 +104,45 @@ export const handleSendACHInitiationEmailEffect = async <DataType>(user: IUserDo
   } catch (err) {
     console.error(err);
     throw new CustomError('Error sending ach initiation email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleSendACHCancelledEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IACHTransferEmailData;
+  const { date, amount, accountMask, accountType, name } = d;
+  if (!d) throw new Error('Invalid ach initiation notification data');
+  try {
+    await sendACHCancelledEmail({
+      user,
+      amount,
+      accountMask,
+      accountType,
+      date,
+      name,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending ach cancelled email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleSendACHReturnedEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
+  const d = data as unknown as IACHTransferEmailData;
+  const { date, amount, accountMask, accountType, name, reason } = d;
+  if (!d) throw new Error('Invalid ach initiation notification data');
+  try {
+    await sendACHReturnedEmail({
+      user,
+      amount,
+      accountMask,
+      accountType,
+      date,
+      name,
+      reason,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending ach returned email', ErrorTypes.SERVER);
   }
 };
 
@@ -266,22 +305,6 @@ export const handleCardShippedEffect = async <DataType>(user: IUserDocument, dat
   }
 };
 
-export const handleCardDeliveredEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
-  const d = data as unknown as ICardShippedNotificationData;
-  const { name } = d;
-  if (!d) throw new Error('Invalid card shipped data');
-  try {
-    await sendCardDeliveredEmail({
-      user: user._id,
-      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
-      name,
-    });
-  } catch (err) {
-    console.log(err);
-    throw new CustomError('Error sending card shipped email', ErrorTypes.SERVER);
-  }
-};
-
 export const handleSendEmployerGiftEmailEffect = async <DataType>(user: IUserDocument, data: DataType): Promise<void> => {
   const d = data as unknown as IEmployerGiftData;
   const { name, amount } = d;
@@ -307,6 +330,8 @@ export const NotificationEffectsFunctions: {
   SendCaseWonProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendPushNotification: handlePushEffect,
   SendACHInitiationEmail: handleSendACHInitiationEmailEffect,
+  SendACHCancelledEmail: handleSendACHCancelledEmailEffect,
+  SendACHReturnedEmail: handleSendACHReturnedEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
@@ -315,7 +340,6 @@ export const NotificationEffectsFunctions: {
   SendCaseWonProvisionalCreditNotAlreadyIssuedEmail: handleCaseWonProvisionalCreditNotAlreadyIssuedEffect,
   SendDisputeReceivedNoProvisionalCreditIssuedEmail: handleDisputeReceivedNoProvisionalCreditIssuedEffect,
   SendCardShippedEmail: handleCardShippedEffect,
-  SendCardDeliveredEmail: handleCardDeliveredEffect,
   SendCaseLostProvisionalCreditNotAlreadyIssued: handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect,
   SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
 } as const;
@@ -326,6 +350,8 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendPayoutIssuedEmail,
     NotificationEffectsEnum.SendCaseWonProvisionalCreditAlreadyIssuedEmail,
     NotificationEffectsEnum.SendACHInitiationEmail,
+    NotificationEffectsEnum.SendACHCancelledEmail,
+    NotificationEffectsEnum.SendACHReturnedEmail,
     NotificationEffectsEnum.SendNoChargebackRightsEmail,
     NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail,
@@ -334,7 +360,6 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
     NotificationEffectsEnum.SendDisputeReceivedNoProvisionalCreditIssuedEmail,
     NotificationEffectsEnum.SendCardShippedEmail,
-    NotificationEffectsEnum.SendCardDeliveredEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued,
     NotificationEffectsEnum.SendEmployerGiftEmail,
   ],

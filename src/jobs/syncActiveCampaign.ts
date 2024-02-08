@@ -2,7 +2,7 @@ import { AxiosInstance } from 'axios';
 import { SandboxedJob } from 'bullmq';
 import dayjs from 'dayjs';
 import isemail from 'isemail';
-import { PaginateResult } from 'mongoose';
+import { PaginateResult, Types } from 'mongoose';
 import z, { SafeParseError } from 'zod';
 import { ActiveCampaignClient, IContactsData, IContactsImportData } from '../clients/activeCampaign';
 import {
@@ -27,13 +27,10 @@ import { roundToPercision, sleep } from '../lib/misc';
 import { IArticleDocument } from '../models/article';
 import { IUser, IUserDocument, UserModel } from '../models/user';
 import {
-  getArticleRecommendationsBasedOnTransactionHistory,
-  getCompaniesWithArticles,
-  getArticlesForCompany,
-  URLs,
+  getArticleRecommendationsBasedOnTransactionHistory, getArticlesForCompany, getCompaniesWithArticles, URLs,
 } from '../services/article/utils/recommendations';
-import { getUserGroupSubscriptionsToUpdate, updateNewKWCardUserSubscriptions, updateUserSubscriptions } from '../services/subscription';
-import { IterationRequest } from '../services/user/utils';
+import { getActiveCampaignSubscribedListIds, getNonActiveCampaignSubscriptions, getUserGroupSubscriptionsToUpdate, reconcileActiveCampaignListSubscriptions, updateNewKWCardUserSubscriptions, updateUserSubscriptions } from '../services/subscription';
+import { iterateOverUsersAndExecWithDelay, IterationRequest, IterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
   getMonthlyMissedCashBack,
@@ -657,6 +654,43 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
   await iterateOverUsersAndExecImportReqWithDelay(req, prepareRemovedOrUnlinkedAccountsSyncRequest, msDelayBetweenBatches);
 };
 
+const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
+  const msDelayBetweenBatches = 2000;
+
+  const req: IterationRequest<{}> = {
+    httpClient,
+    batchQuery: {},
+    batchLimit: 100,
+  };
+
+  await iterateOverUsersAndExecWithDelay(
+    req,
+    async (_: IterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<IterationResponse<{}>[]> => {
+      await Promise.all(
+        userBatch.docs.map(async (user: IUserDocument) => {
+          const email = user?.emails?.find((e) => e.primary)?.email;
+          console.log(`Reconciling Active Campaign List Subscriptions for ${user._id}, ${email}`);
+          try {
+            // get active campaign subscrtiptions for this email
+            const activeCampaignListIds = await getActiveCampaignSubscribedListIds(email);
+            // add ids of any active subs not from active campaign
+            const nonActiveCampaignSubs = await getNonActiveCampaignSubscriptions(user._id as unknown as Types.ObjectId);
+            // update db with active campaign subscriptions
+            await reconcileActiveCampaignListSubscriptions(new Types.ObjectId(user._id.toString()), activeCampaignListIds, nonActiveCampaignSubs);
+          } catch (err) {
+            console.error(`Error reconciling list subscriptions for user: ${err}`);
+          }
+        }),
+      );
+
+      return userBatch.docs.map((user: IUserDocument) => ({
+        userId: user._id,
+      }));
+    },
+    msDelayBetweenBatches,
+  );
+};
+
 const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
@@ -767,6 +801,9 @@ export const exec = async ({ syncType, userSubscriptions, cardSignupUserId, http
         break;
       case ActiveCampaignSyncTypes.UNLINKED_AND_REMOVED_ACCOUNTS:
         await syncUnlinkedAndRemovedAccountsFields(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.RECONCILE_SUBSCRIPTIONS:
+        await reconcileUserSubscriptions(httpClient);
         break;
       case ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION:
         await syncArticleRecommendationFields(httpClient);

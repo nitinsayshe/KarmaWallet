@@ -14,7 +14,8 @@ export const getUserImpactReportsSummary: IRequestHandler = async (req, res) => 
 export const getUserImpactReport: IRequestHandler<UserMonthlyImpactReportService.IUserImpactReportParams> = async (req, res) => {
   try {
     const userImpactReport = await UserMonthlyImpactReportService.getUserImpactReport(req);
-    output.api(req, res, UserMonthlyImpactReportService.getShareableUserMonthlyImpactReport(userImpactReport));
+    const shareable = await UserMonthlyImpactReportService.getShareableUserMonthlyImpactReport(userImpactReport);
+    output.api(req, res, shareable);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

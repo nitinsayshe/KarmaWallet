@@ -21,6 +21,24 @@ export const testACHInitiationEmail: IRequestHandler<{}, {}, {}> = async (req, r
   }
 };
 
+export const testACHCancellationEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testACHCancelledEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testACHReturnedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testACHReturnedEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const testNoChargebackRightsEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const email = await EmailTestingService.testNoChargebackRightsEmail(req);
@@ -113,15 +131,6 @@ export const testDisputeReceivedNoProvisionalCreditIssuedEmail: IRequestHandler<
 export const testCardShippedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const email = await EmailTestingService.testCardShippedEmail(req);
-    output.api(req, res, email);
-  } catch (err) {
-    output.error(req, res, asCustomError(err));
-  }
-};
-
-export const testCardDeliveredEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
-  try {
-    const email = await EmailTestingService.testCardDeliveredEmail(req);
     output.api(req, res, email);
   } catch (err) {
     output.error(req, res, asCustomError(err));

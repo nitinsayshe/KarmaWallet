@@ -668,18 +668,26 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
   }
 };
 
-export const updateActiveCampaignListStatusForEmail = async (
+export const updateActiveCampaignContactData = async (
   userData: {email: string, name?: string},
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
   tags?: string[],
+  fields?: FieldValues,
   client?: AxiosInstance,
 ) => {
   const ac = new ActiveCampaignClient();
   ac.withHttpClient(client);
 
-  const firstName = userData.name?.split(' ')?.[0];
-  const lastName = userData.name?.split(' ')?.pop();
+  let firstName = '';
+  let lastName = '';
+
+  if (userData?.name.includes(' ')) {
+    firstName = userData.name?.split(' ')?.[0];
+    lastName = userData.name?.split(' ')?.pop();
+  } else {
+    firstName = userData.name;
+  }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
@@ -692,8 +700,10 @@ export const updateActiveCampaignListStatusForEmail = async (
       subscribe: sub,
       unsubscribe: unsub,
       tags,
+      fields,
     },
   ];
+
   await ac.importContacts({ contacts });
 };
 

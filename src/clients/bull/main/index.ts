@@ -58,7 +58,7 @@ export class _MainBullClient extends _BullClient {
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
     this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 *' } });
     this.createJob(JobNames.UpdateWildfireCommissions, null, { jobId: `${JobNames.UpdateWildfireCommissions}-daily`, repeat: { cron: '0 5 * * *' } });
-    this.createJob(JobNames.GenerateKarmaCardStatements, null, { jobId: `${JobNames.GenerateKarmaCardStatements}-monthly`, repeat: { cron: '0 3 1 * *' } });
+    this.createJob(JobNames.GenerateKarmaCardStatements, null, { jobId: `${JobNames.GenerateKarmaCardStatements}-monthly`, repeat: { cron: '0 5 1 * *' } });
 
     if (process.env.NODE_ENV === 'production') {
       // active campaign sync
@@ -73,6 +73,7 @@ export class _MainBullClient extends _BullClient {
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
 
       this.createJob(JobNames.MarqetaDataSync, { syncTypes: [MarqetaDataSyncTypeEnum.Transactions, MarqetaDataSyncTypeEnum.Users, MarqetaDataSyncTypeEnum.Cards], startDate: dayjs().subtract(30, 'day').toDate(), endDate: dayjs().toDate() }, { jobId: `${JobNames.MarqetaDataSync}-daily`, repeat: { cron: '0 3 * * *' } });
+      this.createJob(JobNames.KardCommissionReconciliation, { startDate: dayjs().subtract(30, 'day').toDate() }, { jobId: `${JobNames.KardCommissionReconciliation}-daily`, repeat: { cron: '0 2 * * *' } });
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Affiliates },

@@ -348,9 +348,22 @@ export const getCompanyDataSources = async (companyId: ObjectId) => {
   return [..._datasources, ..._parents];
 };
 
+export const merchantHasCurrentCashbackOffers = (merchant: any) => {
+  if (!merchant) return false;
+  const merchantHasWildfireCashback = !!merchant?.integrations?.wildfire?.domains[0]?.Merchant?.MaxRate?.Amount;
+  const merchantHasKardCashback = !!merchant?.integrations?.kard?.maxOffer?.totalCommission;
+  return merchantHasWildfireCashback || merchantHasKardCashback;
+};
+
 export const getCompanyById = async (req: IRequest, _id: string, includeHidden = false) => {
   try {
-    const query: FilterQuery<ICompany> = { _id, 'creation.status': { $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations] } };
+    const query: FilterQuery<ICompany> = {
+      _id,
+      'creation.status': {
+        $nin: [CompanyCreationStatus.PendingDataSources, CompanyCreationStatus.PendingScoreCalculations],
+      },
+    };
+
     if (!includeHidden) query['hidden.status'] = false;
 
     const company = await CompanyModel.findOne(query)
@@ -396,6 +409,9 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
       ]);
 
     if (!company) throw new CustomError('Company not found.', ErrorTypes.NOT_FOUND);
+    if (!merchantHasCurrentCashbackOffers(company.merchant)) {
+      company.merchant = null;
+    }
 
     const unsdgs = await getCompanyUNSDGs(req, { company });
     const companiesOwned = await getCompaniesOwned(req, company);
@@ -1213,6 +1229,12 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
     ],
   };
 
+  const hiddenStatusFilter: any = {
+    'hidden.status': {
+      $ne: true,
+    },
+  };
+
   const merchantLookup = {
     $lookup: {
       from: 'merchants',
@@ -1236,6 +1258,7 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
         ...sectorQuery,
         ...merchantQuery,
         ...excludeNegativeCompanies,
+        ...hiddenStatusFilter,
       },
     },
     merchantLookup,

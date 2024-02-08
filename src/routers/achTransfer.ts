@@ -1,6 +1,8 @@
 import { Express, Router } from 'express';
 import authenticate from '../middleware/authenticate';
 import * as AchTransferController from '../controllers/achTransfer';
+import protectedRequirements from '../middleware/protected';
+import { IMarqetaUserStatus } from '../integrations/marqeta/types';
 
 const router = Router();
 
@@ -14,6 +16,6 @@ router.route('/update/:achTransferId')
   .post(authenticate, AchTransferController.updateACHBankTransfer);
 
 router.route('/create')
-  .post(authenticate, AchTransferController.initiateACHBankTransfer);
+  .post(authenticate, protectedRequirements({ marqetaStatus: [IMarqetaUserStatus.ACTIVE] }), AchTransferController.initiateACHBankTransfer);
 
 export default (app: Express) => app.use('/ach-transfer', router);

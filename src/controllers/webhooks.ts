@@ -22,7 +22,6 @@ import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { IRequestHandler } from '../types/request';
 import { CardModel } from '../models/card';
-import { ACHTransferModel } from '../models/achTransfer';
 import * as output from '../services/output';
 import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import { PushNotificationTypes } from '../lib/constants/notification';
@@ -38,6 +37,7 @@ import {
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard';
 import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
+import { handleMarqetaACHTransitionWebhook } from '../services/achTransfers';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -362,26 +362,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     if (!!banktransfertransitions) {
       console.log('////////// PROCESSING MARQETA BANKTRANSFERTRANSITION WEBHOOK ////////// ');
       for (const banktransfertransition of banktransfertransitions) {
-        const userTransitions = await ACHTransferModel.findOneAndUpdate(
-          {
-            token: banktransfertransition.bank_transfer_token,
-          },
-          {
-            $set: { status: banktransfertransition.status },
-            $push: { transitions: banktransfertransition },
-          },
-        );
-        // Send push notification of funds available for use
-        if (banktransfertransition.status === MarqetaWebhookConstants.COMPLETED && userTransitions?.userId) {
-          const user = await UserModel.findById(userTransitions?.userId);
-          if (user) {
-            await createPushUserNotificationFromUserAndPushData(user, {
-              pushNotificationType: PushNotificationTypes.FUNDS_AVAILABLE,
-              body: 'Your funds are now available on your Karma Wallet Card!',
-              title: 'Deposit Alert',
-            });
-          }
-        }
+        console.log('////// in bank transfer');
+        await handleMarqetaACHTransitionWebhook(banktransfertransition);
       }
     }
 
@@ -390,6 +372,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       for (const transaction of transactions) {
         // Handle any code that tees off of the transaction code here before mapping to a transaction
         const user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
+        if (!user) throw new CustomError('User not found', ErrorTypes.SERVER);
         const { code } = transaction.response as any;
         // Insufficent funds from code
         if (InsufficientFundsConstants.CODES.includes(code)) {

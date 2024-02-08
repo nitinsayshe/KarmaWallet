@@ -1,6 +1,6 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import { updateActiveCampaignListStatusForEmail } from '../../integrations/activecampaign';
+import { updateActiveCampaignContactData } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
 import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constants';
 import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
@@ -71,7 +71,7 @@ const getSubscriptionsByQuery = async (query: FilterQuery<ISubscription>): Promi
 
 const enrollInMonthlyNewsletterCampaign = async (email: string, subscribe: ActiveCampaignListId[], unsubscribe: ActiveCampaignListId[]) => {
   try {
-    await updateActiveCampaignListStatusForEmail({ email }, subscribe, unsubscribe);
+    await updateActiveCampaignContactData({ email }, subscribe, unsubscribe);
   } catch (err) {
     console.error(`Error updating active campaign list subscriptions for visitor with email ${email}:`, err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
@@ -122,18 +122,15 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
 export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
-    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale || !!info.marqeta) {
-      visitor.integrations = {};
-      if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-      if (!!info.params) {
-        visitor.integrations.urlParams = info.params;
-        if (info.params.find(p => p.key === 'groupCode')) {
-          visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
-        }
+    if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
+    if (!!info.params) {
+      visitor.integrations.urlParams = info.params;
+      if (info.params.find(p => p.key === 'groupCode')) {
+        visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
-      if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
-      if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     }
+    if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+    if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
     visitor.save();
     return visitor;
   } catch (err) {

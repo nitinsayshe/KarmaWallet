@@ -6,13 +6,11 @@ const router = Router();
 
 router.post(
   '/create',
-  authenticate,
   UserController.createMarqetaUser,
 );
 
 router.get(
   '/list',
-  authenticate,
   UserController.listMarqetaUser,
 );
 

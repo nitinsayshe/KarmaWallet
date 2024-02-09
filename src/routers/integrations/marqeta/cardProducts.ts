@@ -11,4 +11,5 @@ router.route('/list')
 
 router.route('/:cardProductToken')
   .get(CardProductController.getCardproduct);
+
 export default router;

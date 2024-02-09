@@ -96,11 +96,11 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
     channels: [NotificationChannelEnum.Email],
     effects: [NotificationEffectsEnum.SendACHInitiationEmail],
   },
-  // [NotificationTypeEnum.KarmaCardWelcome]: {
-  //   type: NotificationTypeEnum.KarmaCardWelcome,
-  //   channels: [NotificationChannelEnum.Email],
-  //   effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
-  // },
+  [NotificationTypeEnum.KarmaCardWelcome]: {
+    type: NotificationTypeEnum.KarmaCardWelcome,
+    channels: [NotificationChannelEnum.Email],
+    effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
+  },
   [NotificationTypeEnum.ACHTransferCancelled]: {
     type: NotificationTypeEnum.ACHTransferCancelled,
     channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],

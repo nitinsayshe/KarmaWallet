@@ -8,11 +8,13 @@ const router = Router();
 
 router.post(
   '/addfund',
+  authenticate,
   GPAController.fundUserGPAFromProgramFundingSource,
 );
 
 router.get(
   '/balance',
+  authenticate,
   GPAController.getGPAbalance,
 );
 

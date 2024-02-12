@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import {
-  AccountIdentity,
+  AccountBase,
 } from 'plaid';
 import { Schema } from 'mongoose';
 import { IPlaidBankItem, IPlaidInstitution } from './types';
@@ -17,7 +17,7 @@ class Bank {
   // all plaid items this plaid account was found in (in case we ever need to reference them later)
   _plaid_items: Set<string> = null;
   // the plaid account object
-  _account: AccountIdentity = null;
+  _account: AccountBase = null;
   _accessToken: string = null;
   _publicToken: string = null;
   _linkSessionId: string = null;
@@ -26,7 +26,7 @@ class Bank {
   _fundingSourceToken: string = null;
   _isNew = false;
 
-  constructor(userId: Schema.Types.ObjectId, account: AccountIdentity, plaidItem: IPlaidBankItem) {
+  constructor(userId: Schema.Types.ObjectId, account: AccountBase, plaidItem: IPlaidBankItem) {
     this._userId = userId;
     this._plaid_items = new Set([`${plaidItem.item_id}`]); // use Set to prevent duplicates
     this._account = account;
@@ -107,7 +107,7 @@ class Bank {
    *
    * @param {Object} account - the plaid account object to update this instance with
    */
-  update = (account: AccountIdentity, plaidItem: IPlaidBankItem) => {
+  update = (account: AccountBase, plaidItem: IPlaidBankItem) => {
     this._plaid_items.add(`${plaidItem.item_id}`);
     this._account = account;
     this._accessToken = `${plaidItem.access_token}`;

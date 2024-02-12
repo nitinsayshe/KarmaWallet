@@ -1,4 +1,4 @@
-import { AccountBase, AccountIdentity, Item, Transaction } from 'plaid';
+import { AccountBase, Item, Transaction } from 'plaid';
 import { ObjectId } from 'mongoose';
 import { PlaidCompanyMatchType } from '../../lib/constants/plaid';
 import { CombinedPartialTransaction } from '../../types/transaction';
@@ -38,7 +38,7 @@ export interface IPlaidItem {
 }
 
 export interface IPlaidBankItem {
-  accounts: AccountIdentity[];
+  accounts: AccountBase[];
   userId: string;
   link_session_id?: string;
   institution?: IPlaidInstitution;

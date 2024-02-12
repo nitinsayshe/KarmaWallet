@@ -96,6 +96,8 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserStatus;
   created_time?: string;
   _id?: string;
+  reason? :string;
+  reason_code? :string;
 }
 
 export interface IFCMTokenIntegration {
@@ -214,6 +216,8 @@ const userSchema = new Schema({
         state: { type: String },
         country: { type: String },
         postal_code: { type: String },
+        reason: { type: String },
+        reason_code: { type: String },
         account_holder_group_token: { type: String },
         identifications: [
           {

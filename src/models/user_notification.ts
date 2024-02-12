@@ -1,4 +1,4 @@
-import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
+import { Document, Schema, model, ObjectId, PaginateModel } from 'mongoose';
 import {
   NotificationChannelEnum,
   NotificationChannelEnumValue,
@@ -24,6 +24,10 @@ export interface IPushNotificationData extends UserNotificationData {
   pushNotificationType: PushNotificationTypes;
 }
 
+export interface IEarnedCashbackPushNotificationData extends IPushNotificationData{
+  commissionId: Schema.Types.ObjectId;
+}
+
 export interface ICardTransitionNotificationData extends UserNotificationData {
   cardStatus: string;
 }
@@ -31,6 +35,7 @@ export interface ICardTransitionNotificationData extends UserNotificationData {
 export interface IEarnedCashbackNotificationData extends UserNotificationData {
   name: string;
   companyName: string;
+  commissionId: Schema.Types.ObjectId;
 }
 
 export interface ICaseWonProvisionalCreditAlreadyIssuedNotificationData extends UserNotificationData {

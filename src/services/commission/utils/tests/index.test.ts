@@ -1,6 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/globals';
 import { randomUUID } from 'crypto';
-import { mapKardCommissionToKarmaCommisison } from '..';
+import { CommissionAndPreviouslyExistingData, mapKardCommissionToKarmaCommisison } from '..';
 import {
   CardNetwork,
   EarnedRewardWebhookBody,
@@ -197,7 +197,7 @@ describe('tests commission utils logic', () => {
   });
 
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
-    const karmaCommission = (await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Aggregator, testEarnedWebhookBody)) as ICommissionDocument;
+    const karmaCommission = ((await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Aggregator, testEarnedWebhookBody)) as CommissionAndPreviouslyExistingData)?.commission;
     expect(karmaCommission).toBeDefined();
     expect(karmaCommission).not.toBeNull();
     expect(karmaCommission).toHaveProperty('allocation');

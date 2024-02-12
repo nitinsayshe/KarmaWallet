@@ -34,7 +34,6 @@ export const createComplyAdvantageSearch = async (data: ICreateSearchForUserData
       search_term: `${firstName} ${lastName}`,
       client_ref: refId,
       filters: {
-        types: ['sanction', 'warning', 'fitness-probity'],
         birth_year: birthYear,
         remove_deceased: '1',
         entity_type: ComplyAdvantageEntityType.person,

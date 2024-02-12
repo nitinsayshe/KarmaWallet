@@ -108,6 +108,8 @@ export type SecondaryMatchTypeEnumValue = (typeof SecondaryMatchTypeEnum)[keyof 
 export const HitDocMatchTypeEnum = {
   // matched against the entity name exactly
   NameExact: 'name_exact',
+  // The word was allowed to be missing from hit as part of name_variations behaviour
+  NameVariationsRemoval: 'name_variations_removal',
   // matched against an entity AKA (also known as) entry exactly
   AkaExact: 'aka_exact',
   // matched closely to the name, but at least one word had an edit distance change

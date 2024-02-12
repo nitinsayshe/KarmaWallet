@@ -54,6 +54,7 @@ const port = process.env.PORT || 8012;
     await emailRateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate }, app),
   );
   app.set(KWRateLimiterKeyPrefixes.Login, await emailRateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.Login }, app));
+  app.set(KWRateLimiterKeyPrefixes.DefaultEmailLimiter, await emailRateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.DefaultEmailLimiter }, app));
 
   routers(app);
 })();

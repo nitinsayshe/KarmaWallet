@@ -87,13 +87,21 @@ export interface IGetCompanyDataParams {
   page: string;
   limit: string;
 }
+
 export interface IGetPartnerQuery {
   companyId: string;
+}
+
+export enum FeaturedCashbackSortOptions {
+  HighestCashback = 'highestCashback',
+  Alphabetical = 'alphabetical',
 }
 
 export interface IGetFeaturedCashbackCompaniesQuery {
   location?: CashbackCompanyDisplayLocation;
   'sectors.sector'?: string;
+  sort?: FeaturedCashbackSortOptions;
+  number?: string;
 }
 
 export interface IGetFeaturedCashbackCompaniesRequest {
@@ -1182,6 +1190,78 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
   return partner;
 };
 
+export const sortByMaxRate = (companies: any[]) => companies.sort((a, b) => {
+  const aRate = parseFloat(a.merchant.maxAmount.slice(0, -1));
+  const bRate = parseFloat(b.merchant.maxAmount.slice(0, -1));
+  return bRate - aRate;
+});
+
+export const getKarmaCollectiveCompanies = async () => {
+  const karmaCollectiveMerchants = await MerchantModel.find({
+    karmaCollectiveMember: true,
+    $or: [
+      { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+      { $and:
+          [
+            { 'merchant.integrations.kard': { $exists: true } },
+            { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+          ],
+      },
+    ],
+  });
+
+  const merchantIds = karmaCollectiveMerchants.map(m => m._id.toString());
+
+  const companies = await CompanyModel
+    .find({
+      merchant: {
+        $in: merchantIds,
+      },
+    })
+    .populate([
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+    ]);
+
+  const shareableCompanies = companies.map(c => getShareableCompany(c));
+  const sortedCompanies = sortByMaxRate(shareableCompanies);
+  return sortedCompanies;
+};
+
+export const getFeaturedCashbackCompaniesUnpaginated = async (req: IGetFeaturedCashbackCompaniesRequest) => {
+  const { location, number, sort } = req.query;
+  const numberToReturn: number = !!number ? parseInt(number) : 10;
+
+  if (!location) throw new CustomError('Location is required', ErrorTypes.INVALID_ARG);
+  const locationArray = location.split(',');
+
+  const companies = await CompanyModel
+    .find({
+      'featuredCashback.location': { $in: locationArray },
+      'featuredCashback.status': true,
+      rating: { $ne: CompanyRating.Negative },
+      merchant: { $ne: null },
+    })
+    .populate([
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+    ])
+    .sort({ companyName: 1 });
+
+  companies.length = numberToReturn;
+  const shareableCompanies = companies.map(c => getShareableCompany(c));
+
+  if (!!sort && sort === FeaturedCashbackSortOptions.HighestCashback) {
+    return sortByMaxRate(shareableCompanies);
+  }
+
+  return shareableCompanies;
+};
+
 export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackCompaniesRequest, query: FilterQuery<ICompany>) => {
   const { location } = req.query;
   let sectorQuery = {};
@@ -1277,7 +1357,6 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
   const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
-
   return companies;
 };
 

@@ -128,11 +128,29 @@ export const getFeaturedCashbackCompanies: IRequestHandler = async (req, res) =>
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const companies = await CompanyService.getFeaturedCashbackCompanies(req, query);
-    const sharableCompanies = {
+    const shareableCompanies = {
       ...companies,
       docs: companies.docs.map((c: ICompanyDocument) => CompanyService.getShareableCompany(c)),
     };
-    output.api(req, res, !companies.docs.length ? companies : sharableCompanies);
+    output.api(req, res, !companies.docs.length ? companies : shareableCompanies);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getFeaturedCashbackCompaniesUnpaginated: IRequestHandler = async (req, res) => {
+  try {
+    const companies = await CompanyService.getFeaturedCashbackCompaniesUnpaginated(req);
+    output.api(req, res, companies);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getKarmaCollectiveCompanies: IRequestHandler = async (req, res) => {
+  try {
+    const companies = await CompanyService.getKarmaCollectiveCompanies();
+    output.api(req, res, companies);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

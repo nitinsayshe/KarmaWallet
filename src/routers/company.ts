@@ -5,10 +5,12 @@ const router = Router();
 
 router.get('/', CompanyController.getCompanies);
 router.get('/sample', CompanyController.getSample);
+router.get('/karma-collective', CompanyController.getKarmaCollectiveCompanies);
 router.get('/partners', CompanyController.getAllPartners);
 router.get('/partner', CompanyController.getPartner);
 router.get('/score-range', CompanyController.getCompanyScoreRange);
 router.get('/featured-cashback', CompanyController.getFeaturedCashbackCompanies);
+router.get('/unpaginated-featured-cashback', CompanyController.getFeaturedCashbackCompaniesUnpaginated);
 router.get('/:companyId/merchant-rates', CompanyController.getMerchantRatesForCompany);
 router.get('/:companyId', CompanyController.getCompanyById);
 router.get('/partners/count', CompanyController.getPartnersCount);

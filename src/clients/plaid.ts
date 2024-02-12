@@ -196,7 +196,7 @@ export class PlaidClient extends SdkClient {
       if (!plaidItem.accounts) {
         [processorTokens, { accounts, item }] = await Promise.all([
           await this.getProcessorTokens(accessToken), // get the processor token from plaid
-          await this.getAuth(accessToken), // get user identity through plaid
+          await this.getAuth(accessToken), // get user accounts/identity through plaid
         ]);
         const { institution_id, name } = await this.getInstitutionsById(item.institution_id);
         const data = { ...plaidItem, accounts, item, status: BankConnectionStatus.Linked, institution: { name, institution_id } };

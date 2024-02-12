@@ -127,7 +127,7 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
 
   // Start building the user information, grabs the integrations information from the visitor object
   const integrations: IUserIntegrations = {};
-  const { urlParams, shareASale, groupCode, marqeta } = visitor.integrations;
+  const { urlParams, shareASale, groupCode, marqeta, complyAdvantage } = visitor.integrations;
   const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
 
@@ -169,6 +169,10 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
 
   // if marqeta is present in visitor
   integrations.marqeta = marqeta;
+
+  if (!!complyAdvantage) {
+    integrations.complyAdvantage = complyAdvantage;
+  }
 
   newUserData.integrations = integrations;
 

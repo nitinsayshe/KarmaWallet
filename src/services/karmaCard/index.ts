@@ -1,4 +1,5 @@
 /* eslint-disable import/no-cycle */
+import { v4 as uuid } from 'uuid';
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
@@ -14,7 +15,7 @@ import {
   KarmaCardApplicationModel,
 } from '../../models/karmaCardApplication';
 import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
-import { VisitorModel } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
@@ -32,6 +33,7 @@ import { updateUserUrlParams } from '../user';
 import { updateCustomFields } from '../../integrations/activecampaign';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { IMarqetaListKYCResponse } from '../../clients/marqeta/types';
+import { createComplyAdvantageSearch, ICreateSearchForUserData, monitorComplyAdvantageSearch, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -67,6 +69,36 @@ export interface INewLegalTextRequestBody {
 export interface IUpdateLegalTextRequestParams {
   legalTextId: string;
 }
+
+export interface KycData extends Partial<ICreateSearchForUserData> {}
+
+export const performInternalKyc = async (user: IUserDocument | IVisitorDocument, data: KycData): Promise<IUserDocument | IVisitorDocument> => {
+  try {
+    const { firstName, lastName, birthYear } = data;
+    const clientRef = user?.integrations?.complyAdvantage?.client_ref || uuid();
+    // create comply advantage search
+    const complyAdvantageSearchResults = await createComplyAdvantageSearch({
+      refId: clientRef,
+      firstName,
+      lastName,
+      birthYear,
+    });
+    if (!complyAdvantageSearchResults) throw new CustomError('Error creating comply advantage search', ErrorTypes.SERVER);
+
+    if (!user.integrations) user.integrations = {};
+    user.integrations.complyAdvantage = {
+      ...complyAdvantageSearchResults.data,
+    };
+
+    user = await user.save();
+    if (!(await userPassesComplyAdvantage(complyAdvantageSearchResults.data))) {
+      throw new CustomError('User failed comply advantage', ErrorTypes.INVALID_ARG);
+    }
+    return user;
+  } catch (err) {
+    console.error(`Error performing internal kyc: ${err}`);
+  }
+};
 
 export const getShareableKarmaCardApplication = ({
   _id,
@@ -160,10 +192,7 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
-export const updateActiveCampaignDataAndJoinGroupForApplicant = async (
-  userObject: IUserDocument,
-  urlParams?: IUrlParam[],
-) => {
+export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
   const subscribeData: IActiveCampaignSubscribeData = {
     debitCardholder: true,
   };
@@ -181,7 +210,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (
     }
 
     if (!!groupCode) {
-      const mockRequest = ({
+      const mockRequest = {
         requestor: userObject,
         authKey: '',
         body: {
@@ -190,7 +219,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (
           userId: userObject._id.toString(),
           skipSubscribe: true,
         },
-      } as any);
+      } as any;
 
       const userGroup = await joinGroup(mockRequest);
       if (!!userGroup) {
@@ -204,7 +233,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (
 };
 
 export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
-  const userEmail = userObject.emails.find(email => !!email.primary).email;
+  const userEmail = userObject.emails.find((email) => !!email.primary).email;
   if (!!urlParams) {
     await updateUserUrlParams(userObject, urlParams);
     await updateActiveCampaignDataAndJoinGroupForApplicant(userObject, urlParams);
@@ -212,10 +241,7 @@ export const handleExistingUserApplySuccess = async (userObject: IUserDocument, 
     await updateActiveCampaignDataAndJoinGroupForApplicant(userObject);
   }
   // add existingUser flag to active campaign
-  await updateCustomFields(
-    userEmail,
-    [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }],
-  );
+  await updateCustomFields(userEmail, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
   await createKarmaCardWelcomeUserNotification(userObject, false);
 };
 
@@ -251,6 +277,9 @@ export const handleKarmaCardApplySuccess = async ({
     await createKarmaCardWelcomeUserNotification(userObject, true);
   }
 
+  // monitor the user's search in comply advantage
+  await monitorComplyAdvantageSearch(userObject.integrations.complyAdvantage.id);
+
   // store marqeta card in DB
   await mapMarqetaCardtoCard(userObject._id.toString(), virtualCardResponse); // map virtual card
   await mapMarqetaCardtoCard(userObject._id.toString(), physicalCardResponse); // map physical card
@@ -266,7 +295,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   let { firstName, lastName, email } = req.body;
   const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams } = req.body;
 
-  if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) { throw new Error('Missing required fields'); }
+  if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
+    throw new Error('Missing required fields');
+  }
   if (!requestor && !email) throw new Error('Missing required fields');
 
   const phoneValidation = validatePhoneNumber(phone);
@@ -283,7 +314,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   email = email.toLowerCase();
 
   const existingVisitor = await VisitorModel.findOne({ email });
-  const existingUser = await UserModel.findOne({ 'emails.email': email });
+  let existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)
@@ -319,6 +350,23 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
     _visitor = newVisitorResponse;
+  }
+
+  // store comply advantage data in existing user if that exists, else store in existing visitor, else store in new visitor
+  const birthYear = dayjs(birthDate).year();
+  if (!!existingUser) {
+    existingUser = (await performInternalKyc(existingUser, { firstName, lastName, birthYear })) as IUserDocument;
+  } else {
+    _visitor = (await performInternalKyc(_visitor, { firstName, lastName, birthYear })) as IVisitorDocument;
+  }
+  if (!existingUser && !_visitor) {
+    return {
+      email,
+      kycResult: {
+        status: IMarqetaKycState.failure,
+        codes: [ReasonCode.FailedInternalKyc],
+      },
+    };
   }
 
   const marqetaKYCInfo: IMarqetaCreateUser = {
@@ -359,7 +407,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const kycStatus = status;
 
   if (!existingUser) {
-    // Update the visitors marqeta Kyc status
+  // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
   }
 

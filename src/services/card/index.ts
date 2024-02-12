@@ -13,6 +13,8 @@ import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegratio
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+// eslint-disable-next-line import/no-cycle
+import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
 import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
@@ -21,8 +23,6 @@ import {
   createPushUserNotificationFromUserAndPushData,
 } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
-// eslint-disable-next-line import/no-cycle
-import { getShareableUser } from '../user';
 
 dayjs.extend(utc);
 

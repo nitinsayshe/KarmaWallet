@@ -664,7 +664,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Existing user with Marqeta integration already saved
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== userTransition?.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
-    // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
+    // If reason attribute is missing in userTransition(webhook data) then populate the reason based on reason_code
     const { reason, reason_code: reasonCode } = userTransition;
     existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
     existingUser.integrations.marqeta.reason_code = reasonCode;

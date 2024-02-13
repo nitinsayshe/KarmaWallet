@@ -7,6 +7,8 @@ import { updateNewUserSubscriptions } from '../subscription';
 import { CardModel } from '../../models/card';
 import { UserGroupModel } from '../../models/userGroup';
 import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';
+import { GPA } from '../../clients/marqeta/gpa';
+import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 
 export interface IEmployerBetaUserInfo {
   code: string;
@@ -148,17 +150,57 @@ export const checkEmployeeListBeforeDeposit = async () => {
   fs.writeFileSync(path.resolve(__dirname, './.tmp', 'employeesFormatted.json'), JSON.stringify(employeeData));
 };
 
+export const checkForDuplicatesInArrays = (data: []) => {
+  const unique = [...new Set(data)];
+  if (unique.length !== data.length) {
+    throw new Error('Duplicate found');
+  }
+};
+
+export const checkProgramAccountBalanceHasEnough = async (amount: number) => {
+  const amountNeeded = amount + 25000;
+  const marqetaClient = new MarqetaClient();
+  const gpa = new GPA(marqetaClient);
+  // check program funding balance
+  const programFundingResponse = await gpa.getProgramFundingBalance();
+  if (programFundingResponse.available_balance < amountNeeded) {
+    console.log('////// Program funding source balance is not enough to make GPA deposit.');
+    return false;
+  }
+
+  return true;
+};
+
+export const confirmInGroup = async (userId: string, groupId: string) => {
+  const userGroup = await UserGroupModel.findOne({
+    user: userId,
+    group: groupId,
+  });
+
+  if (!userGroup) {
+    throw new Error(`[+] User ${userId} not in group`);
+  }
+};
+
 export const buildEmployerDepositData = async (memo: string, groupId: string) => {
   const rawEmployees = fs.readFileSync(path.resolve(__dirname, './.tmp', 'employeesFormatted.json'), 'utf8');
   const employees = JSON.parse(rawEmployees);
   const gpaDepositArray = [];
+  const total = employees.reduce((acc: any, curr: any) => acc + curr.amount, 0);
 
-  for (const employee of employees) {
-    gpaDepositArray.push({
-      userId: employee.userId,
-      amount: 200,
-    });
+  checkForDuplicatesInArrays(employees.map((employee: any) => employee.id));
+  const hasEnough = await checkProgramAccountBalanceHasEnough(total);
+  if (!!hasEnough) {
+    console.log('////// Program funding source balance is enough to make a cashBack !');
+    for (const employee of employees) {
+      await confirmInGroup(employee.id, groupId);
+      gpaDepositArray.push({
+        userId: employee.id,
+        amount: 200,
+      });
+    }
   }
+  if (!hasEnough) throw new Error('Program funding source balance is not enough to make a cashBack !');
 
   console.log(`Added ${gpaDepositArray.length} employees to this gpaDepositArray`);
 

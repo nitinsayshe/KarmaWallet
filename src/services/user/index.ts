@@ -39,7 +39,7 @@ import { checkIfUserWithEmailExists } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
-import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
+import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 // eslint-disable-next-line import/no-cycle
 import { generateRandomPasswordString } from '../../lib/misc';
@@ -337,6 +337,8 @@ export const getShareableUser = ({
       address1: integrations.marqeta.address1,
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
+      reason: integrations?.marqeta?.reason || '',
+      reason_code: integrations?.marqeta?.reason_code || '',
     };
   }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;
@@ -662,6 +664,11 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Existing user with Marqeta integration already saved
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== userTransition?.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
+    // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
+    const { reason, reason_code: reasonCode } = userTransition;
+    existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
+    existingUser.integrations.marqeta.reason_code = reasonCode;
+
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
       // Ensure that the Welcome email has not already been sent
       if (!existingKarmaWelcomeNotification) {

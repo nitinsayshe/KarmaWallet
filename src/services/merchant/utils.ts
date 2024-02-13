@@ -7,7 +7,7 @@ export const getMerchantRateDescription = (
   const kind = Kind ? Kind.toLowerCase() : null;
   const maxDescription = kind === 'percentage' || kind === 'percent'
     ? `Up to ${Amount}%`
-    : `Up to ${Amount}`;
+    : `Up to $${Amount}`;
 
   return {
     maxDescription,

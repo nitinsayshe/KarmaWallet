@@ -335,6 +335,7 @@ export const getShareableUser = ({
       postal_code: integrations.marqeta.postal_code,
       state: integrations.marqeta.state,
       address1: integrations.marqeta.address1,
+      address2: integrations.marqeta.address2,
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
       reason: integrations?.marqeta?.reason || '',

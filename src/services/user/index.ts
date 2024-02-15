@@ -26,7 +26,7 @@ import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
-import { VisitorModel } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
@@ -652,6 +652,25 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
   return true;
 };
 
+// if the status is closed, add '+closed' to this email in marqeta
+export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (user: IVisitorDocument | IUserDocument, userTransition: Partial<IMarqetaUserTransitionsEvent>): Promise<void> => {
+  if (!user || !userTransition?.status || userTransition?.status !== IMarqetaUserStatus.CLOSED) {
+    return;
+  }
+
+  try {
+    const emailParts = user.integrations.marqeta.email.split('@');
+    const closedEmail = `${emailParts[0]}+closed@${emailParts[1]}`;
+    await updateMarqetaUser(userTransition.user_token, { email: closedEmail });
+
+    // remove the marqeta itegration from the user object
+    user.integrations.marqeta = undefined;
+    await user.save();
+  } catch (error) {
+    console.log('Error updating Marqeta user email', error);
+  }
+};
+
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
@@ -668,6 +687,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Existing user with Marqeta integration already saved
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== userTransition?.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
+    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(existingUser, userTransition);
     // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
     const { reason, reason_code: reasonCode } = userTransition;
     existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
@@ -687,6 +707,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Could be a visitor that later created an account with that same email
   if (!!visitor?._id && !existingUser?._id) {
     visitor.integrations.marqeta.status = userTransition.status;
+    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, userTransition);
+
     await visitor.save();
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
@@ -717,6 +739,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           visitorUser.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: ['Approved'] };
           await visitorUser.save();
         }
+
+        await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitorUser, userTransition);
 
         existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
           user: visitorUser._id,

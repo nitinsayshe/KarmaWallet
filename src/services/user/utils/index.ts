@@ -8,24 +8,24 @@ import { IUser, IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
 
-export type IterationRequest<T> = {
+export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;
   batchQuery: FilterQuery<IUser>;
   batchLimit: number;
   fields?: T;
 };
 
-export type IterationResponse<T> = {
+export type UserIterationResponse<T> = {
   userId: Types.ObjectId;
   fields?: T;
 };
 
 export const iterateOverUsersAndExecWithDelay = async <Req, Res>(
-  request: IterationRequest<Req>,
-  exec: (req: IterationRequest<Req>, userBatch: PaginateResult<IUserDocument>) => Promise<IterationResponse<Res>[]>,
+  request: UserIterationRequest<Req>,
+  exec: (req: UserIterationRequest<Req>, userBatch: PaginateResult<IUserDocument>) => Promise<UserIterationResponse<Res>[]>,
   msDelayBetweenBatches: number,
-): Promise<IterationResponse<Res>[]> => {
-  let report: IterationResponse<Res>[] = [];
+): Promise<UserIterationResponse<Res>[]> => {
+  let report: UserIterationResponse<Res>[] = [];
 
   let page = 1;
   let hasNextPage = true;

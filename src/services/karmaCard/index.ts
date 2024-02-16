@@ -19,11 +19,11 @@ import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { ReasonCode, hasKarmaWalletCards } from './utils';
+import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
-import { createKarmaCardWelcomeUserNotification } from '../user_notification';
+import { createDeclinedKarmaWalletCardUserNotification, createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { joinGroup } from '../groups';
 import { validatePhoneNumber } from '../user/utils/validate';
 import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../subscription';
@@ -32,6 +32,7 @@ import { updateUserUrlParams } from '../user';
 import { updateCustomFields } from '../../integrations/activecampaign';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { IMarqetaListKYCResponse } from '../../clients/marqeta/types';
+import { IDeclinedData } from '../email/types';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -391,6 +392,26 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     if (!!existingUser) karmaCardApplication.userId = existingUser._id.toString();
     // store the karma card application log
     await storeKarmaCardApplication(karmaCardApplication);
+    // create a pending/declined notification for the user
+    if (!!existingUser || !!_visitor) {
+      const data = getShareableMarqetaUser(marqeta);
+      const { reason, acceptedDocuments, solutionText, message } = data;
+
+      const dataObj: IDeclinedData = {
+        acceptedDocuments,
+        reason,
+        name: firstName,
+        message,
+        solutionText,
+        status: data.status,
+      };
+
+      if (!!existingUser) dataObj.user = existingUser;
+      if (!!_visitor) dataObj.visitor = _visitor;
+
+      await createDeclinedKarmaWalletCardUserNotification(dataObj);
+    }
+
     return marqeta;
   }
 

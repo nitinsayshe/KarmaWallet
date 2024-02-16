@@ -29,6 +29,7 @@ export enum EmailTemplateKeys {
   DisputeReceivedNoProvisionalCreditIssued = 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped = 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued = 'caseLostProvisionalCreditNotAlreadyIssued',
+  KarmaCardDeclined = 'karmaCardDeclined',
 }
 
 export enum EmailTemplateTypes {
@@ -45,6 +46,7 @@ export enum EmailTemplateTypes {
   Support = 'support',
   Verification = 'verification',
   EmployerGift = 'employerGift',
+  KarmaCardDeclined = 'karmaCardDeclined',
 }
 
 export interface IEmailTemplateConfig {
@@ -169,6 +171,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   EmployerGift: {
     name: EmailTemplateKeys.EmployerGift,
     type: EmailTemplateTypes.EmployerGift,
+  },
+  KarmaCardDeclined: {
+    name: EmailTemplateKeys.KarmaCardDeclined,
+    type: EmailTemplateTypes.KarmaCardDeclined,
   },
 };
 

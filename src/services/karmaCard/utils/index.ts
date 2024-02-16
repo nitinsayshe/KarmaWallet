@@ -12,7 +12,7 @@ enum ResponseMessages {
   DECLINED = 'Your application has been declined.'
 }
 
-enum SolutionMessages {
+export enum SolutionMessages {
   NAME_OR_DOB_ISSUE = 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
   SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
   ADDRESS_ISSUE = 'Please submit two of the following documents that show your full name and address to support@karmawallet.io',
@@ -20,7 +20,7 @@ enum SolutionMessages {
   ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
 }
 
-const AcceptedDocuments = {
+export const AcceptedDocuments = {
   NAME_OR_DOB_ISSUE: [
     'Unexpired government issued photo ID that has name and date of birth',
     'Driver’s License or State Issued ID',
@@ -78,6 +78,7 @@ interface SourceResponse {
 
 export const getShareableMarqetaUser = (sourceResponse: SourceResponse): TransformedResponse => {
   const { kycResult } = sourceResponse;
+
   const messages: Record<ReasonCode, string> = {
     [ReasonCode.Approved]: ResponseMessages.APPROVED,
     [ReasonCode.NameIssue]: ResponseMessages.NAME_ISSUE,
@@ -124,6 +125,7 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
   };
   if (solutionText[kycResult.codes[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes[0] as ReasonCode];
   if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode];
+
   return transformed;
 };
 

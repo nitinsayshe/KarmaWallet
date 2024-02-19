@@ -16,4 +16,10 @@ router.route('/:cardToken')
 router.route('/transition')
   .post(authenticate, CardController.cardTransition);
 
+router.route('/tokenization/:cardToken')
+  .post(CardController.tokenizeCard);
+
+router.route('/detokenization')
+  .post(CardController.deTokenizeCard);
+
 export default router;

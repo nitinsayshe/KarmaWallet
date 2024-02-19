@@ -1,4 +1,4 @@
-import { IMarqetaCardTransition, IMarqetaCreateCard } from '../../../integrations/marqeta/types';
+import { IMarqetaCardTransition, IMarqetaCreateCard, IVGSToken } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
@@ -54,6 +54,27 @@ export const cardTransition: IRequestHandler<{}, {}, IMarqetaCardTransition> = a
 export const getCardDetails: IRequestHandler<{ cardToken: string }, {}, {}> = async (req, res) => {
   try {
     const { data } = await CardService.getCardDetails(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+// tokenize the card using VGS proxy
+export const tokenizeCard: IRequestHandler<{ cardToken: string }, {}, {}> = async (req, res) => {
+  try {
+    const data = await CardService.tokenizeCard(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+// tokenize the card using VGS proxy
+export const deTokenizeCard: IRequestHandler<{}, {}, IVGSToken> = async (req, res) => {
+  try {
+    const { body } = req;
+    const data = await CardService.deTokenizeCard(body);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

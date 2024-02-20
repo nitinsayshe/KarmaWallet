@@ -493,17 +493,26 @@ export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>)
 };
 
 export const deleteLinkedCardData = async (userId: Types.ObjectId) => {
-  const plaidClient = new PlaidClient();
+  try {
+    const plaidClient = new PlaidClient();
 
-  const cards = await CardModel.find({ userId, status: CardStatus.Linked });
-  const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
+    const cards = await CardModel.find({ userId, status: CardStatus.Linked });
+    const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
 
-  // Unlinking Plaid Access Tokens
-  for (const card of plaidCards) {
-    await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+    // Unlinking Plaid Access Tokens
+    for (const card of plaidCards) {
+      try {
+        await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+      } catch (error) {
+        console.error(`Error unlinking plaid access token ${card.integrations.plaid.accessToken} from card: ${card._id} for user: ${userId}`);
+        console.error(`${error}`);
+      }
+    }
+
+    await CardModel.deleteMany({ userId });
+  } catch (error) {
+    console.log('Error deleting linked card data', error);
   }
-
-  await CardModel.deleteMany({ userId });
 };
 
 export const deleteUserData = async (userId: Types.ObjectId) => {

@@ -361,11 +361,15 @@ export const updateUserSubscriptions = async (user: string, subscribe: Array<Sub
 };
 
 export const cancelAllUserSubscriptions = async (userId: string) => {
-  const subs = await SubscriptionModel.find({ user: userId }).lean();
-  const unsubscribe = subs?.map((sub) => sub.code);
+  try {
+    const subs = await SubscriptionModel.find({ user: userId }).lean();
+    const unsubscribe = subs?.map((sub) => sub.code);
 
-  if (unsubscribe?.length > 0) {
-    await updateUserSubscriptions(userId, [], unsubscribe);
+    if (unsubscribe?.length > 0) {
+      await updateUserSubscriptions(userId, [], unsubscribe);
+    }
+  } catch (err) {
+    console.error('Error canceling subscription', err);
   }
 };
 

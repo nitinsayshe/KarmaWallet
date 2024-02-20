@@ -5,6 +5,7 @@ import {
   ActiveCampaignClient,
   IContactAutomation,
   IContactList,
+  IContactsData,
   IGetContactResponse,
   UpdateContactListStatusEnum,
 } from '../../clients/activeCampaign';
@@ -682,27 +683,28 @@ export const updateActiveCampaignContactData = async (
   let firstName = '';
   let lastName = '';
 
-  if (userData?.name.includes(' ')) {
-    firstName = userData.name?.split(' ')?.[0];
-    lastName = userData.name?.split(' ')?.pop();
+  if (userData?.name?.includes(' ')) {
+    firstName = userData?.name?.split(' ')?.[0];
+    lastName = userData?.name?.split(' ')?.pop();
   } else {
-    firstName = userData.name;
+    firstName = userData?.name;
   }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
-  const contacts = [
+  const contacts: Array<IContactsData> = [
     {
-      first_name: firstName,
-      last_name: lastName,
       email: userData.email,
-      subscribe: sub,
-      unsubscribe: unsub,
-      tags,
-      fields,
     },
   ];
+
+  if (!!firstName) contacts[0].first_name = firstName;
+  if (!!lastName) contacts[0].last_name = lastName;
+  if (!!sub) contacts[0].subscribe = sub;
+  if (!!unsub) contacts[0].unsubscribe = unsub;
+  if (!!tags) contacts[0].tags = tags;
+  if (!!fields) contacts[0].fields = fields;
 
   await ac.importContacts({ contacts });
 };

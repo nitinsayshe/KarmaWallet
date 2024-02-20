@@ -6,6 +6,7 @@ import { UserModel } from '../../models/user';
 import { performInternalKyc } from '../karmaCard';
 import { monitorComplyAdvantageSearch } from '../../integrations/complyAdvantage';
 import { sleep } from '../../lib/misc';
+import { ServerModel, ServerSourcesEnum, ServerTypesEnum } from '../../models/server';
 
 const sleepTimeMs = 500;
 export const activateMonitoredComplyAdvantageSearchesForKWCardUsers = async () => {
@@ -73,4 +74,29 @@ export const activateMonitoredComplyAdvantageSearchesForKWCardUsers = async () =
   }
 
   console.log(`updated ${updatedUsers.length} users`);
+};
+
+// Script for registering whitelisted servers
+// IPs taken from https://docs.complyadvantage.com/api-docs/?_ga=2.188571051.2052295075.1638190767-1892350473.1619086178#source-ip-addresses
+const ComplyAdvantageServers = [
+  '18.217.114.218', // US (Ohio)
+  '18.223.31.187', // US (Ohio)
+  '18.220.222.49', // US (Ohio)
+];
+
+export const registerWhitelistedServers = async () => {
+  for (const server of ComplyAdvantageServers) {
+    try {
+      const whitelistedServer = new ServerModel({
+        ip: server,
+        source: ServerSourcesEnum.ComplyAdvantage,
+        type: ServerTypesEnum.Whitelist,
+      });
+
+      await whitelistedServer.save();
+      console.log(`Server ${server} registered`);
+    } catch (e) {
+      console.log(`Error registering server ${server}`);
+    }
+  }
 };

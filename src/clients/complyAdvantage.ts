@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
 import {
+  ComplyAdvantageGetSearchResponseContent as ComplyAdvantageGetSearchResponseData,
   IComplyAdvantageSearchParams,
   IComplyAdvantageSearchResponseContent,
   ICompyAdvantageUpdateMonitoredSearchContent,
@@ -29,7 +30,11 @@ export class ComplyAdvantage extends SdkClient {
     });
   }
 
-  private async sendHttpRequestWithRetry(sendRequestFunction: () => Promise<AxiosResponse<any>>, initialRetries = 3, retries = 3): Promise<AxiosResponse<any>> {
+  private async sendHttpRequestWithRetry(
+    sendRequestFunction: () => Promise<AxiosResponse<any>>,
+    initialRetries = 3,
+    retries = 3,
+  ): Promise<AxiosResponse<any>> {
     try {
       return await sendRequestFunction();
     } catch (err) {
@@ -42,11 +47,12 @@ export class ComplyAdvantage extends SdkClient {
         // https://docs.complyadvantage.com/api-docs/?javascript#429-too-many-requests-errors
         const MaximumBackoffMs = 60000; // 1 minute
         const randomNumMiliseconds = getRandomInt(1, 1000);
-        const n = (initialRetries + 1) - retries;
+        const n = initialRetries + 1 - retries;
         const backoffTime = Math.min(2 ** n + randomNumMiliseconds, MaximumBackoffMs);
         await sleep(backoffTime);
         return this.sendHttpRequestWithRetry(sendRequestFunction, initialRetries, retries - 1);
       }
+      throw err;
     }
   }
 
@@ -61,7 +67,17 @@ export class ComplyAdvantage extends SdkClient {
     }
   }
 
-  public async getSearches() {
+  public async getSearch(searchId: number): Promise<ComplyAdvantageGetSearchResponseData> {
+    try {
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get(`/searches/${searchId}`));
+      if (!!data?.content?.data) return data.content.data;
+    } catch (err) {
+      console.log('[!] Error getting searches', err);
+      throw asCustomError(err);
+    }
+  }
+
+  public async getSearches(): Promise<ComplyAdvantageGetSearchResponseData[]> {
     try {
       const { data } = await this.sendHttpRequestWithRetry(() => this._client.get('/searches'));
       if (!!data.content) return data.content.data;
@@ -113,10 +129,10 @@ export class ComplyAdvantage extends SdkClient {
     }
   }
 
-  public async deleteSearch(id: string) {
+  public async deleteSearch(searchId: number) {
     try {
-      const { data } = await this.sendHttpRequestWithRetry(() => this._client.delete(`/searches/${id}`));
-      if (!!data.content) return data;
+      const res = await this.sendHttpRequestWithRetry(() => this._client.delete(`/searches/${searchId}`));
+      if (!res?.status || res.status !== 204) throw new Error('Error deleting search, status code not 204');
     } catch (err) {
       console.log('[!] Error deleting search', err);
       throw asCustomError(err);

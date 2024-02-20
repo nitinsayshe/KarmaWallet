@@ -40,7 +40,7 @@ export interface IComplyAdvantageFilters {
 
 export interface IComplyAdvantageSearchParams {
   // max 255 characters, A string representing the name of the entity or an Object
-  search_term?: string;
+  search_term?: string | {first_name: string; last_name: string; middle_names?: string};
   // Your reference for this person/entity for which you are searching. Used for tracking searches and auto-whitelisting recurring results
   client_ref?: string;
   // The Profile ID of a search profile that can be retrieved from the UI
@@ -204,6 +204,7 @@ interface Hit {
 export interface IComplyAdvantageIntegration {
   client_ref: string;
   id: number;
+  assigned_to?: number;
   ref: string;
   searcher_id: number;
   assignee_id: number;
@@ -219,7 +220,6 @@ export interface IComplyAdvantageIntegration {
   updated_at: string;
   tags: string[] | [];
   labels?: string[] | []; // couldn't find this field in the docs;
-  hits: Hit[] | [];
   blacklist_hits?: string[] | []; // couldn't find this field in the docs;
 }
 
@@ -261,6 +261,8 @@ export interface IComplyAdvantageSearchResponseContent {
   };
 }
 
+export type ComplyAdvantageGetSearchResponseContent = IComplyAdvantageSearchResponseContent['data'];
+
 export interface IComplyAdvantageSearchResponse {
   code: number;
   status: string;
@@ -277,4 +279,60 @@ export interface ICompyAdvantageUpdateMonitoredSearchContent {
 export interface IComplyAdvantageUpdateMonitoredSearchResponse {
   content: ICompyAdvantageUpdateMonitoredSearchContent;
   status: string; // expect 'success'
+}
+
+export const ComplyAdvantageWebhookEventEnum = {
+  // fired whenever the match status of an entity or the is_whitelisted property of an entity is changed
+  MatchStatusUpdated: 'match_status_updated',
+  // fired whenever the status of a search is changed through case management functionality
+  SearchStatusUpdated: 'search_status_updated',
+  // fired when a monitored search has been detected as having updated search results available,
+  // and/or the suspended state of the monitored search changes.
+  MonitoredSearchUpdated: 'monitored_search_updated',
+} as const;
+export type ComplyAdvantageWebhookEventEnumValues = (typeof ComplyAdvantageWebhookEventEnum)[keyof typeof ComplyAdvantageWebhookEventEnum];
+
+export type UpdateSearchData = {
+  search_id: number;
+}
+
+export interface IMatchStatusUpdatedEventData {
+  client_ref: string;
+  search_id: number;
+  entity_id: string;
+  entity_match_status: ComplyAdvantageMatchStatus;
+  is_whitelisted: boolean;
+  tags: { [key: string]: string };
+}
+
+interface ISearchChanges {
+  assigned_to?: number;
+  risk_level?: string;
+  match_status?: ComplyAdvantageMatchStatus;
+}
+
+export interface ISearchStatusUpdatedEventData {
+  changes: {
+    before?: ISearchChanges;
+    after?: ISearchChanges;
+  };
+  ref: string; // search reference
+  client_ref: string;
+  search_id: number;
+  terms: { name: string; hits: number }[];
+  filters: IComplyAdvantageFilters;
+}
+
+export interface IMonitoredSearchUpdatedData {
+  search_id: number;
+  updated: string[];
+  new: string[];
+  removed: string[];
+  is_suspended: boolean;
+}
+
+export type ComplyAdvantageWebhookDataTypes = IMatchStatusUpdatedEventData | ISearchStatusUpdatedEventData;
+export interface IComplyAdvantageWebhookBody {
+  event: ComplyAdvantageWebhookEventEnumValues;
+  data: Array<ComplyAdvantageWebhookEventEnumValues>;
 }

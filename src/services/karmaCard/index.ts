@@ -154,7 +154,6 @@ export const isUserKYCVerifiedFromIntegration = (marqetaIntegration: IMarqetaUse
 export const orderKarmaCards = async (user: IUserDocument) => {
   let virtualCardResponse = null;
   let physicalCardResponse = null;
-  console.log('///// ORDER CARDS!', user);
 
   if (!user?.integrations?.marqeta?.userToken) {
     console.error('User does not have marqeta integration');
@@ -210,7 +209,6 @@ export const performKycForUserOrVisitor = async (user: IUserDocument | IVisitorD
   if (!isUserKYCVerifiedFromIntegration(marqetaIntegration)) {
     kycResponse = await processUserKyc(marqetaIntegration.userToken);
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
-      console.log('///// order card for user in performKycForUserOrVisitor');
       const virtualCardResponse = await createCard({ userToken: marqetaIntegration.userToken, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN });
       const physicalCardResponse = await createCard({ userToken: marqetaIntegration.userToken, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN });
       return { virtualCardResponse, physicalCardResponse };
@@ -265,7 +263,6 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   // perform the kyc through marqeta & create the card
   if (!isUserKYCVerified(kycResponse)) {
     kycResponse = await processUserKyc(marqetaUserResponse.token);
-    console.log('/////// perform kyc');
   }
 
   return { marqetaUserResponse, kycResponse };
@@ -284,7 +281,6 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
-  console.log('///// should update active campaign', userObject, urlParams);
   const subscribeData: IActiveCampaignSubscribeData = {
     debitCardholder: true,
   };
@@ -515,11 +511,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     lastModified: dayjs().utc().toDate(),
   };
 
-  console.log('///// this is the kyc state', kycStatus);
-
   // FAILED OR PENDING KYC, already saved to user or visitor object
   if (kycStatus !== IMarqetaKycState.success) {
-    console.log('///// not successgul send email');
     // prepare the data object for karmaCardApplication
     if (_visitor) karmaCardApplication.visitorId = _visitor._id;
     if (!!existingUser) karmaCardApplication.userId = existingUser._id.toString();

@@ -85,7 +85,6 @@ export const createComplyAdvantageSearch = async (data: ICreateSearchForUserData
 };
 
 export const userPassesComplyAdvantage = async (searchResponse: IComplyAdvantageIntegration) => {
-  console.log('///// search response', searchResponse);
   if (
     searchResponse.match_status === ComplyAdvantageMatchStatus.noMatch
     && searchResponse.total_matches === 0 // total_matches includes total_hits and total_blacklist_hits

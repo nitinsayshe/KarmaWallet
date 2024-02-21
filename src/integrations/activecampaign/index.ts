@@ -670,7 +670,7 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
 };
 
 export const updateActiveCampaignContactData = async (
-  userData: {email: string, name?: string},
+  userData: { email: string, name?: string },
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
   tags?: string[],
@@ -779,6 +779,21 @@ export const removeDuplicateContactAutomations = async (email: string, client?: 
     console.log('done removing duplicate automations for ', email);
   } catch (err) {
     console.error('Error removing duplicate automation enrollments', err);
+  }
+};
+
+export const updateContactEmail = async (oldEmail: string, newEmail: string, client?: AxiosInstance) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    // get active campaign id for user
+    const rs = await ac.getContacts({ email: oldEmail });
+    if (rs?.contacts?.length > 0) {
+      return await ac.updateContact({ id: parseInt(rs.contacts[0].id, 10), contact: { email: newEmail } });
+    }
+  } catch (err) {
+    console.error('Error updating contact email', err);
   }
 };
 

@@ -5,7 +5,7 @@ import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
@@ -32,7 +32,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelAllUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest, IUrlParam } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -440,7 +440,8 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     if (legacyUser) legacyUser.emails = user.emails;
   }
 
-  await updateSubscriptionsOnEmailChange(user._id, user.name, prevEmail, email);
+  await updateContactEmail(prevEmail, email);
+  await updateMarqetaUser(user.integrations.marqeta.userToken, { email });
 };
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {

@@ -1,0 +1,22 @@
+<div class='card'>
+  <p class='salutation-text'>Hi {{name}},</p>
+  <p class='body-text'>{{message}}</p>
+   {{#if solutionText}}
+    <p class='body-text'>{{solutionText}}</p>
+    {{#if acceptedDocuments}}
+     <ul>
+      {{#each acceptedDocuments}}
+        <li class='body-text'>{{this}}</li>
+      {{/each}}
+    </ul>
+    {{/if}}  
+  {{/if}}
+  <p class='body-text'>You have 10 days from today to submit documentation for review. After 10 days, your application will be closed and you will need to reapply.</p>
+  <div class='signature-container'>
+    <p>Thanks,</p>
+    <p>Karma Wallet Support</p>
+  </div>
+  <p class='support-text'>
+    <a href='mailto:support@karmawallet.io'>Need help? Contact us!</a>
+  </p>
+</div>

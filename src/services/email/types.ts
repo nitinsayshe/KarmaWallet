@@ -2,6 +2,16 @@ import { Types } from 'mongoose';
 import { EmailTemplateKeys, EmailTemplateTypes, IEmailTemplateConfig } from '../../lib/constants/email';
 import { IUserDocument } from '../../models/user';
 import { IVisitorDocument } from '../../models/visitor';
+import { IMarqetaKycState } from '../../integrations/marqeta/types';
+
+interface IBaseEmailParams {
+  domain?: string;
+  recipientEmail?: string;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+  sendEmail?: boolean;
+  name: string;
+}
 
 export interface ICreateSentEmailParams {
   key: EmailTemplateKeys;
@@ -20,14 +30,18 @@ export interface IACHTransferEmailData {
   reason?: string;
 }
 
-interface IBaseEmailParams {
-  domain?: string;
-  recipientEmail?: string;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-  sendEmail?: boolean;
+export interface IDeclinedData {
+  acceptedDocuments: string[];
+  message: string;
   name: string;
+  reason: string;
+  solutionText: string;
+  status: IMarqetaKycState
+  user?: IUserDocument;
+  visitor?: IVisitorDocument;
 }
+
+export interface IKarmaCardDeclinedEmailData extends IDeclinedData, IBaseEmailParams { }
 
 interface IEmailTemplateParams extends IBaseEmailParams {
   user?: Types.ObjectId;
@@ -97,28 +111,33 @@ export interface IPopulateEmailTemplateRequest extends IEmailVerificationTemplat
 }
 
 export interface IEmailJobData {
+  acceptedDocuments?: string[];
   accountMask?: string;
   accountType?: string;
   amount?: string;
   companyName?: string;
   currentYear?: string;
   date?: string;
-  reversalDate?: string;
   deleteAccountRequestId?: string;
   deleteReason?: string;
-  reason?: string;
   domain?: string;
   emailTemplateConfig?: IEmailTemplateConfig;
   footerStyle?: string;
   groupName?: string;
+  instituteName?: string;
   isSuccess?: boolean;
+  kycStatus?: IMarqetaKycState;
+  lastDigitsOfBankAccountNumber?: string;
   message?: string;
   name?: string;
   newUser?: boolean;
   passwordResetLink?: string;
+  reason?: string;
   recipientEmail: string;
   replyToAddresses: string[];
+  reversalDate?: string;
   senderEmail: string;
+  solutionText?: string;
   style?: string;
   subject: string;
   supportTicketId?: string;
@@ -130,8 +149,6 @@ export interface IEmailJobData {
   userId?: string;
   verificationLink?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
-  instituteName?: string;
-  lastDigitsOfBankAccountNumber?: string;
 }
 
 export interface IBuildTemplateParams {

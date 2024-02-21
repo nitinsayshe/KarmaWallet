@@ -45,9 +45,8 @@ import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus } from '../../models/karmaCardApplication';
 // eslint-disable-next-line import/no-cycle
-import { MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN, MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
+import { orderKarmaCards, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
 import { UserNotificationModel } from '../../models/user_notification';
-import { createCard } from '../../integrations/marqeta/card';
 
 dayjs.extend(utc);
 
@@ -707,22 +706,11 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     existingUser.integrations.marqeta.reason_code = reasonCode;
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
       // Ensure that the Welcome email has not already been sent
       if (!existingKarmaWelcomeNotification) {
         await createKarmaCardWelcomeUserNotification(existingUser, true);
-        const existingKarmaCards = await CardModel.find({
-          userId: existingUser._id,
-          'integrations.marqeta': { $exists: true },
-        });
-
-        // create physical and virtual card for user if they do not already have them and are newly active
-        if (!existingKarmaCards.length) {
-          const { userToken } = existingUser.integrations.marqeta;
-          const virtualCard = await createCard({ userToken, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN });
-          if (!virtualCard) console.log(`[+] Webhook Error: Error creating virtual card for user with id: ${existingUser._id}`);
-          const physicalCard = await createCard({ userToken, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN });
-          if (!physicalCard) console.log(`[+] Webhook Error: Error creating physical card for user with id: ${existingUser._id}`);
-        }
+        await orderKarmaCards(existingUser);
       }
     }
 
@@ -757,7 +745,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           type: 'karmaCardWelcome',
         });
 
-        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(user, true);
+        if (!existingKarmaWelcomeNotification) {
+          await createKarmaCardWelcomeUserNotification(user, true);
+          await orderKarmaCards(user);
+        }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
         if (!!visitorUser?._id) {
@@ -774,7 +765,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           type: 'karmaCardWelcome',
         });
 
-        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(existingUser, true);
+        if (!existingKarmaWelcomeNotification) {
+          await createKarmaCardWelcomeUserNotification(visitorUser, true);
+          await orderKarmaCards(visitorUser);
+        }
       }
 
       console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');

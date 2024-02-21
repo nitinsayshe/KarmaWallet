@@ -124,4 +124,11 @@ router.route('/employer-gift-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testEmployerGiftEmail,
   );
+
+router.route('/karma-card-decline-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testKarmaCardDeclineEmail,
+  );
 export default router;

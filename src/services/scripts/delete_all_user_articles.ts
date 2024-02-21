@@ -1,6 +1,6 @@
 import { PaginateResult } from 'mongoose';
 import { IUserDocument } from '../../models/user';
-import { iterateOverUsersAndExecWithDelay, IterationRequest, IterationResponse } from '../user/utils';
+import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 
 export const deleteAllUserQueuedArticles = async () => {
   console.log('deleting all user queued articles');
@@ -12,7 +12,7 @@ export const deleteAllUserQueuedArticles = async () => {
     };
     await iterateOverUsersAndExecWithDelay(
       req,
-      async (_: IterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<IterationResponse<{}>[]> => {
+      async (_: UserIterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<UserIterationResponse<{}>[]> => {
         await Promise.all(
           userBatch.docs.map(async (user: IUserDocument) => {
             console.log(`deleting queued articles for user ${user._id}, ${user.emails.find((e) => e.primary)?.email}`);

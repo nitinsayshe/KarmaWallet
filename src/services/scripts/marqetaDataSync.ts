@@ -14,6 +14,7 @@ import { sleep } from '../../lib/misc';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IUserDocument, UserModel } from '../../models/user';
 import { getCardStatusFromMarqetaCardState } from '../card';
+import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
 
 dayjs.extend(utc);
 
@@ -230,6 +231,9 @@ export const updateMarqetaUser = async (user: MarqetaUserModel, usersWithMarqeta
     console.error(`Marqeta user with token: ${user.token} is missing from our database`);
     return null;
   }
+
+  await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(existingUser, user);
+
   try {
     // update the existing user with the marqeta user info
     const existingIntegration = existingUser?.integrations?.marqeta;

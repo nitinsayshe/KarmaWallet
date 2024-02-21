@@ -7,10 +7,10 @@ import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 const router = Router();
 
 router.route('/banktransfer/:achToken')
-  .get(ACHFundingSourceController.getACHBankTransfer);
+  .get(authenticate, ACHFundingSourceController.getACHBankTransfer);
 
 router.route('/banktransfer')
-  .get(ACHFundingSourceController.listACHBankTransfer);
+  .get(authenticate, ACHFundingSourceController.listACHBankTransfer);
 
 router.route('/fundingSource')
   .get(authenticate, protectedRequirements({ marqetaStatus: [IMarqetaUserStatus.ACTIVE] }), ACHFundingSourceController.getLocalACHFundingSource);

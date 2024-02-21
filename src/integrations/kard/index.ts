@@ -137,6 +137,12 @@ export const deleteKardUserForCard = async (card: ICardDocument | Types.ObjectId
     if (!(card as ICardDocument)?.name) {
       card = await CardModel.findById(card);
     }
+
+    if (!card) {
+      console.error('Error deleting kard account.\nNo card found.');
+      return null;
+    }
+
     const c = card as ICardDocument;
     const kardUserId = c?.integrations?.kard?.userId;
     if (!kardUserId || !!(uuidSchema.safeParse(kardUserId) as SafeParseError<string>).error) {
@@ -157,6 +163,7 @@ export const deleteKardUserForCard = async (card: ICardDocument | Types.ObjectId
     return null;
   }
 };
+
 // delete a user from Kard
 export const deleteKardUsersForUser = async (user: IUserDocument | Types.ObjectId): Promise<ICardDocument[]> => {
   try {

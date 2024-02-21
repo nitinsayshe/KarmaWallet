@@ -13,6 +13,8 @@ import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegratio
 import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
+// eslint-disable-next-line import/no-cycle
+import { getShareableUser } from '../user';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
 import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
@@ -21,8 +23,6 @@ import {
   createPushUserNotificationFromUserAndPushData,
 } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
-// eslint-disable-next-line import/no-cycle
-import { getShareableUser } from '../user';
 
 dayjs.extend(utc);
 
@@ -106,9 +106,18 @@ export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<I
 // when a user removes a card
 const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   const client = new PlaidClient();
-  if (card?.integrations?.plaid?.accessToken) {
+  if (!!card?.integrations?.plaid?.accessToken) {
     await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+
+    await CardModel.updateMany(
+      { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
+      {
+        'integrations.plaid.accessToken': null,
+        $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
+      },
+    );
   }
+
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
     // TODO: these jobs should ideally be broken down into jobs for users and jobs to get totals
@@ -117,19 +126,12 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserTransactionTotals, {});
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
-
-  await CardModel.updateMany(
-    { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
-    {
-      'integrations.plaid.accessToken': null,
-      $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
-    },
-  );
 };
 
 const _removeKardUser = async (card: ICardDocument): Promise<void> => {
   await deleteKardUserForCard(card);
 };
+
 const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });

@@ -5,7 +5,7 @@ import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
@@ -26,13 +26,13 @@ import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
-import { VisitorModel } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelAllUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest, IUrlParam } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -128,7 +128,7 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
 
   // Start building the user information, grabs the integrations information from the visitor object
   const integrations: IUserIntegrations = {};
-  const { urlParams, shareASale, groupCode, marqeta } = visitor.integrations;
+  const { urlParams, shareASale, groupCode, marqeta, complyAdvantage } = visitor.integrations;
   const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
 
@@ -170,6 +170,10 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
 
   // if marqeta is present in visitor
   integrations.marqeta = marqeta;
+
+  if (!!complyAdvantage) {
+    integrations.complyAdvantage = complyAdvantage;
+  }
 
   newUserData.integrations = integrations;
 
@@ -438,7 +442,8 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     if (legacyUser) legacyUser.emails = user.emails;
   }
 
-  await updateSubscriptionsOnEmailChange(user._id, user.name, prevEmail, email);
+  await updateContactEmail(prevEmail, email);
+  await updateMarqetaUser(user.integrations.marqeta.userToken, { email });
 };
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
@@ -493,17 +498,26 @@ export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>)
 };
 
 export const deleteLinkedCardData = async (userId: Types.ObjectId) => {
-  const plaidClient = new PlaidClient();
+  try {
+    const plaidClient = new PlaidClient();
 
-  const cards = await CardModel.find({ userId, status: CardStatus.Linked });
-  const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
+    const cards = await CardModel.find({ userId, status: CardStatus.Linked });
+    const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
 
-  // Unlinking Plaid Access Tokens
-  for (const card of plaidCards) {
-    await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+    // Unlinking Plaid Access Tokens
+    for (const card of plaidCards) {
+      try {
+        await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+      } catch (error) {
+        console.error(`Error unlinking plaid access token ${card.integrations.plaid.accessToken} from card: ${card._id} for user: ${userId}`);
+        console.error(`${error}`);
+      }
+    }
+
+    await CardModel.deleteMany({ userId });
+  } catch (error) {
+    console.log('Error deleting linked card data', error);
   }
-
-  await CardModel.deleteMany({ userId });
 };
 
 export const deleteUserData = async (userId: Types.ObjectId) => {
@@ -650,6 +664,25 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
   return true;
 };
 
+// if the status is closed, add '+closed' to this email in marqeta
+export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (user: IVisitorDocument | IUserDocument, userTransition: Partial<IMarqetaUserTransitionsEvent>): Promise<void> => {
+  if (!user || !userTransition?.status || userTransition?.status !== IMarqetaUserStatus.CLOSED) {
+    return;
+  }
+
+  try {
+    const emailParts = user.integrations.marqeta.email.split('@');
+    const closedEmail = `${emailParts[0]}+closed@${emailParts[1]}`;
+    await updateMarqetaUser(userTransition.user_token, { email: closedEmail });
+
+    // remove the marqeta itegration from the user object
+    user.integrations.marqeta = undefined;
+    await user.save();
+  } catch (error) {
+    console.log('Error updating Marqeta user email', error);
+  }
+};
+
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
@@ -667,7 +700,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Existing user with Marqeta integration already saved
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== userTransition?.status) {
     existingUser.integrations.marqeta.status = userTransition.status;
-    // If reason attribute is missing in userTransition(webhook data) then populate the reason based on reason_code
+    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(existingUser, userTransition);
+    // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
     const { reason, reason_code: reasonCode } = userTransition;
     existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
     existingUser.integrations.marqeta.reason_code = reasonCode;
@@ -700,6 +734,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Could be a visitor that later created an account with that same email
   if (!!visitor?._id && !existingUser?._id) {
     visitor.integrations.marqeta.status = userTransition.status;
+    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, userTransition);
+
     await visitor.save();
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
@@ -730,6 +766,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           visitorUser.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: ['Approved'] };
           await visitorUser.save();
         }
+
+        await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitorUser, userTransition);
 
         existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
           user: visitorUser._id,

@@ -124,7 +124,6 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     message: messages[kycResult.codes[0] as ReasonCode],
   };
 
-  console.log('///// this is the status', kycResult.status, kycResult.codes[0] as ReasonCode);
   if (solutionText[kycResult.codes[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes[0] as ReasonCode];
   if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode];
 

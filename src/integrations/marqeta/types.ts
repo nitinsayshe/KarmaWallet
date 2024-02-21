@@ -119,9 +119,9 @@ enum kyc_required {
 }
 
 export enum IMarqetaKycState {
-  failure = 'failure',
-  success = 'success',
-  pending = 'pending',
+  failure = 'FAILURE',
+  success = 'SUCCESS',
+  pending = 'PENDING',
 }
 
 interface IMarqetaACHGroupConfig {

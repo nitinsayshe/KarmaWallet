@@ -138,3 +138,47 @@ export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
   });
   return !!karmaCards.length;
 };
+
+export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
+  });
+
+  const virtualCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt_cps'));
+  const physicalCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
+
+  return {
+    virtualCards: virtualCard.length,
+    physicalCard: physicalCard.length,
+  };
+};
+
+export const hasPhysicalCard = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta.': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
+  });
+
+  if (!!karmaCards.length) {
+    const physicalCard = karmaCards.find((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
+    return !!physicalCard;
+  }
+  return false;
+};
+
+export const hasVirtualCard = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta.': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
+  });
+
+  if (!!karmaCards.length) {
+    const virtualCard = karmaCards.find((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt_cps'));
+    return !!virtualCard;
+  }
+  return false;
+};

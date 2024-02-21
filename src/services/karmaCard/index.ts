@@ -19,7 +19,7 @@ import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards } from './utils';
+import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards, karmaWalletCardBreakdown } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
@@ -58,8 +58,6 @@ interface IApplySuccessData {
   firstName: string;
   lastName: string;
   urlParams?: IUrlParam[];
-  virtualCardResponse: any;
-  physicalCardResponse: any;
   visitorId?: string;
 }
 
@@ -109,14 +107,42 @@ export const getShareableKarmaCardApplication = ({
   lastModified,
 });
 
-export const isUserKYCVerified = (userStatus: IMarqetaUserStatus, kycResponse: IMarqetaListKYCResponse) => {
+export const isUserKYCVerified = (kycResponse: IMarqetaListKYCResponse) => {
   const hasSuccessfulKYC = kycResponse.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
-  return userStatus === IMarqetaUserStatus.ACTIVE && !!hasSuccessfulKYC;
+  return !!hasSuccessfulKYC;
 };
 
 export const isUserKYCVerifiedFromIntegration = (marqetaIntegration: IMarqetaUserIntegrations) => {
   const hasSuccessfulKYC = !!marqetaIntegration?.kycResult?.status && marqetaIntegration.kycResult.status === IMarqetaKycState.success;
   return marqetaIntegration.status === IMarqetaUserStatus.ACTIVE && hasSuccessfulKYC;
+};
+
+export const orderKarmaCards = async (user: IUserDocument) => {
+  let virtualCardResponse = null;
+  let physicalCardResponse = null;
+
+  if (!user?.integrations?.marqeta?.userToken) {
+    console.error('User does not have marqeta integration');
+    return;
+  }
+
+  const karmaWalletCards = await karmaWalletCardBreakdown(user);
+
+  if (karmaWalletCards.virtualCards > 0 && karmaWalletCards.physicalCard > 0) {
+    console.error(`User already has karma cards: ${user._id}`);
+  }
+
+  if (karmaWalletCards.virtualCards === 0) {
+    virtualCardResponse = await createCard({ userToken: user.integrations.marqeta.userToken, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN });
+    if (!virtualCardResponse) console.log(`[+] Card Creation Error: Error creating virtual card for user with id: ${user._id}`);
+  }
+
+  if (karmaWalletCards.physicalCard === 0) {
+    physicalCardResponse = await createCard({ userToken: user.integrations.marqeta.userToken, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN });
+    if (!physicalCardResponse) console.log(`[+] Card Creation Error: Error creating physical card for user with id: ${user._id}`);
+  }
+
+  return { virtualCardResponse, physicalCardResponse };
 };
 
 // This function expects the user to have a marqeta integration
@@ -133,6 +159,7 @@ export const performKycForUserOrVisitor = async (user: IUserDocument | IVisitorD
   if (!isUserKYCVerifiedFromIntegration(marqetaIntegration)) {
     kycResponse = await processUserKyc(marqetaIntegration.userToken);
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
+      console.log('///// order card for user in performKycForUserOrVisitor');
       const virtualCardResponse = await createCard({ userToken: marqetaIntegration.userToken, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN });
       const physicalCardResponse = await createCard({ userToken: marqetaIntegration.userToken, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN });
       return { virtualCardResponse, physicalCardResponse };
@@ -170,8 +197,6 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   let userToken;
   let marqetaUserResponse;
   let kycResponse;
-  let virtualCardResponse;
-  let physicalCardResponse;
 
   if (data.length > 0) {
     // if email is register in marqeta then update the user in marqeta
@@ -187,18 +212,12 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   kycResponse = await listUserKyc(userToken);
 
   // perform the kyc through marqeta & create the card
-  if (!isUserKYCVerified(marqetaUserResponse.status, kycResponse)) {
+  if (!isUserKYCVerified(kycResponse)) {
     kycResponse = await processUserKyc(marqetaUserResponse.token);
-    if (kycResponse?.result?.status === IMarqetaKycState.success) {
-      marqetaUserResponse.status = IMarqetaUserStatus.ACTIVE;
-      [virtualCardResponse, physicalCardResponse] = await Promise.all([
-        await createCard({ userToken: marqetaUserResponse.token, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN }),
-        await createCard({ userToken: marqetaUserResponse.token, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN }),
-      ]);
-    }
+    console.log('/////// perform kyc');
   }
 
-  return { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse };
+  return { marqetaUserResponse, kycResponse };
 };
 
 const storeKarmaCardApplication = async (cardApplicationData: IKarmaCardApplication) => {
@@ -277,8 +296,6 @@ export const handleKarmaCardApplySuccess = async ({
   firstName,
   lastName,
   urlParams,
-  virtualCardResponse,
-  physicalCardResponse,
   visitorId,
 }: IApplySuccessData): Promise<IUserDocument> => {
   // find the user again since there is a potential race condition
@@ -286,6 +303,7 @@ export const handleKarmaCardApplySuccess = async ({
   // EXISTING USER
   if (!!userObject) {
     await handleExistingUserApplySuccess(userObject, urlParams);
+    console.log('///// existing user');
     userObject.name = `${firstName} ${lastName}`;
   }
 
@@ -300,13 +318,22 @@ export const handleKarmaCardApplySuccess = async ({
       isAutoGenerated: true,
     });
 
+    console.log('///// created a user!');
+
     userObject = user;
     await createKarmaCardWelcomeUserNotification(userObject, true);
   }
 
+  const { virtualCardResponse, physicalCardResponse } = await orderKarmaCards(userObject);
+
+  if (!!virtualCardResponse) {
   // store marqeta card in DB
-  await mapMarqetaCardtoCard(userObject._id.toString(), virtualCardResponse); // map virtual card
-  await mapMarqetaCardtoCard(userObject._id.toString(), physicalCardResponse); // map physical card
+    await mapMarqetaCardtoCard(userObject._id.toString(), virtualCardResponse); // map virtual card
+  }
+
+  if (!!physicalCardResponse) {
+    await mapMarqetaCardtoCard(userObject._id.toString(), physicalCardResponse); // map physical card
+  }
 
   // store the karma card application log
   await userObject.save();
@@ -396,9 +423,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (address2) marqetaKYCInfo.address2 = address2;
   // perform the KYC logic and Marqeta stuff here
-  const marqetaResponse = await performMarqetaCreateAndKYC(marqetaKYCInfo);
-
-  const { marqetaUserResponse, kycResponse, virtualCardResponse, physicalCardResponse } = marqetaResponse;
+  const { marqetaUserResponse, kycResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
   // get the kyc result code
   const { status, codes } = kycResponse.result;
   const kycErrorCodes = codes.map((item: any) => item.code);
@@ -439,7 +464,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   // FAILED OR PENDING KYC, already saved to user or visitor object
   if (kycStatus !== IMarqetaKycState.success) {
     // prepare the data object for karmaCardApplication
-
     if (_visitor) karmaCardApplication.visitorId = _visitor._id;
     if (!!existingUser) karmaCardApplication.userId = existingUser._id.toString();
     // store the karma card application log
@@ -472,8 +496,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     email,
     firstName,
     lastName,
-    virtualCardResponse,
-    physicalCardResponse,
     visitorId: _visitor?._id || '',
   };
 

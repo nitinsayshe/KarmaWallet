@@ -467,8 +467,8 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
     state: cardFromWebhook?.state,
     fulfillment_status: cardFromWebhook?.fulfillment_status,
-    reson: cardFromWebhook.reason,
-    reson_code: cardFromWebhook.reason_code,
+    reason: cardFromWebhook.reason,
+    reason_code: cardFromWebhook.reason_code,
   };
 
   if (existingCard?.integrations?.marqeta?.instrument_type) {
@@ -497,7 +497,7 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
-  // if reason attribute is missing in cardWebhookData then populate the reson based on reson_code
+  // if reason attribute is missing in cardWebhookData then populate the reason based on reason_code
   if (!cardWebhookData.reason) {
     const { reason_code } = cardWebhookData;
     cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';

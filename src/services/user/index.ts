@@ -45,7 +45,7 @@ import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus } from '../../models/karmaCardApplication';
 // eslint-disable-next-line import/no-cycle
-import { updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
+import { orderKarmaCards, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
 import { UserNotificationModel } from '../../models/user_notification';
 
 dayjs.extend(utc);
@@ -339,6 +339,7 @@ export const getShareableUser = ({
       postal_code: integrations.marqeta.postal_code,
       state: integrations.marqeta.state,
       address1: integrations.marqeta.address1,
+      address2: integrations.marqeta.address2 || '',
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
       reason: integrations?.marqeta?.reason || '',
@@ -686,6 +687,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
 
   if (!existingUser?._id && !visitor?._id) {
+    // add in code to add the user to our database?
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
@@ -704,11 +706,14 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     existingUser.integrations.marqeta.reason_code = reasonCode;
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
       // Ensure that the Welcome email has not already been sent
       if (!existingKarmaWelcomeNotification) {
         await createKarmaCardWelcomeUserNotification(existingUser, true);
+        await orderKarmaCards(existingUser);
       }
     }
+
     await existingUser.save();
   }
 
@@ -740,7 +745,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           type: 'karmaCardWelcome',
         });
 
-        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(user, true);
+        if (!existingKarmaWelcomeNotification) {
+          await createKarmaCardWelcomeUserNotification(user, true);
+          await orderKarmaCards(user);
+        }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
         if (!!visitorUser?._id) {
@@ -757,7 +765,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           type: 'karmaCardWelcome',
         });
 
-        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(existingUser, true);
+        if (!existingKarmaWelcomeNotification) {
+          await createKarmaCardWelcomeUserNotification(visitorUser, true);
+          await orderKarmaCards(visitorUser);
+        }
       }
 
       console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');

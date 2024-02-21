@@ -89,6 +89,7 @@ export const userPassesComplyAdvantage = async (searchResponse: IComplyAdvantage
     searchResponse.match_status === ComplyAdvantageMatchStatus.noMatch
     && searchResponse.total_matches === 0 // total_matches includes total_hits and total_blacklist_hits
   ) {
+    console.log('User passes comply advantage');
     return true;
   }
   return false;

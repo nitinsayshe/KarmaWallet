@@ -704,11 +704,16 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     const { reason, reason_code: reasonCode } = userTransition;
     existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
     existingUser.integrations.marqeta.reason_code = reasonCode;
+    console.log('/////// USER STATUS DATA', {
+      status: userTransition.status,
+      reason: existingUser.integrations.marqeta.status,
+    });
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
       console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
       // Ensure that the Welcome email has not already been sent
       if (!existingKarmaWelcomeNotification) {
+        console.log('////// CREATE NEW CARDS FOR USER TRANSITIONING TO ACTIVE STATUS //////');
         await createKarmaCardWelcomeUserNotification(existingUser, true);
         await orderKarmaCards(existingUser);
       }

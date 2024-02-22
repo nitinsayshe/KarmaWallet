@@ -33,7 +33,7 @@ import { updateCustomFields } from '../../integrations/activecampaign';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { IMarqetaListKYCResponse } from '../../clients/marqeta/types';
 import { IDeclinedData } from '../email/types';
-import { createComplyAdvantageSearch, ICreateSearchForUserData, monitorComplyAdvantageSearch, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
+import { createComplyAdvantageSearch, ICreateSearchForUserData, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 
@@ -369,8 +369,6 @@ export const handleKarmaCardApplySuccess = async ({
     userObject = user;
   }
 
-  // monitor the user's search in comply advantage
-  await monitorComplyAdvantageSearch(userObject.integrations.complyAdvantage.id);
   await createKarmaCardWelcomeUserNotification(userObject, true);
 
   // store the karma card application log
@@ -399,7 +397,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   email = email.toLowerCase();
 
   const existingVisitor = await VisitorModel.findOne({ email });
-  let existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
+  const existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)
@@ -438,26 +436,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     _visitor = newVisitorResponse;
   }
 
-  // COMPLY ADVANTAGE:  store comply advantage data in existing user if that exists,
-  // else store in existing visitor, else store in new visitor
-  const birthYear = dayjs(birthDate).year();
-
-  if (!!existingUser) {
-    existingUser = (await performInternalKyc(existingUser, { firstName, lastName, birthYear })) as IUserDocument;
-  } else {
-    _visitor = (await performInternalKyc(_visitor, { firstName, lastName, birthYear })) as IVisitorDocument;
-  }
-
-  if (!existingUser && !_visitor) {
-    return {
-      email,
-      kycResult: {
-        status: IMarqetaKycState.failure,
-        codes: [ReasonCode.FailedInternalKyc],
-      },
-    };
-  }
-
   // MARQETA KYC: Prepare Data to create a User in Marqeta and submit for Marqeta KYC
   const marqetaKYCInfo: IMarqetaCreateUser = {
     firstName,
@@ -483,7 +461,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   // MARQETA KYC/CREATE USER
   const { marqetaUserResponse, kycResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
-  console.log('///// this is the kyc response', kycResponse);
   // get the kyc result code
   const { status, codes } = kycResponse.result;
   const kycErrorCodes = codes.map((item: any) => item.code);

@@ -33,7 +33,7 @@ import { updateCustomFields } from '../../integrations/activecampaign';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { IMarqetaListKYCResponse } from '../../clients/marqeta/types';
 import { IDeclinedData } from '../email/types';
-import { createComplyAdvantageSearch, ICreateSearchForUserData, monitorComplyAdvantageSearch, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
+import { createComplyAdvantageSearch, ICreateSearchForUserData, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 
@@ -260,11 +260,13 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   }
 
   // get the kyc list of a user
-  kycResponse = await listUserKyc(userToken);
+  const existingKYCChecks = await listUserKyc(userToken);
 
   // perform the kyc through marqeta & create the card
-  if (!isUserKYCVerified(kycResponse)) {
+  if (!isUserKYCVerified(existingKYCChecks)) {
     kycResponse = await processUserKyc(marqetaUserResponse.token);
+  } else {
+    kycResponse = existingKYCChecks.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
   }
 
   return { marqetaUserResponse, kycResponse };
@@ -320,6 +322,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
     }
   }
   await updateNewUserSubscriptions(userObject, subscribeData);
+  return userObject;
 };
 
 export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
@@ -364,8 +367,6 @@ export const handleKarmaCardApplySuccess = async ({
     userObject = user;
   }
 
-  // monitor the user's search in comply advantage
-  await monitorComplyAdvantageSearch(userObject.integrations.complyAdvantage.id);
   await createKarmaCardWelcomeUserNotification(userObject, true);
 
   // store the karma card application log
@@ -394,7 +395,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   email = email.toLowerCase();
 
   const existingVisitor = await VisitorModel.findOne({ email });
-  let existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
+  const existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)
@@ -431,26 +432,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
     _visitor = newVisitorResponse;
-  }
-
-  // COMPLY ADVANTAGE:  store comply advantage data in existing user if that exists,
-  // else store in existing visitor, else store in new visitor
-  const birthYear = dayjs(birthDate).year();
-
-  if (!!existingUser) {
-    existingUser = (await performInternalKyc(existingUser, { firstName, lastName, birthYear })) as IUserDocument;
-  } else {
-    _visitor = (await performInternalKyc(_visitor, { firstName, lastName, birthYear })) as IVisitorDocument;
-  }
-
-  if (!existingUser && !_visitor) {
-    return {
-      email,
-      kycResult: {
-        status: IMarqetaKycState.failure,
-        codes: [ReasonCode.FailedInternalKyc],
-      },
-    };
   }
 
   // MARQETA KYC: Prepare Data to create a User in Marqeta and submit for Marqeta KYC

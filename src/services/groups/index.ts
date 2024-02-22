@@ -814,6 +814,7 @@ export const getSummary = async (_: IRequest) => {
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
+  console.log('////// this is the info', req.params);
   try {
     if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
@@ -830,8 +831,12 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
     const cachedDataKey = getGroupOffsetDataKey(groupId);
     let cachedData = await getCachedData(cachedDataKey);
 
+    console.log('///// 834');
+
     if (!cachedData || bustCache) {
       for (const member of members) {
+        if (!member.user) continue;
+
         const query = {
           user: (member.user as IUserDocument)._id,
           date: { $gte: member.joinedOn },
@@ -907,6 +912,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (group.status === GroupStatus.Locked) throw new CustomError('This group is not accepting new members.', ErrorTypes.NOT_ALLOWED);
 
     let user: IUserDocument;
+
     if (userId === req.requestor._id.toString()) {
       user = await getUser(req, { _id: userId });
     } else {
@@ -916,7 +922,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
-
     // confirm that user has not been banned from group
     const usersUserGroup: IUserGroupDocument = await UserGroupModel
       .findOne({ group: group._id.toString(), user: user._id.toString() })

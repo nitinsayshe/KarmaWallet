@@ -40,6 +40,9 @@ export interface IRareUserIntegration {
 
 export interface IShareASale {
   trackingId?: string;
+  xTypeParam?: string;
+  sscid?: string;
+  sscidCreatedOn: number;
 }
 
 export interface IActiveCampaignUserIntegration {
@@ -258,6 +261,9 @@ const userSchema = new Schema({
     shareasale: {
       type: {
         trackingId: { type: String },
+        xTypeParam: { type: String },
+        sscid: { type: String },
+        sscidCreatedOn: { type: Number },
       },
     },
     referrals: {

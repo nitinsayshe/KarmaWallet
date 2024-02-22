@@ -52,6 +52,9 @@ export interface IKarmaCardRequestBody {
   ssn: string;
   state: string;
   urlParams?: IUrlParam[];
+  sscid?: string;
+  sscidCreatedOn?: string;
+  xType?: string;
 }
 
 interface IApplySuccessData {
@@ -346,6 +349,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
   const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams } = req.body;
+  const { sscid, sscidCreatedOn, xType } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
     throw new Error('Missing required fields');
@@ -398,6 +402,12 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       if (!!groupCode) {
         visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
       }
+    }
+
+    if (!!sscid && !!sscidCreatedOn && !!xType) {
+      visitorData.sscid = sscid;
+      visitorData.sscidCreatedOn = sscidCreatedOn;
+      visitorData.xTypeParam = xType;
     }
 
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
@@ -457,6 +467,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   };
 
   const kycStatus = status;
+
+  if (!!existingUser) {
+    console.log('///////////////////////', existingUser, '/////////////////////////');
+    console.log('///////////////////////', sscid, '/////////////////////////');
+  }
 
   if (!existingUser) {
     // Update the visitors marqeta Kyc status

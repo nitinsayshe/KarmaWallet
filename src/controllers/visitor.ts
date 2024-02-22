@@ -50,12 +50,14 @@ export const submitInterestForm: IRequestHandler<{}, {}, InterestFormRequest> = 
 export const createAccountForm: IRequestHandler<{}, {}, VisitorService.ICreateAccountRequest> = async (req, res) => {
   try {
     const { body } = req;
-    const { email, groupCode, params, shareASale } = body;
+    const { email, groupCode, params, sscid, xTypeParam, sscidCreatedOn } = body;
     const createAccountFormReq = {
       email,
       groupCode,
       params,
-      shareASale,
+      sscid,
+      xTypeParam,
+      sscidCreatedOn,
     };
     await VisitorService.createAccountForm(req, createAccountFormReq);
     output.api(req, res, null);

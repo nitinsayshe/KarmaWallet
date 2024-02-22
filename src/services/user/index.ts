@@ -127,7 +127,8 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
 
   // Start building the user information, grabs the integrations information from the visitor object
   const integrations: IUserIntegrations = {};
-  const { urlParams, shareASale, groupCode, marqeta, complyAdvantage } = visitor.integrations;
+  const { urlParams, groupCode, marqeta, complyAdvantage } = visitor.integrations;
+  const { sscid, sscidCreatedOn, xTypeParam } = visitor.integrations.shareASale;
   const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
 
@@ -142,7 +143,7 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
   };
 
   // If user is from shareASale, generate a unique tracking id to add to the user object
-  if (!!shareASale) {
+  if (!!sscid) {
     let uniqueId = nanoid();
     let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
 
@@ -153,6 +154,9 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
 
     integrations.shareasale = {
       trackingId: uniqueId,
+      sscid,
+      sscidCreatedOn,
+      xTypeParam,
     };
   }
 

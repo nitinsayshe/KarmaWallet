@@ -42,7 +42,11 @@ export interface IMarqetaVisitorData {
 export interface IVisitorIntegrations {
   groupCode?: string;
   urlParams?: IUrlParam[];
-  shareASale?: boolean;
+  shareASale?: {
+    sscid?: string;
+    xTypeParam?: string;
+    sscidCreatedOn?: number;
+  };
   marqeta?: IMarqetaVisitorData;
   complyAdvantage?: IComplyAdvantageIntegration;
 }
@@ -85,7 +89,11 @@ const visitorSchema = new Schema({
   integrations: {
     groupCode: String,
     urlParams: { type: Array },
-    shareASale: Boolean,
+    shareASale: {
+      sscid: { type: String },
+      xTypeParam: { type: String },
+      sscidCreatedOn: { type: Number },
+    },
     complyAdvantage: ComplyAdvantageIntegrationSchema,
     marqeta: {
       type: {

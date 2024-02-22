@@ -30,7 +30,9 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
-  shareASale?: boolean;
+  sscid?: string;
+  sscidCreatedOn?: number;
+  xTypeParam?: string;
   marqeta?: IMarqetaVisitorData;
   complyAdvantage?: IComplyAdvantageIntegration;
 }
@@ -102,10 +104,10 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
       email: info.email,
     };
 
-    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
+    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.sscid || !!info.xTypeParam || !!info.sscidCreatedOn) {
       visitorInfo.integrations = {};
       if (!!info.groupCode) {
-        visitorInfo.integrations.groupCode = info.groupCode;
+        visitorInfo.integrations.groupCode = 'asdfasdf';
       }
       if (!!info.params) {
         visitorInfo.integrations.urlParams = info.params;
@@ -113,7 +115,13 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
         }
       }
-      if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
+      if (!!info.sscid && !!info.sscidCreatedOn && !!info.xTypeParam) {
+        visitorInfo.integrations.shareASale = {
+          sscid: info.sscid,
+          sscidCreatedOn: info.sscidCreatedOn,
+          xTypeParam: info.xTypeParam,
+        };
+      }
     }
     const visitor = await VisitorModel.create(visitorInfo);
     return visitor;
@@ -130,7 +138,9 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
-      if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+      if (!!info.sscid || visitor.integrations.shareASale.sscid) visitor.integrations.shareASale.sscid = info.sscid || visitor.integrations.shareASale.sscid;
+      if (!!info.sscidCreatedOn || visitor.integrations.shareASale.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn || visitor.integrations.shareASale.sscidCreatedOn;
+      if (!!info.xTypeParam || visitor.integrations.shareASale.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam || visitor.integrations.shareASale.xTypeParam;
       if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
       if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
     }
@@ -186,7 +196,7 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
 };
 
 export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest) => {
-  const { groupCode, shareASale, params } = data;
+  const { groupCode, sscid, sscidCreatedOn, xTypeParam, params } = data;
   let { email } = data;
 
   if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
@@ -203,8 +213,9 @@ export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest
   // check if exisiting visitor with this email, if so resend the verification email
   let visitor = await getVisitorByEmail(email);
 
-  if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, shareASale, params, email });
-  else visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
+  console.log('////////////////////////////', sscid, xTypeParam, '//////////////////////////////////');
+  if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, sscid, sscidCreatedOn, xTypeParam, params, email });
+  else visitor = await createCreateAccountVisitor({ groupCode, sscid, sscidCreatedOn, xTypeParam, params, email });
 
   if (!!visitor) {
     try {

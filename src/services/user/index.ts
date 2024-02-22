@@ -685,6 +685,11 @@ export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (us
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
+  // CardHolder creation is not a user transition event we want to do anything for
+  if (userTransition.reason === 'CardHolder creation') {
+    console.log('////// CardHolder creation event received. No action taken. //////');
+    return;
+  }
 
   if (!existingUser?._id && !visitor?._id) {
     // add in code to add the user to our database?
@@ -706,6 +711,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     existingUser.integrations.marqeta.reason_code = reasonCode;
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      existingUser.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
       console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
       // Ensure that the Welcome email has not already been sent
       if (!existingKarmaWelcomeNotification) {

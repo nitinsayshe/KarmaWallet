@@ -104,19 +104,20 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
       visitorInfo.integrations = {};
-      if (!!info.groupCode) {
-        visitorInfo.integrations.groupCode = info.groupCode;
-      }
+      // group code
+      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
+      // url params
       if (!!info.params) {
         visitorInfo.integrations.urlParams = info.params;
         if (info.params.find(p => p.key === 'groupCode')) {
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
         }
       }
+      // shareasale
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
     }
-    const visitor = await VisitorModel.create(visitorInfo);
-    return visitor;
+
+    return await VisitorModel.create(visitorInfo);
   } catch (err) {
     throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.GEN);
   }

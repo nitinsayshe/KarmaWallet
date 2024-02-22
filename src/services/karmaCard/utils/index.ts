@@ -149,6 +149,7 @@ export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
   return !!karmaCards.length;
 };
 
+// get a breakdown a user's Karma Wallet cards
 export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
   const karmaCards = await CardModel.find({
     userId: userObject._id.toString(),
@@ -156,7 +157,7 @@ export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
     status: { $nin: [CardStatus.Removed] },
   });
 
-  const virtualCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt_cps'));
+  const virtualCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt'));
   const physicalCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
 
   return {

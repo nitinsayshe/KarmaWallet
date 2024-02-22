@@ -451,10 +451,6 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
   const origCreatedTime = existingCard?.createdOn;
 
-  if (!existingCard) {
-    return;
-  }
-
   const newData: any = {
     card_token: cardFromWebhook?.card_token,
     user_token: cardFromWebhook?.user_token,
@@ -471,19 +467,29 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     reason_code: cardFromWebhook.reason_code,
   };
 
-  if (existingCard?.integrations?.marqeta?.instrument_type) {
-    newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
-  }
+  // if not an existing card, create a new card
+  if (!existingCard) {
+    // if virtual card ensure set to active when first created
+    if (newData.card_token.includes('virt')) {
+      newData.state = MarqetaCardState.ACTIVE;
+    }
 
-  if (existingCard?.integrations?.marqeta?.barcode) {
-    newData.barcode = existingCard?.integrations?.marqeta?.barcode;
-  }
+    await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
+  } else {
+    if (existingCard?.integrations?.marqeta?.instrument_type) {
+      newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
+    }
 
-  existingCard.integrations.marqeta = newData;
-  existingCard.lastModified = dayjs().utc().toDate();
-  existingCard.createdOn = origCreatedTime;
-  existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
-  await existingCard.save();
+    if (existingCard?.integrations?.marqeta?.barcode) {
+      newData.barcode = existingCard?.integrations?.marqeta?.barcode;
+    }
+
+    existingCard.integrations.marqeta = newData;
+    existingCard.lastModified = dayjs().utc().toDate();
+    existingCard.createdOn = origCreatedTime;
+    existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
+    await existingCard.save();
+  }
 };
 
 export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {

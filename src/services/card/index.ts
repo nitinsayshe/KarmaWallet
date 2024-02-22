@@ -501,6 +501,10 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
   // if reason attribute is missing in cardWebhookData then populate the reason based on reason_code
+  console.log('[+] Handling Marqeta Card Webhook', {
+    cardWebhookData,
+  });
+
   if (!cardWebhookData.reason) {
     const { reason_code } = cardWebhookData;
     cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';

@@ -157,8 +157,6 @@ export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
     status: { $nin: [CardStatus.Removed] },
   });
 
-  console.log('///// check cards exist', karmaCards.length, karmaCards);
-
   const virtualCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt'));
   const physicalCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
 

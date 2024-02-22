@@ -672,7 +672,7 @@ export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (us
   try {
     const emailParts = user.integrations.marqeta.email.split('@');
     const closedEmail = `${emailParts[0]}+closed@${emailParts[1]}`;
-    await updateMarqetaUser(userTransition.user_token, { email: closedEmail });
+    await updateMarqetaUser(userTransition.token, { email: closedEmail });
 
     // remove the marqeta itegration from the user object
     user.integrations.marqeta = undefined;

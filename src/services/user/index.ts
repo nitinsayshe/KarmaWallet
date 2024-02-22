@@ -751,6 +751,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         });
 
         if (!existingKarmaWelcomeNotification) {
+          console.log('/////// VISITOR ORDER CARDS!!!! ');
           await createKarmaCardWelcomeUserNotification(user, true);
           await orderKarmaCards(user);
         }

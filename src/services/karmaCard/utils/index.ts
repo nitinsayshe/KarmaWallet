@@ -12,7 +12,7 @@ enum ResponseMessages {
   DECLINED = 'Your application has been declined.',
 }
 
-enum SolutionMessages {
+export enum SolutionMessages {
   NAME_OR_DOB_ISSUE = 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
   SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
   ADDRESS_ISSUE = 'Please submit two of the following documents that show your full name and address to support@karmawallet.io',
@@ -21,7 +21,7 @@ enum SolutionMessages {
   FAILED_INTERNAL_KYC = 'Your application is pending, please submit two forms of the following identification to support@karmawallet.io.',
 }
 
-const AcceptedDocuments = {
+export const AcceptedDocuments = {
   NAME_OR_DOB_ISSUE: [
     'Unexpired government issued photo ID that has name and date of birth',
     'Driver’s License or State Issued ID',
@@ -85,6 +85,7 @@ interface SourceResponse {
 
 export const getShareableMarqetaUser = (sourceResponse: SourceResponse): TransformedResponse => {
   const { kycResult } = sourceResponse;
+
   const messages: Record<ReasonCode, string> = {
     [ReasonCode.Approved]: ResponseMessages.APPROVED,
     [ReasonCode.NameIssue]: ResponseMessages.NAME_ISSUE,
@@ -132,8 +133,10 @@ export const getShareableMarqetaUser = (sourceResponse: SourceResponse): Transfo
     reason: kycResult.codes[0] as ReasonCode,
     message: messages[kycResult.codes[0] as ReasonCode],
   };
+
   if (solutionText[kycResult.codes[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes[0] as ReasonCode];
-  if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) { transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode]; }
+  if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode];
+
   return transformed;
 };
 
@@ -144,4 +147,49 @@ export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
     status: { $nin: [CardStatus.Removed] },
   });
   return !!karmaCards.length;
+};
+
+// get a breakdown a user's Karma Wallet cards
+export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
+  });
+
+  const virtualCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt'));
+  const physicalCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
+
+  return {
+    virtualCards: virtualCard.length,
+    physicalCard: physicalCard.length,
+  };
+};
+
+export const hasPhysicalCard = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta.': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
+  });
+
+  if (!!karmaCards.length) {
+    const physicalCard = karmaCards.find((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
+    return !!physicalCard;
+  }
+  return false;
+};
+
+export const hasVirtualCard = async (userObject: IUserDocument) => {
+  const karmaCards = await CardModel.find({
+    userId: userObject._id.toString(),
+    'integrations.marqeta.': { $exists: true },
+    status: { $nin: [CardStatus.Removed] },
+  });
+
+  if (!!karmaCards.length) {
+    const virtualCard = karmaCards.find((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt_cps'));
+    return !!virtualCard;
+  }
+  return false;
 };

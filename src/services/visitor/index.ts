@@ -106,15 +106,16 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.sscid || !!info.xTypeParam || !!info.sscidCreatedOn) {
       visitorInfo.integrations = {};
-      if (!!info.groupCode) {
-        visitorInfo.integrations.groupCode = 'asdfasdf';
-      }
+      // group code
+      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
+      // url params
       if (!!info.params) {
         visitorInfo.integrations.urlParams = info.params;
         if (info.params.find(p => p.key === 'groupCode')) {
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
         }
       }
+      // shareasale
       if (!!info.sscid && !!info.sscidCreatedOn && !!info.xTypeParam) {
         visitorInfo.integrations.shareASale = {
           sscid: info.sscid,
@@ -123,8 +124,8 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
         };
       }
     }
-    const visitor = await VisitorModel.create(visitorInfo);
-    return visitor;
+
+    return await VisitorModel.create(visitorInfo);
   } catch (err) {
     throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.GEN);
   }

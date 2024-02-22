@@ -5,7 +5,7 @@ import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
@@ -32,7 +32,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelAllUserSubscriptions, updateNewUserSubscriptions, updateSubscriptionsOnEmailChange } from '../subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
 import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest, IUrlParam } from './types';
 import { checkIfUserWithEmailExists } from './utils';
@@ -45,7 +45,7 @@ import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus } from '../../models/karmaCardApplication';
 // eslint-disable-next-line import/no-cycle
-import { updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
+import { orderKarmaCards, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
 import { UserNotificationModel } from '../../models/user_notification';
 
 dayjs.extend(utc);
@@ -348,6 +348,7 @@ export const getShareableUser = ({
       postal_code: integrations.marqeta.postal_code,
       state: integrations.marqeta.state,
       address1: integrations.marqeta.address1,
+      address2: integrations.marqeta.address2 || '',
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
       reason: integrations?.marqeta?.reason || '',
@@ -449,7 +450,8 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
     if (legacyUser) legacyUser.emails = user.emails;
   }
 
-  await updateSubscriptionsOnEmailChange(user._id, user.name, prevEmail, email);
+  await updateContactEmail(prevEmail, email);
+  await updateMarqetaUser(user.integrations.marqeta.userToken, { email });
 };
 
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
@@ -504,17 +506,26 @@ export const updatePassword = async (req: IRequest<{}, {}, IUpdatePasswordBody>)
 };
 
 export const deleteLinkedCardData = async (userId: Types.ObjectId) => {
-  const plaidClient = new PlaidClient();
+  try {
+    const plaidClient = new PlaidClient();
 
-  const cards = await CardModel.find({ userId, status: CardStatus.Linked });
-  const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
+    const cards = await CardModel.find({ userId, status: CardStatus.Linked });
+    const plaidCards = cards.filter((card) => !!card.integrations?.plaid?.accessToken);
 
-  // Unlinking Plaid Access Tokens
-  for (const card of plaidCards) {
-    await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+    // Unlinking Plaid Access Tokens
+    for (const card of plaidCards) {
+      try {
+        await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
+      } catch (error) {
+        console.error(`Error unlinking plaid access token ${card.integrations.plaid.accessToken} from card: ${card._id} for user: ${userId}`);
+        console.error(`${error}`);
+      }
+    }
+
+    await CardModel.deleteMany({ userId });
+  } catch (error) {
+    console.log('Error deleting linked card data', error);
   }
-
-  await CardModel.deleteMany({ userId });
 };
 
 export const deleteUserData = async (userId: Types.ObjectId) => {
@@ -670,7 +681,7 @@ export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (us
   try {
     const emailParts = user.integrations.marqeta.email.split('@');
     const closedEmail = `${emailParts[0]}+closed@${emailParts[1]}`;
-    await updateMarqetaUser(userTransition.user_token, { email: closedEmail });
+    await updateMarqetaUser(userTransition.token, { email: closedEmail });
 
     // remove the marqeta itegration from the user object
     user.integrations.marqeta = undefined;
@@ -685,6 +696,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
 
   if (!existingUser?._id && !visitor?._id) {
+    // add in code to add the user to our database?
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
@@ -703,12 +715,15 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     existingUser.integrations.marqeta.reason_code = reasonCode;
 
     if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+      console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
       // Ensure that the Welcome email has not already been sent
       if (!existingKarmaWelcomeNotification) {
         // Call the Pupeter script to append Shareasale tracking pixel to a new instance of chrome in headless mode
         await createKarmaCardWelcomeUserNotification(existingUser, true);
+        await orderKarmaCards(existingUser);
       }
     }
+
     await existingUser.save();
   }
 
@@ -740,7 +755,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           type: 'karmaCardWelcome',
         });
 
-        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(user, true);
+        if (!existingKarmaWelcomeNotification) {
+          await createKarmaCardWelcomeUserNotification(user, true);
+          await orderKarmaCards(user);
+        }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
         if (!!visitorUser?._id) {
@@ -757,7 +775,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           type: 'karmaCardWelcome',
         });
 
-        if (!existingKarmaWelcomeNotification) await createKarmaCardWelcomeUserNotification(existingUser, true);
+        if (!existingKarmaWelcomeNotification) {
+          await createKarmaCardWelcomeUserNotification(visitorUser, true);
+          await orderKarmaCards(visitorUser);
+        }
       }
 
       console.log('///// CREATED A USER BASED ON MARQETA WEBHOOK /////');

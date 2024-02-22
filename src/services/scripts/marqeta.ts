@@ -1,7 +1,8 @@
 import { PaginateResult } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent } from '../../integrations/marqeta/types';
+import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, MarqetaUserModel } from '../../integrations/marqeta/types';
+import { User } from '../../clients/marqeta/user';
 import { sleep } from '../../lib/misc';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument } from '../../models/visitor';
@@ -9,6 +10,8 @@ import { mapMarqetaCardtoCard } from '../card';
 import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
+
+const backoffMs = 1000;
 
 export const getCardsFromMarqeta = async (userId: string) => {
   const user = await UserModel.findById(userId);
@@ -21,7 +24,46 @@ export const getCardsFromMarqeta = async (userId: string) => {
   }
 };
 
-const backoffMs = 1000;
+export const updateEmailOfClosedAccountsFromMarqeta = async () => {
+  // make paginated requests to marqeta to get all closed accounts
+  const marqetaClient = new MarqetaClient();
+  const client = new User(marqetaClient);
+  let isMore = true;
+  let startIndex = 0;
+  while (isMore) {
+    try {
+      // get the next page of closed accounts
+      const userBatch: { end_index: number; start_index: number; is_more: boolean; data: MarqetaUserModel[] } = await client.listMarqetaUsers({ isMore: isMore ? 'true' : 'false', startIndex: `${startIndex}`, count: '10' });
+
+      for (const user of userBatch.data) {
+        // for each account, update the email of the user if it is closed and doesn't already contain +closed
+        if (user.status !== IMarqetaUserStatus.CLOSED) {
+          continue;
+        }
+        console.log('user with closed account: ', user.email);
+
+        const { email } = user;
+        if (!email) {
+          console.log('no email for user: ', JSON.stringify(user, null, 2));
+          continue;
+        }
+        if (email.includes('+closed')) {
+          continue;
+        }
+        console.log('updating user: ', user.email);
+      }
+      startIndex = userBatch.end_index + 1;
+      isMore = userBatch.is_more;
+      await sleep(backoffMs);
+    } catch (err) {
+      isMore = false;
+
+      console.error(err);
+    }
+  }
+  // for each account, update the email of the user
+};
+
 export const updateClosedMarqetaAccounts = async () => {
   console.log('updating users with account status === closed');
   try {
@@ -38,6 +80,7 @@ export const updateClosedMarqetaAccounts = async () => {
           await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(user, {
             ...user.integrations.marqeta,
             token: user.integrations.marqeta.userToken,
+            status: user.integrations.marqeta.status,
           } as unknown as IMarqetaUserTransitionsEvent);
           await sleep(backoffMs);
         }
@@ -58,6 +101,7 @@ export const updateClosedMarqetaAccounts = async () => {
           await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, {
             ...visitor.integrations.marqeta,
             token: visitor.integrations.marqeta.userToken,
+            status: visitor.integrations.marqeta.status,
           } as unknown as IMarqetaUserTransitionsEvent);
           await sleep(backoffMs);
         }

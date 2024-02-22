@@ -1,5 +1,4 @@
 import { INotificationDocument, IShareableNotification, NotificationModel } from '../../models/notification';
-import { IUserDocument } from '../../models/user';
 import { IUserNotificationDocument } from '../../models/user_notification';
 import { NotificationChannelEffects, NotificationEffectsFunctions } from './effects';
 
@@ -9,9 +8,8 @@ export const getShareableNotification = (notification: INotificationDocument): I
   lastModified: notification?.lastModified,
 }) as IShareableNotification;
 
-export const executeUserNotificationEffects = async <NotificationDataType>(
+export const executeUserNotificationEffects = async (
   userNotification: IUserNotificationDocument,
-  user: IUserDocument,
 ): Promise<void> => {
   try {
     const { type, channel, data } = userNotification;
@@ -32,7 +30,17 @@ export const executeUserNotificationEffects = async <NotificationDataType>(
       throw new Error(`No notification effects found for type ${type} and channel ${channel}`);
     }
     // execute the effect
-    await Promise.all(effectsFunctions?.map(async (effect) => effect<NotificationDataType>(user, data as unknown as NotificationDataType)));
+    const dataForEffect: any = {
+      data,
+    };
+
+    if (!!userNotification.user) {
+      dataForEffect.user = userNotification.user;
+    } else {
+      if (userNotification.visitor) dataForEffect.visitor = userNotification.visitor;
+    }
+
+    await Promise.all(effectsFunctions?.map(async (effect) => effect(dataForEffect)));
   } catch (err) {
     console.error(`Error executing notification effects: ${err}`);
   }

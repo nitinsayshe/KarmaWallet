@@ -470,10 +470,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   // if not an existing card, create a new card
   if (!existingCard) {
     // if virtual card ensure set to active when first created
-    if (newData.card_token.includes('virt')) {
-      newData.state = MarqetaCardState.ACTIVE;
-    }
-
+    if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
     await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
   } else {
     if (existingCard?.integrations?.marqeta?.instrument_type) {

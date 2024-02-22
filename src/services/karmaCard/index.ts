@@ -367,8 +367,6 @@ export const handleKarmaCardApplySuccess = async ({
     userObject = user;
   }
 
-  await createKarmaCardWelcomeUserNotification(userObject, true);
-
   // store the karma card application log
   await userObject.save();
   return userObject;
@@ -545,10 +543,8 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   karmaCardApplication.userId = userDocument._id.toString();
   userDocument.integrations.marqeta = marqeta;
-  userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  await orderKarmaCards(userDocument);
   const applyResponse = userDocument?.integrations?.marqeta;
   return applyResponse;
 };

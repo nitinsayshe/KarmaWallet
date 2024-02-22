@@ -285,7 +285,6 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
-  console.log('/////// this is the data', userObject, urlParams);
   const subscribeData: IActiveCampaignSubscribeData = {
     debitCardholder: true,
   };
@@ -313,9 +312,8 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
           skipSubscribe: true,
         },
       } as any;
-      console.log('//// before join group');
+
       const userGroup = await joinGroup(mockRequest);
-      console.log('///// after jpine group', userGroup);
       if (!!userGroup) {
         const group = await GroupModel.findById(userGroup.group);
         subscribeData.groupName = group.name;

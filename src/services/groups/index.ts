@@ -912,10 +912,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     if (group.status === GroupStatus.Locked) throw new CustomError('This group is not accepting new members.', ErrorTypes.NOT_ALLOWED);
 
     let user: IUserDocument;
-    console.log('////// INFO', {
-      userId,
-      reqId: req.requestor._id.toString(),
-    });
 
     if (userId === req.requestor._id.toString()) {
       user = await getUser(req, { _id: userId });
@@ -926,7 +922,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
-    console.log('////// this is the group id', group._id.toString());
     // confirm that user has not been banned from group
     const usersUserGroup: IUserGroupDocument = await UserGroupModel
       .findOne({ group: group._id.toString(), user: user._id.toString() })
@@ -1003,15 +998,12 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     // the role to Verified.
     let userUserGroupDocument: IUserGroupDocument = null;
 
-    console.log('/ Line 1001');
-
     if (!!usersUserGroup) {
       usersUserGroup.email = validEmail;
       usersUserGroup.role = UserGroupRole.Member;
       usersUserGroup.status = UserGroupStatus.Verified;
       userUserGroupDocument = await usersUserGroup.save();
     } else {
-      console.log('///// create a new user group');
       const userGroup = new UserGroupModel({
         user,
         group,
@@ -1020,12 +1012,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
         status: UserGroupStatus.Verified,
       });
 
-      console.log('///// save a new user group', userGroup);
       userUserGroupDocument = await userGroup.save();
     }
 
     if (!skipSubscribe) {
-      console.log('//////// do not skip subscribe');
       const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
       await updateActiveCampaignGroupListsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
       await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
@@ -1033,12 +1023,10 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 
     // busting cache for group dashboard
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
-    console.log('////// get the group ingo', group);
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId: group._id.toString() } }, true);
 
     return userUserGroupDocument;
   } catch (err) {
-    console.log('////// there was an error');
     throw asCustomError(err);
   }
 };

@@ -260,11 +260,13 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   }
 
   // get the kyc list of a user
-  kycResponse = await listUserKyc(userToken);
+  const existingKYCChecks = await listUserKyc(userToken);
 
   // perform the kyc through marqeta & create the card
-  if (!isUserKYCVerified(kycResponse)) {
+  if (!isUserKYCVerified(existingKYCChecks)) {
     kycResponse = await processUserKyc(marqetaUserResponse.token);
+  } else {
+    kycResponse = existingKYCChecks.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
   }
 
   return { marqetaUserResponse, kycResponse };
@@ -283,6 +285,7 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
+  console.log('/////// this is the data', userObject, urlParams);
   const subscribeData: IActiveCampaignSubscribeData = {
     debitCardholder: true,
   };
@@ -310,8 +313,9 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
           skipSubscribe: true,
         },
       } as any;
-
+      console.log('//// before join group');
       const userGroup = await joinGroup(mockRequest);
+      console.log('///// after jpine group', userGroup);
       if (!!userGroup) {
         const group = await GroupModel.findById(userGroup.group);
         subscribeData.groupName = group.name;
@@ -320,6 +324,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
     }
   }
   await updateNewUserSubscriptions(userObject, subscribeData);
+  return userObject;
 };
 
 export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
@@ -478,6 +483,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   // MARQETA KYC/CREATE USER
   const { marqetaUserResponse, kycResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
+  console.log('///// this is the kyc response', kycResponse);
   // get the kyc result code
   const { status, codes } = kycResponse.result;
   const kycErrorCodes = codes.map((item: any) => item.code);

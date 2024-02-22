@@ -42,7 +42,7 @@ export interface IShareASale {
   trackingId?: string;
   xTypeParam?: string;
   sscid?: string;
-  sscidCreatedOn: number;
+  sscidCreatedOn: string;
 }
 
 export interface IActiveCampaignUserIntegration {
@@ -263,7 +263,7 @@ const userSchema = new Schema({
         trackingId: { type: String },
         xTypeParam: { type: String },
         sscid: { type: String },
-        sscidCreatedOn: { type: Number },
+        sscidCreatedOn: { type: String },
       },
     },
     referrals: {

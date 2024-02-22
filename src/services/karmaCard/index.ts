@@ -469,8 +469,16 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const kycStatus = status;
 
   if (!!existingUser) {
-    console.log('///////////////////////', existingUser, '/////////////////////////');
-    console.log('///////////////////////', sscid, '/////////////////////////');
+    if (existingUser.integrations.marqeta.kycResult.status !== IMarqetaKycState.success) {
+      delete existingUser.integrations.shareasale;
+    } else {
+      existingUser.integrations.shareasale = {
+        sscid,
+        sscidCreatedOn,
+        xTypeParam: xType,
+      };
+    }
+    await existingUser.save();
   }
 
   if (!existingUser) {
@@ -531,6 +539,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   karmaCardApplication.userId = userDocument._id.toString();
   userDocument.integrations.marqeta = marqeta;
   userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
+
+  // if user has sscid/shareasale params use that info to call script that creates the pupeteer browser instance etc.
+
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
   const applyResponse = userDocument?.integrations?.marqeta;

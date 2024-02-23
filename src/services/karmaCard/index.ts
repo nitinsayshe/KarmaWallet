@@ -543,8 +543,20 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   karmaCardApplication.userId = userDocument._id.toString();
   userDocument.integrations.marqeta = marqeta;
+  userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
+  await orderKarmaCards(userDocument);
+
+  const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+    user: userDocument._id,
+    type: 'karmaCardWelcome',
+  });
+
+  if (!existingKarmaWelcomeNotification) {
+    await createKarmaCardWelcomeUserNotification(userDocument, false);
+  }
+
   const applyResponse = userDocument?.integrations?.marqeta;
   return applyResponse;
 };

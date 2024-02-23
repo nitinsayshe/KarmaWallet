@@ -1,3 +1,4 @@
+import { listCards } from '../../../integrations/marqeta/card';
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
@@ -151,16 +152,12 @@ export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
 
 // get a breakdown a user's Karma Wallet cards
 export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
-  const karmaCards = await CardModel.find({
-    userId: userObject._id.toString(),
-    'integrations.marqeta': { $exists: true },
-    status: { $nin: [CardStatus.Removed] },
-  });
+  const cardsInMarqeta = await listCards(userObject.integrations.marqeta.userToken);
+  const cardsArray = cardsInMarqeta.cards.data;
+  if (!cardsArray.length) return { virtualCards: 0, physicalCard: 0 };
 
-  console.log('///// check cards exist', karmaCards.length, karmaCards);
-
-  const virtualCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_virt'));
-  const physicalCard = karmaCards.filter((card) => card.integrations.marqeta?.card_product_token.includes('kw_phys'));
+  const virtualCard = cardsArray.filter((card) => card.card_product_token.includes('kw_virt'));
+  const physicalCard = cardsArray.filter((card) => card.card_product_token.includes('kw_phys'));
 
   return {
     virtualCards: virtualCard.length,

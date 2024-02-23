@@ -22,6 +22,8 @@ import {
 } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 import { getShareableUser } from '../user/utils';
+import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { Card } from '../../clients/marqeta/card';
 
 dayjs.extend(utc);
 
@@ -499,22 +501,33 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
+  // Instantiate the MarqetaClient
+  const marqetaClient = new MarqetaClient();
+
+  // Instantiate the CARD class
+  const cardClient = new Card(marqetaClient);
+  const cardDataInMarqeta = await cardClient.getCardDetails(cardWebhookData?.card_token);
+
+  if (!cardDataInMarqeta) throw new CustomError(`Card with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   // if reason attribute is missing in cardWebhookData then populate the reason based on reason_code
   console.log('[+] Handling Marqeta Card Webhook', {
     cardWebhookData,
   });
 
-  if (!cardWebhookData.reason) {
-    const { reason_code } = cardWebhookData;
-    cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+  if (cardWebhookData.state === cardDataInMarqeta.state) {
+    if (!cardWebhookData.reason) {
+      const { reason_code } = cardWebhookData;
+      cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+    }
   }
+
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user?._id) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
   if (!prevCardData) {
-    await mapMarqetaCardtoCard(user._id.toString(), cardWebhookData);
+    await mapMarqetaCardtoCard(user._id.toString(), cardDataInMarqeta);
   }
-  await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
-  await updateCardFromMarqetaCardWebhook(cardWebhookData);
-  await sendCardUpdateEmails(cardWebhookData);
+  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
+  await updateCardFromMarqetaCardWebhook(cardDataInMarqeta);
+  await sendCardUpdateEmails(cardDataInMarqeta);
 };

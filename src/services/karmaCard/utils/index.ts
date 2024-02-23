@@ -2,7 +2,10 @@ import { listCards } from '../../../integrations/marqeta/card';
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
-import { IUserDocument } from '../../../models/user';
+import { GroupModel } from '../../../models/group';
+import { IUrlParam, IUserDocument } from '../../../models/user';
+import { joinGroup } from '../../groups/utils';
+import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
 
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
@@ -191,4 +194,45 @@ export const hasVirtualCard = async (userObject: IUserDocument) => {
     return !!virtualCard;
   }
   return false;
+};
+
+export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
+  const subscribeData: IActiveCampaignSubscribeData = {
+    debitCardholder: true,
+  };
+
+  if (!!urlParams) {
+    const groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
+    // employer beta card group
+    if (!!urlParams.find((param) => param.key === 'employerBeta')) {
+      subscribeData.employerBeta = true;
+    }
+
+    // beta card group
+    if (!!urlParams.find((param) => param.key === 'beta')) {
+      subscribeData.beta = true;
+    }
+
+    if (!!groupCode) {
+      const mockRequest = {
+        requestor: userObject,
+        authKey: '',
+        body: {
+          code: groupCode,
+          email: userObject?.emails?.find((e) => e.primary)?.email,
+          userId: userObject._id.toString(),
+          skipSubscribe: true,
+        },
+      } as any;
+
+      const userGroup = await joinGroup(mockRequest);
+      if (!!userGroup) {
+        const group = await GroupModel.findById(userGroup.group);
+        subscribeData.groupName = group.name;
+        subscribeData.tags = [group.name];
+      }
+    }
+  }
+  await updateNewUserSubscriptions(userObject, subscribeData);
+  return userObject;
 };

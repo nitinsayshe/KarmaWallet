@@ -4,7 +4,7 @@ import CustomError from '../../lib/customError';
 import { IRequest } from '../../types/request';
 import { PaypalClient } from '../../clients/paypal';
 import { UserModel } from '../../models/user';
-import { getShareableUser } from '../../services/user';
+import { getShareableUser } from '../../services/user/utils';
 import { KarmaCommissionPayoutStatus, PayPalPayoutItemStatus } from '../../models/commissionPayout';
 import { KarmaCommissionPayoutOverviewStatus } from '../../models/commissionPayoutOverview';
 import { updateCommissionOverviewStatus, updateCommissionPayoutStatus } from '../../services/commission/utils';

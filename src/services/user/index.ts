@@ -41,12 +41,11 @@ import { IEmail, resendEmailVerification, verifyBiometric } from './verification
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
-// eslint-disable-next-line import/no-cycle
 import { generateRandomPasswordString } from '../../lib/misc';
 import { ApplicationStatus } from '../../models/karmaCardApplication';
-// eslint-disable-next-line import/no-cycle
-import { orderKarmaCards, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard';
 import { UserNotificationModel } from '../../models/user_notification';
+import { executeOrderKarmaWalletCardsJob } from '../card/utils';
+import { updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 
 dayjs.extend(utc);
 
@@ -291,18 +290,6 @@ export const getUsersPaginated = (_: IRequest, query: FilterQuery<IUser>) => {
 
 export const getUsers = async (_: IRequest, query = {}) => UserModel.find(query);
 
-export const getUser = async (_: IRequest, query = {}) => {
-  try {
-    const user = await UserModel.findOne(query);
-
-    if (!user) throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
-
-    return user;
-  } catch (err) {
-    throw asCustomError(err);
-  }
-};
-
 export const getUserById = async (_: IRequest, uid: string) => {
   try {
     const user = await UserModel.findById({ _id: uid });
@@ -313,51 +300,6 @@ export const getUserById = async (_: IRequest, uid: string) => {
   } catch (err) {
     throw asCustomError(err);
   }
-};
-
-export const getShareableUser = ({
-  _id,
-  email,
-  emails,
-  name,
-  dateJoined,
-  zipcode,
-  role,
-  legacyId,
-  integrations,
-}: IUserDocument) => {
-  const _integrations: Partial<IUserIntegrations> = {};
-  if (integrations?.paypal) _integrations.paypal = integrations.paypal;
-  if (integrations?.shareasale) _integrations.shareasale = integrations.shareasale;
-  if (integrations?.marqeta) {
-    _integrations.marqeta = {
-      userToken: integrations.marqeta.userToken,
-      email: integrations.marqeta.email,
-      first_name: integrations.marqeta.first_name,
-      last_name: integrations.marqeta.last_name,
-      city: integrations.marqeta.city,
-      postal_code: integrations.marqeta.postal_code,
-      state: integrations.marqeta.state,
-      address1: integrations.marqeta.address1,
-      address2: integrations.marqeta.address2 || '',
-      country: integrations.marqeta.country,
-      status: integrations.marqeta.status,
-      reason: integrations?.marqeta?.reason || '',
-      reason_code: integrations?.marqeta?.reason_code || '',
-    };
-  }
-  if (integrations?.fcm) _integrations.fcm = integrations.fcm;
-  return {
-    _id,
-    email,
-    emails,
-    name,
-    dateJoined,
-    zipcode,
-    role,
-    legacyId,
-    integrations: _integrations,
-  };
 };
 
 export const logout = async (_: IRequest, authKey: string) => {
@@ -721,7 +663,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
       if (!existingKarmaWelcomeNotification) {
         console.log('////// CREATE NEW CARDS FOR USER TRANSITIONING TO ACTIVE STATUS //////');
         await createKarmaCardWelcomeUserNotification(existingUser, true);
-        await orderKarmaCards(existingUser);
+        console.log('/////// Ordering cards from the User webhook for an existing user');
+        executeOrderKarmaWalletCardsJob(existingUser);
       }
     }
 
@@ -758,7 +701,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(user, true);
-          await orderKarmaCards(user);
+          console.log('/////// Ordering cards from the User webhook for a newly created user (visitor to user)');
+          executeOrderKarmaWalletCardsJob(existingUser);
         }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
@@ -779,7 +723,8 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(visitorUser, true);
-          await orderKarmaCards(visitorUser);
+          console.log('/////// Ordering cards from the User webhook for a newly created user (visitor and user exists)');
+          executeOrderKarmaWalletCardsJob(existingUser);
         }
       }
 

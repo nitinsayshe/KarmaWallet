@@ -7,7 +7,7 @@ import { nanoid } from 'nanoid';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact, updateContactEmail } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
-import { updateMarqetaUser } from '../../integrations/marqeta/user';
+import { getMarqetaUser, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -685,10 +685,11 @@ export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (us
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
-  // CardHolder creation is not a user transition event we want to do anything for
-  if (userTransition.reason === 'CardHolder creation') {
-    console.log('////// CardHolder creation event received. No action taken. //////');
-    return;
+  // grab the user data from Marqeta directly since webhooks can come in out of order
+  const currentMarqetaUserState = await getMarqetaUser(userTransition?.user_token);
+
+  if (!currentMarqetaUserState) {
+    console.log('///// Error getting most up to date user information from Marqeta /////');
   }
 
   if (!existingUser?._id && !visitor?._id) {
@@ -696,24 +697,27 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
 
-  let existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
-    user: existingUser._id,
-    type: 'karmaCardWelcome',
-  });
-
   // Existing user with Marqeta integration already saved
-  if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== userTransition?.status) {
-    existingUser.integrations.marqeta.status = userTransition.status;
-    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(existingUser, userTransition);
+  if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserState?.status) {
+    existingUser.integrations.marqeta.status = currentMarqetaUserState.status;
+    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(existingUser, currentMarqetaUserState);
     // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
-    const { reason, reason_code: reasonCode } = userTransition;
-    existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
-    existingUser.integrations.marqeta.reason_code = reasonCode;
+    if (userTransition.status === currentMarqetaUserState.status) {
+      const { reason, reason_code: reasonCode } = userTransition;
+      existingUser.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
+      existingUser.integrations.marqeta.reason_code = reasonCode;
+    }
 
-    if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+    if (currentMarqetaUserState.status === IMarqetaUserStatus.ACTIVE) {
       existingUser.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
       console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
       // Ensure that the Welcome email has not already been sent
+
+      const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+        user: existingUser._id,
+        type: 'karmaCardWelcome',
+      });
+
       if (!existingKarmaWelcomeNotification) {
         console.log('////// CREATE NEW CARDS FOR USER TRANSITIONING TO ACTIVE STATUS //////');
         await createKarmaCardWelcomeUserNotification(existingUser, true);
@@ -728,12 +732,12 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Could be just a visitor (if they didn't create an account later with that same email)
   // Could be a visitor that later created an account with that same email
   if (!!visitor?._id && !existingUser?._id) {
-    visitor.integrations.marqeta.status = userTransition.status;
-    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, userTransition);
+    visitor.integrations.marqeta.status = currentMarqetaUserState.status;
+    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, currentMarqetaUserState);
 
     await visitor.save();
 
-    if (userTransition.status === IMarqetaUserStatus.ACTIVE) {
+    if (currentMarqetaUserState.status === IMarqetaUserStatus.ACTIVE) {
       if (!visitor.user) {
         const { user } = await register({
           name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,
@@ -747,7 +751,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
         await user.save();
 
-        existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+        const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
           user: user._id,
           type: 'karmaCardWelcome',
         });
@@ -758,6 +762,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
+
         if (!!visitorUser?._id) {
           visitorUser.integrations.marqeta = visitor.integrations.marqeta;
           visitorUser.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
@@ -765,9 +770,9 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           await visitorUser.save();
         }
 
-        await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitorUser, userTransition);
+        await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitorUser, currentMarqetaUserState);
 
-        existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
+        const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
           user: visitorUser._id,
           type: 'karmaCardWelcome',
         });

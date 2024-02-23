@@ -31,7 +31,7 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
   sscid?: string;
-  sscidCreatedOn?: number;
+  sscidCreatedOn?: string;
   xTypeParam?: string;
   marqeta?: IMarqetaVisitorData;
   complyAdvantage?: IComplyAdvantageIntegration;

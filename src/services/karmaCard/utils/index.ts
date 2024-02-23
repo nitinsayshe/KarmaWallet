@@ -1,3 +1,4 @@
+import puppeteer from 'puppeteer';
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
@@ -192,4 +193,35 @@ export const hasVirtualCard = async (userObject: IUserDocument) => {
     return !!virtualCard;
   }
   return false;
+};
+
+// eslint-disable-next-line
+export const openBrowserAndAddShareASaleCode = async (sscid: any, trackingid: any, xtype: any) => {
+  const browser = await puppeteer.launch({
+    headless: true,
+  });
+
+  const page = await browser.newPage();
+
+  await page.goto('https://www.karmawallet.io/');
+  await page.setCookie({ name: 'sas_m_awin', value: `{"clickId": "${sscid}"}` });
+
+  await page.evaluate((trackingID = trackingid, xType = xtype) => {
+    const img = document.createElement('img');
+    img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=lead&xType=${xType}`;
+    img.width = 1;
+    img.height = 1;
+    document.body.appendChild(img);
+
+    const script = document.createElement('script');
+    script.src = 'https://www.dwin1.com/19038.js';
+    script.type = 'text/javascript';
+    script.defer = true;
+    document.body.appendChild(script);
+  }, trackingid, xtype);
+
+  setTimeout(async () => {
+    await page.close();
+    await browser.close();
+  }, 2000);
 };

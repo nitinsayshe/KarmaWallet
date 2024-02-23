@@ -20,7 +20,7 @@ import { IRequest } from '../../types/request';
 import { mapMarqetaCardtoCard } from '../card';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards, karmaWalletCardBreakdown } from './utils';
+import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards, karmaWalletCardBreakdown, openBrowserAndAddShareASaleCode } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
@@ -586,7 +586,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     xTypeParam: xType,
   };
 
+  // console.log('/////////////User kard apply success, make new browser window', 'sscid:', sscid, 'xtype:', xType, '/////// visitor', _visitor, 'userDocument', userDocument, '///////////////////');
   // if user has sscid/shareasale params use that info to call script that creates the pupeteer browser instance etc.
+  console.log(userDocument.integrations.shareasale, 'userDocument.integrations.shareasale');
+  await openBrowserAndAddShareASaleCode(sscid, userDocument.integrations.shareasale.trackingId, xType);
 
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);

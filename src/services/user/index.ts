@@ -283,6 +283,7 @@ export const login = async (req: IRequest, { email, password, biometricSignature
   if (fcmToken && deviceInfo) {
     await addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
   }
+
   return { user, authKey };
 };
 

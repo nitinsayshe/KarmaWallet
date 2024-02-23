@@ -1,4 +1,7 @@
+import { MainBullClient } from '../../../clients/bull/main';
 import { CardNetwork } from '../../../lib/constants';
+import { JobNames } from '../../../lib/constants/jobScheduler';
+import { IUserDocument } from '../../../models/user';
 
 export const getNetworkFromBin = (bin: string): CardNetwork | null => {
   const binPrefix = bin.slice(0, 2);
@@ -21,4 +24,20 @@ export const getNetworkFromBin = (bin: string): CardNetwork | null => {
     return CardNetwork.Discover;
   }
   return null;
+};
+
+export const executeOrderKarmaWalletCardsJob = (userDocument: IUserDocument) => {
+  MainBullClient.createJob(
+    JobNames.OrderKarmaWalletCards,
+    userDocument,
+    {
+      delay: 1 * 60 * 1000,
+      jobId: `${JobNames.OrderKarmaWalletCards}-${userDocument._id}`,
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 4 * 1000,
+      },
+    },
+  );
 };

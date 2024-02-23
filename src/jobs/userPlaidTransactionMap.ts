@@ -6,7 +6,7 @@ import { SocketClient } from '../clients/socket';
 import { SocketEvents, SocketEventTypes } from '../lib/constants/sockets';
 import { INextJob } from '../clients/bull/base';
 import * as EmailService from '../services/email';
-import { getUser } from '../services/user';
+import { getUser } from '../services/user/utils';
 import { IRequest } from '../types/request';
 import { _updateCards } from '../services/card';
 import { globalPlaidTransactionMapping } from '../services/scripts/global_plaid_transaction_mapping';

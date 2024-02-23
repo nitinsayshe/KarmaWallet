@@ -42,15 +42,12 @@ import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manua
 import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
-// eslint-disable-next-line import/no-cycle
 import { getShareableCard } from '../card';
 import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, ICompanyProtocol, _getPaginatedCompanies } from '../company';
 import { getCompanyRatingsThresholds } from '../misc';
 import { calculateCompanyScore } from '../scripts/calculate_company_scores';
 import { getShareableSector } from '../sectors';
-// eslint-disable-next-line import/no-cycle
-import { getShareableUser } from '../user';
-import { _getTransactions } from './utils';
+import { _getTransactions, getTransactionCount } from './utils';
 import {
   ITransactionsAggregationRequestQuery,
   ITransactionsRequestQuery,
@@ -75,14 +72,9 @@ import { PushNotificationTypes } from '../../lib/constants/notification';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { MCCStandards } from '../../integrations/marqeta/types';
-// eslint-disable-next-line import/no-cycle
-import { checkIfUserInGroup } from '../groups';
+import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
-
-const plaidIntegrationPath = 'integrations.plaid.category';
-const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
-const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
-const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
+import { getShareableUser } from '../user/utils';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
@@ -395,23 +387,6 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     throw asCustomError(err);
   }
 };
-
-export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
-  const aggResult = await TransactionModel.aggregate()
-    .match({ sector: { $nin: sectorsToExcludeFromTransactions }, amount: { $gt: 0 }, ...query, ...excludePaymentQuery })
-    .group({ _id: '$user', total: { $sum: '$amount' } });
-
-  return aggResult?.length ? aggResult[0].total : 0;
-};
-
-// await needed her for TS to resolve the type of aggregations output
-// eslint-disable-next-line no-return-await
-export const getTransactionCount = async (query = {}) => await TransactionModel.find({
-  sector: { $nin: sectorsToExcludeFromTransactions },
-  amount: { $gt: 0 },
-  ...query,
-  ...excludePaymentQuery,
-}).count();
 
 export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const Rare = new RareClient();

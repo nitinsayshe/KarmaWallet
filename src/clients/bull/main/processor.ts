@@ -31,6 +31,7 @@ import * as UpdateWildfireCommissions from '../../../jobs/updateWildfireCommissi
 import * as KardCommissionReconciliation from '../../../jobs/kardCommissionReconciliation';
 import * as SyncActiveCampaign from '../../../jobs/syncActiveCampaign';
 import * as GenerateKarmaCardStatements from '../../../jobs/generateKarmaCardStatements';
+import * as OrderKarmaWalletCards from '../../../jobs/orderKarmaWalletCards';
 import { INextJob } from '../base';
 import { globalPlaidTransactionMapping } from '../../../services/scripts/global_plaid_transaction_mapping';
 
@@ -186,6 +187,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.SyncActiveCampaign:
       result = await SyncActiveCampaign.exec(data);
+      break;
+    case JobNames.OrderKarmaWalletCards:
+      result = await OrderKarmaWalletCards.exec(data);
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

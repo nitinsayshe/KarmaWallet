@@ -721,6 +721,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
       if (!existingKarmaWelcomeNotification) {
         console.log('////// CREATE NEW CARDS FOR USER TRANSITIONING TO ACTIVE STATUS //////');
         await createKarmaCardWelcomeUserNotification(existingUser, true);
+        console.log('/////// Ordering cards from the User webhook for an existing user');
         await orderKarmaCards(existingUser);
       }
     }
@@ -758,6 +759,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(user, true);
+          console.log('/////// Ordering cards from the User webhook for a newly created user (visitor to user)');
           await orderKarmaCards(user);
         }
       } else {
@@ -779,6 +781,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(visitorUser, true);
+          console.log('/////// Ordering cards from the User webhook for a newly created user (visitor and user exists)');
           await orderKarmaCards(visitorUser);
         }
       }

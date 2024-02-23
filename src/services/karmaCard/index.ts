@@ -162,6 +162,7 @@ export const orderKarmaCards = async (user: IUserDocument) => {
 
   const karmaWalletCards = await karmaWalletCardBreakdown(user);
 
+  console.log('///// these are the karma wallet cards', karmaWalletCards);
   if (karmaWalletCards.virtualCards > 0 && karmaWalletCards.physicalCard > 0) {
     console.error(`User already has karma cards: ${user._id}`);
   }
@@ -546,6 +547,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
+  console.log('///// ordering cards from applyForKarmaCard');
   await orderKarmaCards(userDocument);
 
   const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({

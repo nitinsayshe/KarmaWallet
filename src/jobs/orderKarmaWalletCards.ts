@@ -17,25 +17,19 @@ export const exec = async (user: IUserDocument) => {
 
   const karmaWalletCards = await karmaWalletCardBreakdown(user);
 
-  console.log('///// Karma Wallet Card breakdown', karmaWalletCards);
-
   if (karmaWalletCards.virtualCards > 0 && karmaWalletCards.physicalCard > 0) {
     console.error(`User already has karma cards: ${user._id}`);
   }
 
   // Order virtual card
   if (karmaWalletCards.virtualCards === 0) {
-    console.log('//// Ordering virtual card');
     virtualCardResponse = await createCard({
       userToken: user.integrations.marqeta.userToken,
       cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN,
     });
 
-    console.log('////// Order Virtual Card Response', virtualCardResponse);
-
     if (!!virtualCardResponse) {
       // virtual card should start out in active state
-      console.log('//// Mapping physical card');
       virtualCardResponse.state = MarqetaCardState.ACTIVE;
       await mapMarqetaCardtoCard(user._id.toString(), virtualCardResponse); // map physical card
     } else {
@@ -45,16 +39,12 @@ export const exec = async (user: IUserDocument) => {
 
   // Order physical card
   if (karmaWalletCards.physicalCard === 0) {
-    console.log('//// Ordering physical card');
     physicalCardResponse = await createCard({
       userToken: user.integrations.marqeta.userToken,
       cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN,
     });
 
-    console.log('////// Order Physical Card Response', physicalCardResponse);
-
     if (!!physicalCardResponse) {
-      console.log('//// Mapping physical card');
       await mapMarqetaCardtoCard(user._id.toString(), physicalCardResponse); // map physical card
     } else {
       console.log(`[+] Card Creation Error: Error creating physical card for user with id: ${user._id}`);

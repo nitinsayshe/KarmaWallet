@@ -460,12 +460,12 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     last_four: encrypt(cardFromWebhook?.last_four),
     expr_month: month,
     expr_year: year,
-    created_time: existingCard?.integrations.marqeta.created_time,
+    created_time: existingCard?.integrations?.marqeta?.created_time,
     pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
     state: cardFromWebhook?.state,
     fulfillment_status: cardFromWebhook?.fulfillment_status,
-    reason: cardFromWebhook.reason,
-    reason_code: cardFromWebhook.reason_code,
+    reason: cardFromWebhook?.reason,
+    reason_code: cardFromWebhook?.reason_code,
   };
 
   // if not an existing card, create a new card

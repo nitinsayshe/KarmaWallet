@@ -39,6 +39,5 @@ export const login = async (req: IRequest, { email, password, biometricSignature
     await addFCMAndDeviceInfo(user, fcmToken, deviceInfo);
   }
 
-  // await openBrowserAndAddShareASaleCode(user);
   return { user, authKey };
 };

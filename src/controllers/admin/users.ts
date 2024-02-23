@@ -26,7 +26,7 @@ export const getUsersPaginated: IRequestHandler = async (req, res) => {
     }
 
     const results = await UserService.getUsersPaginated(req, query);
-    const users = results.docs.map((d) => UserService.getShareableUser(d));
+    const users = results.docs.map((d) => UserUtilitiesService.getShareableUser(d));
     const docs: (Partial<IUserDocument> & { accountIsLocked: boolean })[] = [];
     console.log('adding account lock status to users', JSON.stringify(users, null, 2));
     // add the account lock status to these users

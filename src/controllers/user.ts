@@ -1,4 +1,5 @@
 import * as UserService from '../services/user';
+import * as UserUtils from '../services/user/utils';
 import * as output from '../services/output';
 import { verifyRequiredFields } from '../lib/requestData';
 import { ErrorTypes } from '../lib/constants';
@@ -29,7 +30,7 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
     }
     const { password, name, token, promo } = body;
     const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo });
-    output.api(req, res, { user: UserService.getShareableUser(user), groupCode }, authKey);
+    output.api(req, res, { user: UserUtils.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -47,7 +48,7 @@ export const login: IRequestHandler<{}, {}, UserServiceTypes.ILoginData> = async
       deviceInfo,
     });
 
-    output.api(req, res, UserService.getShareableUser(user), authKey);
+    output.api(req, res, UserUtils.getShareableUser(user), authKey);
   } catch (err) {
     setRateLimiterHeaders(req, res);
     output.error(req, res, asCustomError(err));
@@ -74,7 +75,7 @@ export const submitSupportTicket: IRequestHandler<{}, {}, SupportTicketService.I
 
 export const getProfile: IRequestHandler = async (req, res) => {
   try {
-    output.api(req, res, UserService.getShareableUser(req.requestor));
+    output.api(req, res, UserUtils.getShareableUser(req.requestor));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -92,7 +93,7 @@ export const logout: IRequestHandler = async (req, res) => {
 export const updateProfile: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = async (req, res) => {
   try {
     const user = await UserService.updateProfile(req);
-    output.api(req, res, UserService.getShareableUser(user));
+    output.api(req, res, UserUtils.getShareableUser(user));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -101,7 +102,7 @@ export const updateProfile: IRequestHandler<{}, {}, UserServiceTypes.IUserData> 
 export const updatePassword: IRequestHandler<{}, {}, UserServiceTypes.IUpdatePasswordBody> = async (req, res) => {
   try {
     const user = await UserService.updatePassword(req);
-    output.api(req, res, UserService.getShareableUser(user));
+    output.api(req, res, UserUtils.getShareableUser(user));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }
@@ -142,7 +143,7 @@ UserServiceTypes.ILoginData & UserServiceTypes.IUpdatePasswordBody
 > = async (req, res) => {
   try {
     const user = await UserService.resetPasswordFromToken(req);
-    output.api(req, res, UserService.getShareableUser(user));
+    output.api(req, res, UserUtils.getShareableUser(user));
     await unblockFromEmailLimiterOnSuccess(req, res, KWRateLimiterKeyPrefixes.Login);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -176,7 +177,7 @@ export const getTestIdentities: IRequestHandler<{}, {}, {}> = async (req, res) =
     output.api(
       req,
       res,
-      data.map((d) => UserService.getShareableUser(d)),
+      data.map((d) => UserUtils.getShareableUser(d)),
     );
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -7,6 +7,7 @@ import { GroupModel } from '../../../models/group';
 import { IUrlParam, IUserDocument } from '../../../models/user';
 import { joinGroup } from '../../groups/utils';
 import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
+import { getDaysFromPreviousDate } from '../../../lib/date';
 
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
@@ -197,8 +198,12 @@ export const hasVirtualCard = async (userObject: IUserDocument) => {
   return false;
 };
 
-// eslint-disable-next-line
-export const openBrowserAndAddShareASaleCode = async (sscid: any, trackingid: any, xtype: any) => {
+export const openBrowserAndAddShareASaleCode = async (sscid: string, trackingid: string, xtype: string, sscidCreatedOn: any) => {
+  if (!sscid || !trackingid || !xtype || !sscidCreatedOn) return;
+
+  const daysBetweenCreatedSscidAndNow = getDaysFromPreviousDate(sscidCreatedOn);
+  if (daysBetweenCreatedSscidAndNow <= 0) return;
+
   const browser = await puppeteer.launch({
     headless: true,
   });
@@ -222,6 +227,7 @@ export const openBrowserAndAddShareASaleCode = async (sscid: any, trackingid: an
     document.body.appendChild(script);
   }, trackingid, xtype);
 
+  // close the browser after 2 seconds with set timeout to allow the page to load. Look into using a better approach?
   setTimeout(async () => {
     await page.close();
     await browser.close();

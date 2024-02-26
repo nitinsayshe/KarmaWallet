@@ -46,6 +46,7 @@ export interface IVisitorIntegrations {
     sscid?: string;
     xTypeParam?: string;
     sscidCreatedOn?: string;
+    trackingId?: string;
   };
   marqeta?: IMarqetaVisitorData;
   complyAdvantage?: IComplyAdvantageIntegration;
@@ -93,6 +94,7 @@ const visitorSchema = new Schema({
       sscid: { type: String },
       xTypeParam: { type: String },
       sscidCreatedOn: { type: String },
+      trackingId: { type: String },
     },
     complyAdvantage: ComplyAdvantageIntegrationSchema,
     marqeta: {

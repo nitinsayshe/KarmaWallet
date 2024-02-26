@@ -472,12 +472,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     sscid,
     sscidCreatedOn,
     xTypeParam: xType,
+    trackingId: _visitor.integrations.shareASale.trackingId,
   };
 
-  // console.log('/////////////User kard apply success, make new browser window', 'sscid:', sscid, 'xtype:', xType, '/////// visitor', _visitor, 'userDocument', userDocument, '///////////////////');
-  // if user has sscid/shareasale params use that info to call script that creates the pupeteer browser instance etc.
-  console.log(userDocument.integrations.shareasale, 'userDocument.integrations.shareasale');
-  await openBrowserAndAddShareASaleCode(sscid, userDocument.integrations.shareasale.trackingId, xType);
+  console.log('//////////////', userDocument.integrations.shareasale, '//////////////////////////d');
+  await openBrowserAndAddShareASaleCode(sscid, userDocument.integrations.shareasale.trackingId, xType, sscidCreatedOn);
 
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);

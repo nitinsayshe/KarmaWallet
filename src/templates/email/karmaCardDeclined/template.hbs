@@ -1,6 +1,10 @@
 <div class='card'>
   <p class='salutation-text'>Hi {{name}},</p>
-  <p class='body-text'>{{message}}</p>
+   {{#if acceptedDocuments}}
+    <p class='body-text'>Your application is currently on hold pending further identity verification.</p>
+   {{else}}
+    <p class='body-text'>Your application has been declined due to insufficient identity verification. Please contact support@karmawallet.io so an associate may provide next steps for verification.</p>
+   {{/if}}
    {{#if solutionText}}
     <p class='body-text'>{{solutionText}}</p>
     {{#if acceptedDocuments}}
@@ -11,7 +15,7 @@
     </ul>
     {{/if}}  
   {{/if}}
-  <p class='body-text'>You have 10 days from today to submit documentation for review. After 10 days, your application will be closed and you will need to reapply.</p>
+  <p class='body-text'>Failure to reconcile indentity verification within 10 days will result in application closure, requiring you to reapply. We appreciate your prompt attention to this matter and thank you for your cooperation.</p>
   <div class='signature-container'>
     <p>Thanks,</p>
     <p>Karma Wallet Support</p>

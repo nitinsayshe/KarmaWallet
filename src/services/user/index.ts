@@ -663,7 +663,6 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
       if (!existingKarmaWelcomeNotification) {
         console.log('////// CREATE NEW CARDS FOR USER TRANSITIONING TO ACTIVE STATUS //////');
         await createKarmaCardWelcomeUserNotification(existingUser, true);
-        console.log('/////// Ordering cards from the User webhook for an existing user');
         executeOrderKarmaWalletCardsJob(existingUser);
       }
     }

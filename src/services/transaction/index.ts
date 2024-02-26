@@ -454,6 +454,7 @@ export const getShareableTransaction = async ({
   status,
   amount,
   date,
+  bank,
   reversed,
   createdOn,
   lastModified,
@@ -467,6 +468,8 @@ export const getShareableTransaction = async ({
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name ? getShareableUser(user as IUserDocument) : user;
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
+
+  const _bank = bank || null;
 
   const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
     ? getShareableCompany(company as ICompanyDocument)
@@ -491,6 +494,7 @@ export const getShareableTransaction = async ({
     subType,
     status,
     group,
+    ...(!!_bank && { bank: _bank }),
   };
 
   if (integrations?.rare) {

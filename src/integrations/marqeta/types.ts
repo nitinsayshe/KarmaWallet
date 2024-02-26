@@ -226,6 +226,7 @@ export interface IACHBankTransfer {
   channel: string;
   funding_source_token: string;
   type: string;
+  bank?: any;
   currency_code: string;
   transfer_speed: string;
   status: string;

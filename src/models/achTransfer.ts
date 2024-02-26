@@ -24,6 +24,14 @@ export enum IACHTransferTypes {
   PULL = 'PULL'
 }
 
+export interface IBank {
+  name: string;
+  subtype: string;
+  institution: string;
+  mask: string;
+  type: string;
+}
+
 export interface IACHTransition {
   token: string;
   bank_transfer_token: string;
@@ -45,6 +53,7 @@ export interface IShareableACHTransfer {
   type: IACHTransferTypes;
   currency_code: string;
   transfer_speed: string;
+  bank: IBank;
   status: IACHTransferStatuses;
   transitions: IACHTransition;
   created_time: Date;
@@ -80,6 +89,13 @@ const ACHTransferSchema = new Schema({
   currency_code: { type: String },
   transfer_speed: { type: String },
   status: { type: String, enum: Object.values(IACHTransferStatuses) },
+  bank: {
+    name: { type: String },
+    subtype: { type: String },
+    type: { type: String },
+    institution: { type: String },
+    mask: { type: String },
+  },
   transitions: [
     {
       token: { type: String },

@@ -21,6 +21,7 @@ import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
 import { IShareableUser, IUserDocument } from './user';
+import { IBank } from './achTransfer';
 
 export enum MatchTypes {
   Offset = 'offset',
@@ -138,6 +139,7 @@ export interface IShareableTransaction {
   card: IRef<ObjectId, IShareableCard>;
   sector: IRef<ObjectId, ISector>;
   amount: number;
+  bank?: IBank;
   status: TransactionModelStateEnumValues;
   type?: TransactionTypeEnumValues;
   subType?: TransactionSubtypeEnumValues;
@@ -162,6 +164,7 @@ export interface ITransaction extends IShareableTransaction {
   association?: IUserOrGroup;
   card: IRef<ObjectId, ICardDocument>;
   cardId: IRef<ObjectId, ICardDocument>;
+  bank?: IBank;
   company: IRef<ObjectId, ICompanyDocument>;
   companyId: IRef<ObjectId, ICompanyDocument>;
   matched?: ITransactionMatch;
@@ -205,6 +208,13 @@ export const transactionSchemaDefinition = {
   cardId: {
     type: Schema.Types.ObjectId,
     ref: 'card',
+  },
+  bank: {
+    name: { type: String },
+    subtype: { type: String },
+    type: { type: String },
+    institution: { type: String },
+    mask: { type: String },
   },
   category: { type: Number },
   subCategory: { type: Number },
@@ -386,5 +396,5 @@ transactionSchema.plugin(mongooseAggregatePaginate);
 
 export const TransactionModel = model<ITransactionDocument, IAggregatePaginateModel<ITransactionDocument>>(
   'transaction',
-  transactionSchema
+  transactionSchema,
 );

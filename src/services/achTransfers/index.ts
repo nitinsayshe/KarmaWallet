@@ -9,7 +9,7 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
-import { ACHTransferModel, IACHTransfer } from '../../models/achTransfer';
+import { ACHTransferModel, IACHTransfer, IBank } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
 import { createACHInitiationUserNotification, createACHTransferCancelledUserNotification, createACHTransferReturnedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { BankConnectionModel } from '../../models/bankConnection';
@@ -23,13 +23,12 @@ export interface IACHTransferParams {
 }
 
 // store ACH bank transfer  to karma DB
-export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer) => {
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer, bank:IBank) => {
   const { token } = ACHBankTransferData;
   let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
   if (!ACHBankTranfer) {
-    ACHBankTranfer = await ACHTransferModel.create({ userId, ...ACHBankTransferData });
+    ACHBankTranfer = await ACHTransferModel.create({ userId, bank, ...ACHBankTransferData });
   }
-
   return ACHBankTranfer;
 };
 
@@ -130,7 +129,7 @@ export const updateACHTransfer = async (req: IRequest<IACHTransferParams, {}, IM
 export const getACHSourceBankName = async (accessToken: string) => {
   const bankConnection = await BankConnectionModel.findOne({ 'integrations.plaid.accessToken': accessToken });
   if (!bankConnection) throw new CustomError('Unable to find bank connection.', ErrorTypes.GEN);
-  return bankConnection.institution;
+  return bankConnection;
 };
 
 export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHBankTransfer>) => {
@@ -148,23 +147,32 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   if (isError) throw new CustomError(message, ErrorTypes.INVALID_ARG);
   // Create ACH transfer in marqeta
   const achTransferData = await createACHBankTransfer(req);
+  console.log('##############');
+  console.log(JSON.stringify(achTransferData));
+  console.log('##############');
+
   if (!achTransferData) throw new CustomError('Unable to create ACH transfer.', ErrorTypes.GEN);
   const { data } = achTransferData;
+  const bankConnection = await BankConnectionModel.findOne({ userId: _id, fundingSourceToken });
+  const { mask, name, subtype, institution, type } = bankConnection;
+  const bank = { mask, name, subtype, institution, type };
   // Store ACH transfer in karma database
-  const savedACHTransfer = await mapACHBankTransfer(_id, data);
+  const savedACHTransfer = await mapACHBankTransfer(_id, data, bank);
   if (!savedACHTransfer) throw new CustomError('Error saving the ACH Transfer to the database.', ErrorTypes.GEN);
 
   if (achTransferData.data.status === ACHTransferTransitionStatusEnum.Pending) {
     const transferBankData = await ACHFundingSourceModel.findOne({
       token: fundingSourceToken,
     });
-    const bankName = await getACHSourceBankName(transferBankData.accessToken);
+    // const bankConnection = await getACHSourceBankName(transferBankData.accessToken);
+    // map the marqeta Transacion to Karma Transacation DB
+    // const transactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
     // Create user notification
     await createACHInitiationUserNotification({
       user: req.requestor,
       amount,
       accountMask: transferBankData.account_suffix.toString(),
-      accountType: `${bankName} ${transferBankData.account_type.toString()}`,
+      accountType: `${bankConnection?.institution} ${transferBankData.account_type.toString()}`,
       date: dayjs(data.created_time).utc().format('MMMM DD, YYYY'),
     });
   }

@@ -280,6 +280,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
+      { status: { $ne: TransactionModelStateEnum.Declined } },
       { amount: { $gt: 0 } },
     ],
   };

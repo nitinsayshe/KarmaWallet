@@ -147,10 +147,6 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   if (isError) throw new CustomError(message, ErrorTypes.INVALID_ARG);
   // Create ACH transfer in marqeta
   const achTransferData = await createACHBankTransfer(req);
-  console.log('##############');
-  console.log(JSON.stringify(achTransferData));
-  console.log('##############');
-
   if (!achTransferData) throw new CustomError('Unable to create ACH transfer.', ErrorTypes.GEN);
   const { data } = achTransferData;
   const bankConnection = await BankConnectionModel.findOne({ userId: _id, fundingSourceToken });

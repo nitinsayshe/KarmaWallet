@@ -202,7 +202,7 @@ export const openBrowserAndAddShareASaleCode = async (sscid: string, trackingid:
   if (!sscid || !trackingid || !xtype || !sscidCreatedOn) return;
 
   const daysBetweenCreatedSscidAndNow = getDaysFromPreviousDate(sscidCreatedOn);
-  if (daysBetweenCreatedSscidAndNow <= 0) return;
+  if (daysBetweenCreatedSscidAndNow >= 90) return;
 
   const browser = await puppeteer.launch({
     headless: true,

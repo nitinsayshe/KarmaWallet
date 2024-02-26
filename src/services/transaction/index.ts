@@ -280,6 +280,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
+      { status: { $ne: TransactionModelStateEnum.Declined } },
       { amount: { $gt: 0 } },
     ],
   };
@@ -304,7 +305,6 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
   if (!!startDate) filter.$and.push(startDateQuery);
   if (!!endDate) filter.$and.push(endDateQuery);
-  if (!includeDeclined) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
 
   const transactions = await TransactionModel.paginate(filter, paginationOptions);
 

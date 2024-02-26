@@ -894,7 +894,7 @@ export const sendKarmaCardDeclinedEmail = async ({
   visitor,
 }: IKarmaCardDeclinedEmailData) => {
   const emailTemplateConfig = EmailTemplateConfigs.KarmaCardDeclined;
-  const subject = 'Next Steps: Karma Wallet Card Application Pending/Declined';
+  const subject = 'Action Needed: Complete Your Identity Verification with Karma Wallet';
   const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'reason', 'acceptedDocuments'], {
     domain,
     recipientEmail,

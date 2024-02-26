@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { BankConnectionModel, IBankConnection, IBankConnectionDocument, IBankRequestBody, IShareableBankConnection } from '../../models/bankConnection';
 import { IRequest } from '../../types/request';
 import { IUserDocument } from '../../models/user';
-import { getShareableUser } from '../user';
+import { getShareableUser } from '../user/utils';
 import { IRef } from '../../types/model';
 import { BankConnectionStatus, ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';

@@ -1,18 +1,31 @@
 import { Router } from 'express';
 import * as TransactionController from '../../../controllers/integrations/marqeta/transactions';
+import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
 
-router.route('/')
-  .post(TransactionController.makeTransaction);
+router.post(
+  '/',
+  authenticate,
+  TransactionController.makeTransaction,
+);
 
-router.route('/advice')
-  .post(TransactionController.makeTransactionAdvice);
+router.post(
+  '/advice',
+  authenticate,
+  TransactionController.makeTransactionAdvice,
+);
 
-router.route('/clearing')
-  .post(TransactionController.makeTransactionClearing);
+router.post(
+  '/clearing',
+  authenticate,
+  TransactionController.makeTransactionClearing,
+);
 
-router.route('/list')
-  .get(TransactionController.listTransaction);
+router.get(
+  '/list',
+  authenticate,
+  TransactionController.listTransaction,
+);
 
 export default router;

@@ -30,7 +30,7 @@ import {
   getArticleRecommendationsBasedOnTransactionHistory, getArticlesForCompany, getCompaniesWithArticles, URLs,
 } from '../services/article/utils/recommendations';
 import { getActiveCampaignSubscribedListIds, getNonActiveCampaignSubscriptions, getUserGroupSubscriptionsToUpdate, reconcileActiveCampaignListSubscriptions, updateNewKWCardUserSubscriptions, updateUserSubscriptions } from '../services/subscription';
-import { iterateOverUsersAndExecWithDelay, IterationRequest, IterationResponse } from '../services/user/utils';
+import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
   getMonthlyMissedCashBack,
@@ -86,9 +86,9 @@ const getGroupSubscriptionListsToUpdate = async (user: IUserDocument): Promise<I
 const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> => getGroupSubscriptionListsToUpdate(user);
 
 const iterateOverUsersAndExecImportReqWithDelay = async <T>(
-  request: IterationRequest<T>,
+  request: UserIterationRequest<T>,
   prepareBulkImportRequest: (
-    req: IterationRequest<T>,
+    req: UserIterationRequest<T>,
     userBatch: PaginateResult<IUser>,
     customFields: { name: string; id: number }[]
   ) => Promise<IContactsImportData>,
@@ -124,7 +124,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
 };
 
 const prepareSyncUsersRequest = async (
-  req: IterationRequest<SyncAllUsersCustomFields>,
+  req: UserIterationRequest<SyncAllUsersCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: FieldIds,
 ): Promise<IContactsImportData> => {
@@ -214,7 +214,7 @@ export const onFailed = (_: SandboxedJob, err: Error) => {
 
 const syncAllUsers = async (syncType: ActiveCampaignSyncTypes, httpClient: AxiosInstance) => {
   const msDelayBetweenBatches = 1500;
-  const req: IterationRequest<SyncAllUsersCustomFields> = {
+  const req: UserIterationRequest<SyncAllUsersCustomFields> = {
     httpClient,
     batchQuery: {},
     batchLimit: 150,
@@ -306,7 +306,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
 };
 
 const prepareMonthlyCashbackSimulationImportRequest = async (
-  request: IterationRequest<CashbackSimulationCustomFields>,
+  request: UserIterationRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -369,7 +369,7 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
 };
 
 const prepareWeeklyCashbackSimulationImportRequest = async (
-  request: IterationRequest<CashbackSimulationCustomFields>,
+  request: UserIterationRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -435,7 +435,7 @@ const syncEstimatedCashbackFieldsWeekly = async (httpClient?: AxiosInstance) => 
 
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<CashbackSimulationCustomFields> = {
+  const req: UserIterationRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: {
       _id: { $nin: usersWithCommissionsLastWeek },
@@ -455,7 +455,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
 
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<CashbackSimulationCustomFields> = {
+  const req: UserIterationRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: { _id: { $nin: usersWithCommissionsLastMonth } },
     batchLimit: 100,
@@ -468,7 +468,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
 };
 
 const prepareSpendingAnalysisImportRequest = async (
-  _: IterationRequest<SpendingAnalysisCustomFields>,
+  _: UserIterationRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -538,7 +538,7 @@ const prepareSpendingAnalysisImportRequest = async (
 const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<{}> = {
+  const req: UserIterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -548,7 +548,7 @@ const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
 };
 
 const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
-  _: IterationRequest<SpendingAnalysisCustomFields>,
+  _: UserIterationRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -594,7 +594,7 @@ const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
 };
 
 const prepareArticleRecommendationSyncRequest = async (
-  req: IterationRequest<ArticleRecommedationsCustomFields>,
+  req: UserIterationRequest<ArticleRecommedationsCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -645,7 +645,7 @@ const prepareArticleRecommendationSyncRequest = async (
 const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<{}> = {
+  const req: UserIterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -657,7 +657,7 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
 const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<{}> = {
+  const req: UserIterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -665,7 +665,7 @@ const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
 
   await iterateOverUsersAndExecWithDelay(
     req,
-    async (_: IterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<IterationResponse<{}>[]> => {
+    async (_: UserIterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<UserIterationResponse<{}>[]> => {
       await Promise.all(
         userBatch.docs.map(async (user: IUserDocument) => {
           const email = user?.emails?.find((e) => e.primary)?.email;
@@ -702,7 +702,7 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
     companiesWithArticles.map(async (company) => getArticlesForCompany(company)),
   );
 
-  const req: IterationRequest<ArticleRecommedationsCustomFields> = {
+  const req: UserIterationRequest<ArticleRecommedationsCustomFields> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,

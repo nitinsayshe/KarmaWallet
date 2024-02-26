@@ -1,11 +1,13 @@
-import { Schema, model, Document, PaginateModel, ObjectId } from 'mongoose';
+import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { IModel, IRef } from '../types/model';
+import { IComplyAdvantageIntegration } from '../integrations/complyAdvantage/types';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
 import { UserRoles } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
-import { IPromo, IPromoDocument } from './promo';
+import { IModel, IRef } from '../types/model';
 import { IArticle } from './article';
-import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
+import { IPromo, IPromoDocument } from './promo';
+import { ComplyAdvantageIntegrationSchema } from './types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -115,6 +117,7 @@ export interface IUserIntegrations {
   biometrics?: IBiometrics[];
   marqeta?: IMarqetaUserIntegrations;
   fcm?: IFCMTokenIntegration[];
+  complyAdvantage?: IComplyAdvantageIntegration;
 }
 
 export interface IShareableUser {
@@ -275,6 +278,7 @@ const userSchema = new Schema({
       },
     ],
     fcm: [{ token: String, deviceId: String }],
+    complyAdvantage: ComplyAdvantageIntegrationSchema,
   },
   deviceInfo: [{
     manufacturer: { type: String },

@@ -431,7 +431,7 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-// exclude karma collective cashback offers by default (web), mobile app will need to pass thru `includeKarmaCollective=true`
+// exclude karma collective cashback offers, mobile app will need to pass thru `includeKarmaCollective=true`
 export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
   let unsdgQuery = {};
@@ -445,6 +445,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const cashbackOnly = !!filter?.merchant;
   const karmaCollectiveMember = !!filter?.karmaCollectiveMember;
   const includeKarmaCollective = !!filter?.includeKarmaCollective;
+  const hideKardOffers = !!filter?.hideKardOffers;
 
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
@@ -548,6 +549,15 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       aggregateSteps.push({
         $match: {
           'merchant.karmaCollectiveMember': { $ne: true },
+        },
+      });
+    }
+
+    if (hideKardOffers) {
+      delete filter.hideKardOffers;
+      aggregateSteps.push({
+        $match: {
+          'merchant.integrations.kard': { $exists: false },
         },
       });
     }

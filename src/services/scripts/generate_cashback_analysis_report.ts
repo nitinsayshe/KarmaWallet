@@ -6,7 +6,7 @@ import path from 'path';
 import { SafeParseError, z } from 'zod';
 import { roundToPercision } from '../../lib/misc';
 import { IUser, IUserDocument } from '../../models/user';
-import { iterateOverUsersAndExecWithDelay, IterationRequest, IterationResponse } from '../user/utils';
+import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 import {
   getCashbackCompanies,
   getMissedCashBackForDateRange,
@@ -44,9 +44,9 @@ type RangedCashbackSimulationFields = {
 };
 
 const runUserCashbackSimulation = async (
-  req: IterationRequest<RangedCashbackSimulationFields>,
+  req: UserIterationRequest<RangedCashbackSimulationFields>,
   userBatch: PaginateResult<IUser>,
-): Promise<IterationResponse<CashbackUserReport>[]> => {
+): Promise<UserIterationResponse<CashbackUserReport>[]> => {
   let missedCashbackMetrics = await Promise.all(
     userBatch?.docs?.map(async (user) => getMissedCashBackForDateRange(user as unknown as IUserDocument, req.fields?.startDate, req.fields?.endDate)),
   );
@@ -56,7 +56,7 @@ const runUserCashbackSimulation = async (
     return !!metric.email && !(validationResult as SafeParseError<string>)?.error;
   });
 
-  const userReports: IterationResponse<CashbackUserReport>[] = missedCashbackMetrics?.map((metric) => {
+  const userReports: UserIterationResponse<CashbackUserReport>[] = missedCashbackMetrics?.map((metric) => {
     const {
       id,
       estimatedMissedCommissionsAmount,
@@ -84,7 +84,7 @@ const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<Ca
   const usersWithTransactionsInDateRange = await getUsersWithTransactionsInDateRange(startDate, endDate);
   const msDelayBetweenBatches = 2000;
 
-  const request: IterationRequest<RangedCashbackSimulationFields> = {
+  const request: UserIterationRequest<RangedCashbackSimulationFields> = {
     batchQuery: {
       $and: [{ _id: { $nin: usersWithCommissionsInDateRange } }, { _id: { $in: usersWithTransactionsInDateRange } }],
     },
@@ -94,13 +94,13 @@ const runCashbackSimulation = async (startDate: Date, endDate: Date): Promise<Ca
       endDate,
     },
   };
-  const report: IterationResponse<CashbackUserReport>[] = await iterateOverUsersAndExecWithDelay(
+  const report: UserIterationResponse<CashbackUserReport>[] = await iterateOverUsersAndExecWithDelay(
     request,
     runUserCashbackSimulation,
     msDelayBetweenBatches,
   );
 
-  return report.map((r: IterationResponse<CashbackUserReport>) => ({ ...r.fields, userId: r.userId }));
+  return report.map((r: UserIterationResponse<CashbackUserReport>) => ({ ...r.fields, userId: r.userId }));
 };
 
 const getPrevWeeksCashBackReport = async (
@@ -273,9 +273,9 @@ const getCashbackMerchantFrequencyMetricsForDateRange = async (
 };
 
 const genereateMissedCashbackMerchantFrequencyReport = async (
-  req: IterationRequest<MissedCashbackMerchantFrequencyRequest>,
+  req: UserIterationRequest<MissedCashbackMerchantFrequencyRequest>,
   userBatch: PaginateResult<IUser>,
-): Promise<IterationResponse<MissedCashbackMerchantFrequencyReport>[]> => {
+): Promise<UserIterationResponse<MissedCashbackMerchantFrequencyReport>[]> => {
   // get all transactions for this user in the date range (with cashback merchants)
   // grouped by merchant
   // count the number of transactions for each merchant
@@ -290,7 +290,7 @@ const genereateMissedCashbackMerchantFrequencyReport = async (
       )),
     )
   ).filter((metric) => metric?.merchantFrequencies?.length > 0);
-  const userReports: IterationResponse<MissedCashbackMerchantFrequencyReport>[] = cashbackMerchantFrequencyMetrics?.map(
+  const userReports: UserIterationResponse<MissedCashbackMerchantFrequencyReport>[] = cashbackMerchantFrequencyMetrics?.map(
     (metric) => {
       const { userId, merchantFrequencies } = metric;
       return {
@@ -319,7 +319,7 @@ export const generateMissedCashbackMerchantFrequencyReport = async (weeksBack: n
 
   const msDelayBetweenBatches = 2000;
 
-  const request: IterationRequest<MissedCashbackMerchantFrequencyRequest> = {
+  const request: UserIterationRequest<MissedCashbackMerchantFrequencyRequest> = {
     batchQuery: {
       $and: [{ _id: { $nin: usersWithCommissionsInDateRange } }, { _id: { $in: usersWithTransactionsInDateRange } }],
     },

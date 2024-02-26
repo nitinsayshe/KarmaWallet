@@ -14,6 +14,7 @@ import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../.
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
 import { IVerifyTokenBody } from '../user/types';
+import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -30,7 +31,8 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
   shareASale?: boolean;
-  marqeta?: IMarqetaVisitorData
+  marqeta?: IMarqetaVisitorData;
+  complyAdvantage?: IComplyAdvantageIntegration;
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -102,19 +104,20 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
     if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
       visitorInfo.integrations = {};
-      if (!!info.groupCode) {
-        visitorInfo.integrations.groupCode = info.groupCode;
-      }
+      // group code
+      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
+      // url params
       if (!!info.params) {
         visitorInfo.integrations.urlParams = info.params;
         if (info.params.find(p => p.key === 'groupCode')) {
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
         }
       }
+      // shareasale
       if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
     }
-    const visitor = await VisitorModel.create(visitorInfo);
-    return visitor;
+
+    return await VisitorModel.create(visitorInfo);
   } catch (err) {
     throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.GEN);
   }
@@ -128,10 +131,11 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
+      if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
+      if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
+      if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
     }
-    if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
-    if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
-    visitor.save();
+    await visitor.save();
     return visitor;
   } catch (err) {
     throw new CustomError(`Error updating visitor: ${err} `, ErrorTypes.GEN);

@@ -149,6 +149,7 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
   const achTransferData = await createACHBankTransfer(req);
   if (!achTransferData) throw new CustomError('Unable to create ACH transfer.', ErrorTypes.GEN);
   const { data } = achTransferData;
+  // get the bank Responsible for this ACH transfer
   const bankConnection = await BankConnectionModel.findOne({ userId: _id, fundingSourceToken });
   const { mask, name, subtype, institution, type } = bankConnection;
   const bank = { mask, name, subtype, institution, type };

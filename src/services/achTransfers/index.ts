@@ -9,7 +9,8 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
-import { ACHTransferModel, IACHTransfer, IBank } from '../../models/achTransfer';
+import { IACHTransfer, IBank } from '../../models/achTransfer/types';
+import { ACHTransferModel } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
 import { createACHInitiationUserNotification, createACHTransferCancelledUserNotification, createACHTransferReturnedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { BankConnectionModel } from '../../models/bankConnection';
@@ -23,7 +24,7 @@ export interface IACHTransferParams {
 }
 
 // store ACH bank transfer  to karma DB
-export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer, bank:IBank) => {
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer, bank: IBank) => {
   const { token } = ACHBankTransferData;
   let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
   if (!ACHBankTranfer) {

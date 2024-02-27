@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
-import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserStatus } from '../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserIntegrations, IMarqetaUserStatus } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { formatName, generateRandomPasswordString } from '../../lib/misc';
 import {
@@ -14,7 +14,7 @@ import {
   IShareableCardApplication,
   KarmaCardApplicationModel,
 } from '../../models/karmaCardApplication';
-import { IMarqetaUserIntegrations, IUrlParam, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
@@ -33,6 +33,7 @@ import { createComplyAdvantageSearch, ICreateSearchForUserData, userPassesComply
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
+import { IUrlParam } from '../user/types';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 

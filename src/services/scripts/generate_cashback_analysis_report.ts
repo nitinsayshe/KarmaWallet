@@ -5,7 +5,7 @@ import { PaginateResult, Types } from 'mongoose';
 import path from 'path';
 import { SafeParseError, z } from 'zod';
 import { roundToPercision } from '../../lib/misc';
-import { IUser, IUserDocument } from '../../models/user';
+import { IUserDocument } from '../../models/user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 import {
   getCashbackCompanies,
@@ -13,6 +13,7 @@ import {
   getUsersWithCommissionsInDateRange,
   getUsersWithTransactionsInDateRange,
 } from '../user/utils/metrics';
+import { IUser } from '../../models/user/types';
 
 type CashbackUserReport = {
   userId: Types.ObjectId;

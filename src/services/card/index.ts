@@ -10,7 +10,6 @@ import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
 import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
@@ -24,6 +23,8 @@ import { PushNotificationTypes } from '../../lib/constants/notification';
 import { getShareableUser } from '../user/utils';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Card } from '../../clients/marqeta/card';
+import { IUserDocument, UserModel } from '../../models/user';
+import { IShareableUser } from '../../models/user/types';
 
 dayjs.extend(utc);
 

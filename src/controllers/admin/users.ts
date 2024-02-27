@@ -2,13 +2,14 @@ import aqp from 'api-query-params';
 import { ObjectId } from 'mongoose';
 import { asCustomError } from '../../lib/customError';
 import { emailIsBlocked } from '../../middleware/rateLimiter';
-import { IUser, IUserDocument } from '../../models/user';
+import { IUserDocument } from '../../models/user';
 import * as output from '../../services/output';
 import * as UserService from '../../services/user';
 import * as UserTestIdentityService from '../../services/user/testIdentities';
 import * as UserUtilitiesService from '../../services/user/utils';
 import { IRef } from '../../types/model';
 import { IRequestHandler } from '../../types/request';
+import { IUser } from '../../models/user/types';
 
 export const getUsersPaginated: IRequestHandler = async (req, res) => {
   try {

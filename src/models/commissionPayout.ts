@@ -6,7 +6,7 @@ import {
   ObjectId,
 } from 'mongoose';
 import { IRef } from '../types/model';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 
 export enum KarmaCommissionPayoutStatus {
   Pending = 'pending',

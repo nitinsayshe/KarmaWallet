@@ -25,7 +25,8 @@ import { ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument } from '../../../models/merchant';
 import { IMerchantRateDocument } from '../../../models/merchantRate';
 import { ITransactionDocument } from '../../../models/transaction';
-import { IUserDocument, UserEmailStatus } from '../../../models/user';
+import { IUserDocument } from '../../../models/user';
+import { UserEmailStatus } from '../../../models/user/types';
 
 describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
   let testUserWithLinkedAccountNoKardIntegration: IUserDocument;

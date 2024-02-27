@@ -1,7 +1,8 @@
 import { UserRoles } from '../../lib/constants';
 import { DeleteRequestReason } from '../../models/deleteAccountRequest';
 import { ILegacyUserDocument } from '../../models/legacyUser';
-import { IUserIntegrations, IUserDocument } from '../../models/user';
+import { IUserDocument } from '../../models/user';
+import { IUserIntegrations } from '../../models/user/types';
 import { IRequest } from '../../types/request';
 
 export interface IVerifyTokenBody {
@@ -47,7 +48,7 @@ export interface IUserData extends ILoginData {
   pw?: string;
   shareASaleId?: boolean;
   referralParams?: IUrlParam[];
-  integrations?: IUserIntegrations
+  integrations?: IUserIntegrations;
 }
 export interface IRegisterUserData {
   name: string;

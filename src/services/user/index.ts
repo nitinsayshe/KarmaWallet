@@ -20,7 +20,7 @@ import { LegacyUserModel } from '../../models/legacyUser';
 import { IPromo, IPromoEvents, IPromoTypes, PromoModel } from '../../models/promo';
 import { TokenModel } from '../../models/token';
 import { TransactionModel } from '../../models/transaction';
-import { IUser, IUserDocument, IUserIntegrations, UserEmailStatus, UserModel, IDeviceInfo } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
@@ -46,6 +46,7 @@ import { ApplicationStatus } from '../../models/karmaCardApplication';
 import { UserNotificationModel } from '../../models/user_notification';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
+import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 
 dayjs.extend(utc);
 

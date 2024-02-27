@@ -161,9 +161,6 @@ export const initiateACHBankTransfer = async (req: IRequest<{}, {}, IMarqetaACHB
     const transferBankData = await ACHFundingSourceModel.findOne({
       token: fundingSourceToken,
     });
-    // const bankConnection = await getACHSourceBankName(transferBankData.accessToken);
-    // map the marqeta Transacion to Karma Transacation DB
-    // const transactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
     // Create user notification
     await createACHInitiationUserNotification({
       user: req.requestor,

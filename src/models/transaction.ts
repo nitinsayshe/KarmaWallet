@@ -165,7 +165,6 @@ export interface ITransaction extends IShareableTransaction {
   card: IRef<ObjectId, ICardDocument>;
   cardId: IRef<ObjectId, ICardDocument>;
   achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
-  achTransferId?: IRef<ObjectId, IShareableACHTransfer>;
   company: IRef<ObjectId, ICompanyDocument>;
   companyId: IRef<ObjectId, ICompanyDocument>;
   matched?: ITransactionMatch;
@@ -211,10 +210,6 @@ export const transactionSchemaDefinition = {
     ref: 'card',
   },
   achTransfer: {
-    type: Schema.Types.ObjectId,
-    ref: 'ach_transfer',
-  },
-  achTransferId: {
     type: Schema.Types.ObjectId,
     ref: 'ach_transfer',
   },

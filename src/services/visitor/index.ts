@@ -1,6 +1,5 @@
 import isemail from 'isemail';
 import { FilterQuery } from 'mongoose';
-import { nanoid } from 'nanoid';
 import { updateActiveCampaignContactData } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
 import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constants';
@@ -119,19 +118,10 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
       }
       // shareasale
       if (!!info.sscid && !!info.sscidCreatedOn && !!info.xTypeParam) {
-        let uniqueId = nanoid();
-        let existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
-
-        while (existingId) {
-          uniqueId = nanoid();
-          existingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
-        }
-
         visitorInfo.integrations.shareASale = {
           sscid: info.sscid,
           sscidCreatedOn: info.sscidCreatedOn,
           xTypeParam: info.xTypeParam,
-          trackingId: uniqueId,
         };
       }
     }
@@ -144,16 +134,16 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
 export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
+    if (!visitor.integrations) visitor.integrations = {};
     if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
+    if (!!info.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
+    if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
+    if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
     if (!!info.params) {
       visitor.integrations.urlParams = info.params;
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
-      if (!!info.sscid || visitor.integrations.shareASale.sscid) visitor.integrations.shareASale.sscid = info.sscid || visitor.integrations.shareASale.sscid;
-      if (!!info.sscidCreatedOn || visitor.integrations.shareASale.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn || visitor.integrations.shareASale.sscidCreatedOn;
-      if (!!info.xTypeParam || visitor.integrations.shareASale.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam || visitor.integrations.shareASale.xTypeParam;
-      if (!!info.trackingId || visitor.integrations.shareASale.trackingId) visitor.integrations.shareASale.xTypeParam = info.xTypeParam || visitor.integrations.shareASale.xTypeParam;
       if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
       if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
     }

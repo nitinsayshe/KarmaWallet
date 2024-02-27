@@ -1,5 +1,6 @@
 import { AxiosInstance } from 'axios';
 import { FilterQuery, ObjectId, PaginateResult, Types } from 'mongoose';
+import { nanoid } from 'nanoid';
 import { ErrorTypes } from '../../../lib/constants';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import { sleep } from '../../../lib/misc';
@@ -129,4 +130,16 @@ export const getUser = async (_: IRequest, query = {}) => {
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const createShareasaleTrackingId = async () => {
+  let uniqueId = nanoid();
+  let existingTrackingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+  while (existingTrackingId) {
+    uniqueId = nanoid();
+    existingTrackingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+  }
+
+  return uniqueId;
 };

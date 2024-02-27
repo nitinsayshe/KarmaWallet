@@ -33,6 +33,7 @@ import { createComplyAdvantageSearch, ICreateSearchForUserData, userPassesComply
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
+import { createShareasaleTrackingId } from '../user/utils';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -391,7 +392,14 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (!existingUser) {
     // Update the visitors marqeta Kyc status
-    _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, { marqeta, email, params: urlParams });
+    _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
+      marqeta,
+      email,
+      params: urlParams,
+      sscid,
+      sscidCreatedOn,
+      xTypeParam: xType,
+    });
   }
 
   const karmaCardApplication: IKarmaCardApplication = {
@@ -465,18 +473,22 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     codes: [],
   };
 
+  const trackingId = await createShareasaleTrackingId();
+
   karmaCardApplication.userId = userDocument._id.toString();
   userDocument.integrations.marqeta = marqeta;
   userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
-  userDocument.integrations.shareasale = {
-    sscid,
-    sscidCreatedOn,
-    xTypeParam: xType,
-    trackingId: _visitor.integrations.shareASale.trackingId,
-  };
 
-  console.log('//////////////', userDocument.integrations.shareasale, '//////////////////////////d');
-  await openBrowserAndAddShareASaleCode(sscid, userDocument.integrations.shareasale.trackingId, xType, sscidCreatedOn);
+  if (!!sscid && !!sscidCreatedOn && !!xType) {
+    userDocument.integrations.shareasale = {
+      sscid,
+      sscidCreatedOn,
+      xTypeParam: xType,
+      trackingId,
+    };
+  }
+
+  await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
 
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);

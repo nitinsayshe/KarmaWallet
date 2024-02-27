@@ -71,6 +71,17 @@ export enum ReasonCode {
   FailedInternalKyc = 'FailedInternalKyc',
 }
 
+export enum ShareASaleXType {
+  FREE = 'FREE',
+}
+
+interface PuppateerShareASaleParams {
+  sscid: string,
+  trackingid: string,
+  xtype: string,
+  sscidCreatedOn: any,
+}
+
 interface TransformedResponse {
   message: string;
   status: IMarqetaKycState;
@@ -198,8 +209,12 @@ export const hasVirtualCard = async (userObject: IUserDocument) => {
   return false;
 };
 
-export const openBrowserAndAddShareASaleCode = async (sscid: string, trackingid: string, xtype: string, sscidCreatedOn: any) => {
+export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerShareASaleParams) => {
+  const { sscid, trackingid, xtype, sscidCreatedOn } = shareASaleInfo;
+
   if (!sscid || !trackingid || !xtype || !sscidCreatedOn) return;
+
+  if (xtype !== ShareASaleXType.FREE) return;
 
   const daysBetweenCreatedSscidAndNow = getDaysFromPreviousDate(sscidCreatedOn);
   if (daysBetweenCreatedSscidAndNow >= 90) return;
@@ -215,7 +230,7 @@ export const openBrowserAndAddShareASaleCode = async (sscid: string, trackingid:
 
   await page.evaluate((trackingID = trackingid, xType = xtype) => {
     const img = document.createElement('img');
-    img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=lead&xType=${xType}`;
+    img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=sale&xType=${xType}`;
     img.width = 1;
     img.height = 1;
     document.body.appendChild(img);

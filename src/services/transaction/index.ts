@@ -459,7 +459,6 @@ export const getShareableTransaction = async ({
     user: _user,
     company: _company,
     card: _card,
-    achTransfer: _achtransfer,
     sector: _sector,
     amount,
     date,
@@ -473,6 +472,8 @@ export const getShareableTransaction = async ({
     status,
     group,
   };
+
+  if (!!_achtransfer) shareableTransaction.achTransfer = _achtransfer;
 
   if (integrations?.rare) {
     const { projectName, tonnes_amt: offsetsPurchased, certificateUrl } = integrations.rare;

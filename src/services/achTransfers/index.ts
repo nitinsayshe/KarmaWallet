@@ -24,7 +24,7 @@ export interface IACHTransferParams {
 }
 
 // store ACH bank transfer  to karma DB
-export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer, bank:IBank) => {
+export const mapACHBankTransfer = async (userId: string, ACHBankTransferData: IACHBankTransfer, bank: IBank) => {
   const { token } = ACHBankTransferData;
   let ACHBankTranfer = await ACHTransferModel.findOne({ userId, token });
   if (!ACHBankTranfer) {

@@ -440,7 +440,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       karmaCardApplication.userId = existingUser._id.toString();
       dataObj.user = existingUser;
       existingUser.integrations.marqeta = marqeta;
-      if (!!urlParams) existingUser.integrations.referrals.params.push(...urlParams);
+      if (!!urlParams) {
+        existingUser.integrations.referrals = {
+          params: urlParams,
+        };
+      }
       await existingUser.save();
     } else {
       karmaCardApplication.visitorId = _visitor._id;

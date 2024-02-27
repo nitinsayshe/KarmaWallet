@@ -322,7 +322,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
-    /* sleep(1000); */
     expect(newKardUser).toBeDefined();
     const updatedCards = await deleteKardUsersForUser(testUserWithKardIntegration._id);
     expect(updatedCards.length).toBe(1);
@@ -341,7 +340,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
-    /* sleep(1000); */
     expect(newKardUser).toBeDefined();
     const updatedCards = await deleteKardUsersForUser(testUserWithKardIntegration);
     expect(updatedCards.length).toBe(1);

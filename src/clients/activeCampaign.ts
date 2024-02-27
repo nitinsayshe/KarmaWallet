@@ -10,8 +10,8 @@ const customFieldsLimit = 100;
 
 export interface ICreateContactData {
   email: string;
-  firstName: string;
-  lastName: string;
+  firstName?: string;
+  lastName?: string;
   fieldValues?: Array<{ field: string; value: string }>;
   phone?: string;
 }

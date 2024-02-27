@@ -431,11 +431,11 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
       token: t.marqeta_transaction.bank_transfer_token,
     });
     if (!!achTransfer.bank) {
-      newTransaction.bank = achTransfer.bank;
+      newTransaction.achTransfer = achTransfer;
     }
   } catch (err) {
     console.error(err);
-    throw new CustomError(`Error looking up the card associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
+    throw new CustomError(`Error looking up the achTransfer-responsible-bank associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
   }
 
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);

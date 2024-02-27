@@ -21,7 +21,7 @@ import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
 import { IShareableUser, IUserDocument } from './user';
-import { IBank } from './achTransfer';
+import { IShareableACHTransfer } from './achTransfer';
 
 export enum MatchTypes {
   Offset = 'offset',
@@ -137,9 +137,9 @@ export interface IShareableTransaction {
   user: IRef<ObjectId, IShareableUser>;
   company: IRef<ObjectId, IShareableCompany>;
   card: IRef<ObjectId, IShareableCard>;
+  achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
   sector: IRef<ObjectId, ISector>;
   amount: number;
-  bank?: IBank;
   status: TransactionModelStateEnumValues;
   type?: TransactionTypeEnumValues;
   subType?: TransactionSubtypeEnumValues;
@@ -164,7 +164,8 @@ export interface ITransaction extends IShareableTransaction {
   association?: IUserOrGroup;
   card: IRef<ObjectId, ICardDocument>;
   cardId: IRef<ObjectId, ICardDocument>;
-  bank?: IBank;
+  achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
+  achTransferId?: IRef<ObjectId, IShareableACHTransfer>;
   company: IRef<ObjectId, ICompanyDocument>;
   companyId: IRef<ObjectId, ICompanyDocument>;
   matched?: ITransactionMatch;
@@ -180,7 +181,7 @@ export interface ITransactionAggregate extends ITransaction {
   total: number;
 }
 
-export interface ITransactionDocument extends ITransaction, Document {}
+export interface ITransactionDocument extends ITransaction, Document { }
 export type ITransactionModel = IModel<ITransaction>;
 
 export const transactionSchemaDefinition = {
@@ -209,12 +210,13 @@ export const transactionSchemaDefinition = {
     type: Schema.Types.ObjectId,
     ref: 'card',
   },
-  bank: {
-    name: { type: String },
-    subtype: { type: String },
-    type: { type: String },
-    institution: { type: String },
-    mask: { type: String },
+  achTransfer: {
+    type: Schema.Types.ObjectId,
+    ref: 'ach_transfer',
+  },
+  achTransferId: {
+    type: Schema.Types.ObjectId,
+    ref: 'ach_transfer',
   },
   category: { type: Number },
   subCategory: { type: Number },

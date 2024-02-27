@@ -78,6 +78,7 @@ import { MCCStandards } from '../../integrations/marqeta/types';
 // eslint-disable-next-line import/no-cycle
 import { checkIfUserInGroup } from '../groups';
 import { CommissionModel } from '../../models/commissions';
+import { IShareableACHTransfer } from '../../models/achTransfer';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -454,7 +455,7 @@ export const getShareableTransaction = async ({
   status,
   amount,
   date,
-  bank,
+  achTransfer,
   reversed,
   createdOn,
   lastModified,
@@ -469,7 +470,7 @@ export const getShareableTransaction = async ({
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
 
-  const _bank = bank || null;
+  const _achtransfer: IRef<ObjectId, IShareableACHTransfer> = achTransfer;
 
   const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
     ? getShareableCompany(company as ICompanyDocument)
@@ -482,6 +483,7 @@ export const getShareableTransaction = async ({
     user: _user,
     company: _company,
     card: _card,
+    achTransfer: _achtransfer,
     sector: _sector,
     amount,
     date,
@@ -494,7 +496,6 @@ export const getShareableTransaction = async ({
     subType,
     status,
     group,
-    ...(!!_bank && { bank: _bank }),
   };
 
   if (integrations?.rare) {
@@ -945,7 +946,8 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
     user: req.requestor._id,
   })
     .populate('company')
-    .populate('sector');
+    .populate('sector')
+    .populate({ path: 'achTransfer', options: { strictPopulate: false } });
 
   if (!matchedTransaction) throw new CustomError('No transaction found with given id.', ErrorTypes.NOT_FOUND);
 

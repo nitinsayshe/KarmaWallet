@@ -20,8 +20,9 @@ import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
-import { IShareableUser, IUserDocument } from './user';
-import { IShareableACHTransfer } from './achTransfer';
+import { IShareableUser } from './user/types';
+import { IShareableACHTransfer } from './achTransfer/types';
+import { IUserDocument } from './user';
 
 export enum MatchTypes {
   Offset = 'offset',

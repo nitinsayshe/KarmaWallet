@@ -36,7 +36,7 @@ import {
   ITransactionDocument,
   TransactionModel,
 } from '../../models/transaction';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
 import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
@@ -75,7 +75,8 @@ import { MCCStandards } from '../../integrations/marqeta/types';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
 import { getShareableUser } from '../user/utils';
-import { IShareableACHTransfer } from '../../models/achTransfer';
+import { IShareableACHTransfer } from '../../models/achTransfer/types';
+import { IShareableUser } from '../../models/user/types';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 

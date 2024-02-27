@@ -7,13 +7,13 @@ import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
-import { IVerifyTokenBody } from '../user/types';
+import { IUrlParam, IVerifyTokenBody } from '../user/types';
 import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';

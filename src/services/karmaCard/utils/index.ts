@@ -3,9 +3,10 @@ import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { GroupModel } from '../../../models/group';
-import { IUrlParam, IUserDocument } from '../../../models/user';
+import { IUserDocument } from '../../../models/user';
 import { joinGroup } from '../../groups/utils';
 import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
+import { IUrlParam } from '../../user/types';
 
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',

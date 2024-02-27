@@ -11,7 +11,7 @@ import { UserGroupStatus } from '../types/groups';
 import { IModel, IRef } from '../types/model';
 import { IGroup, IShareableGroup } from './group';
 import { ISubgroup } from './subgroup';
-import { IShareableUser, IUser } from './user';
+import { IShareableUser, IUser } from './user/types';
 import { getUtcDate } from '../lib/date';
 
 export interface IShareableGroupMember {

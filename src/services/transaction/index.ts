@@ -210,7 +210,7 @@ const getTransactionIntegrationFilter = (integrationType: TransactionIntegration
 };
 
 export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate, includeDeclined } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};

@@ -812,7 +812,7 @@ export const getSummary = async (_: IRequest) => {
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
-  console.log('////// this is the info', req.params);
+
   try {
     if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
@@ -828,8 +828,6 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     const cachedDataKey = getGroupOffsetDataKey(groupId);
     let cachedData = await getCachedData(cachedDataKey);
-
-    console.log('///// 834');
 
     if (!cachedData || bustCache) {
       for (const member of members) {

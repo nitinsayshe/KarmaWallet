@@ -19,10 +19,10 @@ enum ResponseMessages {
 }
 
 export enum SolutionMessages {
-  NAME_OR_DOB_ISSUE = 'Please submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io',
-  SSN_ISSUE = 'Please submit a photo of the following items to support@karmawallet.io',
-  ADDRESS_ISSUE = 'Please submit two of the following documents that show your full name and address to support@karmawallet.io',
-  CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate step. Contact support@karmawallet.io.',
+  NAME_OR_DOB_ISSUE = 'To proceed with your application, we kindly request that you submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io within 10 days',
+  SSN_ISSUE = 'To proceed with your application, we kindly request that you submit a photo of one of the following items to support@karmawallet.io within 10 days',
+  ADDRESS_ISSUE = 'To proceed with your application, we kindly request you submit photos of two of the following documents showing your full name and address to support@karmawallet.io within 10 days',
+  CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate steps. Contact support@karmawallet.io.',
   ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
   FAILED_INTERNAL_KYC = 'Your application is pending, please submit two forms of the following identification to support@karmawallet.io.',
 }

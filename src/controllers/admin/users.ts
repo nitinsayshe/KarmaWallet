@@ -1,7 +1,8 @@
 import aqp from 'api-query-params';
 import { ObjectId } from 'mongoose';
 import { asCustomError } from '../../lib/customError';
-import { IUser } from '../../models/user';
+import { emailIsBlocked } from '../../middleware/rateLimiter';
+import { IUser, IUserDocument } from '../../models/user';
 import * as output from '../../services/output';
 import * as UserService from '../../services/user';
 import * as UserTestIdentityService from '../../services/user/testIdentities';
@@ -25,10 +26,27 @@ export const getUsersPaginated: IRequestHandler = async (req, res) => {
     }
 
     const results = await UserService.getUsersPaginated(req, query);
+    const users = results.docs.map((d) => UserUtilitiesService.getShareableUser(d));
+    const docs: (Partial<IUserDocument> & { accountIsLocked: boolean })[] = [];
+    console.log('adding account lock status to users', JSON.stringify(users, null, 2));
+    // add the account lock status to these users
+    for (let i = 0; i < users.length; i++) {
+      const user = users[i];
+      const email = user.emails.find((e) => e.primary)?.email || '';
+      let accountIsLocked = false;
+      if (!!email) {
+        accountIsLocked = await emailIsBlocked(req, email);
+      }
+      docs.push({
+        ...user,
+        accountIsLocked,
+      });
+    }
+    console.log('docs', JSON.stringify(docs, null, 2));
 
     output.api(req, res, {
       ...results,
-      docs: results.docs.map((d) => UserService.getShareableUser(d)),
+      docs,
     });
   } catch (err) {
     output.error(req, res, asCustomError(err));

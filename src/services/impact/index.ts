@@ -3,7 +3,7 @@ import dayjs from 'dayjs';
 import { getRandomInt } from '../../lib/number';
 import { IRequest } from '../../types/request';
 import * as CarbonService from './utils/carbon';
-import * as TransactionService from '../transaction';
+import * as TransactionService from '../transaction/utils';
 import { MiscModel } from '../../models/misc';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes, UserRoles } from '../../lib/constants';

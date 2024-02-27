@@ -443,11 +443,11 @@ export type MarqetaUserModel = {
   phone?: string;
   uses_parent_account?: boolean;
   corporate_card_holder?: boolean;
-  created_time?: string;
-  last_modified_time?: string;
+  created_time?: Date;
+  last_modified_time?: Date;
   metadata?: Record<string, any>;
   account_holder_group_token?: string;
-  status?: string;
+  status?: IMarqetaUserStatus;
   identifications?: Identification[];
 };
 

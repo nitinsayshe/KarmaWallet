@@ -1,17 +1,12 @@
-import { FieldValue } from 'aws-sdk/clients/cloudsearch';
 import { AxiosInstance } from 'axios';
 import dayjs from 'dayjs';
 import isemail from 'isemail';
 import { FilterQuery, ObjectId, Types, UpdateQuery } from 'mongoose';
-import { ActiveCampaignClient, IGetContactResponse } from '../../clients/activeCampaign';
+import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import {
-  contactListToSubscribedListIDs,
   FieldValues,
-  getActiveCampaignContactByEmail,
-  getActiveCampaignTags,
   getSubscribedLists,
   subscribeContactToList,
-  updateActiveCampaignData,
   updateActiveCampaignContactData,
   updateCustomFields,
 } from '../../integrations/activecampaign';
@@ -267,73 +262,6 @@ export const subscribeToList = async (userId: Types.ObjectId, code: Subscription
   }
 };
 
-// orchestrates reaching out to active campaign and transferring subscriptions
-export const updateSubscriptionsOnEmailChange = async (
-  userId: Types.ObjectId,
-  name: string,
-  prevEmail: string,
-  newEmail: string,
-): Promise<void> => {
-  let prevSubs: SubscriptionCode[] = [];
-  let prevCustomFields: FieldValues | {} = {};
-
-  const transferTags = await getActiveCampaignTags(userId._id.toString());
-
-  try {
-    let prevContact: IGetContactResponse | null = null;
-    // get custom field values from the prev email
-    prevContact = await getActiveCampaignContactByEmail(prevEmail);
-    prevSubs = contactListToSubscribedListIDs(prevContact.contactLists).map((id) => ProviderProductIdToSubscriptionCode[id]);
-    prevCustomFields = prevContact.fieldValues
-      ?.map((field) => {
-        const id = parseInt(field.field, 10);
-        if (isNaN(id)) return {};
-
-        return {
-          id,
-          value: field.value,
-        };
-      })
-      ?.filter((field) => (field as FieldValue) || {});
-  } catch (err) {
-    console.log('no previous subs found for ', prevEmail);
-  }
-
-  let newEmailSubs: SubscriptionCode[] = [];
-  try {
-    newEmailSubs = await getActiveCampaignSubscribedSubscriptionCodes(newEmail);
-  } catch (err) {
-    console.log('no previous subs found for ', newEmail);
-  }
-
-  // cancel new email's previous subscriptions if any
-  if (prevSubs.length > 0) {
-    // unsubscribe prev email from any subs in active campaign
-    await updateActiveCampaignData({
-      userId: userId._id,
-      email: prevEmail,
-      subscriptions: { unsubscribe: prevSubs, subscribe: [] },
-      tags: { add: [], remove: transferTags },
-    });
-  }
-
-  // remove any dupe subs that we actually want to keep
-  const unsubscribeLists: SubscriptionCode[] = newEmailSubs.length > 0 ? newEmailSubs.filter((sub) => !prevSubs?.includes(sub)) : [];
-
-  // subscribe new email to any active list subsctiptions in active campaign
-  await updateActiveCampaignData({
-    firstName: name?.split(' ')[0],
-    lastName: name?.split(' ')?.pop(),
-    userId: userId._id,
-    email: newEmail,
-    subscriptions: { unsubscribe: unsubscribeLists, subscribe: prevSubs },
-    tags: { add: transferTags, remove: [] },
-    customFields: prevCustomFields as FieldValues,
-  });
-
-  // TODO: rollback if error occurred?
-};
-
 export const updateUserSubscriptions = async (user: string, subscribe: Array<SubscriptionCode>, unsubscribe: Array<SubscriptionCode>) => {
   if (subscribe?.length > 0) {
     await Promise.all(
@@ -361,11 +289,15 @@ export const updateUserSubscriptions = async (user: string, subscribe: Array<Sub
 };
 
 export const cancelAllUserSubscriptions = async (userId: string) => {
-  const subs = await SubscriptionModel.find({ user: userId }).lean();
-  const unsubscribe = subs?.map((sub) => sub.code);
+  try {
+    const subs = await SubscriptionModel.find({ user: userId }).lean();
+    const unsubscribe = subs?.map((sub) => sub.code);
 
-  if (unsubscribe?.length > 0) {
-    await updateUserSubscriptions(userId, [], unsubscribe);
+    if (unsubscribe?.length > 0) {
+      await updateUserSubscriptions(userId, [], unsubscribe);
+    }
+  } catch (err) {
+    console.error('Error canceling subscription', err);
   }
 };
 
@@ -379,11 +311,11 @@ export const updateUsersSubscriptions = async (userSubs: UserSubscriptions[]) =>
 };
 
 /*
- * Takes active campaign sub ids and converts them into subscription codes and
- * makes sure the user/visitor is subscribed to them
- * user or visitor will be unsubscribed from any subscription not included in
- * subCodes or the converted activeCampaignSubs
- */
+   * Takes active campaign sub ids and converts them into subscription codes and
+   * makes sure the user/visitor is subscribed to them
+   * user or visitor will be unsubscribed from any subscription not included in
+   * subCodes or the converted activeCampaignSubs
+   */
 export const reconcileActiveCampaignListSubscriptions = async (
   id: Types.ObjectId,
   activeCampaignSubs: ActiveCampaignListId[],
@@ -738,7 +670,7 @@ export const updateNewKWCardUserSubscriptions = async (user: IUserDocument, clie
     let existingWebAppUser: 'true' | 'false' = 'true';
     if (
       !!user?.integrations?.marqeta
-      || dayjs(user.dateJoined).isAfter(dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour'))
+        || dayjs(user.dateJoined).isAfter(dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour'))
     ) {
       existingWebAppUser = 'false';
     }

@@ -14,6 +14,7 @@ import {
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IUserDocument } from './user';
+import { IVisitorDocument } from './visitor';
 
 export type UserNotificationData = {
   body: string;
@@ -113,7 +114,8 @@ export interface IUserNotification extends IShareableUserNotification {
   status: UserNotificationStatusEnumValue;
   type: NotificationTypeEnumValue;
   channel: NotificationChannelEnumValue;
-  user: IRef<ObjectId, IUserDocument>;
+  user?: IRef<ObjectId, IUserDocument>;
+  visitor?: IRef<ObjectId, IVisitorDocument>;
   resource?: IRef<ObjectId, Document>;
   resourceType?: NotificationTypeEnumValue;
   data?: NotificationData;
@@ -139,6 +141,10 @@ const userNotification = new Schema({
   user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
+  },
+  visitor: {
+    type: Schema.Types.ObjectId,
+    ref: 'visitor',
   },
   channel: {
     required: true,

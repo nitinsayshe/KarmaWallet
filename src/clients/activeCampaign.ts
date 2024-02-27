@@ -1,5 +1,7 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import { asCustomError } from '../lib/customError';
+import { sleep } from '../lib/misc';
+import { getRandomInt } from '../lib/number';
 import { SdkClient } from './sdkClient';
 
 const { ACTIVECAMPAIGN_API_KEY, ACTIVECAMPAIGN_API_URL } = process.env;
@@ -73,17 +75,180 @@ export interface IContactAutomation {
   id?: string;
 }
 
+// Define types for each entity in the JSON response
+
 export interface IContactList {
-  contact?: string; // contact id
-  list?: string; // list ids
-  status?: string; // TODO: restrict to an enum
+  // Contact List
+  contact?: string;
+  list?: string;
+  form?: string | null;
+  seriesid?: string;
+  sdate?: string | null;
+  udate?: string | null;
+  status?: string;
+  responder?: string;
+  sync?: string;
+  unsubreason?: string | null;
+  campaign?: string | null;
+  message?: string | null;
+  first_name?: string;
+  last_name?: string;
+  ip4Sub?: string;
+  sourceid?: string;
+  autosyncLog?: string | null;
+  ip4_last?: string;
+  ip4Unsub?: string;
+  unsubscribeAutomation?: string | null;
+  links?: {
+    automation?: string;
+    list?: string;
+    contact?: string;
+    form?: string;
+    autosyncLog?: string;
+    campaign?: string;
+    unsubscribeAutomation?: string;
+    message?: string;
+  };
+  id?: string;
+  automation?: string | null;
 }
 
-// Using this mainly to retrieve list status
+// Deal
+interface IDeal {
+  owner: string;
+  contact: string;
+  organization: string | null;
+  group: string | null;
+  title: string;
+  nexttaskid: string;
+  currency: string;
+  status: string;
+  links: {
+    activities: string;
+    contact: string;
+    contactDeals: string;
+    group: string;
+    nextTask: string;
+    notes: string;
+    organization: string;
+    owner: string;
+    scoreValues: string;
+    stage: string;
+    tasks: string;
+  };
+  id: string;
+  nextTask: string | null;
+}
+
+// Field Value
+interface IFieldValue {
+  contact: string;
+  field: string;
+  value: string | null;
+  cdate: string;
+  udate: string;
+  links: {
+    owner: string;
+    field: string;
+  };
+  id: string;
+  owner: string;
+}
+
+// Geo Address
+interface IGeoAddress {
+  ip4: string;
+  country2: string;
+  country: string;
+  state: string;
+  city: string;
+  zip: string;
+  area: string;
+  lat: string;
+  lon: string;
+  tz: string;
+  tstamp: string;
+  links: never[]; // This seems to be an empty array in the provided JSON
+  id: string;
+}
+
+// Geo IP
+interface IGeoIp {
+  contact: string;
+  campaignid: string;
+  messageid: string;
+  geoaddrid: string;
+  ip4: string;
+  tstamp: string;
+  geoAddress: string;
+  links: {
+    geoAddress: string;
+  };
+  id: string;
+}
+
+// Contact
+interface IContact {
+  cdate?: string;
+  email?: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  orgid?: string;
+  segmentio_id?: string;
+  bounced_hard?: string;
+  bounced_soft?: string;
+  bounced_date?: string | null;
+  ip?: string;
+  ua?: string | null;
+  hash?: string;
+  socialdata_lastcheck?: string | null;
+  email_local?: string;
+  email_domain?: string;
+  sentcnt?: string;
+  rating_tstamp?: string | null;
+  gravatar?: string;
+  deleted?: string;
+  adate?: string | null;
+  udate?: string | null;
+  edate?: string | null;
+  contactAutomations?: string[];
+  contactLists?: string[];
+  fieldValues?: string[];
+  geoIps?: string[];
+  deals?: string[];
+  accountContacts?: string[];
+  links?: {
+    bounceLogs?: string;
+    contactAutomations?: string;
+    contactData?: string;
+    contactGoals?: string;
+    contactLists?: string;
+    contactLogs?: string;
+    contactTags?: string;
+    contactDeals?: string;
+    deals?: string;
+    fieldValues?: string;
+    geoIps?: string;
+    notes?: string;
+    organization?: string;
+    plusAppend?: string;
+    trackingLogs?: string;
+    scoreValues?: string;
+  };
+  id: string;
+  organization?: string | null;
+}
+
+// Complete Response Type
 export interface IGetContactResponse {
-  contactAutomations?: Array<IContactAutomation>;
-  contactLists?: Array<IContactList>;
-  fieldValues?: Array<{ field: string; value: string }>;
+  contactAutomations: IContactAutomation[];
+  contactLists: IContactList[];
+  deals: IDeal[];
+  fieldValues: IFieldValue[];
+  geoAddresses: IGeoAddress[];
+  geoIps: IGeoIp[];
+  contact: IContact;
 }
 
 export interface IContactsData {
@@ -110,16 +275,6 @@ export interface ContactListUpdateRequest {
   };
 }
 
-export interface IContact {
-  id: string;
-  email: string;
-  cdate?: Date;
-  phone?: string;
-  firstName?: string;
-  lastName?: string;
-  deleted?: string;
-}
-
 export interface Metadata {
   total: string;
 }
@@ -127,31 +282,6 @@ export interface Metadata {
 export interface IGetContactsResponse {
   contacts: Array<IContact>;
   meta: Metadata;
-}
-
-interface _ContactAutomation {
-  contact: string;
-  seriesid: string;
-  startid: string;
-  status: string;
-  batchid: null;
-  adddate: string;
-  remdate: string;
-  timespan: string;
-  lastblock: string;
-  lastlogid: string;
-  lastdate: string;
-  completedElements: string;
-  totalElements: string;
-  completed: number;
-  completeValue: number;
-  links: {
-    automation: string;
-    contact: string;
-    contactGoals: string;
-  };
-  id: string;
-  automation: string;
 }
 
 export class ActiveCampaignClient extends SdkClient {
@@ -176,6 +306,27 @@ export class ActiveCampaignClient extends SdkClient {
     });
   }
 
+  private async sendHttpRequestWithRetry(sendRequestFunction: () => Promise<AxiosResponse<any>>, initialRetries = 3, retries = 3): Promise<AxiosResponse<any>> {
+    try {
+      return await sendRequestFunction();
+    } catch (err) {
+      // Would we want to retry in cases other than 429?
+      if (axios.isAxiosError(err) && (err as AxiosError).response?.status === 429) {
+        if (retries <= 0) throw err;
+        console.error(`Error sending Active Campaign request: ${(err as AxiosError).toJSON()}`);
+        console.error(`Retrying request. Retries left: ${retries}`);
+        // this logic is taken from comply advantage docs
+        // https://docs.complyadvantage.com/api-docs/?javascript#429-too-many-requests-errors
+        const MaximumBackoffMs = 60000; // 1 minute
+        const randomNumMiliseconds = getRandomInt(1, 1000);
+        const n = (initialRetries + 1) - retries;
+        const backoffTime = Math.min(2 ** n + randomNumMiliseconds, MaximumBackoffMs);
+        await sleep(backoffTime);
+        return this.sendHttpRequestWithRetry(sendRequestFunction, initialRetries, retries - 1);
+      }
+    }
+  }
+
   public withHttpClient(client: AxiosInstance) {
     if (!client) {
       return;
@@ -186,7 +337,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* creates contacts - POST /contacts */
   public async createContact(contact: ICreateContactData) {
     try {
-      const { data } = await this._client.post('/contacts', { contact });
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.post('/contacts', { contact }));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -199,11 +350,12 @@ export class ActiveCampaignClient extends SdkClient {
   }
 
   /* updates contacts - PUT /contacts */
-  public async updateContact(contact: IUpdateContactData) {
+  public async updateContact(contact: IUpdateContactData): Promise<{ contact: IContact }> {
     try {
       const { id } = contact;
       delete contact.id;
-      const { data } = await this._client.put(`/contacts/${id}`, { ...contact });
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.put(`/contacts/${id}`, { ...contact }));
+
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -218,7 +370,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* deletes contacts - DELETE /contacts */
   public async deleteContact(id: number) {
     try {
-      const { data } = await this._client.delete(`/contacts/${id}`);
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.delete(`/contacts/${id}`));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -234,7 +386,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* Note: The API specifies a max of 250 contacts at a time */
   public async importContacts(contactImportData: IContactsImportData) {
     try {
-      const { data } = await this._client.post('/import/bulk_import', contactImportData);
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.post('/import/bulk_import', contactImportData));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -249,7 +401,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* list recent bulk imports - POST /bulk_import */
   public async listBulkImports() {
     try {
-      const { data } = await this._client.get('/import/bulk_import');
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get('/import/bulk_import'));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -264,7 +416,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* list all custom fields - GET /fields */
   public async listCustomFields() {
     try {
-      const { data } = await this._client.get('/fields', { params: { limit: customFieldsLimit } });
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get('/fields', { params: { limit: customFieldsLimit } }));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -279,7 +431,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* bulk contact import status info - GET /import/info */
   public async getImportStatus(batchId: string) {
     try {
-      const { data } = await this._client.get('/import/info', { params: { batchId } });
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get('/import/info', { params: { batchId } }));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -294,7 +446,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* get contact lsits - GET /contacts/{id} */
   public async getContact(id: number): Promise<IGetContactResponse> {
     try {
-      const { data } = await this._client.get(`/contacts/${id}`);
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get(`/contacts/${id}`));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -309,9 +461,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* list, search, and filter contacts - GET /contacts */
   public async getContacts(contactsFilter: IGetContactsData): Promise<IGetContactsResponse> {
     try {
-      const { data } = await this._client.get('/contacts', {
-        params: contactsFilter,
-      });
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get('/contacts', { params: contactsFilter }));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -344,7 +494,7 @@ export class ActiveCampaignClient extends SdkClient {
 
   public async removeContactAutomation(id: number): Promise<AxiosResponse<undefined, undefined>> {
     try {
-      const { data } = await this._client.delete(`/contactAutomations/${id}`);
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.delete(`/contactAutomations/${id}`));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -358,7 +508,7 @@ export class ActiveCampaignClient extends SdkClient {
 
   public async updateContactListStatus(contactListUpdateRequest: ContactListUpdateRequest): Promise<AxiosResponse<undefined, undefined>> {
     try {
-      const { data } = await this._client.post('/contactLists', contactListUpdateRequest);
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.post('/contactLists', contactListUpdateRequest));
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {

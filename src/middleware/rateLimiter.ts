@@ -58,7 +58,7 @@ export const rateLimiter = async (opts: Partial<IRateLimiterStoreOptions>) => {
 export const unblockEmailFromLimiter = async (
   req: IRequest,
   email: string,
-  limiterKey: typeof KWRateLimiterKeyPrefixes.Login | typeof KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate,
+  limiterKey: typeof KWRateLimiterKeyPrefixes.Login | typeof KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate | typeof KWRateLimiterKeyPrefixes.DefaultEmailLimiter,
 ): Promise<void> => {
   const savedEmailRateLimiter = req?.app?.get(getRateLimiterInstanceKeyFromKeyPrefix(limiterKey));
   if (!savedEmailRateLimiter) {
@@ -67,6 +67,43 @@ export const unblockEmailFromLimiter = async (
   }
   console.log(`Deleting key: ${email} from rate limiter with key: ${limiterKey}`);
   await savedEmailRateLimiter.delete(email);
+};
+
+export const emailIsBlockedInLimiter = async (
+  req: IRequest,
+  email: string,
+  limiterKey: typeof KWRateLimiterKeyPrefixes.Login | typeof KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate | typeof KWRateLimiterKeyPrefixes.DefaultEmailLimiter,
+): Promise<boolean> => {
+  const savedEmailRateLimiter = req?.app?.get(getRateLimiterInstanceKeyFromKeyPrefix(limiterKey));
+  if (!savedEmailRateLimiter) {
+    console.error('Error retrieving rate limiter with key: ', limiterKey);
+    return false;
+  }
+
+  console.log(`Checking if key: ${email} is blocked in rate limiter with key: ${limiterKey}`);
+  const rateLimiterRes: RateLimiterRes | null = await savedEmailRateLimiter?.get(email);
+  if (!rateLimiterRes) {
+    console.log(`Error checking if limiter: ${limiterKey} contains email: ${email}`);
+    return false;
+  }
+
+  if (rateLimiterRes.remainingPoints === 0 && rateLimiterRes.msBeforeNext > 0) {
+    console.log(`Key: ${email} is blocked in rate limiter with key: ${limiterKey}`);
+    return true;
+  }
+
+  console.log(`Key: ${email} is not blocked in rate limiter with key: ${limiterKey}`);
+  return false;
+};
+
+export const emailIsBlocked = async (
+  req: IRequest,
+  email: string,
+) => {
+  const isBlockedInLoginLimiter = await emailIsBlockedInLimiter(req, email, KWRateLimiterKeyPrefixes.Login);
+  const isBlockedInResetPasswordTokenCreateLimiter = await emailIsBlockedInLimiter(req, email, KWRateLimiterKeyPrefixes.ResetPasswordTokenCreate);
+  const isBlockedInDefaultEmailLimiter = await emailIsBlockedInLimiter(req, email, KWRateLimiterKeyPrefixes.DefaultEmailLimiter);
+  return isBlockedInLoginLimiter || isBlockedInResetPasswordTokenCreateLimiter || isBlockedInDefaultEmailLimiter;
 };
 
 export const unblockFromEmailLimiterOnSuccess = async (

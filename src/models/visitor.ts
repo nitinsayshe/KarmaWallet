@@ -6,6 +6,8 @@ import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/ty
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
+import { IComplyAdvantageIntegration } from '../integrations/complyAdvantage/types';
+import { ComplyAdvantageIntegrationSchema } from './types';
 
 interface IMarqetaKycResult {
   status: IMarqetaKycState;
@@ -42,6 +44,7 @@ export interface IVisitorIntegrations {
   urlParams?: IUrlParam[];
   shareASale?: boolean;
   marqeta?: IMarqetaVisitorData;
+  complyAdvantage?: IComplyAdvantageIntegration;
 }
 
 export interface IShareableVisitor {
@@ -83,6 +86,7 @@ const visitorSchema = new Schema({
     groupCode: String,
     urlParams: { type: Array },
     shareASale: Boolean,
+    complyAdvantage: ComplyAdvantageIntegrationSchema,
     marqeta: {
       type: {
         userToken: String,

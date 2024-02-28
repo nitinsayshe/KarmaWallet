@@ -673,13 +673,14 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // Marqeta integration is saved on the visitor object,
   // Could be just a visitor (if they didn't create an account later with that same email)
   // Could be a visitor that later created an account with that same email
+  // Marqeta integration is saved on the visitor, but not a user yet
   if (!!visitor?._id && !existingUser?._id) {
     visitor.integrations.marqeta.status = currentMarqetaUserState.status;
     await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, currentMarqetaUserState);
-
     await visitor.save();
 
     if (currentMarqetaUserState.status === IMarqetaUserStatus.ACTIVE) {
+      // create a user for this visitor since they have been transitioned to ACTIVE in Marqeta
       if (!visitor.user) {
         const { user } = await register({
           name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,
@@ -689,7 +690,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         });
 
         user.integrations.marqeta = visitor.integrations.marqeta;
-        user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS, codes: [] };
+        user.integrations.marqeta.kycResult = { status: ApplicationStatus.SUCCESS,  codes: ['Approved'] };
         user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
         await user.save();
 
@@ -701,7 +702,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(user, true);
           console.log('/////// Ordering cards from the User webhook for a newly created user (visitor to user)');
-          executeOrderKarmaWalletCardsJob(existingUser);
+          executeOrderKarmaWalletCardsJob(user);
         }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
@@ -713,8 +714,6 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
           await visitorUser.save();
         }
 
-        await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitorUser, currentMarqetaUserState);
-
         const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
           user: visitorUser._id,
           type: 'karmaCardWelcome',
@@ -723,7 +722,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(visitorUser, true);
           console.log('/////// Ordering cards from the User webhook for a newly created user (visitor and user exists)');
-          executeOrderKarmaWalletCardsJob(existingUser);
+          executeOrderKarmaWalletCardsJob(visitorUser);
         }
       }
 

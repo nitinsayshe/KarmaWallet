@@ -289,8 +289,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
-  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams } = req.body;
-  const { sscid, sscidCreatedOn, xType } = req.body;
+  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
     throw new Error('Missing required fields');
@@ -441,9 +440,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       dataObj.user = existingUser;
       existingUser.integrations.marqeta = marqeta;
       if (!!urlParams) {
-        existingUser.integrations.referrals = {
-          params: urlParams,
-        };
+        await updateUserUrlParams(existingUser, urlParams);
+      } else {
+        await existingUser.save();
       }
       await existingUser.save();
     } else {
@@ -477,22 +476,20 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     codes: [],
   };
 
-  const trackingId = await createShareasaleTrackingId();
-
   karmaCardApplication.userId = userDocument._id.toString();
   userDocument.integrations.marqeta = marqeta;
   userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
 
   if (!!sscid && !!sscidCreatedOn && !!xType) {
+    const trackingId = await createShareasaleTrackingId();
     userDocument.integrations.shareasale = {
       sscid,
       sscidCreatedOn,
       xTypeParam: xType,
       trackingId,
     };
+    await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
   }
-
-  await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
 
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);

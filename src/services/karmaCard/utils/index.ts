@@ -79,7 +79,7 @@ interface PuppateerShareASaleParams {
   sscid: string,
   trackingid: string,
   xtype: string,
-  sscidCreatedOn: any,
+  sscidCreatedOn: string,
 }
 
 interface TransformedResponse {
@@ -216,7 +216,9 @@ export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerS
 
   if (xtype !== ShareASaleXType.FREE) return;
 
-  const daysBetweenCreatedSscidAndNow = getDaysFromPreviousDate(sscidCreatedOn);
+  const sscidCreatedOnDate = new Date(sscidCreatedOn);
+
+  const daysBetweenCreatedSscidAndNow = getDaysFromPreviousDate(sscidCreatedOnDate);
   if (daysBetweenCreatedSscidAndNow >= 90) return;
 
   const browser = await puppeteer.launch({

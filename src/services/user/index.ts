@@ -144,7 +144,7 @@ export const register = async ({ password, name, token, promo, visitorId, isAuto
   if (!!sscid) {
     integrations.shareasale = {
       sscid,
-      sscidCreatedOn: String(sscidCreatedOn),
+      sscidCreatedOn,
       xTypeParam,
     };
 

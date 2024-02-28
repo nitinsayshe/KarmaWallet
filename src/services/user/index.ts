@@ -701,7 +701,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(user, true);
           console.log('/////// Ordering cards from the User webhook for a newly created user (visitor to user)');
-          executeOrderKarmaWalletCardsJob(existingUser);
+          executeOrderKarmaWalletCardsJob(user);
         }
       } else {
         const visitorUser = await UserModel.findById(visitor.user);
@@ -723,7 +723,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
         if (!existingKarmaWelcomeNotification) {
           await createKarmaCardWelcomeUserNotification(visitorUser, true);
           console.log('/////// Ordering cards from the User webhook for a newly created user (visitor and user exists)');
-          executeOrderKarmaWalletCardsJob(existingUser);
+          executeOrderKarmaWalletCardsJob(visitorUser);
         }
       }
 

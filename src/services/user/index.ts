@@ -723,10 +723,27 @@ export const updateUserUrlParams = async (
   const existingParams = userObject.integrations?.referrals?.params;
   const newParams = filterToValidQueryParams(urlParams);
   const params = !!existingParams ? [...newParams, ...existingParams] : newParams;
-  if (!!existingParams) {
-    userObject.integrations.referrals.params = params;
+  const duplicatesRemoved = Array.from(new Set(params));
+  if (!existingParams) {
+    userObject.integrations.referrals = { params: duplicatesRemoved };
   } else {
-    userObject.integrations.referrals = { params };
+    userObject.integrations.referrals.params = duplicatesRemoved;
   }
   await userObject.save();
 };
+
+export const updateVisitorUrlParams = async (
+  visitorObject: IVisitorDocument,
+  urlParams: IUrlParam[],
+): Promise<void> => {
+  const existingParams = visitorObject?.integrations?.urlParams;
+  const newParams = filterToValidQueryParams(urlParams);
+  const params = !!existingParams ? [...newParams, ...existingParams] : newParams;
+  console.log('///// these are the params to set', params)
+  if (!visitorObject.integrations) visitorObject.integrations = {};
+  const duplicatesRemoved = Array.from(new Set(params));
+  visitorObject.integrations.urlParams = duplicatesRemoved;
+  visitorObject.integrations.urlParams = duplicatesRemoved;
+ 
+  await visitorObject.save();
+}

@@ -15,6 +15,7 @@ import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
 import { IUrlParam, IVerifyTokenBody } from '../user/types';
 import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
+import { updateVisitorUrlParams } from '../user';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -108,6 +109,7 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
       if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
       // url params
       if (!!info.params) {
+        if (!visitorInfo.integrations) visitorInfo.integrations = {};
         visitorInfo.integrations.urlParams = info.params;
         if (info.params.find(p => p.key === 'groupCode')) {
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
@@ -127,7 +129,7 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
   try {
     if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
     if (!!info.params) {
-      visitor.integrations.urlParams = info.params;
+      await updateVisitorUrlParams(visitor, info.params);
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }

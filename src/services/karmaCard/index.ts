@@ -332,6 +332,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     };
 
     if (!!urlParams) {
+      console.log('//// these are the user params', urlParams)
       visitorData.params = urlParams;
       const groupCode = urlParams.find((param) => param.key === 'groupCode');
       if (!!groupCode) {
@@ -419,7 +420,9 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       karmaCardApplication.userId = existingUser._id.toString();
       dataObj.user = existingUser;
       existingUser.integrations.marqeta = marqeta;
-      if (!!urlParams) existingUser.integrations.referrals.params.push(...urlParams);
+      if (!!urlParams) {
+        await updateUserUrlParams(existingUser, urlParams);
+      } 
       await existingUser.save();
     } else {
       karmaCardApplication.visitorId = _visitor._id;

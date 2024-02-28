@@ -23,7 +23,8 @@ import { ICommissionPayoutOverviewDocument } from '../../../models/commissionPay
 import { ICommissionDocument, KarmaCommissionStatus, WildfireCommissionStatus } from '../../../models/commissions';
 import { ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument } from '../../../models/merchant';
-import { IUserDocument, UserEmailStatus } from '../../../models/user';
+import { UserEmailStatus } from '../../../models/user/types';
+import { IUserDocument } from '../../../models/user';
 import { aggregateCommissionTotalAndIds } from '../utils';
 
 describe('tests commission service logic', () => {

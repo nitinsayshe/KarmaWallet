@@ -1,12 +1,6 @@
-import {
-  Schema,
-  model,
-  Document,
-  Model,
-  ObjectId,
-} from 'mongoose';
-import { IModel, IRef } from '../types/model';
-import { IShareableUser } from './user';
+import { ObjectId } from 'mongoose';
+import { IModel, IRef } from '../../types/model';
+import { IShareableUser } from '../user/types';
 
 export enum IACHTransferStatuses {
   INITIATED = 'INITIATED',
@@ -22,6 +16,14 @@ export enum IACHTransferStatuses {
 export enum IACHTransferTypes {
   PUSH = 'PUSH',
   PULL = 'PULL'
+}
+
+export interface IBank {
+  name: string;
+  subtype: string;
+  institution: string;
+  mask: string;
+  type: string;
 }
 
 export interface IACHTransition {
@@ -45,6 +47,7 @@ export interface IShareableACHTransfer {
   type: IACHTransferTypes;
   currency_code: string;
   transfer_speed: string;
+  bank: IBank;
   status: IACHTransferStatuses;
   transitions: IACHTransition;
   created_time: Date;
@@ -65,33 +68,3 @@ export interface IACHTrasferDocumentWithSourceData extends IACHTransferDocument 
 }
 
 export type IACHTransferModel = IModel<IACHTransfer>;
-
-const ACHTransferSchema = new Schema({
-  userId: {
-    type: Schema.Types.ObjectId,
-    ref: 'user',
-    required: true,
-  },
-  token: { type: String },
-  amount: { type: Number },
-  channel: { type: String },
-  funding_source_token: { type: String },
-  type: { type: String, enum: Object.values(IACHTransferTypes) },
-  currency_code: { type: String },
-  transfer_speed: { type: String },
-  status: { type: String, enum: Object.values(IACHTransferStatuses) },
-  transitions: [
-    {
-      token: { type: String },
-      bank_transfer_token: { type: String },
-      status: { type: String, enum: Object.values(IACHTransferStatuses) },
-      transaction_token: { type: String },
-      created_time: { type: Date },
-      last_modified_time: { type: Date },
-    },
-  ],
-  created_time: { type: Date },
-  last_modified_time: { type: Date },
-});
-
-export const ACHTransferModel = model<IACHTransferDocument, Model<IACHTransfer>>('ach_transfer', ACHTransferSchema);

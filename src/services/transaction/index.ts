@@ -36,7 +36,7 @@ import {
   ITransactionDocument,
   TransactionModel,
 } from '../../models/transaction';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
 import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
@@ -75,6 +75,8 @@ import { MCCStandards } from '../../integrations/marqeta/types';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
 import { getShareableUser } from '../user/utils';
+import { IShareableACHTransfer } from '../../models/achTransfer/types';
+import { IShareableUser } from '../../models/user/types';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
@@ -210,7 +212,7 @@ const getTransactionIntegrationFilter = (integrationType: TransactionIntegration
 };
 
 export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate, includeDeclined } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};
@@ -429,6 +431,7 @@ export const getShareableTransaction = async ({
   status,
   amount,
   date,
+  achTransfer,
   reversed,
   createdOn,
   lastModified,
@@ -442,6 +445,8 @@ export const getShareableTransaction = async ({
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name ? getShareableUser(user as IUserDocument) : user;
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
+
+  const _achtransfer: IRef<ObjectId, IShareableACHTransfer> = achTransfer;
 
   const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
     ? getShareableCompany(company as ICompanyDocument)
@@ -467,6 +472,8 @@ export const getShareableTransaction = async ({
     status,
     group,
   };
+
+  if (!!_achtransfer) shareableTransaction.achTransfer = _achtransfer;
 
   if (integrations?.rare) {
     const { projectName, tonnes_amt: offsetsPurchased, certificateUrl } = integrations.rare;
@@ -916,7 +923,8 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
     user: req.requestor._id,
   })
     .populate('company')
-    .populate('sector');
+    .populate('sector')
+    .populate({ path: 'achTransfer', options: { strictPopulate: false } });
 
   if (!matchedTransaction) throw new CustomError('No transaction found with given id.', ErrorTypes.NOT_FOUND);
 

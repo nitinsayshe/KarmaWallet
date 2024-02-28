@@ -15,12 +15,13 @@ import {
 } from '../../../lib/testingUtils';
 import { ICardDocument } from '../../../models/card';
 import { ICompanyDocument } from '../../../models/company';
-import { IUserDocument, UserEmailStatus } from '../../../models/user';
+import { IUserDocument } from '../../../models/user';
 import { IMarqetaKycState, IMarqetaUserStatus, MarqetaCardFulfillmentStatus, MarqetaCardState } from '../types';
 import { TransactionModel } from '../../../clients/marqeta/types';
 import { ISectorDocument } from '../../../models/sector';
 import { cleanUpDocuments } from '../../../lib/model';
 import { mapMarqetaTransactionsToKarmaTransactions } from '../transactions';
+import { UserEmailStatus } from '../../../models/user/types';
 
 // Thest values should match up with the request in ./data/testMarqetaTransaction.json
 const mccToMatch = 9999;

@@ -6,7 +6,7 @@ import { IShareableCompany } from './company';
 import { IShareableMerchant } from './merchant';
 import { IPromo } from './promo';
 import { IShareableTransaction } from './transaction';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 
 // https://kb.wildfire-corp.com/article/ygwr-commission-history
 export enum WildfireCommissionStatus {

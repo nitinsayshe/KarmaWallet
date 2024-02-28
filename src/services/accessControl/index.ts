@@ -1,7 +1,7 @@
 import { FilterQuery } from 'mongoose';
 import { ErrorTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
-import { IUser } from '../../models/user';
+import { IUser } from '../../models/user/types';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 

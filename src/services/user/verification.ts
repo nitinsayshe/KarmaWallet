@@ -1,10 +1,7 @@
 import isemail from 'isemail';
 import dayjs from 'dayjs';
 import crypto from 'crypto';
-import {
-  IUserDocument, UserModel,
-  UserEmailStatus,
-} from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import CustomError from '../../lib/customError';
 import {
   TokenTypes, emailVerificationDays, ErrorTypes,
@@ -15,6 +12,7 @@ import { sendEmailVerification } from '../email';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { checkIfUserWithEmailExists } from './utils';
+import { UserEmailStatus } from '../../models/user/types';
 
 export interface IEmailVerificationData {
   email: string;

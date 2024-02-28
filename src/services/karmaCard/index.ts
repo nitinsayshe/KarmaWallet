@@ -332,7 +332,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     };
 
     if (!!urlParams) {
-      console.log('//// these are the user params', urlParams)
       visitorData.params = urlParams;
       const groupCode = urlParams.find((param) => param.key === 'groupCode');
       if (!!groupCode) {

@@ -20,7 +20,7 @@ import { ISectorDocument, SectorModel } from '../models/sector';
 import { SubcategoryModel } from '../models/subcategory';
 import { ITransactionDocument, ITransactionIntegrations, TransactionModel } from '../models/transaction';
 import { UnsdgModel } from '../models/unsdg';
-import { IUserDocument, UserEmailStatus, UserModel } from '../models/user';
+import { IUserDocument, UserModel } from '../models/user';
 import { getMonthStartDate } from '../services/impact/utils';
 import { IRef } from '../types/model';
 import { CardStatus } from './constants';
@@ -28,6 +28,7 @@ import { CompanyRating } from './constants/company';
 import { getUtcDate } from './date';
 import { getRandomInt } from './number';
 import { CommissionPayoutModel, ICommissionPayoutDocument, KarmaCommissionPayoutStatus } from '../models/commissionPayout';
+import { UserEmailStatus } from '../models/user/types';
 
 export type CreateTestUsersRequest = {
   users?: Partial<IUserDocument>[];

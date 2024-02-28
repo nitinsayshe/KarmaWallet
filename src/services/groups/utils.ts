@@ -4,12 +4,13 @@ import { updateActiveCampaignGroupListsAndTags } from '../../integrations/active
 import { UserRoles, ErrorTypes, UserGroupRole } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { GroupModel, GroupStatus } from '../../models/group';
-import { IUserDocument, UserModel, UserEmailStatus } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../subscription';
 import { getUser } from '../user/utils';
+import { UserEmailStatus } from '../../models/user/types';
 
 export const checkIfUserInGroup = async (userId: string, groupId: string) => {
   const userGroup = await UserGroupModel.findOne({ user: userId, group: groupId });

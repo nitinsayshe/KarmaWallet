@@ -4,12 +4,12 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { IRequest } from '../../types/request';
 import * as ACHTransferTypes from './types';
-import { ACHTransferModel } from '../../models/achTransfer';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
 import { dailyACHTransferLimit, monthlyACHTransferLimit, perTransferLimit } from '../../lib/constants/plaid';
 import { DATE_REGEX } from '../../lib/constants/regex';
 import { UserModel } from '../../models/user';
 import { createBankLinkedConfirmationNotification } from '../../services/user_notification';
+import { ACHTransferModel } from '../../models/achTransfer';
 
 dayjs.extend(utc);
 

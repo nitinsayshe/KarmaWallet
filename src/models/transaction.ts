@@ -20,7 +20,9 @@ import { ICardDocument, IShareableCard } from './card';
 import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
-import { IShareableUser, IUserDocument } from './user';
+import { IShareableUser } from './user/types';
+import { IShareableACHTransfer } from './achTransfer/types';
+import { IUserDocument } from './user';
 
 export enum MatchTypes {
   Offset = 'offset',
@@ -136,6 +138,7 @@ export interface IShareableTransaction {
   user: IRef<ObjectId, IShareableUser>;
   company: IRef<ObjectId, IShareableCompany>;
   card: IRef<ObjectId, IShareableCard>;
+  achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
   sector: IRef<ObjectId, ISector>;
   amount: number;
   status: TransactionModelStateEnumValues;
@@ -162,6 +165,7 @@ export interface ITransaction extends IShareableTransaction {
   association?: IUserOrGroup;
   card: IRef<ObjectId, ICardDocument>;
   cardId: IRef<ObjectId, ICardDocument>;
+  achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
   company: IRef<ObjectId, ICompanyDocument>;
   companyId: IRef<ObjectId, ICompanyDocument>;
   matched?: ITransactionMatch;
@@ -177,7 +181,7 @@ export interface ITransactionAggregate extends ITransaction {
   total: number;
 }
 
-export interface ITransactionDocument extends ITransaction, Document {}
+export interface ITransactionDocument extends ITransaction, Document { }
 export type ITransactionModel = IModel<ITransaction>;
 
 export const transactionSchemaDefinition = {
@@ -205,6 +209,10 @@ export const transactionSchemaDefinition = {
   cardId: {
     type: Schema.Types.ObjectId,
     ref: 'card',
+  },
+  achTransfer: {
+    type: Schema.Types.ObjectId,
+    ref: 'ach_transfer',
   },
   category: { type: Number },
   subCategory: { type: Number },
@@ -386,5 +394,5 @@ transactionSchema.plugin(mongooseAggregatePaginate);
 
 export const TransactionModel = model<ITransactionDocument, IAggregatePaginateModel<ITransactionDocument>>(
   'transaction',
-  transactionSchema
+  transactionSchema,
 );

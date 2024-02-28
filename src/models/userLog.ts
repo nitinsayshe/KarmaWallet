@@ -8,7 +8,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUser } from './user';
+import { IShareableUser, IUser } from './user/types';
 
 export interface IUserLog {
   user: IRef<ObjectId, (IShareableUser | IUser)>;

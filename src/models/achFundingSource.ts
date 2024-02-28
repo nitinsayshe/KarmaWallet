@@ -6,7 +6,7 @@ import {
   ObjectId,
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 
 export interface IShareableACHFundingSource {
   _id: ObjectId;

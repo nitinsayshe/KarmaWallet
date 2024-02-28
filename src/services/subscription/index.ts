@@ -19,12 +19,13 @@ import { sleep } from '../../lib/misc';
 import { GroupModel, IGroupDocument } from '../../models/group';
 import { MiscModel } from '../../models/misc';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IEmail, IUser, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IUserGroup, UserGroupModel } from '../../models/userGroup';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
+import { IUser, IEmail } from '../../models/user/types';
 
 export interface UserSubscriptions {
   userId: string;

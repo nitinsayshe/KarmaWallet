@@ -5,7 +5,7 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
+import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user/types';
 import { IComplyAdvantageIntegration } from '../integrations/complyAdvantage/types';
 import { ComplyAdvantageIntegrationSchema } from './types';
 

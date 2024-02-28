@@ -1,10 +1,11 @@
 import { FilterQuery, isValidObjectId } from 'mongoose';
 import { AccountSubtype, Transaction as PlaidTransaction, TransactionsGetResponse } from 'plaid';
-import { UserModel, IUserDocument, IUser } from '../../models/user';
+import { UserModel, IUserDocument } from '../../models/user';
 import { createAchFundingSource } from '../marqeta/accountFundingSource';
 import Bank from './bank';
 import Card from './card';
 import { IPlaidItem, IPlaidBankItem } from './types';
+import { IUser } from '../../models/user/types';
 
 class User {
   // the user object from the database

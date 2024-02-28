@@ -32,7 +32,6 @@ import { IDeclinedData } from '../email/types';
 import { createComplyAdvantageSearch, ICreateSearchForUserData, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
-import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUrlParam } from '../user/types';
 import { handleMarqetaUserActiveTransition } from '../user';
 

@@ -160,7 +160,7 @@ export const updateSearchForUser = async (user: IUserDocument | IVisitorDocument
 
 export const verifyComplyAdvantageWebhookSource = async (req: IRequest<{}, {}, IComplyAdvantageWebhookBody>) => {
   // get the ip this request was sent from in the request
-  let requesterIp: string = req.headers['x-forwarded-for'] || req.ip;
+  let requesterIp: string = req.headers['x-real-ip'];
   requesterIp = requesterIp?.trim();
 
   // pull whitelisted Comply Advantage IPs from the database

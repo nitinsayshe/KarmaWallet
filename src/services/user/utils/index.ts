@@ -5,9 +5,10 @@ import { ErrorTypes } from '../../../lib/constants';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import { sleep } from '../../../lib/misc';
 import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../middleware/rateLimiter';
-import { IUser, IUserDocument, IUserIntegrations, UserModel } from '../../../models/user';
+import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
+import { IUser, IUserIntegrations } from '../../../models/user/types';
 
 export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;

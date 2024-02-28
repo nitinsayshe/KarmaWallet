@@ -4,8 +4,9 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { UserEmailStatus, UserModel } from '../models/user';
+import { UserModel } from '../models/user';
 import { VisitorModel } from '../models/visitor';
+import { UserEmailStatus } from '../models/user/types';
 
 dayjs.extend(utc);
 

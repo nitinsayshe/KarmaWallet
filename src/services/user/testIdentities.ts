@@ -19,9 +19,10 @@ import { getRandomInt } from '../../lib/number';
 import { createSomeCards, createSomeUsers } from '../../lib/testingUtils';
 import { CardModel, ICardDocument } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
-import { IUserDocument, UserEmailStatus, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IRequest } from '../../types/request';
 import { CardResponse } from '../../clients/marqeta/types';
+import { UserEmailStatus } from '../../models/user/types';
 
 export enum TestIdentities {
   HenryDavidThoreau = 'HenryDavidThoreau',

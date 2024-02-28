@@ -4,10 +4,11 @@ import { cleanUpDocuments } from '../../../lib/model';
 import { createSomeCards, createSomePromos, createSomeUsers } from '../../../lib/testingUtils';
 import { ICardDocument } from '../../../models/card';
 import { IPromoDocument } from '../../../models/promo';
-import { IUserDocument, IUserIntegrations } from '../../../models/user';
+import { IUserDocument } from '../../../models/user';
 import { IRequest } from '../../../types/request';
 import { getPromosReport, IAccountStatusAggData, ICampaignAggData, ISourceAggData } from '../promos';
 import { IReportRequestParams, IReportRequestQuery, ReportType } from '../utils/types';
+import { IUserIntegrations } from '../../../models/user/types';
 
 const numUsersInFirstPromo = 5;
 const numUsersInSecondPromo = 3;

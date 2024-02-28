@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { IUrlParam } from '../models/user';
 import { URL_QUERY_PARAMS_REGEX } from './constants/regex';
+import { IUrlParam } from '../models/user/types';
 
 export const formatZodFieldErrors = (fieldErrors: { [key: string]: string[] }): string => {
   let error = '';

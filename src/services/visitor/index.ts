@@ -7,14 +7,15 @@ import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
-import { IVerifyTokenBody } from '../user/types';
+import { IUrlParam, IVerifyTokenBody } from '../user/types';
 import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
+import { updateVisitorUrlParams } from '../user';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -111,6 +112,7 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
       if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
       // url params
       if (!!info.params) {
+        if (!visitorInfo.integrations) visitorInfo.integrations = {};
         visitorInfo.integrations.urlParams = info.params;
         if (info.params.find(p => p.key === 'groupCode')) {
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
@@ -140,7 +142,7 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
     if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
     if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
     if (!!info.params) {
-      visitor.integrations.urlParams = info.params;
+      await updateVisitorUrlParams(visitor, info.params);
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }

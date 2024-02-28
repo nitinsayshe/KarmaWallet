@@ -25,7 +25,7 @@ import { JobNames } from '../lib/constants/jobScheduler';
 import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
 import { IArticleDocument } from '../models/article';
-import { IUser, IUserDocument, UserModel } from '../models/user';
+import { IUserDocument, UserModel } from '../models/user';
 import {
   getArticleRecommendationsBasedOnTransactionHistory, getArticlesForCompany, getCompaniesWithArticles, URLs,
 } from '../services/article/utils/recommendations';
@@ -40,6 +40,7 @@ import {
   getWeeklyMissedCashBack,
 } from '../services/user/utils/metrics';
 import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
+import { IUser } from '../models/user/types';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes;

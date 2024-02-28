@@ -3,13 +3,14 @@ import fs from 'fs';
 import dayjs from 'dayjs';
 import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { v4 as uuid } from 'uuid';
-import { IUser, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { ITransaction, ITransactionDocument, TransactionModel } from '../../models/transaction';
 import { IMatchedTransaction } from './types';
 import { CardModel, ICard, ICardDocument } from '../../models/card';
 import { TransactionStatus } from '../../clients/kard';
 import { queueSettledTransactions } from '../kard';
 import { KardEnrollmentStatus } from '../../lib/constants';
+import { IUser } from '../../models/user/types';
 
 export interface ICardsDictionary {
   [key: string]: ObjectId;

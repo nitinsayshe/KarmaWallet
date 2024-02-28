@@ -739,7 +739,6 @@ export const updateVisitorUrlParams = async (
   const existingParams = visitorObject?.integrations?.urlParams;
   const newParams = filterToValidQueryParams(urlParams);
   const params = !!existingParams ? [...newParams, ...existingParams] : newParams;
-  console.log('///// these are the params to set', params)
   if (!visitorObject.integrations) visitorObject.integrations = {};
   const duplicatesRemoved = Array.from(new Set(params));
   visitorObject.integrations.urlParams = duplicatesRemoved;

@@ -141,13 +141,13 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
     if (!!info.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
     if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
     if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
+    if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
+    if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
     if (!!info.params) {
       await updateVisitorUrlParams(visitor, info.params);
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
-      if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
-      if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
     }
     await visitor.save();
     return visitor;

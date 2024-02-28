@@ -1,12 +1,15 @@
 import { listCards } from '../../../integrations/marqeta/card';
-import { IMarqetaKycState } from '../../../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { GroupModel } from '../../../models/group';
 import { IUserDocument } from '../../../models/user';
+import { UserNotificationModel } from '../../../models/user_notification';
+import { executeOrderKarmaWalletCardsJob } from '../../card/utils';
 import { joinGroup } from '../../groups/utils';
 import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
 import { IUrlParam } from '../../user/types';
+import { createKarmaCardWelcomeUserNotification } from '../../user_notification';
 
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',

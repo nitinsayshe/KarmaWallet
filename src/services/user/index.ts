@@ -625,21 +625,11 @@ export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (us
   }
 };
 
-export const handleMarqetaUserActiveTransition = async (user: IUserDocument) => {
+export const handleMarqetaUserActiveTransition = async (user: IUserDocument, newUser: boolean) => {
   user.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: [] };
   user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
-
-  const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
-    user: user._id,
-    type: 'karmaCardWelcome',
-  });
-
-  // Ensure that the Welcome email has not already been sent
-  if (!existingKarmaWelcomeNotification) {
-    executeOrderKarmaWalletCardsJob(user);
-    await createKarmaCardWelcomeUserNotification(user, true);
-  }
-
+  executeOrderKarmaWalletCardsJob(user);
+  await createKarmaCardWelcomeUserNotification(user, newUser);
   return await user.save();
 };
 
@@ -661,7 +651,7 @@ export const updateExistingUserFromMarqetaWebhook = async (
 
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
     console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
-    await handleMarqetaUserActiveTransition(user);
+    await handleMarqetaUserActiveTransition(user, false);
   }
 }
 
@@ -679,19 +669,19 @@ export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument,
 };
 
 // Existing Visitor with Marqeta integration (no existing user with the Marqeta integration although there could be an existing user)
-export const handleMarqetaVisitorUserActiveTransition = async (visitor: IVisitorDocument, currentMarqetaUserData: MarqetaUserModel) => {
+export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument, currentMarqetaUserData: MarqetaUserModel) => {
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
     if (!visitor.user) {
       // Visitor only created
       const user = await createNewUserFromMarqetaWebhook(visitor, currentMarqetaUserData);
-      await handleMarqetaUserActiveTransition(user);
+      await handleMarqetaUserActiveTransition(user, true);
     } else {
       // Visitor created a KW account after being declined for a KW card
       // Marqeta integration only saved on visitor not on user yet
       // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
       const user = await UserModel.findById(visitor.user);
       if (!user) throw new CustomError('User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
-      await handleMarqetaUserActiveTransition(user);
+      await handleMarqetaUserActiveTransition(user, false);
     }
   }
 }
@@ -722,7 +712,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     visitor.integrations.marqeta.status = currentMarqetaUserData.status;
     await visitor.save();
     await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, currentMarqetaUserData);
-    await handleMarqetaVisitorUserActiveTransition(visitor, currentMarqetaUserData);
+    await updatedVisitorFromMarqetaWebhook(visitor, currentMarqetaUserData);
   }
 };
 

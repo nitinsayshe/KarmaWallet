@@ -34,6 +34,7 @@ import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUrlParam } from '../user/types';
+import { handleMarqetaUserActiveTransition } from '../user';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -304,6 +305,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   const existingVisitor = await VisitorModel.findOne({ email });
   const existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
+  const newUser = !existingUser;
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)
@@ -456,17 +458,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
   await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  executeOrderKarmaWalletCardsJob(userDocument);
-
-  const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
-    user: userDocument._id,
-    type: 'karmaCardWelcome',
-  });
-
-  if (!existingKarmaWelcomeNotification) {
-    await createKarmaCardWelcomeUserNotification(userDocument, false);
-  }
-
+  await handleMarqetaUserActiveTransition(userDocument, newUser);
   const applyResponse = userDocument?.integrations?.marqeta;
   return applyResponse;
 };

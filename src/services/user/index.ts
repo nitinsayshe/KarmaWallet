@@ -650,8 +650,11 @@ export const updateExistingUserFromMarqetaWebhook = async (
 
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
     console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
-    const { sscid, xTypeParam, sscidCreatedOn, trackingId } = user.integrations.shareasale;
-    await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });
+    if (!!user.integrations?.shareasale) {
+      const { sscid, xTypeParam, sscidCreatedOn, trackingId } = user.integrations.shareasale;
+      await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });
+    }
+
     await handleMarqetaUserActiveTransition(user, false);
   }
 };

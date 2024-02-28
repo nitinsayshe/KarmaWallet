@@ -48,6 +48,7 @@ import { handleTransactionDisputeMacros, handleTransactionNotifications } from '
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { IRequestHandler } from '../types/request';
+import { WebhookModel, WebhookProviders } from '../models/webhook';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -420,6 +421,13 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
 
     const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
+
+    // saving all webhooks for debugging purposes
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Marqeta, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Marqeta webhook. processing will continue. error: ${e}---`);
+    }
 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {

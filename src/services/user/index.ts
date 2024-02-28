@@ -4,7 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact, updateContactEmail } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail, updateCustomFields } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { getMarqetaUser, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
@@ -44,6 +44,7 @@ import { generateRandomPasswordString } from '../../lib/misc';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
+import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 
 dayjs.extend(utc);
 
@@ -656,6 +657,8 @@ export const updateExistingUserFromMarqetaWebhook = async (
     }
 
     await handleMarqetaUserActiveTransition(user, false);
+    await updateActiveCampaignDataAndJoinGroupForApplicant(user, user.integrations.referrals?.params);
+    await updateCustomFields(user.emails.find(e => e.primary).email, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
   }
 };
 

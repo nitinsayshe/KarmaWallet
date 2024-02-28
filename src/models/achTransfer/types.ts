@@ -1,6 +1,5 @@
 import { ObjectId } from 'mongoose';
-import { IModel, IRef } from '../../types/model';
-import { IShareableUser } from '../user/types';
+import { IModel } from '../../types/model';
 
 export enum IACHTransferStatuses {
   INITIATED = 'INITIATED',
@@ -35,9 +34,24 @@ export interface IACHTransition {
   last_modified_time: Date;
 }
 
+export interface IACHBankTransfer {
+  token: string;
+  amount: number;
+  channel: string;
+  funding_source_token: string;
+  type: string;
+  bank?: IBank;
+  currency_code: string;
+  transfer_speed: string;
+  status: string;
+  transitions: IACHTransition;
+  created_time: Date;
+  last_modified_time: Date;
+}
+
 export interface IShareableACHTransfer {
   _id: ObjectId;
-  userId: IRef<ObjectId, IShareableUser>;
+  userId: ObjectId;
   // use this as the bank_transfer_token when making updates
   token: string;
   amount: number;

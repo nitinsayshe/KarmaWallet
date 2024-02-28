@@ -2,7 +2,6 @@ import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
 import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
-import { IBank } from '../../models/achTransfer/types';
 
 interface Identification {
   type: string;
@@ -216,21 +215,6 @@ export interface IACHTransition {
   bank_transfer_token: string;
   status: string;
   transaction_token: string;
-  created_time: Date;
-  last_modified_time: Date;
-}
-
-export interface IACHBankTransfer {
-  token: string;
-  amount: number;
-  channel: string;
-  funding_source_token: string;
-  type: string;
-  bank?: IBank;
-  currency_code: string;
-  transfer_speed: string;
-  status: string;
-  transitions: IACHTransition;
   created_time: Date;
   last_modified_time: Date;
 }

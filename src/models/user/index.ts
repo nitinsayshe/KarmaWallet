@@ -107,6 +107,9 @@ const userSchema = new Schema({
     shareasale: {
       type: {
         trackingId: { type: String },
+        xTypeParam: { type: String },
+        sscid: { type: String },
+        sscidCreatedOn: { type: String },
       },
     },
     referrals: {

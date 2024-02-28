@@ -31,6 +31,9 @@ export interface IRareUserIntegration {
 
 export interface IShareASale {
   trackingId?: string;
+  xTypeParam?: string;
+  sscid?: string;
+  sscidCreatedOn: string;
 }
 
 export interface IActiveCampaignUserIntegration {

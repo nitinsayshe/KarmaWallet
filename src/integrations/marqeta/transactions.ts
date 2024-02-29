@@ -426,16 +426,13 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
     throw new CustomError(`Error looking up the card associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
   }
 
-  try {
+  if (!!t.marqeta_transaction.bank_transfer_token) {
+    // add achTransfer if it applies
     const achTransfer = await ACHTransferModel.findOne({
       token: t.marqeta_transaction.bank_transfer_token,
     });
-    if (!!achTransfer.bank) {
-      newTransaction.achTransfer = achTransfer;
-    }
-  } catch (err) {
-    console.error(err);
-    throw new CustomError(`Error looking up the achTransfer-responsible-bank associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
+
+    if (!!achTransfer.bank) newTransaction.achTransfer = achTransfer;
   }
 
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);

@@ -12,7 +12,7 @@ export interface IMisc {
 }
 
 export interface IMiscDocument extends IMisc, Document {}
-export type IMistModel = IModel<IMisc>;
+export type IMiscModel = IModel<IMisc>;
 
 const miscSchema = new Schema({
   key: { type: String },

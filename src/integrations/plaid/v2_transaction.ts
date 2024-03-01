@@ -59,13 +59,9 @@ export const mapPlaidTransactionToKarmaTransaction = (
     cardToAssign = _card;
   }
 
-  const transactionDate = getTransactionDate(plaidTransaction.date);
-
   const transaction = new TransactionModel({
     user: userId,
-    date: transactionDate,
-    sortableDate: transactionDate,
-    settledDate: transactionDate,
+    date: getTransactionDate(plaidTransaction.date),
     integrations: {
       plaid: plaidTransaction,
     },

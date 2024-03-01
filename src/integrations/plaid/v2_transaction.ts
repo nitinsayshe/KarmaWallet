@@ -65,6 +65,7 @@ export const mapPlaidTransactionToKarmaTransaction = (
     user: userId,
     date: transactionDate,
     sortableDate: transactionDate,
+    settledDate: transactionDate,
     integrations: {
       plaid: plaidTransaction,
     },

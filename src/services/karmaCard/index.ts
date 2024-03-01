@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
-import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserStatus } from '../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaKycState, IMarqetaUserIntegrations, IMarqetaUserStatus } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { formatName, generateRandomPasswordString } from '../../lib/misc';
 import {
@@ -14,17 +14,17 @@ import {
   IShareableCardApplication,
   KarmaCardApplicationModel,
 } from '../../models/karmaCardApplication';
-import { IMarqetaUserIntegrations, IUrlParam, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards, updateActiveCampaignDataAndJoinGroupForApplicant } from './utils';
+import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards, openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
 import { createDeclinedKarmaWalletCardUserNotification, createKarmaCardWelcomeUserNotification } from '../user_notification';
-import { updateUserUrlParams } from '../user';
+import { updateUserUrlParams, handleMarqetaUserActiveTransition } from '../user';
 import { updateCustomFields } from '../../integrations/activecampaign';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { IMarqetaListKYCResponse } from '../../clients/marqeta/types';
@@ -32,7 +32,8 @@ import { IDeclinedData } from '../email/types';
 import { createComplyAdvantageSearch, ICreateSearchForUserData, userPassesComplyAdvantage } from '../../integrations/complyAdvantage';
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
-import { executeOrderKarmaWalletCardsJob } from '../card/utils';
+import { createShareasaleTrackingId } from '../user/utils';
+import { IUrlParam } from '../user/types';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -49,6 +50,9 @@ export interface IKarmaCardRequestBody {
   ssn: string;
   state: string;
   urlParams?: IUrlParam[];
+  sscid?: string;
+  sscidCreatedOn?: string;
+  xType?: string;
 }
 
 interface IApplySuccessData {
@@ -285,7 +289,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
-  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams } = req.body;
+  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
     throw new Error('Missing required fields');
@@ -303,6 +307,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   const existingVisitor = await VisitorModel.findOne({ email });
   const existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
+  const newUser = !existingUser;
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
   // if they are an existing visitor but not an existing user (could have applied previously)
@@ -335,6 +340,12 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       if (!!groupCode) {
         visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
       }
+    }
+
+    if (!!sscid && !!sscidCreatedOn && !!xType) {
+      visitorData.sscid = sscid;
+      visitorData.sscidCreatedOn = sscidCreatedOn;
+      visitorData.xTypeParam = xType;
     }
 
     const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
@@ -379,6 +390,18 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   const kycStatus = status;
 
+  if (!existingUser) {
+    // Update the visitors marqeta Kyc status
+    _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
+      marqeta,
+      email,
+      params: urlParams,
+      sscid,
+      sscidCreatedOn,
+      xTypeParam: xType,
+    });
+  }
+
   const karmaCardApplication: IKarmaCardApplication = {
     userToken: marqetaUserResponse?.userToken,
     firstName,
@@ -417,7 +440,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       karmaCardApplication.userId = existingUser._id.toString();
       dataObj.user = existingUser;
       existingUser.integrations.marqeta = marqeta;
-      if (!!urlParams) existingUser.integrations.referrals.params.push(...urlParams);
+      if (!!urlParams) await updateUserUrlParams(existingUser, urlParams);
       await existingUser.save();
     } else {
       karmaCardApplication.visitorId = _visitor._id;
@@ -453,19 +476,21 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   karmaCardApplication.userId = userDocument._id.toString();
   userDocument.integrations.marqeta = marqeta;
   userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
-  await userDocument.save();
-  await storeKarmaCardApplication(karmaCardApplication);
-  executeOrderKarmaWalletCardsJob(userDocument);
 
-  const existingKarmaWelcomeNotification = await UserNotificationModel.findOne({
-    user: userDocument._id,
-    type: 'karmaCardWelcome',
-  });
-
-  if (!existingKarmaWelcomeNotification) {
-    await createKarmaCardWelcomeUserNotification(userDocument, false);
+  if (!!sscid && !!sscidCreatedOn && !!xType) {
+    const trackingId = await createShareasaleTrackingId();
+    userDocument.integrations.shareasale = {
+      sscid,
+      sscidCreatedOn,
+      xTypeParam: xType,
+      trackingId,
+    };
+    await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
   }
 
+  await userDocument.save();
+  await storeKarmaCardApplication(karmaCardApplication);
+  await handleMarqetaUserActiveTransition(userDocument, newUser);
   const applyResponse = userDocument?.integrations?.marqeta;
   return applyResponse;
 };

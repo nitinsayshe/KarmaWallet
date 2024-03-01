@@ -1,8 +1,8 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IMarqetaKycResult } from './user';
 import { IShareableVisitor } from './visitor';
+import { IMarqetaKycResult } from '../integrations/marqeta/types';
 
 export enum ApplicationStatus {
   SUCCESS = 'success',

@@ -1,12 +1,14 @@
 import { AxiosInstance } from 'axios';
 import { FilterQuery, ObjectId, PaginateResult, Types } from 'mongoose';
+import { nanoid } from 'nanoid';
 import { ErrorTypes } from '../../../lib/constants';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import { sleep } from '../../../lib/misc';
 import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../middleware/rateLimiter';
-import { IUser, IUserDocument, IUserIntegrations, UserModel } from '../../../models/user';
+import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
+import { IUser, IUserIntegrations } from '../../../models/user/types';
 
 export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;
@@ -129,4 +131,16 @@ export const getUser = async (_: IRequest, query = {}) => {
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const createShareasaleTrackingId = async () => {
+  let uniqueId = nanoid();
+  let existingTrackingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+
+  while (existingTrackingId) {
+    uniqueId = nanoid();
+    existingTrackingId = await UserModel.findOne({ 'integrations.shareasale.trackingId': uniqueId });
+  }
+
+  return uniqueId;
 };

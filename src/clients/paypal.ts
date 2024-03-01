@@ -1,8 +1,8 @@
 /* eslint-disable camelcase */
 import axios, { AxiosInstance } from 'axios';
 import { asCustomError } from '../lib/customError';
-import { IPaypalUserIntegration } from '../models/user';
 import { SdkClient } from './sdkClient';
+import { IPaypalUserIntegration } from '../models/user/types';
 
 const {
   PAYPAL_CLIENT_ID,

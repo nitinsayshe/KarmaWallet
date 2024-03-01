@@ -5,7 +5,7 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user';
+import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user/types';
 import { IComplyAdvantageIntegration } from '../integrations/complyAdvantage/types';
 import { ComplyAdvantageIntegrationSchema } from './types';
 
@@ -42,7 +42,12 @@ export interface IMarqetaVisitorData {
 export interface IVisitorIntegrations {
   groupCode?: string;
   urlParams?: IUrlParam[];
-  shareASale?: boolean;
+  shareASale?: {
+    sscid?: string;
+    xTypeParam?: string;
+    sscidCreatedOn?: string;
+    trackingId?: string;
+  };
   marqeta?: IMarqetaVisitorData;
   complyAdvantage?: IComplyAdvantageIntegration;
 }
@@ -85,7 +90,12 @@ const visitorSchema = new Schema({
   integrations: {
     groupCode: String,
     urlParams: { type: Array },
-    shareASale: Boolean,
+    shareASale: {
+      sscid: { type: String },
+      xTypeParam: { type: String },
+      sscidCreatedOn: { type: String },
+      trackingId: { type: String },
+    },
     complyAdvantage: ComplyAdvantageIntegrationSchema,
     marqeta: {
       type: {

@@ -1,11 +1,14 @@
+import puppeteer from 'puppeteer';
 import { listCards } from '../../../integrations/marqeta/card';
 import { IMarqetaKycState } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { GroupModel } from '../../../models/group';
-import { IUrlParam, IUserDocument } from '../../../models/user';
+import { IUserDocument } from '../../../models/user';
 import { joinGroup } from '../../groups/utils';
 import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
+import { getDaysFromPreviousDate } from '../../../lib/date';
+import { IUrlParam } from '../../user/types';
 
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
@@ -67,6 +70,17 @@ export enum ReasonCode {
   Approved = 'Approved',
   Already_Registered = 'Already_Registered',
   FailedInternalKyc = 'FailedInternalKyc',
+}
+
+export enum ShareASaleXType {
+  FREE = 'FREE',
+}
+
+interface PuppateerShareASaleParams {
+  sscid: string,
+  trackingid: string,
+  xtype: string,
+  sscidCreatedOn: string,
 }
 
 interface TransformedResponse {
@@ -194,6 +208,48 @@ export const hasVirtualCard = async (userObject: IUserDocument) => {
     return !!virtualCard;
   }
   return false;
+};
+
+export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerShareASaleParams) => {
+  const { sscid, trackingid, xtype, sscidCreatedOn } = shareASaleInfo;
+
+  if (!sscid || !trackingid || !xtype || !sscidCreatedOn) return;
+
+  if (xtype !== ShareASaleXType.FREE) return;
+
+  const sscidCreatedOnDate = new Date(sscidCreatedOn);
+
+  const daysBetweenCreatedSscidAndNow = getDaysFromPreviousDate(sscidCreatedOnDate);
+  if (daysBetweenCreatedSscidAndNow >= 90) return;
+
+  const browser = await puppeteer.launch({
+    headless: true,
+  });
+
+  const page = await browser.newPage();
+
+  await page.goto('https://www.karmawallet.io/');
+  await page.setCookie({ name: 'sas_m_awin', value: `{"clickId": "${sscid}"}` });
+
+  await page.evaluate((trackingID = trackingid, xType = xtype) => {
+    const img = document.createElement('img');
+    img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=sale&xType=${xType}`;
+    img.width = 1;
+    img.height = 1;
+    document.body.appendChild(img);
+
+    const script = document.createElement('script');
+    script.src = 'https://www.dwin1.com/19038.js';
+    script.type = 'text/javascript';
+    script.defer = true;
+    document.body.appendChild(script);
+  }, trackingid, xtype);
+
+  // close the browser after 2 seconds with set timeout to allow the page to load. Look into using a better approach?
+  setTimeout(async () => {
+    await page.close();
+    await browser.close();
+  }, 2000);
 };
 
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {

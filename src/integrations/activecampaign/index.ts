@@ -6,6 +6,7 @@ import {
   IContactAutomation,
   IContactList,
   IContactsData,
+  ICreateContactData,
   IGetContactResponse,
   UpdateContactListStatusEnum,
 } from '../../clients/activeCampaign';
@@ -905,5 +906,15 @@ export const updateCustomFields = async (
     await ac.importContacts({ contacts });
   } catch (err) {
     console.error(`error updating custom fields: ${JSON.stringify(fieldUpdates)}`, err);
+  }
+};
+
+export const createContact = async (contact: ICreateContactData, client?: AxiosInstance) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+    return ac.createContact({ email: contact.email });
+  } catch (err) {
+    console.error('error creating contact', err);
   }
 };

@@ -491,7 +491,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
 
     if (!!chargebacktransitions) {
-      console.log('////////// PROCESSING MARQETA CHARGEBACKTRANSITION WEBHOOK ////////// ');
+      console.log('////////// PROCESSING MARQETA CHARGEBACKTRANSITION WEBHOOK //////////');
       const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
       await handleDisputeMacros(savedChargebacks);
     }

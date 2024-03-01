@@ -25,7 +25,8 @@ import { ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument } from '../../../models/merchant';
 import { IMerchantRateDocument } from '../../../models/merchantRate';
 import { ITransactionDocument } from '../../../models/transaction';
-import { IUserDocument, UserEmailStatus } from '../../../models/user';
+import { IUserDocument } from '../../../models/user';
+import { UserEmailStatus } from '../../../models/user/types';
 
 describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
   let testUserWithLinkedAccountNoKardIntegration: IUserDocument;
@@ -322,7 +323,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
-    /* sleep(1000); */
     expect(newKardUser).toBeDefined();
     const updatedCards = await deleteKardUsersForUser(testUserWithKardIntegration._id);
     expect(updatedCards.length).toBe(1);
@@ -341,7 +341,6 @@ describe('kard client interface can fetch session tokes, create, update, and del
       userName: testUserWithKardIntegration.name.trim().split(' ').join(''),
       cardInfo,
     });
-    /* sleep(1000); */
     expect(newKardUser).toBeDefined();
     const updatedCards = await deleteKardUsersForUser(testUserWithKardIntegration);
     expect(updatedCards.length).toBe(1);

@@ -4,7 +4,7 @@ import { parse } from 'json2csv';
 import dayjs, { Dayjs } from 'dayjs';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IGroup } from '../../models/group';
-import { IUser } from '../../models/user';
+import { IUser } from '../../models/user/types';
 import { IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
 
 interface IData {

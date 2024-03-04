@@ -1,18 +1,5 @@
 import { TransactionModel } from '../../models/transaction';
 
-// export const updateTransactions = async () => {
-//   try {
-//     let count = 0;
-//     const transactions = await TransactionModel.find({
-//       'integrations.plaid': { $exists: true },
-//       sortableDate: { $exists: false },
-//     });
-//   } catch (err) {
-//     console.error('Error updating transactions', err);
-//   }
-// };
-
-// write a function that finds all transactions without sortableDate field, then adds sortableDate field set to the value of the existing date field
 export const addSortableDateToTransactions = async () => {
   try {
     let count = 0;

@@ -162,6 +162,16 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   await statement.save();
 };
 
+export const generateKarmaCardStatementForAllUsers = async (startDate: string, endDate: string) => {
+  const usersWithKarmaCards = await UserModel.find({
+    'integrations.marqeta': { $exists: true },
+  });
+
+  for (const cardholder of usersWithKarmaCards) {
+    await generateKarmaCardStatement(cardholder._id.toString(), startDate, endDate);
+  }
+};
+
 export const getKarmaCardStatementPDF = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {
   const { statementId } = req.params;
   if (!statementId) {

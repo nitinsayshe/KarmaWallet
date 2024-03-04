@@ -35,14 +35,7 @@ export const getSumOfTransactionsByTransactionSubType = (transactionSubType: Tra
   return sum;
 };
 
-export const getStartBalance = (transaction: ITransaction) => {
-  if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
-    const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
-    const mostRecentTransaction = sortByNewestFirst[0];
-    return mostRecentTransaction.gpa.ledger_balance;
-  }
-  return transaction.integrations.marqeta.gpa.ledger_balance;
-};
+export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.ledger_balance;
 
 export const getEndBalance = (transaction: ITransaction) => {
   if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
@@ -56,6 +49,7 @@ export const getEndBalance = (transaction: ITransaction) => {
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;
   const previousStatements = await KarmaCardStatementModel.find({ userId });
+  const lastStatement = previousStatements[previousStatements.length - 1];
   const isFirstStatement = previousStatements.length === 0;
 
   let endBalanceFromLastStatement = 0;
@@ -70,7 +64,7 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
 
   if (!!hasTransactions) {
     transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.sortableDate).isBefore(dayjs(b.sortableDate)) ? -1 : 1));
-    startBalance = !!isFirstStatement ? 0 : getStartBalance(transactionsSortedByDate[0]);
+    startBalance = !!isFirstStatement ? 0 : lastStatement.transactionTotals.endBalance;
     endBalance = getEndBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
     const debitsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Debit, transactionsSortedByDate);
     const depositsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Deposit, transactionsSortedByDate);
@@ -84,10 +78,8 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
     cashback = cashbackTotal;
     credits = creditTotal;
   } else {
-    const statements = await KarmaCardStatementModel.find({ userId });
-    const lastStatement = statements[statements.length - 1];
     endBalanceFromLastStatement = lastStatement?.transactionTotals?.endBalance;
-    if (!statements.length) {
+    if (!previousStatements.length) {
       endBalance = 0;
       startBalance = 0;
     } else {
@@ -126,7 +118,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   } else {
     const transactions = await TransactionModel.find({
       user: userId,
-      date: {
+      sortableDate: {
         $gte: startDate,
         $lte: endDate,
       },

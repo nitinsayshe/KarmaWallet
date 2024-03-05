@@ -12,6 +12,8 @@ import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../
 import { getDaysFromPreviousDate } from '../../../lib/date';
 import { IUrlParam } from '../../user/types';
 import { transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
+import { ACHFundingSourceModel } from '../../../models/achFundingSource';
+import { BankConnectionModel } from '../../../models/bankConnection';
 
 enum ResponseMessages {
   APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
@@ -238,11 +240,16 @@ export const closeKarmaCard = async (userObject: IUserDocument) => {
     }
 
     const closeUser = await transitionMarqetaUserToClosed(userObject);
+
     if (closeUser) {
       console.log('[+] User has been transitioned to Closed status in Marqeta');
     } else {
       throw new Error('[+] Error transitioning Marqeta user to closed');
     }
+
+    // delete ach_funding_sources and bank connection
+    await ACHFundingSourceModel.deleteMany({ userId: userObject._id.toString() });
+    await BankConnectionModel.deleteMany({ userId: userObject._id.toString() });
   }
 };
 // get a breakdown a user's Karma Wallet cards

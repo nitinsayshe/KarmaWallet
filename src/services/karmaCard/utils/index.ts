@@ -1,5 +1,10 @@
-import { IMarqetaKycState } from '../../../integrations/marqeta/types';
+import { Card } from '../../../clients/marqeta/card';
+import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
+import { terminateMarqetaCards, transitionMarqetaUserToClosed } from '../../../integrations/marqeta/card';
+import { getGPABalance } from '../../../integrations/marqeta/gpa';
+import { IGPABalanceResponse, IGPABalanceResponseData, IMarqetaKycState, MarqetaCardState } from '../../../integrations/marqeta/types';
 import { CardModel } from '../../../models/card';
+import { TransactionModel } from '../../../models/transaction';
 import { IUserDocument } from '../../../models/user';
 
 enum ResponseMessages {
@@ -133,3 +138,81 @@ export const hasKarmaWalletCards = async (userObject: IUserDocument) => {
   });
   return !!karmaCards.length;
 };
+
+export const getKarmaWalletCardBalance = async (userObject: IUserDocument) => {
+  try {
+    if (!userObject.integrations.marqeta) {
+      console.log('////// User does not have any marqeta cards');
+      return;
+    }
+  
+    const marqetaUserId = userObject.integrations.marqeta.userToken;
+    const balanceData = await getGPABalance(marqetaUserId);
+    if (!balanceData) {
+      console.log('////// No balance data found for user');
+      return;
+    } else {
+      return balanceData.data;
+    }
+  } catch (err) {
+    console.error('Error getting Karma Wallet Card balance', err);
+  }
+}
+
+export const checkIfPendingMarqetaTransactions = async (gpa: IGPABalanceResponseData) => {
+  if (!!gpa.pending_credits) {
+    throw new Error('[+] User has pending credits, account cannot be closed yet.');
+  }
+
+  const pendingTransactions = await TransactionModel.find({
+    'integrations.marqeta': { $exists: true },
+    status: 'pending',
+  });
+
+  if (!!pendingTransactions.length) {
+    throw new Error('[+] User has pending transactions, account cannot be closed yet.');
+  }
+
+  return false;
+};
+
+export const closeKarmaCard = async (userObject: IUserDocument) => {
+  if (!userObject.integrations.marqeta) {
+    console.log('[+] User does not have a Marqeta integration skip this step');
+    return;
+  }
+
+  const userGPABalance: IGPABalanceResponse = await getKarmaWalletCardBalance(userObject);
+  const pendingTransactions = await checkIfPendingMarqetaTransactions(userGPABalance.gpa);
+  const existingBalance = userGPABalance.gpa.available_balance;
+
+  if (!!existingBalance) {
+    throw new Error('[+] User has a balance on their Karma Wallet Card. Manual review required');
+  }
+
+  if (!pendingTransactions) {
+    const karmaCards = await CardModel.find({
+      userId: userObject._id.toString(),
+      'integrations.marqeta': { $exists: true },
+    });
+
+    if (!karmaCards.length) {
+      console.log('[+] User does not have any marqeta cards');
+      return;
+    } else {
+      const transitionedCards = await terminateMarqetaCards(karmaCards);
+      if (transitionedCards.length === karmaCards.length) {
+        console.log('[+] All Marqeta cards have been terminated');
+      } else {
+        throw new Error('[+] Error terminating Marqeta cards');
+      }
+    }
+
+    const closeUser = await transitionMarqetaUserToClosed(userObject);
+    if (closeUser) {
+      console.log('[+] User has been transitioned to Closed status in Marqeta');
+    } else {
+      throw new Error('[+] Error transitioning Marqeta user to closed');
+    }
+  } 
+}

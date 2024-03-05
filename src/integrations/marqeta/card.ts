@@ -2,8 +2,11 @@
 import { GetPaginiatedResourceParams } from '.';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { User } from '../../clients/marqeta/user';
+import { ICardDocument } from '../../models/card';
+import { IUserDocument } from '../../models/user';
 import { IRequest } from '../../types/request';
-import { IMarqetaCardTransition, IMarqetaCreateCard, ListCardsResponse, MarqetaCardModel, PaginatedMarqetaResponse } from './types';
+import { IMarqetaCardTransition, IMarqetaCreateCard, IMarqetaUserStatus, ListCardsResponse, MarqetaCardModel, MarqetaCardState, PaginatedMarqetaResponse } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
@@ -36,3 +39,45 @@ export const getCardsForUser = async (queryParams: GetPaginiatedResourceParams):
   const cards = await cardClient.listCards(queryParams?.userToken, queryParams);
   return cards;
 };
+
+
+export const terminateMarqetaCards = async (cards: ICardDocument[]) => {
+  const marqetaClient = new MarqetaClient();
+  const cardClient = new Card(marqetaClient);
+  const transitionedCards = [];
+   // terminate the cards in marqeta
+    for (const card of cards) {
+      try {
+        const transitionCard = await cardClient.cardTransition({
+          cardToken: card.integrations.marqeta.card_token,
+          channel: 'API',
+          state: MarqetaCardState.TERMINATED,
+          reasonCode: '01',
+        })
+        transitionedCards.push(transitionCard);
+      } catch (err) {
+        throw new Error('Error terminating Marqeta card');
+      }
+    }
+   
+    return transitionedCards;
+}
+
+export const transitionMarqetaUserToClosed = async (user: IUserDocument) => {
+  const marqetaClient = new MarqetaClient();
+  const userClient = new User(marqetaClient);
+  
+  try {
+    const transitionUser = await userClient.userMarqetaTransition({
+      userToken: user.integrations.marqeta.userToken,
+      reason: 'User requested account closure',
+      reasonCode: '01',
+      status: IMarqetaUserStatus.CLOSED,
+      channel: 'API'
+    });
+
+    return transitionUser;
+  } catch (err) {
+    throw new Error('Error transitioning Marqeta user to closed');
+  }
+}

@@ -1026,19 +1026,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
   }
 };
 
-export const leaveGroup = async (req: IRequest, {
-  groupId,
-  userId,
-}: IGroupRequestParams) => {
-  try {
-    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
-
-    const userGroup = await UserGroupModel.findOne({
-      group: groupId,
-      user: userId,
-      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned] },
-    });
-
+export const removeFromGroup = async (userGroup: IUserGroupDocument) => {
     // only a user that is a member of a group can leave it.
     // if someone else is removing the user, that should be
     // done with the updateUserGroup function instead and their
@@ -1058,14 +1046,27 @@ export const leaveGroup = async (req: IRequest, {
     }
 
     await userGroup.save();
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
+    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
+}
+
+export const leaveGroup = async (req: IRequest, {
+  groupId,
+  userId,
+}: IGroupRequestParams) => {
+  try {
+    if (!groupId) throw new CustomError('A group id is required.', ErrorTypes.INVALID_ARG);
+
+    const userGroup = await UserGroupModel.findOne({
+      group: groupId,
+      user: userId,
+      status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned] },
+    });
 
     // busting cache for group dashboard // this appears to be breaking when the person leaving the group is just a regular member
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });
     await getGroupOffsetData({ ...req, requestor: appUser, params: { groupId } }, true);
-
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
-    await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
-    await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
   } catch (err) {
     throw asCustomError(err);
   }

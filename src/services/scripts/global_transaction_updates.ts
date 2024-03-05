@@ -20,6 +20,7 @@ import { ITransaction, TransactionModel } from '../../models/transaction';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { updatePlaidTransactions } from '../../integrations/plaid/v2_transaction';
 import { updateMarqetaTransactions } from '../../integrations/marqeta/transactions';
+import { ExcludeCategories } from '../../lib/constants/plaid';
 
 dayjs.extend(utc);
 
@@ -32,6 +33,9 @@ export interface IGlobalTransactionUpdatesParams {
   userId?: Types.ObjectId | string;
   startingUserCursor?: number;
   transactionSource?: TransactionSource;
+  useExclusions?: boolean;
+  exclusionQuery?: any;
+  customTransactionQuery?: any;
 }
 
 export const globalTransactionUpdates = async ({
@@ -39,6 +43,11 @@ export const globalTransactionUpdates = async ({
   userId = null,
   startingUserCursor = null,
   transactionSource = TransactionSource.Plaid,
+  useExclusions = true,
+  exclusionQuery = {
+    plaid: { 'integrations.plaid.category': { $nin: ExcludeCategories } },
+  },
+  customTransactionQuery,
 }: IGlobalTransactionUpdatesParams) => {
   const logId = '[gptu] - ';
   const log = (message: string) => {
@@ -62,8 +71,10 @@ export const globalTransactionUpdates = async ({
 
   // pulling transactions for the access token gets all cards
   const match: any = {
-    'integrations.plaid': { $ne: null },
+    [`integrations.${transactionSource === TransactionSource.Plaid ? 'plaid' : 'marqeta'}`]: { $ne: null },
+    ...customTransactionQuery,
   };
+
   if (userId) match.user = new Types.ObjectId(userId);
 
   let usersWithTransactions = await TransactionModel.aggregate([
@@ -76,6 +87,11 @@ export const globalTransactionUpdates = async ({
         count: {
           $sum: 1,
         },
+      },
+    },
+    {
+      $sort: {
+        count: 1,
       },
     },
   ]);
@@ -101,91 +117,119 @@ export const globalTransactionUpdates = async ({
         // get already matched each time as it builds on itself
         const alreadyMatchedCompanies = await V2TransactionMatchedCompanyNameModel.find({});
 
-        const transactionQuery: any = { user: user._id };
+        let transactionQuery: any = { user: user._id };
 
         if (transactionSource === TransactionSource.Plaid) transactionQuery['integrations.plaid'] = { $ne: null };
         if (transactionSource === TransactionSource.Marqeta) transactionQuery['integrations.marqeta'] = { $ne: null };
 
-        const allUserTransactions = await TransactionModel.find(transactionQuery).lean();
-
-        const matchedTransactions: IMatchedTransaction[] = [];
-
-        let remainingTransactions: CombinedPartialTransaction[] = [];
-
-        // mappers will be different for each source
-        if (transactionSource === TransactionSource.Plaid) {
-          remainingTransactions = allUserTransactions.reduce((acc: CombinedPartialTransaction[], t) => {
-            if (t.integrations.plaid) acc.push({ datetime: t.date.toDateString(), amount: t.amount, ...t.integrations.plaid } as any as CombinedPartialTransaction);
-            return acc;
-          }, [] as Transaction[]);
+        if (customTransactionQuery) transactionQuery = { ...transactionQuery, ...customTransactionQuery };
+        if (!customTransactionQuery && useExclusions && transactionSource === TransactionSource.Plaid) transactionQuery = { ...transactionQuery, ...exclusionQuery.plaid };
+        if (!customTransactionQuery && useExclusions && transactionSource === TransactionSource.Marqeta) {
+          // add MQ exclusions
         }
 
-        if (transactionSource === TransactionSource.Marqeta) {
-          remainingTransactions = allUserTransactions.reduce((acc: CombinedPartialTransaction[], t) => {
+        log(`transactionQuery ${JSON.stringify(transactionQuery)}`);
+
+        const totalUserTransactions = await TransactionModel.find(transactionQuery).lean();
+
+        const transactionBatchSize = 500;
+        const totalBatches = totalUserTransactions.length / transactionBatchSize;
+
+        log(`totalUserTransactions ${totalUserTransactions.length}`);
+        log(`totalBatches ${totalBatches}`);
+
+        // need to batch updates for Mongo connection to persist
+        for (let batchCount = 0; batchCount < totalBatches; batchCount += 1) {
+          // connecting to DB again in each batch
+          // Mongo disconnects after around 2m and grabbing one transaction from the DB in each iteration seems to avoid this issue
+          await TransactionModel.findOne({ _id: totalUserTransactions[batchCount * transactionBatchSize]._id });
+
+          const allUserTransactions = totalUserTransactions.slice(batchCount * transactionBatchSize, (batchCount + 1) * transactionBatchSize);
+
+          log(`transaction start ${allUserTransactions[0]._id} end ${allUserTransactions[allUserTransactions.length - 1]._id}`);
+
+          const matchedTransactions: IMatchedTransaction[] = [];
+
+          let remainingTransactions: CombinedPartialTransaction[] = [];
+
+          // mappers will be different for each source
+          if (transactionSource === TransactionSource.Plaid) {
+            remainingTransactions = allUserTransactions.reduce((acc: CombinedPartialTransaction[], t) => {
+              if (t.integrations.plaid) acc.push({ datetime: t.date.toDateString(), amount: t.amount, ...t.integrations.plaid } as any as CombinedPartialTransaction);
+              return acc;
+            }, [] as Transaction[]);
+          }
+
+          if (transactionSource === TransactionSource.Marqeta) {
+            remainingTransactions = allUserTransactions.reduce((acc: CombinedPartialTransaction[], t) => {
             // potential for fp or fn here due to the merchant_name and name issues from plaid
-            if (t.integrations.marqeta && t.integrations.marqeta?.card_acceptor?.name) acc.push({ merchant_name: t.integrations.marqeta?.card_acceptor?.name, name: t.integrations.marqeta?.card_acceptor?.name, ...t.integrations.marqeta } as CombinedPartialTransaction);
-            return acc;
-          }, []);
-        }
-
-        const timeString = `${logId}matching for user ${user._id.toString()}`;
-        console.time(timeString);
-
-        log(`initial transaction count ${remainingTransactions.length}`);
-
-        // filter out pending transactions
-        if (transactionSource === TransactionSource.Plaid) {
-          remainingTransactions = remainingTransactions.filter((t) => !t?.pending);
-          log(`initial transaction count after pending ${remainingTransactions.length}`);
-        }
-
-        // filter out false positives
-        const foundFalsePositives: CombinedPartialTransaction[] = [];
-        remainingTransactions = remainingTransactions.filter((t) => {
-          if (falsePositives.find((fp) => fp.originalValue === t[fp.matchType])) {
-            foundFalsePositives.push(t);
-            return false;
+              if (t.integrations.marqeta && t.integrations.marqeta?.card_acceptor?.name) acc.push({ merchant_name: t.integrations.marqeta?.card_acceptor?.name, name: t.integrations.marqeta?.card_acceptor?.name, ...t.integrations.marqeta } as CombinedPartialTransaction);
+              return acc;
+            }, []);
           }
-          return true;
-        });
 
-        // filter out manual matches
-        const foundManualMatches: IMatchedTransaction[] = [];
-        remainingTransactions = remainingTransactions.filter((t) => {
-          const manualMatch = manualMatches.find((mm) => mm.originalValue === t[mm.matchType]);
-          if (manualMatch) {
-            foundManualMatches.push({ ...t, company: manualMatch.company });
-            return false;
+          const timeString = `${logId}matching for user ${user._id.toString()}`;
+          console.time(timeString);
+
+          log(`initial transaction count ${remainingTransactions.length}`);
+
+          // filter out pending transactions
+          // where we could filter via sector/plaid category
+          if (transactionSource === TransactionSource.Plaid) {
+            remainingTransactions = remainingTransactions.filter((t) => !t?.pending);
+            log(`initial transaction count after pending ${remainingTransactions.length}`);
           }
-          return true;
-        });
 
-        // find already matched companies
-        const [_matchedTransactions, nonMatchedTransactions] = matchTransactionsToCompanies(remainingTransactions, alreadyMatchedCompanies);
-        remainingTransactions = nonMatchedTransactions;
-        matchedTransactions.push(..._matchedTransactions);
+          // filter out false positives
+          const foundFalsePositives: CombinedPartialTransaction[] = [];
+          remainingTransactions = remainingTransactions.filter((t) => {
+            if (falsePositives.find((fp) => fp.originalValue === t[fp.matchType])) {
+              foundFalsePositives.push(t);
+              return false;
+            }
+            return true;
+          });
 
-        // find new matches
-        const newMatches = await getMatchResults({ transactions: remainingTransactions, cleanedCompanies, saveMatches: true });
-        const [__matchedTransactions, _nonMatchedTransactions] = matchTransactionsToCompanies(remainingTransactions, newMatches);
+          // filter out manual matches
+          const foundManualMatches: IMatchedTransaction[] = [];
+          remainingTransactions = remainingTransactions.filter((t) => {
+            const manualMatch = manualMatches.find((mm) => mm.originalValue === t[mm.matchType]);
+            if (manualMatch) {
+              foundManualMatches.push({ ...t, company: manualMatch.company });
+              return false;
+            }
+            return true;
+          });
 
-        remainingTransactions = _nonMatchedTransactions;
-        matchedTransactions.push(...__matchedTransactions);
+          // find already matched companies
+          const [_matchedTransactions, nonMatchedTransactions] = matchTransactionsToCompanies(remainingTransactions, alreadyMatchedCompanies);
+          remainingTransactions = nonMatchedTransactions;
+          matchedTransactions.push(..._matchedTransactions);
 
-        // LOGGING
-        log(`matchedTransactions ${matchedTransactions.length}`);
-        log(`foundFalsePositives ${foundFalsePositives.length}`);
-        log(`foundManualMatches ${foundManualMatches.length}`);
-        log(`remainingTransactions ${remainingTransactions.length}`);
-        console.timeEnd(timeString);
+          // find new matches
+          // maybe call getCleanCompanies here to hit DB again cleanedCompanies: await getCleanCompanies(),
+          const newMatches = await getMatchResults({ transactions: remainingTransactions, cleanedCompanies, saveMatches: true });
+          const [__matchedTransactions, _nonMatchedTransactions] = matchTransactionsToCompanies(remainingTransactions, newMatches);
 
-        const newlyMatchedTransactions = [...matchedTransactions, ...foundFalsePositives, ...foundManualMatches, ...remainingTransactions];
-        if (writeOutput) output.push(...newlyMatchedTransactions);
+          remainingTransactions = _nonMatchedTransactions;
+          matchedTransactions.push(...__matchedTransactions);
 
-        // logic to update transactions
+          // LOGGING
+          log(`matchedTransactions ${matchedTransactions.length}`);
+          log(`foundFalsePositives ${foundFalsePositives.length}`);
+          log(`foundManualMatches ${foundManualMatches.length}`);
+          log(`remainingTransactions ${remainingTransactions.length}`);
+          console.timeEnd(timeString);
 
-        if (transactionSource === TransactionSource.Plaid) await updatePlaidTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
-        if (transactionSource === TransactionSource.Marqeta) await updateMarqetaTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
+          const newlyMatchedTransactions = [...matchedTransactions, ...foundFalsePositives, ...foundManualMatches, ...remainingTransactions];
+          if (writeOutput) output.push(...newlyMatchedTransactions);
+
+          // logic to update transactions
+
+          if (transactionSource === TransactionSource.Plaid) await updatePlaidTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
+          if (transactionSource === TransactionSource.Marqeta) await updateMarqetaTransactions(allUserTransactions as ITransaction[], newlyMatchedTransactions);
+        }
+        // end of user loop
       }
     } catch (err) {
       log('error - trying again');

@@ -50,6 +50,7 @@ import {
 } from './types';
 import { IMarqetaGPACustomTags } from '../../services/transaction/types';
 import { GroupModel } from '../../models/group';
+import { ACHTransferModel } from '../../models/achTransfer';
 
 export interface IMarqetaTokenTransactionDictionary {
   [key: string]: ITransactionDocument;
@@ -423,6 +424,15 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   } catch (err) {
     console.error(err);
     throw new CustomError(`Error looking up the card associated with this transaction: ${JSON.stringify(t)} `, ErrorTypes.SERVER);
+  }
+
+  if (!!t.marqeta_transaction?.bank_transfer_token) {
+    // add achTransfer if it applies
+    const achTransfer = await ACHTransferModel.findOne({
+      token: t.marqeta_transaction.bank_transfer_token,
+    });
+
+    if (!!achTransfer?.bank) newTransaction.achTransfer = achTransfer;
   }
 
   const types = getSubtypeAndTypeFromMarqetaTransaction(t.marqeta_transaction);

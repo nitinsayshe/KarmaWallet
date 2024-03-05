@@ -6,7 +6,7 @@ import {
   ObjectId,
 } from 'mongoose';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 import { getUtcDate } from '../lib/date';
 
 export enum ISupportTicketStatus {

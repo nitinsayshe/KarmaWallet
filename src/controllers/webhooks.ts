@@ -1,8 +1,26 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
 import { MainBullClient } from '../clients/bull/main';
+import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
+import { getExistingUserOrVisitorFromClientRef, getExistingUserOrVisitorFromSearchId, updateSearchForUser, verifyComplyAdvantageWebhookSource } from '../integrations/complyAdvantage';
+import {
+  ComplyAdvantageWebhookEventEnum,
+  IComplyAdvantageWebhookBody,
+  IMatchStatusUpdatedEventData,
+  IMonitoredSearchUpdatedData,
+  ISearchStatusUpdatedEventData,
+  UpdateSearchData,
+} from '../integrations/complyAdvantage/types';
+import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
+import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
+import {
+  IMarqetaWebhookBody,
+  IMarqetaWebhookHeader,
+  InsufficientFundsConstants,
+  MarqetaWebhookConstants,
+} from '../integrations/marqeta/types';
 import { processPaypalWebhook } from '../integrations/paypal';
 import { mapTransactions } from '../integrations/rare';
 import { IRareTransaction } from '../integrations/rare/transaction';
@@ -10,34 +28,27 @@ import { IRareRelayedQueryParams } from '../integrations/rare/types';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { ErrorTypes } from '../lib/constants';
 import { JobNames } from '../lib/constants/jobScheduler';
+import { PushNotificationTypes } from '../lib/constants/notification';
 import CustomError, { asCustomError } from '../lib/customError';
+import { CardModel } from '../models/card';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
-import { UserModel } from '../models/user';
-import { _getCard, handleMarqetaCardWebhook } from '../services/card';
+import { IUserDocument, UserModel } from '../models/user';
+import { IVisitorDocument } from '../models/visitor';
+import { handleMarqetaACHTransitionWebhook } from '../services/achTransfers';
+import { handleMarqetaCardWebhook, _getCard } from '../services/card';
+import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { mapWildfireCommissionToKarmaCommission, processKardWebhook } from '../services/commission/utils';
 import { getGroup, IGroupOffsetMatchData, matchMemberOffsets } from '../services/groups';
 import { Logger } from '../services/logger';
+import * as output from '../services/output';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
-import { IRequestHandler } from '../types/request';
-import { CardModel } from '../models/card';
-import * as output from '../services/output';
-import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
-import { PushNotificationTypes } from '../lib/constants/notification';
-import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
-import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
 import { handleTransactionDisputeMacros, handleTransactionNotifications } from '../services/transaction';
-import {
-  IMarqetaWebhookBody,
-  IMarqetaWebhookHeader,
-  InsufficientFundsConstants,
-  MarqetaWebhookConstants,
-} from '../integrations/marqeta/types';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
-import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard';
-import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
-import { handleMarqetaACHTransitionWebhook } from '../services/achTransfers';
+import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
+import { IRequestHandler } from '../types/request';
+import { WebhookModel, WebhookProviders } from '../models/webhook';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -315,6 +326,90 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
   }
 };
 
+const handleSearchStatusUpdated = async (data: ISearchStatusUpdatedEventData) => {
+  const { changes, client_ref, search_id } = data;
+
+  const existingUser = await getExistingUserOrVisitorFromClientRef(client_ref);
+  if (!existingUser) {
+    throw new CustomError(`No user or visitor found for client_ref: ${client_ref}`, ErrorTypes.NOT_FOUND);
+  }
+
+  if (existingUser.integrations.complyAdvantage.id !== search_id) {
+    // TODO: use the new search?
+    throw new CustomError(
+      `Search id mismatch. Existing user search id: ${existingUser.integrations.complyAdvantage.id} does not match search_id: ${search_id}`,
+      ErrorTypes.NOT_FOUND,
+    );
+  }
+
+  const { assigned_to, risk_level, match_status } = changes.before;
+
+  if (!!assigned_to) {
+    existingUser.integrations.complyAdvantage.assigned_to = changes.after.assigned_to;
+  }
+
+  if (!!risk_level) {
+    existingUser.integrations.complyAdvantage.risk_level = changes.after.risk_level;
+  }
+
+  if (!!match_status) {
+    existingUser.integrations.complyAdvantage.match_status = changes.after.match_status;
+  }
+
+  try {
+    return existingUser.save();
+  } catch (e) {
+    throw new CustomError(`Error updating user with client_ref: ${client_ref} and ObjectId: ${existingUser._id}`, ErrorTypes.SERVER);
+  }
+};
+
+const fetchUpdatedSearchData = async (data: UpdateSearchData): Promise<IUserDocument | IVisitorDocument> => {
+  const { search_id } = data;
+
+  // check if a user has an integration with the search_id
+  const existingUser = await getExistingUserOrVisitorFromSearchId(search_id);
+  if (!existingUser) {
+    throw new CustomError(`No user or visitor found for search_id: ${search_id}`, ErrorTypes.NOT_FOUND);
+  }
+
+  if (existingUser.integrations.complyAdvantage.id !== search_id) {
+    // TODO: use the new search?
+    throw new CustomError(
+      `Search id mismatch. Existing user search id: ${existingUser.integrations.complyAdvantage.id} does not match search_id: ${search_id}`,
+      ErrorTypes.NOT_FOUND,
+    );
+  }
+
+  return updateSearchForUser(existingUser);
+};
+
+export const handleComplyAdvantageWebhook: IRequestHandler<{}, {}, IComplyAdvantageWebhookBody> = async (req, res) => {
+  try {
+    console.log('////////// RECEIVED Comply Advantage WEBHOOK ////////// ');
+
+    await verifyComplyAdvantageWebhookSource(req);
+
+    const { event, data } = req.body;
+    switch (event) {
+      case ComplyAdvantageWebhookEventEnum.MatchStatusUpdated:
+        await fetchUpdatedSearchData(data as unknown as IMatchStatusUpdatedEventData);
+        break;
+      case ComplyAdvantageWebhookEventEnum.SearchStatusUpdated:
+        await handleSearchStatusUpdated(data as unknown as ISearchStatusUpdatedEventData);
+        break;
+      case ComplyAdvantageWebhookEventEnum.MonitoredSearchUpdated:
+        await fetchUpdatedSearchData(data as unknown as IMonitoredSearchUpdatedData);
+        break;
+      default:
+        break;
+    }
+
+    output.api(req, res, { message: 'Comply Advantage webhook processed successfully.' });
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
 export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
   try {
     console.log('////////// RECEIVED MARQETA WEBHOOK ////////// ');
@@ -326,6 +421,13 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
 
     const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
+
+    // saving all webhooks for debugging purposes
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Marqeta, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Marqeta webhook. processing will continue. error: ${e}---`);
+    }
 
     // Card transition events include activities such as a card being activated/deactivated, ordered, or shipped
     if (!!cards) {
@@ -389,7 +491,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
 
     if (!!chargebacktransitions) {
-      console.log('////////// PROCESSING MARQETA CHARGEBACKTRANSITION WEBHOOK ////////// ');
+      console.log('////////// PROCESSING MARQETA CHARGEBACKTRANSITION WEBHOOK //////////');
       const savedChargebacks = await mapAndSaveMarqetaChargebackTransitionsToChargebacks(chargebacktransitions);
       await handleDisputeMacros(savedChargebacks);
     }

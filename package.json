@@ -69,6 +69,7 @@
   },
   "dependencies": {
     "@socket.io/redis-adapter": "7.1.0",
+    "@types/puppeteer": "7.0.4",
     "api-query-params": "5.3.1",
     "argon2": "0.28.3",
     "aws-sdk": "2.1066.0",
@@ -109,6 +110,7 @@
     "pdfkit-table": "0.1.99",
     "pino-http": "6.6.0",
     "plaid": "15.2.0",
+    "puppeteer": "22.2.0",
     "rate-limiter-flexible": "2.3.6",
     "sanitize-html": "2.10.0",
     "slugify": "1.6.5",

@@ -5,6 +5,8 @@ import {
   ActiveCampaignClient,
   IContactAutomation,
   IContactList,
+  IContactsData,
+  ICreateContactData,
   IGetContactResponse,
   UpdateContactListStatusEnum,
 } from '../../clients/activeCampaign';
@@ -669,7 +671,7 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
 };
 
 export const updateActiveCampaignContactData = async (
-  userData: {email: string, name?: string},
+  userData: { email: string, name?: string },
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
   tags?: string[],
@@ -682,27 +684,28 @@ export const updateActiveCampaignContactData = async (
   let firstName = '';
   let lastName = '';
 
-  if (userData?.name.includes(' ')) {
-    firstName = userData.name?.split(' ')?.[0];
-    lastName = userData.name?.split(' ')?.pop();
+  if (userData?.name?.includes(' ')) {
+    firstName = userData?.name?.split(' ')?.[0];
+    lastName = userData?.name?.split(' ')?.pop();
   } else {
-    firstName = userData.name;
+    firstName = userData?.name;
   }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
-  const contacts = [
+  const contacts: Array<IContactsData> = [
     {
-      first_name: firstName,
-      last_name: lastName,
       email: userData.email,
-      subscribe: sub,
-      unsubscribe: unsub,
-      tags,
-      fields,
     },
   ];
+
+  if (!!firstName) contacts[0].first_name = firstName;
+  if (!!lastName) contacts[0].last_name = lastName;
+  if (!!sub) contacts[0].subscribe = sub;
+  if (!!unsub) contacts[0].unsubscribe = unsub;
+  if (!!tags) contacts[0].tags = tags;
+  if (!!fields) contacts[0].fields = fields;
 
   await ac.importContacts({ contacts });
 };
@@ -777,6 +780,21 @@ export const removeDuplicateContactAutomations = async (email: string, client?: 
     console.log('done removing duplicate automations for ', email);
   } catch (err) {
     console.error('Error removing duplicate automation enrollments', err);
+  }
+};
+
+export const updateContactEmail = async (oldEmail: string, newEmail: string, client?: AxiosInstance) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    // get active campaign id for user
+    const rs = await ac.getContacts({ email: oldEmail });
+    if (rs?.contacts?.length > 0) {
+      return await ac.updateContact({ id: parseInt(rs.contacts[0].id, 10), contact: { email: newEmail } });
+    }
+  } catch (err) {
+    console.error('Error updating contact email', err);
   }
 };
 
@@ -888,5 +906,15 @@ export const updateCustomFields = async (
     await ac.importContacts({ contacts });
   } catch (err) {
     console.error(`error updating custom fields: ${JSON.stringify(fieldUpdates)}`, err);
+  }
+};
+
+export const createContact = async (contact: ICreateContactData, client?: AxiosInstance) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+    return ac.createContact({ email: contact.email });
+  } catch (err) {
+    console.error('error creating contact', err);
   }
 };

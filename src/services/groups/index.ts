@@ -1,7 +1,6 @@
 import aqp from 'api-query-params';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import isemail from 'isemail';
 import {
   FilterQuery, isValidObjectId, Schema, UpdateQuery,
 } from 'mongoose';
@@ -19,7 +18,7 @@ import { CompanyModel } from '../../models/company';
 import { GroupModel, GroupPrivacyStatus, GroupStatus, IGroup, IGroupDocument, IGroupSettings, IShareableGroup } from '../../models/group';
 import { IStatementDocument, IShareableStatementRef, IStatement, IOffsetsStatement } from '../../models/statement';
 import { MatchTypes, ITransactionMatch, ITransactionDocument } from '../../models/transaction';
-import { IUserDocument, UserModel, UserEmailStatus } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IUserGroupDocument, UserGroupModel, IUserGroup, IShareableUserGroup } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
@@ -31,8 +30,8 @@ import { averageAmericanEmissions as averageAmericanEmissionsData } from '../imp
 import { getEquivalencies, getOffsetTransactionsTotal, getRareOffsetAmount, IEquivalencyObject } from '../impact/utils/carbon';
 import { getStatements } from '../statements';
 import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../subscription';
-// eslint-disable-next-line import/no-cycle
-import { getUser } from '../user';
+import { getUser } from '../user/utils';
+import { UserEmailStatus } from '../../models/user/types';
 
 dayjs.extend(utc);
 
@@ -814,6 +813,7 @@ export const getSummary = async (_: IRequest) => {
 export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestParams>, bustCache = false) => {
   const { requestor } = req;
   const { groupId } = req.params;
+
   try {
     if (!groupId) throw new CustomError('A group id is required', ErrorTypes.INVALID_ARG);
     const userGroupPromise = getUserGroup({ ...req, params: { userId: requestor._id.toString(), groupId: req.params.groupId } });
@@ -832,6 +832,8 @@ export const getGroupOffsetData = async (req: IRequest<IGetGroupOffsetRequestPar
 
     if (!cachedData || bustCache) {
       for (const member of members) {
+        if (!member.user) continue;
+
         const query = {
           user: (member.user as IUserDocument)._id,
           date: { $gte: member.joinedOn },
@@ -945,10 +947,6 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     let validEmail: string;
     const hasDomainRestrictions = group.settings.allowDomainRestriction && group.domains.length > 0;
     if (hasDomainRestrictions) {
-      if (!isemail.validate(email, { minDomainAtoms: 2 })) {
-        throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
-      }
-
       // ??? should we support falling back to existing user emails if the groupEmail does not
       // meet the groups requirements???
       // const validEmail = [groupEmail, user.email, ...(user.altEmails || [])].find(email => {
@@ -1027,10 +1025,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
 };
 
 export const removeFromGroup = async (userGroup: IUserGroupDocument) => {
-    // only a user that is a member of a group can leave it.
-    // if someone else is removing the user, that should be
-    // done with the updateUserGroup function instead and their
-    // status should be set to Removed not Left.
+  try {
     if (!userGroup) throw new CustomError('You are not a member of this group, so you cannot leave it.', ErrorTypes.UNPROCESSABLE);
 
     if (userGroup.role === UserGroupRole.Owner) {
@@ -1049,7 +1044,10 @@ export const removeFromGroup = async (userGroup: IUserGroupDocument) => {
     const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
     await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
-}
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
 
 export const leaveGroup = async (req: IRequest, {
   groupId,
@@ -1063,6 +1061,8 @@ export const leaveGroup = async (req: IRequest, {
       user: userId,
       status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned] },
     });
+
+    await removeFromGroup(userGroup);
 
     // busting cache for group dashboard // this appears to be breaking when the person leaving the group is just a regular member
     const appUser = await getUser(req, { _id: process.env.APP_USER_ID });

@@ -7,13 +7,15 @@ import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
-import { IUrlParam, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
-import { IVerifyTokenBody } from '../user/types';
+import { IUrlParam, IVerifyTokenBody } from '../user/types';
+import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
+import { updateVisitorUrlParams } from '../user';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -29,8 +31,12 @@ export interface INewsletterSignupData extends IVisitorSignupData {
 
 export interface ICreateAccountRequest extends IVisitorSignupData {
   groupCode?: string;
-  shareASale?: boolean;
-  marqeta?: IMarqetaVisitorData
+  sscid?: string;
+  sscidCreatedOn?: string;
+  xTypeParam?: string;
+  trackingId?: string;
+  marqeta?: IMarqetaVisitorData;
+  complyAdvantage?: IComplyAdvantageIntegration;
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -100,21 +106,29 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
       email: info.email,
     };
 
-    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.shareASale) {
+    if (!!info.groupCode || (!!info.params && !!info.params.length) || !!info.sscid || !!info.xTypeParam || !!info.sscidCreatedOn) {
       visitorInfo.integrations = {};
-      if (!!info.groupCode) {
-        visitorInfo.integrations.groupCode = info.groupCode;
-      }
+      // group code
+      if (!!info.groupCode) visitorInfo.integrations.groupCode = info.groupCode;
+      // url params
       if (!!info.params) {
+        if (!visitorInfo.integrations) visitorInfo.integrations = {};
         visitorInfo.integrations.urlParams = info.params;
         if (info.params.find(p => p.key === 'groupCode')) {
           visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
         }
       }
-      if (!!info.shareASale) visitorInfo.integrations.shareASale = info.shareASale;
+      // shareasale
+      if (!!info.sscid && !!info.sscidCreatedOn && !!info.xTypeParam) {
+        visitorInfo.integrations.shareASale = {
+          sscid: info.sscid,
+          sscidCreatedOn: info.sscidCreatedOn,
+          xTypeParam: info.xTypeParam,
+        };
+      }
     }
-    const visitor = await VisitorModel.create(visitorInfo);
-    return visitor;
+
+    return await VisitorModel.create(visitorInfo);
   } catch (err) {
     throw new CustomError(`Error creating visitor: ${err} `, ErrorTypes.GEN);
   }
@@ -122,16 +136,20 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
 
 export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
   try {
+    if (!visitor.integrations) visitor.integrations = {};
     if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
+    if (!!info.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
+    if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
+    if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
+    if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
+    if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
     if (!!info.params) {
-      visitor.integrations.urlParams = info.params;
+      await updateVisitorUrlParams(visitor, info.params);
       if (info.params.find(p => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
       }
     }
-    if (!!info.shareASale) visitor.integrations.shareASale = info.shareASale;
-    if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
-    visitor.save();
+    await visitor.save();
     return visitor;
   } catch (err) {
     throw new CustomError(`Error updating visitor: ${err} `, ErrorTypes.GEN);
@@ -183,7 +201,7 @@ export const getQueryFromSubscriptionCodes = (visitorId: string, codes: Subscrip
 };
 
 export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest) => {
-  const { groupCode, shareASale, params } = data;
+  const { groupCode, sscid, sscidCreatedOn, xTypeParam, params } = data;
   let { email } = data;
 
   if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
@@ -200,8 +218,8 @@ export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest
   // check if exisiting visitor with this email, if so resend the verification email
   let visitor = await getVisitorByEmail(email);
 
-  if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, shareASale, params, email });
-  else visitor = await createCreateAccountVisitor({ groupCode, shareASale, params, email });
+  if (!!visitor) visitor = await updateCreateAccountVisitor(visitor, { groupCode, sscid, sscidCreatedOn, xTypeParam, params, email });
+  else visitor = await createCreateAccountVisitor({ groupCode, sscid, sscidCreatedOn, xTypeParam, params, email });
 
   if (!!visitor) {
     try {

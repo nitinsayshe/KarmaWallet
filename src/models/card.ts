@@ -2,8 +2,9 @@ import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { CardStatus, KardEnrollmentStatus } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUserDocument } from './user';
+import { IUserDocument } from './user';
 import { MarqetaCardFulfillmentStatus, MarqetaCardState } from '../integrations/marqeta/types';
+import { IShareableUser } from './user/types';
 
 export interface IPlaidCardIntegration {
   accessToken: string;
@@ -48,6 +49,8 @@ export interface IMarqetaCardIntegration {
   pin_is_set: boolean;
   state: MarqetaCardState;
   user_token: string;
+  reason?: string;
+  reason_code:string;
 }
 
 export interface ICardIntegrations {

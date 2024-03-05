@@ -91,25 +91,30 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued],
   // },
-  [NotificationTypeEnum.ACHTransferInitiation]: {
-    type: NotificationTypeEnum.ACHTransferInitiation,
-    channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendACHInitiationEmail],
-  },
+  // [NotificationTypeEnum.ACHTransferInitiation]: {
+  //   type: NotificationTypeEnum.ACHTransferInitiation,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendACHInitiationEmail],
+  // },
   // [NotificationTypeEnum.KarmaCardWelcome]: {
   //   type: NotificationTypeEnum.KarmaCardWelcome,
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendKarmaCardWelcomeEmail],
   // },
-  [NotificationTypeEnum.ACHTransferCancelled]: {
-    type: NotificationTypeEnum.ACHTransferCancelled,
-    channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHCancelledEmail],
-  },
-  [NotificationTypeEnum.ACHTransferReturned]: {
-    type: NotificationTypeEnum.ACHTransferReturned,
-    channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHReturnedEmail],
+  // [NotificationTypeEnum.ACHTransferCancelled]: {
+  //   type: NotificationTypeEnum.ACHTransferCancelled,
+  //   channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHCancelledEmail],
+  // },
+  // [NotificationTypeEnum.ACHTransferReturned]: {
+  //   type: NotificationTypeEnum.ACHTransferReturned,
+  //   channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHReturnedEmail],
+  // },
+  [NotificationTypeEnum.KarmaCardDeclined]: {
+    type: NotificationTypeEnum.KarmaCardDeclined,
+    channels: [NotificationChannelEnum.Email],
+    effects: [NotificationEffectsEnum.SendKarmaCardDeclinedEmail],
   },
 };
 

@@ -1,8 +1,9 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUserDocument } from './user';
+import { IUserDocument } from './user';
 import { BankConnectionStatus } from '../lib/constants';
+import { IShareableUser } from './user/types';
 
 export interface IPlaidCardIntegration {
   accessToken: string;

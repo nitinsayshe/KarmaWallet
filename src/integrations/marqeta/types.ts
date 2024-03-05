@@ -2,7 +2,6 @@ import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
 import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
-import { NACHAACHReturnCodeEnumValues } from '../../services/achTransfers/types';
 
 interface Identification {
   type: string;
@@ -220,20 +219,6 @@ export interface IACHTransition {
   last_modified_time: Date;
 }
 
-export interface IACHBankTransfer {
-  token: string;
-  amount: number;
-  channel: string;
-  funding_source_token: string;
-  type: string;
-  currency_code: string;
-  transfer_speed: string;
-  status: string;
-  transitions: IACHTransition;
-  created_time: Date;
-  last_modified_time: Date;
-}
-
 export interface IACHFundingSource {
   token: string;
   accessToken?: string;
@@ -383,12 +368,48 @@ export interface IMarqetaWebhookCardsEvent {
   pan: string;
   pin_is_set: Boolean;
   reason: string;
+  reason_code: string;
   state: MarqetaCardState;
   token: string;
   type: string;
   user_token: string;
   validations: Object;
 }
+
+export const IMarqetaReasonCodesEnum: { [key: string]: string } = {
+  '00': 'Object activated for the first time.',
+  '01': 'Requested by you.',
+  '02': 'Inactivity over time.',
+  '03': 'This address cannot accept mail or the addressee is unknown.',
+  '04': 'Negative account balance.',
+  '05': 'Account under review.',
+  '06': 'Suspicious activity was identified.',
+  '07': 'Activity outside the program parameters was identified.',
+  '08': 'Confirmed fraud was identified.',
+  '09': 'Matched with an Office of Foreign Assets Control list.',
+  10: 'Card was reported lost.',
+  11: 'Card information was cloned.',
+  12: 'Account or card information was compromised.',
+  13: 'Temporary status change while on hold/leave.',
+  14: 'Initiated by Marqeta.',
+  15: 'Initiated by issuer.',
+  16: 'Card expired.',
+  17: 'Failed KYC.',
+  18: 'Changed to ACTIVE because information was properly validated.',
+  19: 'Changed to ACTIVE because account activity was properly validated.',
+  20: 'Change occurred prior to the normalization of reason codes.',
+  21: 'Initiated by a third party, often a digital wallet provider.',
+  22: 'PIN retry limit reached.',
+  23: 'Card was reported stolen.',
+  24: 'Address issue.',
+  25: 'Name issue.',
+  26: 'SSN issue.',
+  27: 'DOB issue.',
+  28: 'Email issue.',
+  29: 'Phone issue.',
+  30: 'Account/fulfillment mismatch.',
+  31: 'Other reason.',
+};
 
 export type MarqetaUserModel = {
   token: string;
@@ -406,13 +427,46 @@ export type MarqetaUserModel = {
   phone?: string;
   uses_parent_account?: boolean;
   corporate_card_holder?: boolean;
-  created_time?: string;
-  last_modified_time?: string;
+  created_time?: Date;
+  last_modified_time?: Date;
   metadata?: Record<string, any>;
   account_holder_group_token?: string;
-  status?: string;
+  status?: IMarqetaUserStatus;
   identifications?: Identification[];
 };
+
+export interface IMarqetaKycResult {
+  status: IMarqetaKycState;
+  codes: string[];
+}
+
+interface IMarqetaIdentification {
+  type: string,
+  value: string,
+}
+
+export interface IMarqetaUserIntegrations {
+  userToken: string;
+  email?: string;
+  kycResult?: IMarqetaKycResult;
+  first_name?: string;
+  last_name?: string;
+  birth_date?: string;
+  phone?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  account_holder_group_token?: string;
+  identifications?: IMarqetaIdentification[];
+  status?: IMarqetaUserStatus;
+  created_time?: string;
+  _id?: string;
+  reason? :string;
+  reason_code? :string;
+}
 
 export const ACHTransferTransitionStatusEnum = {
   Pending: 'PENDING',
@@ -648,9 +702,53 @@ export enum MarqetaUserTransitionReasonCode {
   'other' = '31',
 }
 
+export const NACHAACHReturnCodesEnum = {
+  R01: 'Insufficient Funds',
+  R02: 'Account Closed',
+  R03: 'No Account/Unable to Locate Account',
+  R04: 'Invalid Account Number',
+  R05: 'Improper Debit to Consumer Account',
+  R06: 'Returned per ODFI Request',
+  R07: 'Authorization Revoked by Customer',
+  R08: 'Payment Stopped',
+  R09: 'Uncollected Funds',
+  R10: 'Customer Advises Originator is Not Known to Receiver and/or Originator is Not Authorized by Receiver to Debit Receiver’s Account',
+  R11: 'Customer Advises Entry Not in Accordance with the Terms of the Authorization',
+  R12: 'Branch Sold to Another DFI',
+  R13: 'RDFI Not Qualified to Participate',
+  R14: 'Representative Payee Deceased or Unable to Continue in that Capacity',
+  R15: 'Beneficiary or Account Holder Deceased',
+  R16: 'Bank Account Frozen',
+  R17: 'File Record Edit Criteria',
+  R18: 'Improper Effective Entry Date',
+  R19: 'Amount Field Error',
+  R20: 'Non-Transaction Account',
+  R21: 'Invalid Company Identification',
+  R22: 'Invalid Individual ID Number',
+  R23: 'Credit Entry Refused by Receiver',
+  R24: 'Duplicate Entry',
+  R25: 'Addenda Error',
+  R26: 'Mandatory Field Error',
+  R27: 'Trace Number Error',
+  R28: 'Routing Number Check Digit Error',
+  R29: 'Corporate Customer Advises Not Authorized',
+  R30: 'RDFI Not Participant in Check Truncation Program',
+  R31: 'Permissible Return Entry',
+  R32: 'RDFI Non-Settlement',
+  R33: 'Return of XCK Entry',
+  R34: 'Limited Participation DFI',
+  R35: 'Return of Improper Debit Entry',
+  R36: 'Return of Improper Credit Entry',
+  R37: 'Source Document Presented for Payment',
+  R38: 'Stop Payment on Source Document',
+  R39: 'Improper Source Document',
+} as const;
+export type NACHAACHReturnCodeEnumValues = (typeof NACHAACHReturnCodesEnum)[keyof typeof NACHAACHReturnCodesEnum];
+
 export interface IMarqetaUserTransitionsEvent {
   token: string;
   status: IMarqetaUserStatus;
+  reason?: string;
   reason_code: string;
   channel: string;
   created_time: Date;

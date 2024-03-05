@@ -22,6 +22,10 @@ router.route('/marqeta')
   .post(WebhooksController.handleMarqetaWebhook);
 
 // legacy api passthrough route
+router.route('/comply-advantage')
+  .post(WebhooksController.handleComplyAdvantageWebhook);
+
+// legacy api passthrough route
 router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);
 

@@ -1,7 +1,7 @@
 import { Schema, model, Document, Model, ObjectId } from 'mongoose';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 
 export interface IKarmaCardStatementTransactionTotals {
   debits: number;

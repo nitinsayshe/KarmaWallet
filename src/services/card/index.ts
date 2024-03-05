@@ -10,19 +10,21 @@ import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
 import { formatZodFieldErrors } from '../../lib/validation';
 import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
-import { IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
+import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import {
   createCardShippedUserNotification,
   createPushUserNotificationFromUserAndPushData,
 } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
-// eslint-disable-next-line import/no-cycle
-import { getShareableUser } from '../user';
+import { getShareableUser } from '../user/utils';
+import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { Card } from '../../clients/marqeta/card';
+import { IUserDocument, UserModel } from '../../models/user';
+import { IShareableUser } from '../../models/user/types';
 
 dayjs.extend(utc);
 
@@ -106,9 +108,18 @@ export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<I
 // when a user removes a card
 const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   const client = new PlaidClient();
-  if (card?.integrations?.plaid?.accessToken) {
+  if (!!card?.integrations?.plaid?.accessToken) {
     await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+
+    await CardModel.updateMany(
+      { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
+      {
+        'integrations.plaid.accessToken': null,
+        $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
+      },
+    );
   }
+
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
     // TODO: these jobs should ideally be broken down into jobs for users and jobs to get totals
@@ -117,19 +128,12 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserTransactionTotals, {});
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
-
-  await CardModel.updateMany(
-    { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
-    {
-      'integrations.plaid.accessToken': null,
-      $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
-    },
-  );
 };
 
 const _removeKardUser = async (card: ICardDocument): Promise<void> => {
   await deleteKardUserForCard(card);
 };
+
 const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
@@ -334,6 +338,8 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     instrument_type,
     pin_is_set,
     state,
+    reason,
+    reason_code,
     card_token,
   } = cardData;
 
@@ -367,13 +373,14 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     pin_is_set,
     user_token,
     state,
+    reason,
+    reason_code,
   };
   // Set lastModified date
   card.lastModified = dayjs().utc().toDate();
   // Update the Marqeta details in the integrations.marqeta field
   card.integrations.marqeta = cardItem;
   card.status = getCardStatusFromMarqetaCardState(cardData.state);
-
   // Save the updated card document
   await card.save();
 };
@@ -446,10 +453,6 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
   const origCreatedTime = existingCard?.createdOn;
 
-  if (!existingCard) {
-    return;
-  }
-
   const newData: any = {
     card_token: cardFromWebhook?.card_token,
     user_token: cardFromWebhook?.user_token,
@@ -458,25 +461,34 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     last_four: encrypt(cardFromWebhook?.last_four),
     expr_month: month,
     expr_year: year,
-    created_time: existingCard?.integrations.marqeta.created_time,
+    created_time: existingCard?.integrations?.marqeta?.created_time,
     pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
     state: cardFromWebhook?.state,
     fulfillment_status: cardFromWebhook?.fulfillment_status,
+    reason: cardFromWebhook?.reason,
+    reason_code: cardFromWebhook?.reason_code,
   };
 
-  if (existingCard?.integrations?.marqeta?.instrument_type) {
-    newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
-  }
+  // if not an existing card, create a new card
+  if (!existingCard) {
+    // if virtual card ensure set to active when first created
+    if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
+    await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
+  } else {
+    if (existingCard?.integrations?.marqeta?.instrument_type) {
+      newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
+    }
 
-  if (existingCard?.integrations?.marqeta?.barcode) {
-    newData.barcode = existingCard?.integrations?.marqeta?.barcode;
-  }
+    if (existingCard?.integrations?.marqeta?.barcode) {
+      newData.barcode = existingCard?.integrations?.marqeta?.barcode;
+    }
 
-  existingCard.integrations.marqeta = newData;
-  existingCard.lastModified = dayjs().utc().toDate();
-  existingCard.createdOn = origCreatedTime;
-  existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
-  await existingCard.save();
+    existingCard.integrations.marqeta = newData;
+    existingCard.lastModified = dayjs().utc().toDate();
+    existingCard.createdOn = origCreatedTime;
+    existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
+    await existingCard.save();
+  }
 };
 
 export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
@@ -490,13 +502,33 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
+  // Instantiate the MarqetaClient
+  const marqetaClient = new MarqetaClient();
+
+  // Instantiate the CARD class
+  const cardClient = new Card(marqetaClient);
+  const cardDataInMarqeta = await cardClient.getCardDetails(cardWebhookData?.card_token);
+
+  if (!cardDataInMarqeta) throw new CustomError(`Card with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
+  // if reason attribute is missing in cardWebhookData then populate the reason based on reason_code
+  console.log('[+] Handling Marqeta Card Webhook', {
+    cardWebhookData,
+  });
+
+  if (cardWebhookData.state === cardDataInMarqeta.state) {
+    if (!cardWebhookData.reason) {
+      const { reason_code } = cardWebhookData;
+      cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+    }
+  }
+
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user?._id) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
   if (!prevCardData) {
-    await mapMarqetaCardtoCard(user._id.toString(), cardWebhookData);
+    await mapMarqetaCardtoCard(user._id.toString(), cardDataInMarqeta);
   }
-  await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
-  await updateCardFromMarqetaCardWebhook(cardWebhookData);
-  await sendCardUpdateEmails(cardWebhookData);
+  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
+  await updateCardFromMarqetaCardWebhook(cardDataInMarqeta);
+  await sendCardUpdateEmails(cardDataInMarqeta);
 };

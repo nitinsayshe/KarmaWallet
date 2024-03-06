@@ -12,6 +12,7 @@ const dirs = [
 
 const files = [
   'src/lib/companyTextMatch.py',
+  'src/services/karmaCardStatement/buildStatementPDF/karma_wallet_logo.png',
 ];
 
 const copyDirs = () => {

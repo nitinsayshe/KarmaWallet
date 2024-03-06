@@ -1262,11 +1262,12 @@ export const getFeaturedCashbackCompaniesUnpaginated = async (req: IGetFeaturedC
     ])
     .sort({ companyName: 1 });
 
-  companies.length = numberToReturn;
   const shareableCompanies = companies.map(c => getShareableCompany(c));
 
   if (!!sort && sort === FeaturedCashbackSortOptions.HighestCashback) {
-    return sortByMaxRate(shareableCompanies);
+    const sortedByMax = sortByMaxRate(shareableCompanies);
+    sortedByMax.length = numberToReturn;
+    return sortedByMax;
   }
 
   return shareableCompanies;

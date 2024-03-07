@@ -62,3 +62,5 @@ export interface IInitiateGPADepositsRequest {
   memo?: 'Happy holidays from Impact Karma!'
 }
 ```
+
+Sending this money will send a text message and an email (`employerGift` in our email templates folder) to the cardholder.

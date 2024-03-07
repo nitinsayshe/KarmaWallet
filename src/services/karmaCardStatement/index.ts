@@ -35,22 +35,21 @@ export const getSumOfTransactionsByTransactionSubType = (transactionSubType: Tra
   return sum;
 };
 
-export const getStartBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.ledger_balance;
-
 export const getEndBalance = (transaction: ITransaction) => {
   if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
     const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
     const mostRecentTransaction = sortByNewestFirst[0];
     return mostRecentTransaction.gpa.ledger_balance;
   }
-  return transaction.integrations.marqeta.gpa.ledger_balance;
+
+  return transaction.integrations?.marqeta?.gpa?.ledger_balance;
 };
 
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;
   const previousStatements = await KarmaCardStatementModel.find({ userId });
-  const lastStatement = previousStatements[previousStatements.length - 1];
   const isFirstStatement = previousStatements.length === 0;
+  const lastStatement = !isFirstStatement ? previousStatements[previousStatements.length - 1] : null;
 
   let endBalanceFromLastStatement = 0;
   let transactionsSortedByDate: ITransaction[] | [] = [];

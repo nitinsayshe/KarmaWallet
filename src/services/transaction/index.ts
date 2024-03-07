@@ -1088,7 +1088,7 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : `Deposit from ${group.name}`,
+      memo: !!memo ? memo : `You received money from ${group.name}`,
     });
 
     if (!gpaFundResponse.data) {

@@ -687,7 +687,7 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
       // Marqeta integration only saved on visitor not on user yet
       // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
       const user = await UserModel.findById(visitor.user);
-      if (!user) throw new CustomError('User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
+      if (!user) throw new CustomError('[+] User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
       await handleMarqetaUserActiveTransition(user, false);
     }
   }
@@ -700,12 +700,12 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);
 
   if (!currentMarqetaUserData) {
-    console.log('///// Error getting most up to date user information from Marqeta /////');
+    console.log('[+] Error getting most up to date user information from Marqeta');
   }
 
   if (!existingUser?._id && !visitor?._id) {
     // add in code to add the user to our database?
-    throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
+    throw new CustomError('[+] User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
   // EXISTING USER with Marqeta integration already saved
   // Check if the status has changed for this user
@@ -749,6 +749,5 @@ export const updateVisitorUrlParams = async (
   const duplicatesRemoved = Array.from(new Set(params));
   visitorObject.integrations.urlParams = duplicatesRemoved;
   visitorObject.integrations.urlParams = duplicatesRemoved;
-
   await visitorObject.save();
 };

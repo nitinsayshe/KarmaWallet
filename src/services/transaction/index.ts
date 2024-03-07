@@ -982,7 +982,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
     // add notifiction here?
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.EMPLOYER_GIFT,
-      body: `An employer gift of $${transaction?.amount} has been deposited onto your Karma Wallet Card`,
+      body: `An employer gift of $${transaction?.amount.toFixed(2)} has been deposited onto your Karma Wallet Card`,
       title: 'Employer Gift Received!',
     });
 
@@ -992,7 +992,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${transaction?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      body: `$${transaction?.amount.toFixed()} in Karma Cash has been deposited onto your Karma Wallet Card`,
       title: 'Karma Cash Deposited!',
     });
   }

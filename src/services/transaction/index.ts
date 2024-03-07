@@ -74,7 +74,7 @@ import { createEmployerGiftEmailUserNotification, createPushUserNotificationFrom
 import { MCCStandards } from '../../integrations/marqeta/types';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
-import { getShareableUser } from '../user/utils';
+import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
 import { IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
 
@@ -1078,6 +1078,12 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
   for (const deposit of gpaDeposits) {
     const tags = `groupId=${groupId},type=${type}`;
     const userInGroup = await checkIfUserInGroup(deposit.userId, groupId);
+    const userActiveInMarqeta = await checkIfUserActiveInMarqeta(deposit.userId);
+
+    // Update this later to return a list of errors or something to person running script
+    if (!userActiveInMarqeta) {
+      console.log(`[+] Use ${deposit.userId} not active in Marqeta, skipping deposit`);
+    }
 
     if (!userInGroup) {
       console.error(`User ${deposit.userId} is not in group ${groupId}`);
@@ -1108,7 +1114,7 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : 'Quarterly Karma Cash deposit',
+      memo: !!memo ? memo : 'You earned Karma Cash!',
     });
 
     if (!gpaFundResponse.data) {

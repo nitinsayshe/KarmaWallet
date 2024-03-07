@@ -9,6 +9,8 @@ import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
 import { IUser, IUserIntegrations } from '../../../models/user/types';
+import { getMarqetaUser } from '../../../integrations/marqeta/user';
+import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 
 export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;
@@ -143,4 +145,12 @@ export const createShareasaleTrackingId = async () => {
   }
 
   return uniqueId;
+};
+
+export const checkIfUserActiveInMarqeta = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) console.log(`[+] No User found with this id ${userId}`);
+  const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
+  if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
+  return false;
 };

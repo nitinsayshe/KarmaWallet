@@ -351,7 +351,7 @@ export const createEmployerGiftEmailUserNotification = async (
         user: user?._id?.toString(),
         data: {
           name: user.name,
-          amount: transaction.amount.toFixed(),
+          amount: transaction.amount.toFixed(2),
         },
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;

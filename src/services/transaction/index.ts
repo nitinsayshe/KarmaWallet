@@ -74,7 +74,7 @@ import { createEmployerGiftEmailUserNotification, createPushUserNotificationFrom
 import { MCCStandards } from '../../integrations/marqeta/types';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
-import { getShareableUser } from '../user/utils';
+import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
 import { IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
 
@@ -982,7 +982,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
     // add notifiction here?
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.EMPLOYER_GIFT,
-      body: `An employer gift of $${transaction?.amount} has been deposited onto your Karma Wallet Card`,
+      body: `An employer gift of $${transaction?.amount.toFixed(2)} has been deposited onto your Karma Wallet Card`,
       title: 'Employer Gift Received!',
     });
 
@@ -992,7 +992,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${transaction?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      body: `$${transaction?.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
       title: 'Karma Cash Deposited!',
     });
   }
@@ -1078,6 +1078,12 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
   for (const deposit of gpaDeposits) {
     const tags = `groupId=${groupId},type=${type}`;
     const userInGroup = await checkIfUserInGroup(deposit.userId, groupId);
+    const userActiveInMarqeta = await checkIfUserActiveInMarqeta(deposit.userId);
+
+    // Update this later to return a list of errors or something to person running script
+    if (!userActiveInMarqeta) {
+      console.log(`[+] Use ${deposit.userId} not active in Marqeta, skipping deposit`);
+    }
 
     if (!userInGroup) {
       console.error(`User ${deposit.userId} is not in group ${groupId}`);
@@ -1088,7 +1094,7 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : `Deposit from ${group.name}`,
+      memo: !!memo ? memo : `You received money from ${group.name}`,
     });
 
     if (!gpaFundResponse.data) {
@@ -1108,7 +1114,7 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : 'Quarterly Karma Cash deposit',
+      memo: !!memo ? memo : 'You earned Karma Cash!',
     });
 
     if (!gpaFundResponse.data) {

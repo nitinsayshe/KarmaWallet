@@ -46,3 +46,21 @@ Note: Many tests are currently skipped. Usually, this is to avoid hitting extern
 - Reference other email examples to see which classes can be reused for styling (global styles live in `src/templates/email/style.hbs`)
 - If your email requires additional styles/formatting that are not in the global styles, add a style.hbs file to the same folder your email template html is in, this will allow your html to access those style classes
 - Once you have made your changes, you will need to run `npm run build` to ensure the templates are added to the `dist` folder
+
+## Sending an Employer Gift
+
+- Use the `processGPADeposits` function in `src/services/transaction`. User will need to be in the employer `group` to be able to receive the deposit. Include `groupId`, type of `TransactionCreditSubtypeEnum.Employer` an array of the gpa deposits (including userId and amount), and an optional `memo` of 99 characters or less. This will show up on the Transaction Details for the user. Example data below:
+
+```
+export interface IInitiateGPADepositsRequest {
+  groupId: '6233a60f1fc03e8853a64dc8',
+  type:TransactionCreditSubtypeEnum.Employer,
+  gpaDeposits: [
+    userId: '6233a60f1fc03e8853a982e9',
+    amount: 50,
+  ],
+  memo?: 'Happy holidays from Impact Karma!'
+}
+```
+
+Sending this money will send a text message and an email (`employerGift` in our email templates folder) to the cardholder.

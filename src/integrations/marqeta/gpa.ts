@@ -29,6 +29,7 @@ export const fundUserGPAFromProgramFundingSource = async (params: IMarqetaLoadGp
   if (!userData || !userData.integrations?.marqeta?.userToken) {
     throw new CustomError(!userData ? 'User not found' : 'Marqeta userToken not found', ErrorTypes.NOT_FOUND);
   }
+
   // format the marqeta GPA order payload
   const marqetaGPAOrder: IMarqetaCreateGPAorder = {
     userToken: userData.integrations.marqeta.userToken,

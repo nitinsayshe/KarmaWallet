@@ -464,8 +464,8 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserStatus;
   created_time?: string;
   _id?: string;
-  reason? :string;
-  reason_code? :string;
+  reason?: string;
+  reason_code?: string;
 }
 
 export const ACHTransferTransitionStatusEnum = {
@@ -810,6 +810,66 @@ export const MCCStandards = {
 export const InsufficientFundsConstants = {
   CODES: ['1016', '1865', '1923'],
 };
+
+export enum IDigitalWalletDeviceType {
+  MOBILE_PHONE = 'MOBILE_PHONE',
+  WATCH = 'WATCH',
+  TABLET = 'TABLET'
+}
+export interface IAppleWalletProvesion {
+  cardToken: string;
+  certificates: string[];
+  deviceType: IDigitalWalletDeviceType;
+  nonce: string;
+  nonceSignature: string;
+  provisioningAppVersion: string;
+}
+
+export interface IGoogleWalletProvesion {
+  cardToken: string;
+  deviceId: string;
+  deviceType: IDigitalWalletDeviceType;
+  walletAccountId: string;
+  provisioningAppVersion: string;
+}
+
+export interface ISamsungWalletProvesion {
+  cardToken: string;
+  deviceId: string;
+  deviceType: IDigitalWalletDeviceType;
+  walletUserId: string;
+  provisioningAppVersion: string;
+}
+
+export enum IDigitalWalletTransitionChannel {
+  TOKEN_SERVICE_PROVIDER = 'TOKEN_SERVICE_PROVIDER',
+  TOKEN_SERVICE_PROVIDER_API = 'TOKEN_SERVICE_PROVIDER_API',
+  DIGITAL_WALLET = 'DIGITAL_WALLET',
+  API = 'API',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  ADMIN = 'ADMIN',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IDigitalWalletToken {
+  token: string;
+  cardToken: string;
+}
+
+export enum IDititalWalletState {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED'
+}
+export interface IDigitalWalletTokenTransaition {
+  channel?: IDigitalWalletTransitionChannel;
+  digitalWalletToken: IDigitalWalletToken;
+  reason?: string;
+  reasonCode?: string;
+  state: IDititalWalletState;
+  tokenReferenceId? : string;
+}
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
 export type GetUserByEmailResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

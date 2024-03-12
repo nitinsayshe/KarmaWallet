@@ -9,6 +9,7 @@ import achRouter from './accountFundingSource';
 import pinRouter from './pin';
 import transactionRouter from './transactions';
 import cardProductRouter from './cardProducts';
+import digitalWalletManagementRouter from './digitalWalletmanagement';
 // import authenticate from '../../middleware/authenticate';
 
 const marqetaRouter = Router();
@@ -23,4 +24,5 @@ marqetaRouter.use('/ach', achRouter);
 marqetaRouter.use('/pin', pinRouter);
 marqetaRouter.use('/transaction', transactionRouter);
 marqetaRouter.use('/cardproduct', cardProductRouter);
+marqetaRouter.use('/digital-wallet', digitalWalletManagementRouter);
 export default marqetaRouter;

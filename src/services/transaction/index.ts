@@ -77,10 +77,13 @@ import { CommissionModel } from '../../models/commissions';
 import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
 import { IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
+import { IValue, ValueModel } from '../../models/value';
+import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
+import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
-export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
+export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>): Promise<IAggregatePaginateResult<ITransactionDocument & { values: IValue[] }>> => {
   try {
     const { ratings, userId, page, limit } = req.query;
 
@@ -150,6 +153,22 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
           as: 'company',
         },
       },
+      // {
+      //   $lookup: {
+      //     from: 'value_company_mappings',
+      //     localField: 'company',
+      //     foreignField: 'company',
+      //     as: 'values',
+      //   },
+      // },
+      // {
+      //   $lookup: {
+      //     from: 'values',
+      //     localField: 'values.value',
+      //     foreignField: '_id',
+      //     as: 'values',
+      //   },
+      // },
       {
         $unwind: {
           path: '$company',
@@ -169,7 +188,7 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       limit: limit ?? 10,
     };
 
-    const transactions = await TransactionModel.aggregatePaginate(transactionAggregate, options);
+    const transactions = (await TransactionModel.aggregatePaginate(transactionAggregate, options) as IAggregatePaginateResult<ITransactionDocument & { values: IValue[] }>);
 
     const pageIncludesOffsets = transactions.docs.filter((transaction) => !!transaction.integrations?.rare).length;
 
@@ -189,6 +208,20 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
         console.log(err);
       }
     }
+
+    // map the values to the transaction
+    const valueMappings = await ValueCompanyMappingModel.find({ company: { $in: transactions.docs.map((t) => t.company) } });
+    console.log(valueMappings);
+    const values = await ValueModel.find({ _id: { $in: valueMappings.map((v) => v.value) } });
+    console.log(values);
+
+    transactions.docs.forEach((transaction) => {
+      const matchedValueCompanyMappings = valueMappings.filter((v) => v.company.toString() === transaction.company.toString());
+      transaction.values = matchedValueCompanyMappings.map((v) => values.find((value) => value._id.toString() === v.value.toString()));
+      console.log('values', transaction.values?.length, transaction.values);
+    });
+
+    console.log('/////// getRatedTransactions has values', transactions.docs.some((t) => t.values?.length > 0));
 
     return transactions;
   } catch (err) {
@@ -441,7 +474,7 @@ export const getShareableTransaction = async ({
   type,
   subType,
   group,
-}: ITransactionDocument) => {
+}: ITransactionDocument, skipKard = false) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name ? getShareableUser(user as IUserDocument) : user;
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
@@ -492,7 +525,7 @@ export const getShareableTransaction = async ({
 
   let earnedCommission;
 
-  if (!!integrations?.kard) {
+  if (!!integrations?.kard && !skipKard) {
     // does a commission exist for this transaction?
     if (!!integrations?.kard?.rewardData) {
       // if so, add it to the shareable transaction
@@ -558,6 +591,16 @@ export const getShareableTransaction = async ({
   }
 
   return shareableTransaction;
+};
+
+export const getShareableTransactionWithValues = async (transaction: (ITransactionDocument & {values: IValue[]})): Promise<(Partial<IShareableTransaction> & {values: IValue[]})> => {
+  const shareableTransaction = await getShareableTransaction(transaction, true) as Partial<IShareableTransaction>;
+  console.log('////////// has values in getShareableTransactionWithValues', transaction.values?.length > 0, transaction.values?.length, transaction.values);
+  const shareableTransactionWithValues = {
+    ...shareableTransaction,
+    values: transaction?.values?.length > 0 ? transaction.values : undefined,
+  };
+  return shareableTransactionWithValues;
 };
 
 export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>) => {

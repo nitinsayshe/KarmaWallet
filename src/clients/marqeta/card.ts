@@ -13,6 +13,7 @@ export class Card {
   // create new card
   async createCard(params: IMarqetaCreateCard) {
     try {
+      console.log('///// Creating a card with product token', params.cardProductToken);
       const { data } = await this._marqetaClient._client.post('/cards', camelToSnakeCase(params));
       return data;
     } catch (err) {

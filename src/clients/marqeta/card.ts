@@ -15,6 +15,7 @@ export class Card {
     try {
       console.log('///// Creating a card with product token', params.cardProductToken);
       const { data } = await this._marqetaClient._client.post('/cards', camelToSnakeCase(params));
+      console.log('///// Card created response', data);
       return data;
     } catch (err) {
       console.log(err);

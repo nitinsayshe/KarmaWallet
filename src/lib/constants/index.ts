@@ -375,3 +375,5 @@ export const AppVersionEnum = {
 } as const;
 
 export const MiscAppVersionKey = 'AppVersion';
+
+export const DateKarmaMembershipStoppedbBeingFree = '2024-03-18';

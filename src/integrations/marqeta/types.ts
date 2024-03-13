@@ -415,6 +415,7 @@ export type MarqetaUserModel = {
   token: string;
   active?: boolean;
   first_name?: string;
+  middle_name?: string;
   last_name?: string;
   email?: string;
   address1?: string;

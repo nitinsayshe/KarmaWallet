@@ -188,7 +188,7 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       limit: limit ?? 10,
     };
 
-    const transactions = (await TransactionModel.aggregatePaginate(transactionAggregate, options) as IAggregatePaginateResult<ITransactionDocument & { values: IValue[] }>);
+    const transactions = (await TransactionModel.aggregatePaginate(transactionAggregate, options) as IAggregatePaginateResult<ITransactionDocument & { values: IValue[], company: ICompanyDocument }>);
 
     const pageIncludesOffsets = transactions.docs.filter((transaction) => !!transaction.integrations?.rare).length;
 
@@ -211,17 +211,12 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
 
     // map the values to the transaction
     const valueMappings = await ValueCompanyMappingModel.find({ company: { $in: transactions.docs.map((t) => t.company) } });
-    console.log(valueMappings);
     const values = await ValueModel.find({ _id: { $in: valueMappings.map((v) => v.value) } });
-    console.log(values);
 
     transactions.docs.forEach((transaction) => {
-      const matchedValueCompanyMappings = valueMappings.filter((v) => v.company.toString() === transaction.company.toString());
+      const matchedValueCompanyMappings = valueMappings.filter((v) => v.company.toString() === transaction.company._id.toString());
       transaction.values = matchedValueCompanyMappings.map((v) => values.find((value) => value._id.toString() === v.value.toString()));
-      console.log('values', transaction.values?.length, transaction.values);
     });
-
-    console.log('/////// getRatedTransactions has values', transactions.docs.some((t) => t.values?.length > 0));
 
     return transactions;
   } catch (err) {
@@ -595,7 +590,6 @@ export const getShareableTransaction = async ({
 
 export const getShareableTransactionWithValues = async (transaction: (ITransactionDocument & {values: IValue[]})): Promise<(Partial<IShareableTransaction> & {values: IValue[]})> => {
   const shareableTransaction = await getShareableTransaction(transaction, true) as Partial<IShareableTransaction>;
-  console.log('////////// has values in getShareableTransactionWithValues', transaction.values?.length > 0, transaction.values?.length, transaction.values);
   const shareableTransactionWithValues = {
     ...shareableTransaction,
     values: transaction?.values?.length > 0 ? transaction.values : undefined,

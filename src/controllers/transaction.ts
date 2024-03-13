@@ -55,7 +55,6 @@ export const getMostRecentTransactions: IRequestHandler = async (req, res) => {
 export const getRatedTransactions: IRequestHandler = async (req, res) => {
   try {
     const transactions = await TransactionService.getRatedTransactions(req as IRequest<{}, TransactionTypes.ITransactionsRequestQuery>);
-    console.log('///////////////// has values', transactions.docs.some(t => t.values.length > 0));
     const sharableTransactions = {
       ...transactions,
       docs: await Promise.all(transactions.docs.map(async (t) => TransactionService.getShareableTransactionWithValues(t))),

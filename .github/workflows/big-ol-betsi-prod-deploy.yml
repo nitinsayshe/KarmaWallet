@@ -42,6 +42,9 @@ jobs:
     - run: echo 'PLAID_WEBHOOK_URI=https://backend.karmawallet.io/webhook/plaid' >> .env
     - run: echo 'PLAID_REDIRECT_URI=https://karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
+    - run: echo 'WP_SERVER=blog.karmawallet.io' >> .env
+    - run: echo 'WP_PORT=443' >> .env
+    - run: echo 'WP_PROTOCOL=https' >> .env
     - run: echo 'MAILCHIMP_KEY=' >> .env
     - run: echo 'MAILCHIMP_SERVER=' >> .env
     - run: echo 'RARE_API_KEY=${{ secrets.PRODUCTION_RARE_API_KEY }}' >> .env

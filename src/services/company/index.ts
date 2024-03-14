@@ -1384,3 +1384,15 @@ export const updateCompaniesFeaturedCashbackStatus = async (companiesToUpdate: I
     await company.save();
   }
 };
+
+export const printCompaniesAndIdsForBlogCustomField = async () => {
+  // get all companies
+  const companies = await CompanyModel.find({});
+  // sort alphabetically
+  companies.sort((a, b) => {
+    if (a.companyName.toLowerCase() <= b.companyName.toLowerCase()) return -1;
+    if (a.companyName.toLowerCase() > b.companyName.toLowerCase()) return 1;
+    return 0;
+  });
+  companies.map((c) => console.log(`${c._id} : ${c.companyName}`));
+};

@@ -1,9 +1,9 @@
 import { ObjectId } from 'mongoose';
 import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
 import { IRef } from '../../types/model';
-import { IArticle } from '../article';
 import { IPromo, IPromoDocument } from '../promo';
 import { IMarqetaUserIntegrations } from '../../integrations/marqeta/types';
+import { IWPArticle } from '../wpArticle';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -117,7 +117,7 @@ export interface IUser extends IShareableUser {
   articles?: {
     queued?: {
       date: Date;
-      article: IRef<ObjectId, IArticle>;
+      article: IRef<ObjectId, IWPArticle>;
     }[];
   };
   deviceInfo?:IDeviceInfo[]

@@ -24,9 +24,9 @@ import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/cons
 import { JobNames } from '../lib/constants/jobScheduler';
 import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
-import { IArticleDocument } from '../models/article';
 import { IUserDocument, UserModel } from '../models/user';
 import {
+  ArticleWithCompany,
   getArticleRecommendationsBasedOnTransactionHistory,
   getArticlesForCompany,
   getCompaniesWithArticles,
@@ -68,7 +68,7 @@ interface ISubscriptionLists {
 export type ArticleRecommedationsCustomFields = {
   startDate: Date;
   endDate: Date;
-  articlesByCompany: (IArticleDocument & { url: string })[][];
+  articlesByCompany: ArticleWithCompany[][];
 };
 
 export type SpendingAnalysisCustomFields = {};
@@ -761,7 +761,7 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
   const companiesWithArticles = await getCompaniesWithArticles();
 
   // each element in the array holds the articles for a given company
-  const articlesByCompany: (IArticleDocument & { url: string })[][] = await Promise.all(
+  const articlesByCompany: ArticleWithCompany[][] = await Promise.all(
     companiesWithArticles.map(async (company) => getArticlesForCompany(company)),
   );
 

@@ -7,7 +7,4 @@ const router = Router();
 router.route('/')
   .get(authenticate, DepositAccountController.getDepositAccount);
 
-router.route('/create')
-  .post(authenticate, DepositAccountController.createDepositAccount);
-
 export default (app: Express) => app.use('/deposit-account', router);

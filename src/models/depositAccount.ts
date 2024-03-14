@@ -14,6 +14,7 @@ export enum IDepositAccountState {
   TERMINATED = 'TERMINATED',
   UNACTIVATED = 'UNACTIVATED'
 }
+
 export interface IShareableDepositAccount {
   _id?: ObjectId;
   userId?: IRef<ObjectId, IShareableUser>;

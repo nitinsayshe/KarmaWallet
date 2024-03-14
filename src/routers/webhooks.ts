@@ -6,6 +6,9 @@ const router = Router();
 router.route('/rare')
   .post(WebhooksController.mapRareTransaction);
 
+router.route('/persona')
+  .post(WebhooksController.handlePersonaWebhook);
+
 router.route('/plaid')
   .post(WebhooksController.handlePlaidWebhook);
 

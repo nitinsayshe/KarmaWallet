@@ -7,7 +7,7 @@ import { verifyRequiredFields } from '../../../lib/requestData';
 
 export const appleWalletProvision: IRequestHandler<{}, {}, IAppleWalletProvesion> = async (req, res) => {
   try {
-    const { data } = await DigitalWalletManagementService.appleWalletProvision(req);
+    const data = await DigitalWalletManagementService.appleWalletProvision(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

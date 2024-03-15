@@ -12,7 +12,7 @@ const digitalWalletManagement = new DigitalWalletManagement(marqetaClient);
 export const appleWalletProvision = async (req: IRequest<{}, {}, IAppleWalletProvesion>) => {
   const params = { ...req.body };
   const data = await digitalWalletManagement.appleWalletProvision(params);
-  return { data };
+  return data;
 };
 
 export const googleWalletProvision = async (req: IRequest<{}, {}, IGoogleWalletProvesion>) => {

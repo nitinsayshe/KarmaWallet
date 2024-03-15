@@ -4,10 +4,10 @@ import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
 
 export type CompaniesACF = {
-  companies: Schema.Types.ObjectId[];
+  companies?: Schema.Types.ObjectId[];
 };
 
-export interface IWPArticle extends Partial<wpRestApiPost & { acf: any }> {
+export interface IWPArticle extends Partial<wpRestApiPost & { acf?: any }> {
   _id: Schema.Types.ObjectId;
   createdOn: Date;
   lastModified: Date;

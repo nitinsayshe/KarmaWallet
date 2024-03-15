@@ -76,7 +76,7 @@ export const getCompaniesWithArticles = async (): Promise<(ICompany & { _id: Typ
     {
       $project: {
         company: {
-          $toObjectId: '$company',
+          $convert: { input: '$company', to: 'objectId', onError: '', onNull: '' },
         },
       },
     },
@@ -95,9 +95,11 @@ export const getCompaniesWithArticles = async (): Promise<(ICompany & { _id: Typ
     },
   ]);
 
-  return companies.map((company) => ({
-    ...company.company,
-  }));
+  return companies
+    .filter((company) => !!company?.company?._id)
+    .map((company) => ({
+      ...company.company,
+    }));
 };
 
 export const getCompaniesWithArticlesUserShopsAt = async (
@@ -229,7 +231,7 @@ export const getArticleRecommendationsBasedOnTransactionHistory = async (
     return [];
   }
 
-  const articlesToQueue = articlesByCompany
+  const articlesToQueue: { id: Types.ObjectId; url: string }[] = articlesByCompany
     .filter((articles) => {
       const company = companiesUserShopsAtAndHaveArticles.find(
         (c) => c?._id?.toString() === (articles?.[0]?.company as unknown as ICompanyDocument)?._id?.toString(),
@@ -237,24 +239,17 @@ export const getArticleRecommendationsBasedOnTransactionHistory = async (
       return !!company;
     })
     .flat()
-    .map((article) => article._id)
-    .filter((article, index, articles) => articles.findIndex((article2) => article2.toString() === article.id.toString()) === index);
+    .map((article) => ({ id: article._id, url: article.link }))
+    .filter((article, index, articles) => articles.findIndex((article2) => article2.id.toString() === article.id.toString()) === index);
 
-  if (!!articlesToQueue?.length) {
-    await queueArticlesForUser(user, articlesToQueue);
-  }
-
-  const articleURLs = companiesUserShopsAtAndHaveArticles.map((company) => {
-    const articles = articlesByCompany.find((a) => company._id.equals((a[0].company as unknown as ICompanyDocument)._id.toString()));
-    if (!articles) {
-      return [];
-    }
-    return articles.map((article) => article.link);
-  });
-
-  if (!articleURLs.length) {
+  if (!articlesToQueue?.length) {
     return [];
   }
 
-  return articleURLs.flat();
+  await queueArticlesForUser(
+    user,
+    articlesToQueue.map((article) => article.id),
+  );
+
+  return articlesToQueue.map((article) => article.url);
 };

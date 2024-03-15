@@ -650,7 +650,6 @@ const prepareArticleRecommendationSyncRequest = async (
     return contact;
   });
 
-  console.log(JSON.stringify(contacts, null, 2));
   return { contacts };
 };
 

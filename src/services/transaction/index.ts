@@ -153,22 +153,6 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
           as: 'company',
         },
       },
-      // {
-      //   $lookup: {
-      //     from: 'value_company_mappings',
-      //     localField: 'company',
-      //     foreignField: 'company',
-      //     as: 'values',
-      //   },
-      // },
-      // {
-      //   $lookup: {
-      //     from: 'values',
-      //     localField: 'values.value',
-      //     foreignField: '_id',
-      //     as: 'values',
-      //   },
-      // },
       {
         $unwind: {
           path: '$company',

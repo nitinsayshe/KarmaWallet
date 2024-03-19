@@ -18,12 +18,6 @@ export const exec = async (user: IUserDocument) => {
     return;
   }
 
-  // Create new deposit account for active marqeta user
-  if (karmaWalletDepositAccounts.data.length === 0) {
-    await createDepositAccount(user);
-    console.log('[+] Created a deposit account for userId', user._id);
-  }
-
   if (karmaWalletCards.virtualCards > 0 && karmaWalletCards.physicalCard > 0) {
     console.error(`User already has karma cards: ${user._id}`);
   }
@@ -58,5 +52,11 @@ export const exec = async (user: IUserDocument) => {
     } else {
       console.log(`[+] Card Creation Error: Error creating physical card for user with id: ${user._id}`);
     }
+  }
+
+  // Create new deposit account for active marqeta user, must have cards before can create a deposit account
+  if (karmaWalletDepositAccounts.data.length === 0) {
+    await createDepositAccount(user);
+    console.log('[+] Created a deposit account for userId', user._id);
   }
 };

@@ -12,6 +12,7 @@ import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationRe
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
 import { createDepositAccount, listDepositAccountsForUser, mapMarqetaDepositAccountToKarmaDB } from '../../integrations/marqeta/depositAccount';
 import { DepositAccountModel } from '../../models/depositAccount';
+import { CardModel } from '../../models/card';
 
 const backoffMs = 1000;
 
@@ -127,10 +128,15 @@ export const addDepositAccountToMarqetaUsers = async () => {
     for (const user of users) {
       // check for the user if he is already having any ACTIVE deposit acccount
       const depositAccount = await listDepositAccountsForUser(user.integrations.marqeta.userToken);
-      if (!depositAccount) {
+      const activeAccount = depositAccount.data.find((account: any) => account.state === 'ACTIVE');
+      const hasActiveMarqetaCard = await CardModel.findOne({ userId: user._id, 'integrations.marqeta.state': 'ACTIVE' });
+
+      if (!depositAccount.data.length || !activeAccount) {
         // Generate deposit account number & map into database
-        const depoistNumber = await createDepositAccount(user);
-        console.log(`Assigned deposit account number ${depoistNumber?.accountNumber} to user ${user._id}`);
+        if (hasActiveMarqetaCard) {
+          const depoistNumber = await createDepositAccount(user);
+          console.log(`Assigned deposit account number ${depoistNumber?.accountNumber} to user ${user._id}`);
+        }
       }
       console.log(`this user ${user._id} already have deposit account number`);
     }

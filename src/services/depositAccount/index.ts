@@ -1,13 +1,19 @@
-import { FilterQuery } from 'mongoose';
 import { asCustomError } from '../../lib/customError';
-import { DepositAccountModel, IDepositAccount } from '../../models/depositAccount';
+import { DepositAccountModel } from '../../models/depositAccount';
+import { IDepositAccountState } from '../../models/depositAccount/types';
 
-export const _getDepositAccount = async (query: FilterQuery<IDepositAccount>) => DepositAccountModel.findOne(query);
-
-// store marqeta Deposit account to karma DB
-export const mapMarqetaDepositAccountToKarmaDB = async (_userId: string, DepositAccountData: IDepositAccount) => {
+export const getDepositAccounts = async (userId: string) => {
   try {
-    const depositAccount = await DepositAccountModel.create({ userId: _userId, ...DepositAccountData });
+    const depositAccounts = await DepositAccountModel.find({ userId });
+    return depositAccounts;
+  } catch (error) {
+    throw asCustomError(error);
+  }
+};
+
+export const getActiveDepositAccount = async (userId: string) => {
+  try {
+    const depositAccount = await DepositAccountModel.findOne({ userId, state: IDepositAccountState.ACTIVE });
     return depositAccount;
   } catch (error) {
     throw asCustomError(error);

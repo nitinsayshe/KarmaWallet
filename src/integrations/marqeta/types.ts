@@ -768,16 +768,6 @@ export interface IMarqetaBankTransferTransitionEvent {
   last_modified_time: Date;
 }
 
-export interface IMarqetaWebhookBody {
-  cards: IMarqetaWebhookCardsEvent[];
-  cardactions: IMarqetaCardActionEvent[];
-  chargebacktransitions: ChargebackTransition[];
-  usertransitions: IMarqetaUserTransitionsEvent[];
-  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
-  transactions: TransactionModel[];
-  cardtransitions: IMarqetaWebhookCardsEvent[];
-}
-
 export interface IMarqetaWebhookHeader {
   authorization: string;
 }
@@ -819,7 +809,6 @@ export enum DepositAccountTypes {
 export interface IMarqetaDepositAccount {
   userToken: string;
   type: DepositAccountTypes;
-  customerDueDiligence?: any;
 }
 
 export enum IMarqetaDepositAccountTransitionState {
@@ -829,14 +818,51 @@ export enum IMarqetaDepositAccountTransitionState {
 }
 
 export enum IMarqetaDepositAccountChannel {
-  API = 'API', ADMIN = 'ADMIN', IVR = 'IVR', FRAUD = 'FRAUD', SYSTEM = 'SYSTEM'
+  API = 'API',
+  ADMIN = 'ADMIN',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  SYSTEM = 'SYSTEM'
 }
 
 export interface IMarqetaDepositAccountTransition {
-  channel: IMarqetaDepositAccountChannel,
-  accountToken?: string,
-  state: IMarqetaDepositAccountTransitionState
-  reason?: string
+  channel?: IMarqetaDepositAccountChannel;
+  accountToken: string;
+  state: IMarqetaDepositAccountTransitionState;
+  reason?: string;
+}
+
+export interface IMarqetaDepositAccountData {
+  account_number: string;
+  created_time: Date;
+  last_modified_time: Date;
+  routing_number: string;
+  state: IMarqetaDepositAccountTransitionState;
+  token: string;
+  type: DepositAccountTypes;
+  user_token: string;
+}
+
+export interface IMarqetaDirectDepositWebhookEvent {
+  // webhook token
+  token: string;
+  user_token: string;
+  // direct deposit token
+  account_token: string;
+  state: DirectDepositStateEnumValues;
+  reason: string;
+  created_time: string;
+}
+
+export interface IMarqetaWebhookBody {
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  chargebacktransitions: ChargebackTransition[];
+  usertransitions: IMarqetaUserTransitionsEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: TransactionModel[];
+  cardtransitions: IMarqetaWebhookCardsEvent[];
+  directdepositaccounttransitions: IMarqetaDirectDepositWebhookEvent[];
 }
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

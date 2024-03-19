@@ -3,7 +3,7 @@ import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
 
-export class DepositAccount {
+export class DepositAccountClient {
   private _marqetaClient: MarqetaClient;
 
   constructor(marqetaClient: MarqetaClient) {
@@ -33,7 +33,7 @@ export class DepositAccount {
   }
 
   // List user deposit account
-  async listDepositAccount(userToken: string) {
+  async listDepositAccountsForUser(userToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/depositaccounts/user/${userToken}`);
       return data;
@@ -44,7 +44,7 @@ export class DepositAccount {
   }
 
   //  deposit account transition
-  async depositAccountTransition(params: IMarqetaDepositAccountTransition) {
+  async transitionDepositAccount(params: IMarqetaDepositAccountTransition) {
     try {
       const { data } = await this._marqetaClient._client.post('/depositaccounts/transitions', camelToSnakeCase(params));
       return data;

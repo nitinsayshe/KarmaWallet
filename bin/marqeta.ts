@@ -1,10 +1,10 @@
 import 'dotenv/config';
-import { MongoClient } from '../clients/mongo';
-import { createDepositAccount, getDepositAccount } from '../integrations/marqeta/depositAccount';
-import { UserModel } from '../models/user';
-import { IMarqetaUserStatus } from '../integrations/marqeta/types';
+import { MongoClient } from '../src/clients/mongo';
+import { createDepositAccount, getDepositAccount } from '../src/integrations/marqeta/depositAccount';
+import { UserModel } from '../src/models/user';
+import { IMarqetaUserStatus } from '../src/integrations/marqeta/types';
 
-// Function to assign deposit account numbers to all existing marqeta active users in the karma database
+// Function to assign deposit account numbers to all existing users in the database
 (async () => {
   try {
     await MongoClient.init();

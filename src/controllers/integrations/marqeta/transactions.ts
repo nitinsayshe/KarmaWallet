@@ -31,7 +31,7 @@ export const makeTransactionClearing: IRequestHandler<{}, {}, IMarqetaMakeTransa
   }
 };
 
-export const listTransaction: IRequestHandler<{}, {cardToken:string, userToken:string}, {}> = async (req, res) => {
+export const listTransaction: IRequestHandler<{}, {cardToken: string, userToken: string}, {}> = async (req, res) => {
   try {
     const { data } = await TransactionService.listTransaction(req);
     output.api(req, res, data);

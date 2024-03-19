@@ -1,6 +1,7 @@
 import { GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { User } from '../../clients/marqeta/user';
+import { IUserDocument } from '../../models/user';
 import { IRequest } from '../../types/request';
 import {
   IMarqetaCreateUser,
@@ -13,6 +14,7 @@ import {
   MarqetaUserModel,
   IMarqetaUpdateUser,
   PaginatedMarqetaResponse,
+  IMarqetaUserStatus,
 } from './types';
 
 // Instantiate the MarqetaClient
@@ -78,4 +80,20 @@ export const createMarqetaUserAuthToken = async (req: IRequest<{}, {}, IMarqetaU
 export const getUsers = async (queryParams: GetPaginiatedResourceParams): Promise<PaginatedMarqetaResponse<MarqetaUserModel[]>> => {
   const users = await user.listMarqetaUsers(queryParams);
   return users;
+};
+
+export const transitionMarqetaUserToClosed = async (userDocument: IUserDocument) => {
+  try {
+    const transitionUser = await user.userMarqetaTransition({
+      userToken: userDocument.integrations.marqeta.userToken,
+      reason: 'User requested account closure',
+      reasonCode: '01',
+      status: IMarqetaUserStatus.CLOSED,
+      channel: 'API',
+    });
+
+    return transitionUser;
+  } catch (err) {
+    throw new Error('Error transitioning Marqeta user to closed');
+  }
 };

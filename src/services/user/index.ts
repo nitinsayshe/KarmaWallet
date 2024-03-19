@@ -41,8 +41,9 @@ import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState, MarqetaUserModel } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { generateRandomPasswordString } from '../../lib/misc';
+import { removeFromGroup } from '../groups';
+import { closeKarmaCard, openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
-import { openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 
@@ -563,7 +564,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
 
     // get user from db
-    const user = await UserModel.findById(userId).lean();
+    const user = await UserModel.findById(userId);
     if (!user) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
 
     // get user email
@@ -575,22 +576,25 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
       throw new CustomError('Cannot delete users with commissions.', ErrorTypes.INVALID_ARG);
     }
 
+    await closeKarmaCard(user);
+
     // throw error if user is enrolled in group
-    const userGroups = await UserGroupModel.countDocuments({
+    const userGroups = await UserGroupModel.find({
       user: user._id,
       status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
     });
-    if (userGroups > 0) {
-      throw new CustomError('Cannot delete users enrolled in group(s).', ErrorTypes.INVALID_ARG);
+
+    if (userGroups.length > 0) {
+      for (const userGroup of userGroups) {
+        await removeFromGroup(userGroup);
+      }
     }
 
+    await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
     // delete user from active campaign
     if (email) await deleteContact(email);
     await cancelAllUserSubscriptions(user._id.toString());
-    await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
-
     await deleteUserData(user._id);
-
     await UserModel.deleteOne({ _id: user._id });
   } catch (err) {
     throw asCustomError(err);
@@ -687,7 +691,7 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
       // Marqeta integration only saved on visitor not on user yet
       // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
       const user = await UserModel.findById(visitor.user);
-      if (!user) throw new CustomError('User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
+      if (!user) throw new CustomError('[+] User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
       await handleMarqetaUserActiveTransition(user, false);
     }
   }
@@ -700,12 +704,12 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);
 
   if (!currentMarqetaUserData) {
-    console.log('///// Error getting most up to date user information from Marqeta /////');
+    console.log('[+] Error getting most up to date user information from Marqeta');
   }
 
   if (!existingUser?._id && !visitor?._id) {
     // add in code to add the user to our database?
-    throw new CustomError('User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
+    throw new CustomError('[+] User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
   }
   // EXISTING USER with Marqeta integration already saved
   // Check if the status has changed for this user
@@ -749,6 +753,5 @@ export const updateVisitorUrlParams = async (
   const duplicatesRemoved = Array.from(new Set(params));
   visitorObject.integrations.urlParams = duplicatesRemoved;
   visitorObject.integrations.urlParams = duplicatesRemoved;
-
   await visitorObject.save();
 };

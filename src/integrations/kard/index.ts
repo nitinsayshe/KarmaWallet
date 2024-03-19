@@ -304,17 +304,21 @@ export const queueSettledTransactions = async (
 export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
   try {
     const client = new KardClient(KardEnvironmentEnum.Issuer);
-    return client.verifyWebhookSignature(body, signature);
+    return await client.verifyWebhookSignature(body, signature);
   } catch (err) {
-    console.error('Error verifying webhook signature: ', err);
+    const errorText = 'Error verifying issuer environment webhook signature';
+    console.error(`${errorText}: `, err);
+    return new Error(errorText);
   }
 };
 
 export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
   try {
     const client = new KardClient(KardEnvironmentEnum.Aggregator);
-    return client.verifyWebhookSignature(body, signature);
+    return await client.verifyWebhookSignature(body, signature);
   } catch (err) {
-    console.error('Error verifying webhook signature: ', err);
+    const errorText = 'Error verifying aggregator environment webhook signature';
+    console.error(`${errorText}: `, err);
+    return new Error(errorText);
   }
 };

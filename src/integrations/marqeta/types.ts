@@ -464,8 +464,8 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserStatus;
   created_time?: string;
   _id?: string;
-  reason? :string;
-  reason_code? :string;
+  reason?: string;
+  reason_code?: string;
 }
 
 export const ACHTransferTransitionStatusEnum = {
@@ -810,6 +810,34 @@ export const MCCStandards = {
 export const InsufficientFundsConstants = {
   CODES: ['1016', '1865', '1923'],
 };
+
+export enum DepositAccountTypes {
+  DEPOSIT_ACCOUNT = 'DEPOSIT_ACCOUNT',
+  CHECKING = 'CHECKING',
+}
+
+export interface IMarqetaDepositAccount {
+  userToken: string;
+  type: DepositAccountTypes;
+  customerDueDiligence?: any;
+}
+
+export enum IMarqetaDepositAccountTransitionState {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+}
+
+export enum IMarqetaDepositAccountChannel {
+  API = 'API', ADMIN = 'ADMIN', IVR = 'IVR', FRAUD = 'FRAUD', SYSTEM = 'SYSTEM'
+}
+
+export interface IMarqetaDepositAccountTransition {
+  channel: IMarqetaDepositAccountChannel,
+  accountToken?: string,
+  state: IMarqetaDepositAccountTransitionState
+  reason?: string
+}
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
 export type GetUserByEmailResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

@@ -1,13 +1,12 @@
 import { Router } from 'express';
-import * as DepositAccountController from '../../../controllers/integrations/marqeta/depositAccount';
-import authenticate from '../../../middleware/authenticate';
+import * as DepositAccountController from '../../../controllers/integrations/marqeta/depositAcccount';
 
 const router = Router();
 
-router.route('/create/:userToken')
-  .post(authenticate, DepositAccountController.createDepositAccount);
+router.route('/')
+  .get(DepositAccountController.getDepositAccount);
 
-router.route('/list/:userToken')
-  .get(authenticate, DepositAccountController.listDepositAccount);
+router.route('/transition')
+  .post(DepositAccountController.depositAccountTransition);
 
 export default router;

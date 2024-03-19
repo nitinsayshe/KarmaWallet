@@ -1,4 +1,5 @@
 import { createCard } from '../integrations/marqeta/card';
+import { getDepositAccount, createDepositAccount } from '../integrations/marqeta/depositAccount';
 import { MarqetaCardState } from '../integrations/marqeta/types';
 import { IUserDocument } from '../models/user';
 import { mapMarqetaCardtoCard } from '../services/card';
@@ -16,6 +17,7 @@ export const exec = async (user: IUserDocument) => {
   }
 
   const karmaWalletCards = await karmaWalletCardBreakdown(user);
+  const karmaWalletDepositAccount = await getDepositAccount(user._id);
 
   if (karmaWalletCards.virtualCards > 0 && karmaWalletCards.physicalCard > 0) {
     console.error(`User already has karma cards: ${user._id}`);
@@ -51,5 +53,11 @@ export const exec = async (user: IUserDocument) => {
     } else {
       console.log(`[+] Card Creation Error: Error creating physical card for user with id: ${user._id}`);
     }
+  }
+
+  // Create new deposit account for active marqeta user
+  if (!karmaWalletDepositAccount) {
+    await createDepositAccount(user);
+    console.log('///// created a deposit account for userId', user._id);
   }
 };

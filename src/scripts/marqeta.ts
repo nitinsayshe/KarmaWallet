@@ -1,8 +1,11 @@
 import 'dotenv/config';
-import { MongoClient } from '../clients/mongo';
+import { error } from 'console';
+import { asCustomError } from '../lib/customError';
+import { Logger } from '../services/logger';
 import { createDepositAccount, getDepositAccount } from '../integrations/marqeta/depositAccount';
 import { UserModel } from '../models/user';
 import { IMarqetaUserStatus } from '../integrations/marqeta/types';
+import { MongoClient } from '../clients/mongo';
 
 // Function to assign deposit account numbers to all existing marqeta active users in the karma database
 (async () => {
@@ -22,7 +25,12 @@ import { IMarqetaUserStatus } from '../integrations/marqeta/types';
       console.log(`this user ${user._id} already have deposit account number`);
     }
     console.log('deposit account numbers assigned to all users successfully.');
-  } catch (error) {
+
+    MongoClient.disconnect();
+  } catch (err) {
+    Logger.error(asCustomError(err));
     console.error('Error assigning deposit account numbers to users:', error);
+  } finally {
+    MongoClient.disconnect();
   }
 })();

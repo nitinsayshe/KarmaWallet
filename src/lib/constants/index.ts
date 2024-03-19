@@ -375,3 +375,8 @@ export const AppVersionEnum = {
 } as const;
 
 export const MiscAppVersionKey = 'AppVersion';
+
+export const HttpsPort = '443';
+export const HttpPort = '80';
+
+export const DateKarmaMembershipStoppedbBeingFree = '2024-03-18';

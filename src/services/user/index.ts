@@ -41,8 +41,9 @@ import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState, MarqetaUserModel } from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { generateRandomPasswordString } from '../../lib/misc';
+import { removeFromGroup } from '../groups';
+import { closeKarmaCard, openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
-import { openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 
@@ -563,7 +564,7 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
     if (!userId || !Types.ObjectId.isValid(userId)) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
 
     // get user from db
-    const user = await UserModel.findById(userId).lean();
+    const user = await UserModel.findById(userId);
     if (!user) throw new CustomError('Invalid user id', ErrorTypes.INVALID_ARG);
 
     // get user email
@@ -575,22 +576,25 @@ export const deleteUser = async (req: IRequest<{}, { userId: string }, {}>) => {
       throw new CustomError('Cannot delete users with commissions.', ErrorTypes.INVALID_ARG);
     }
 
+    await closeKarmaCard(user);
+
     // throw error if user is enrolled in group
-    const userGroups = await UserGroupModel.countDocuments({
+    const userGroups = await UserGroupModel.find({
       user: user._id,
       status: { $nin: [UserGroupStatus.Removed, UserGroupStatus.Banned, UserGroupStatus.Left] },
     });
-    if (userGroups > 0) {
-      throw new CustomError('Cannot delete users enrolled in group(s).', ErrorTypes.INVALID_ARG);
+
+    if (userGroups.length > 0) {
+      for (const userGroup of userGroups) {
+        await removeFromGroup(userGroup);
+      }
     }
 
+    await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
     // delete user from active campaign
     if (email) await deleteContact(email);
     await cancelAllUserSubscriptions(user._id.toString());
-    await deleteKardUsersForUser(user as IUserDocument | Types.ObjectId);
-
     await deleteUserData(user._id);
-
     await UserModel.deleteOne({ _id: user._id });
   } catch (err) {
     throw asCustomError(err);

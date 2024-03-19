@@ -1,7 +1,10 @@
+import fs from 'fs';
+import path from 'path';
+import { parse } from 'json2csv';
 import { PaginateResult } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, MarqetaUserModel } from '../../integrations/marqeta/types';
+import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, ListUsersResponse, MarqetaUserModel } from '../../integrations/marqeta/types';
 import { User } from '../../clients/marqeta/user';
 import { sleep } from '../../lib/misc';
 import { IUserDocument, UserModel } from '../../models/user';
@@ -16,8 +19,8 @@ const backoffMs = 1000;
 export const getCardsFromMarqeta = async (userId: string) => {
   const user = await UserModel.findById(userId);
   const { userToken } = user.integrations.marqeta;
-  const marqetaClient = await new MarqetaClient();
-  const cardClient = await new Card(marqetaClient);
+  const marqetaClient = new MarqetaClient();
+  const cardClient = new Card(marqetaClient);
   const usersCards = await cardClient.listCards(userToken);
   for (const card of usersCards.data) {
     await mapMarqetaCardtoCard(userId, card);
@@ -115,4 +118,49 @@ export const updateClosedMarqetaAccounts = async () => {
   } catch (err) {
     console.error(err);
   }
+};
+
+export const getUsersMissingPhoneNumber = async () => {
+  const marqetaClient = new MarqetaClient();
+  const userClient = new User(marqetaClient);
+
+  let usersMissingPhoneNumber: MarqetaUserModel[] = [];
+
+  let startIndex = 0;
+  let isMore = true;
+  while (isMore) {
+    try {
+      console.log('on startIndex: ', startIndex);
+      const userBatch: ListUsersResponse = await userClient.listMarqetaUsers({
+        isMore: isMore.toString(),
+        startIndex: startIndex.toString(),
+        count: '10',
+      });
+
+      isMore = userBatch.is_more;
+      startIndex = userBatch.end_index + 1;
+
+      // find any users that don't have a phone number
+      usersMissingPhoneNumber = [...usersMissingPhoneNumber, ...userBatch.data.filter((user) => !user.phone)];
+
+      console.log(`fetched ${userBatch.data.length} users`);
+    } catch (err) {
+      isMore = false;
+      console.error(err);
+    }
+  }
+
+  // filter out any that aren't in an active state
+  usersMissingPhoneNumber = usersMissingPhoneNumber.filter((user) => user.active);
+
+  console.log('found users missing phone number: ', usersMissingPhoneNumber.length);
+
+  const _userCSV = parse(
+    usersMissingPhoneNumber.map((user) => ({
+      name: `${user.first_name}${!!user.middle_name ? ` ${user.middle_name}` : ''}  ${user.last_name}`,
+      email: user.email,
+      token: user.token,
+    })),
+  );
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'marqeta_users_without_phone_number.csv'), _userCSV);
 };

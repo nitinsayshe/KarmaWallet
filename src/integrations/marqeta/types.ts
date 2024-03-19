@@ -415,6 +415,7 @@ export type MarqetaUserModel = {
   token: string;
   active?: boolean;
   first_name?: string;
+  middle_name?: string;
   last_name?: string;
   email?: string;
   address1?: string;
@@ -837,6 +838,18 @@ export interface IMarqetaDepositAccountTransition {
   accountToken?: string,
   state: IMarqetaDepositAccountTransitionState
   reason?: string
+}
+
+export interface IGPABalanceResponseData {
+  currency_code: string;
+  ledger_balance: number;
+  available_balance: number;
+  credit_balance: number;
+  pending_credits: number;
+}
+
+export interface IGPABalanceResponse {
+  gpa: IGPABalanceResponseData;
 }
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

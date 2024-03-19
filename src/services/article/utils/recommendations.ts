@@ -1,14 +1,12 @@
 import { Schema, Types } from 'mongoose';
 import { getUtcDate } from '../../../lib/date';
-import { kwSlugify } from '../../../lib/slugify';
-import { ArticleModel, IArticle, IArticleDocument } from '../../../models/article';
 import { ICompany, ICompanyDocument } from '../../../models/company';
 import { TransactionModel } from '../../../models/transaction';
 import { IUserDocument } from '../../../models/user';
+import { IWPArticle, WPArticleModel } from '../../../models/wpArticle';
 import { IRef } from '../../../types/model';
 
 export type URLs = string[];
-const IndustryReportBaseURL = 'https://karmawallet.io/industry-report/';
 
 // takes a list of company ids and returns a subset of the ones that the user has shopped at
 export const getMatchingTransactionCompaniesInDateRange = async (
@@ -46,25 +44,62 @@ export const getMatchingTransactionCompaniesInDateRange = async (
 };
 
 export const getCompaniesWithArticles = async (): Promise<(ICompany & { _id: Types.ObjectId })[]> => {
-  const companies = await ArticleModel.aggregate()
-    .match({
-      $and: [{ company: { $exists: true } }, { company: { $ne: null } }],
-    })
-    .lookup({
-      from: 'companies',
-      localField: 'company',
-      foreignField: '_id',
-      as: 'company',
-    })
-    .unwind('company')
-    .group({
-      _id: '$company',
-      company: { $first: '$company' },
-    });
+  const companies = await WPArticleModel.aggregate([
+    {
+      $match: {
+        'acf.companies': {
+          $exists: true,
+          $not: {
+            $size: 0,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        companies: '$acf.companies',
+      },
+    },
+    {
+      $unwind: {
+        path: '$companies',
+      },
+    },
+    {
+      $group: {
+        _id: '$companies',
+        company: {
+          $first: '$companies',
+        },
+      },
+    },
+    {
+      $project: {
+        company: {
+          $convert: { input: '$company', to: 'objectId', onError: '', onNull: '' },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from: 'companies',
+        localField: 'company',
+        foreignField: '_id',
+        as: 'company',
+      },
+    },
+    {
+      $unwind: {
+        path: '$company',
+      },
+    },
+  ]);
 
-  return companies.map((company) => ({
-    ...company.company,
-  }));
+  return companies
+    .filter((company) => !!company?.company?._id)
+    .map((company) => ({
+      ...company.company,
+    }));
 };
 
 export const getCompaniesWithArticlesUserShopsAt = async (
@@ -88,11 +123,22 @@ export const getCompaniesWithArticlesUserShopsAt = async (
   );
 };
 
-export const getArticlesForCompany = async (company: ICompany): Promise<(IArticleDocument & { url: string })[]> => {
+export type ArticleWithCompany = {
+  _id: Types.ObjectId; // article id
+  company: ICompany; // company
+  link: string; // article link
+};
+
+export const getArticlesForCompany = async (company: ICompany): Promise<ArticleWithCompany[]> => {
   try {
-    const articles = await ArticleModel.aggregate()
+    const articles = await WPArticleModel.aggregate()
       .match({
+        'acf.companies': company._id.toString(),
+      })
+      .project({
+        _id: 1,
         company: company._id,
+        link: 1,
       })
       .lookup({
         from: 'companies',
@@ -103,30 +149,18 @@ export const getArticlesForCompany = async (company: ICompany): Promise<(IArticl
       .unwind('company');
 
     if (!articles?.length || !articles?.[0]?.company?.companyName) return [];
-
-    const nameSlug = kwSlugify(articles?.[0]?.company?.companyName);
-    const titleSlug = [kwSlugify(articles?.[0]?.title)];
-    return articles
-      ?.map((article: IArticleDocument & { url: string }) => {
-        if (!nameSlug || !titleSlug) {
-          article.url = '';
-          return article;
-        }
-        article.url = `${IndustryReportBaseURL}${article.type}/${nameSlug}/${titleSlug}/${article._id}`;
-        return article;
-      })
-      .filter((article) => !!article.url);
+    return articles;
   } catch (e) {
     console.error(e);
     return [];
   }
 };
 
-export const queueArticlesForUser = async (user: IUserDocument, articles: Schema.Types.ObjectId[]): Promise<void> => {
+export const queueArticlesForUser = async (user: IUserDocument, articles: Types.ObjectId[]): Promise<void> => {
   if (!user || !articles || !articles.length) return;
   try {
     const queuedArticles = articles.map((article) => ({
-      article: article as unknown as IRef<Schema.Types.ObjectId, IArticle>,
+      article: article as unknown as IRef<Schema.Types.ObjectId, IWPArticle>,
       date: getUtcDate().toDate(),
     }));
 
@@ -144,7 +178,7 @@ export const getArticleRecommendationsBasedOnTransactionHistory = async (
   user: IUserDocument,
   startDate?: Date,
   endDate?: Date,
-  articlesByCompany?: (IArticleDocument & { url: string })[][],
+  articlesByCompany?: ArticleWithCompany[][],
 ): Promise<URLs> => {
   if (!user) return [];
 
@@ -197,32 +231,25 @@ export const getArticleRecommendationsBasedOnTransactionHistory = async (
     return [];
   }
 
-  const articlesToQueue = articlesByCompany.filter((articles) => {
-    const company = companiesUserShopsAtAndHaveArticles.find(
-      (c) => c?._id?.toString() === (articles?.[0]?.company as unknown as ICompanyDocument)?._id?.toString(),
-    );
-    return !!company;
-  });
+  const articlesToQueue: { id: Types.ObjectId; url: string }[] = articlesByCompany
+    .filter((articles) => {
+      const company = companiesUserShopsAtAndHaveArticles.find(
+        (c) => c?._id?.toString() === (articles?.[0]?.company as unknown as ICompanyDocument)?._id?.toString(),
+      );
+      return !!company;
+    })
+    .flat()
+    .map((article) => ({ id: article._id, url: article.link }))
+    .filter((article, index, articles) => articles.findIndex((article2) => article2.id.toString() === article.id.toString()) === index);
 
-  if (!!articlesToQueue?.length) {
-    // add the rest to the list of articles queued for sending
-    await queueArticlesForUser(
-      user,
-      articlesToQueue.map((articles) => articles[0]._id),
-    );
-  }
-
-  const articleURLs = companiesUserShopsAtAndHaveArticles.map((company) => {
-    const articles = articlesByCompany.find((a) => company._id.equals((a[0].company as unknown as ICompanyDocument)._id.toString()));
-    if (!articles) {
-      return [];
-    }
-    return articles.map((article) => article.url);
-  });
-
-  if (!articleURLs.length) {
+  if (!articlesToQueue?.length) {
     return [];
   }
 
-  return articleURLs.flat();
+  await queueArticlesForUser(
+    user,
+    articlesToQueue.map((article) => article.id),
+  );
+
+  return articlesToQueue.map((article) => article.url);
 };

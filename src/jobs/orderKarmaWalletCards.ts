@@ -46,8 +46,6 @@ export const exec = async (user: IUserDocument) => {
       cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN,
     });
 
-    console.log('///// Ordering a card with product token', MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN);
-
     if (!!physicalCardResponse) {
       await mapMarqetaCardtoCard(user._id.toString(), physicalCardResponse); // map physical card
     } else {

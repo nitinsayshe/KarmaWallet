@@ -815,10 +815,28 @@ export enum DepositAccountTypes {
   DEPOSIT_ACCOUNT = 'DEPOSIT_ACCOUNT',
   CHECKING = 'CHECKING',
 }
+
 export interface IMarqetaDepositAccount {
   userToken: string;
   type: DepositAccountTypes;
   customerDueDiligence?: any;
+}
+
+export enum IMarqetaDepositAccountTransitionState {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+}
+
+export enum IMarqetaDepositAccountChannel {
+  API = 'API', ADMIN = 'ADMIN', IVR = 'IVR', FRAUD = 'FRAUD', SYSTEM = 'SYSTEM'
+}
+
+export interface IMarqetaDepositAccountTransition {
+  channel: IMarqetaDepositAccountChannel,
+  accountToken?: string,
+  state: IMarqetaDepositAccountTransitionState
+  reason?: string
 }
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

@@ -1,4 +1,4 @@
-import { IMarqetaDepositAccount } from '../../integrations/marqeta/types';
+import { IMarqetaDepositAccount, IMarqetaDepositAccountTransition } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
@@ -36,6 +36,17 @@ export class DepositAccount {
   async listDepositAccount(userToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/depositaccounts/user/${userToken}`);
+      return data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  //  deposit account transition
+  async depositAccountTransition(params: IMarqetaDepositAccountTransition) {
+    try {
+      const { data } = await this._marqetaClient._client.post('/depositaccounts/transitions', camelToSnakeCase(params));
       return data;
     } catch (err) {
       console.log(err);

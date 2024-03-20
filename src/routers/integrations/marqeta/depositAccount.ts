@@ -1,13 +1,22 @@
 import { Router } from 'express';
-import * as DepositAccountController from '../../../controllers/integrations/marqeta/depositAccount';
+import * as DepositAccountController from '../../../controllers/integrations/marqeta/depositAcccount';
 import authenticate from '../../../middleware/authenticate';
+import protectedRequirements from '../../../middleware/protected';
+import { UserRoles } from '../../../lib/constants';
 
 const router = Router();
 
-router.route('/create/:userToken')
-  .post(authenticate, DepositAccountController.createDepositAccount);
+router.route('/')
+  .get(authenticate, DepositAccountController.listDepositAccounts);
 
-router.route('/list/:userToken')
-  .get(authenticate, DepositAccountController.listDepositAccount);
+router.route('/:token')
+  .get(authenticate, DepositAccountController.getDepositAccountByToken);
+
+router.route('/transition')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    DepositAccountController.transitionDepositAccount,
+  );
 
 export default router;

@@ -465,8 +465,8 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserStatus;
   created_time?: string;
   _id?: string;
-  reason? :string;
-  reason_code? :string;
+  reason?: string;
+  reason_code?: string;
 }
 
 export const ACHTransferTransitionStatusEnum = {
@@ -769,16 +769,6 @@ export interface IMarqetaBankTransferTransitionEvent {
   last_modified_time: Date;
 }
 
-export interface IMarqetaWebhookBody {
-  cards: IMarqetaWebhookCardsEvent[];
-  cardactions: IMarqetaCardActionEvent[];
-  chargebacktransitions: ChargebackTransition[];
-  usertransitions: IMarqetaUserTransitionsEvent[];
-  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
-  transactions: TransactionModel[];
-  cardtransitions: IMarqetaWebhookCardsEvent[];
-}
-
 export interface IMarqetaWebhookHeader {
   authorization: string;
 }
@@ -811,6 +801,70 @@ export const MCCStandards = {
 export const InsufficientFundsConstants = {
   CODES: ['1016', '1865', '1923'],
 };
+
+export enum DepositAccountTypes {
+  DEPOSIT_ACCOUNT = 'DEPOSIT_ACCOUNT',
+  CHECKING = 'CHECKING',
+}
+
+export interface IMarqetaDepositAccount {
+  userToken: string;
+  type: DepositAccountTypes;
+}
+
+export enum IMarqetaDepositAccountTransitionState {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+}
+
+export enum IMarqetaDepositAccountChannel {
+  API = 'API',
+  ADMIN = 'ADMIN',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IMarqetaDepositAccountTransition {
+  channel?: IMarqetaDepositAccountChannel;
+  accountToken: string;
+  state: IMarqetaDepositAccountTransitionState;
+  reason?: string;
+}
+
+export interface IMarqetaDepositAccountData {
+  account_number: string;
+  created_time: Date;
+  last_modified_time: Date;
+  routing_number: string;
+  state: IMarqetaDepositAccountTransitionState;
+  token: string;
+  type: DepositAccountTypes;
+  user_token: string;
+}
+
+export interface IMarqetaDirectDepositWebhookEvent {
+  // webhook token
+  token: string;
+  user_token: string;
+  // direct deposit token
+  account_token: string;
+  state: DirectDepositStateEnumValues;
+  reason: string;
+  created_time: string;
+}
+
+export interface IMarqetaWebhookBody {
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  chargebacktransitions: ChargebackTransition[];
+  usertransitions: IMarqetaUserTransitionsEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: TransactionModel[];
+  cardtransitions: IMarqetaWebhookCardsEvent[];
+  directdepositaccounttransitions: IMarqetaDirectDepositWebhookEvent[];
+}
 
 export interface IGPABalanceResponseData {
   currency_code: string;

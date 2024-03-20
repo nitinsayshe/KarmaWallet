@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { isValidObjectId, Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -20,7 +20,7 @@ import {
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { roundToPercision } from '../../lib/misc';
-import { formatZodFieldErrors, getZodEnumScemaFromTypescriptEnum } from '../../lib/validation';
+import { formatZodFieldErrors, getZodEnumSchemaFromTypescriptEnum, optionalObjectReferenceValidation } from '../../lib/validation';
 import { IChargebackDocument } from '../../models/chargeback';
 import { CommissionPayoutModel, ICommissionPayoutDocument } from '../../models/commissionPayout';
 import { CommissionModel, ICommissionDocument } from '../../models/commissions';
@@ -163,17 +163,11 @@ const prepareZodCreateUserNotificationSchema = <DataType>(
 ): z.ZodSchema | void => {
   try {
     return z.object({
-      type: getZodEnumScemaFromTypescriptEnum(NotificationTypeEnum),
-      status: getZodEnumScemaFromTypescriptEnum(UserNotificationStatusEnum),
-      channel: getZodEnumScemaFromTypescriptEnum(NotificationChannelEnum).optional(),
-      user: z
-        .string()
-        .refine((val) => isValidObjectId(val), { message: 'Must be a object reference' })
-        .optional(),
-      resource: z
-        .string()
-        .refine((val) => isValidObjectId(val), { message: 'Must be a valid object reference' })
-        .optional(),
+      type: getZodEnumSchemaFromTypescriptEnum(NotificationTypeEnum),
+      status: getZodEnumSchemaFromTypescriptEnum(UserNotificationStatusEnum),
+      channel: getZodEnumSchemaFromTypescriptEnum(NotificationChannelEnum).optional(),
+      user: optionalObjectReferenceValidation,
+      resource: optionalObjectReferenceValidation,
       resourceType: z
         .string()
         .optional()

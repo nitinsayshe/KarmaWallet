@@ -1,14 +1,14 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { isValidObjectId, FilterQuery, ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import { PlaidClient } from '../../clients/plaid';
 import { createKardUserAndAddIntegrations, deleteKardUserForCard } from '../../integrations/kard';
 import { CardStatus, ErrorTypes, IMapMarqetaCard, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
-import { formatZodFieldErrors } from '../../lib/validation';
+import { formatZodFieldErrors, objectReferenceValidation } from '../../lib/validation';
 import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
@@ -211,7 +211,7 @@ export const enrollInKardRewards = async (req: IRequest<KardRewardsParams, {}, K
       .refine((val) => !!getNetworkFromBin(val), {
         message: 'Must be with a participating network: Visa, MasterCard, Discover, or American Express',
       }),
-    card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object id' }),
+    card: objectReferenceValidation,
   });
 
   const parsed = kardRewardsRegisterRequestSchema.safeParse({ ...req.body, card: req.params.card });
@@ -271,7 +271,7 @@ export const enrollInKardRewards = async (req: IRequest<KardRewardsParams, {}, K
 export const unenrollFromKardRewards = async (req: IRequest<KardRewardsParams, {}, {}>): Promise<ICardDocument> => {
   // validate data
   const kardRewardsRegisterRequestSchema = z.object({
-    card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object reference' }),
+    card: objectReferenceValidation,
   });
   const parsed = kardRewardsRegisterRequestSchema.safeParse(req.params);
   if (!parsed.success) {

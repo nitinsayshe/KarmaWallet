@@ -10,7 +10,6 @@ import { getMarqetaUser, updateMarqetaUser } from '../../integrations/marqeta/us
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
-import { verifyRequiredFields } from '../../lib/requestData';
 import { isValidEmailFormat } from '../../lib/string';
 import { filterToValidQueryParams } from '../../lib/validation';
 import { CardModel } from '../../models/card';
@@ -489,14 +488,6 @@ export const createPasswordResetToken = async (req: IRequest<{}, {}, ILoginData>
 
 export const resetPasswordFromToken = async (req: IRequest<{}, {}, ILoginData & IUpdatePasswordBody>) => {
   const { newPassword, token } = req.body;
-  const requiredFields = ['newPassword', 'token'];
-  const { isValid, missingFields } = verifyRequiredFields(requiredFields, req.body);
-  if (!isValid) {
-    throw new CustomError(
-      `Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`,
-      ErrorTypes.INVALID_ARG,
-    );
-  }
   const errMsg = 'Token not found. Please request password reset again.';
   const existingToken = await TokenService.getTokenAndConsume({ value: token, type: TokenTypes.Password });
   if (!existingToken) throw new CustomError(errMsg, ErrorTypes.NOT_FOUND);
@@ -509,7 +500,6 @@ export const resetPasswordFromToken = async (req: IRequest<{}, {}, ILoginData & 
 
 export const verifyPasswordResetToken = async (req: IRequest<{}, {}, IVerifyTokenBody>) => {
   const { token } = req.body;
-  if (!token) throw new CustomError('Token required.', ErrorTypes.INVALID_ARG);
   const _token = await TokenService.getToken({
     value: token,
     type: TokenTypes.Password,

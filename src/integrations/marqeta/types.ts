@@ -830,7 +830,7 @@ export interface IMarqetaDepositAccountTransition {
   channel?: IMarqetaDepositAccountChannel;
   accountToken: string;
   state: IMarqetaDepositAccountTransitionState;
-  reason?: string;
+  reason: string;
 }
 
 export interface IMarqetaDepositAccountData {

@@ -10,7 +10,7 @@ import * as UserTestIdentityService from '../services/user/testIdentities';
 import * as UserServiceTypes from '../services/user/types';
 import * as SupportTicketService from '../services/supportTicket';
 import { KWRateLimiterKeyPrefixes, setRateLimiterHeaders, unblockFromEmailLimiterOnSuccess } from '../middleware/rateLimiter';
-import { formatZodFieldErrors, getZodEnumSchemaFromTypescriptEnum, nameValidation, nanoIdValidation, optionalNameValidation, optionalObjectReferenceValidation, optionalUuidValidation, optionalZipCodeValidation } from '../lib/validation';
+import { formatZodFieldErrors, getShareableFieldErrors, getZodEnumSchemaFromTypescriptEnum, nameValidation, nanoIdValidation, optionalNameValidation, optionalObjectReferenceValidation, optionalUuidValidation, optionalZipCodeValidation } from '../lib/validation';
 import { DeleteRequestReason } from '../models/deleteAccountRequest';
 
 export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = async (req, res) => {
@@ -26,10 +26,9 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
 
     const parsed = registerUserSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.IUserData>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IUserData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
     const { password, name, token, promo } = body;
@@ -65,10 +64,9 @@ export const login: IRequestHandler<{}, {}, UserServiceTypes.ILoginData> = async
 
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.ILoginData>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.ILoginData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
     const { user, authKey } = await UserService.login(req, {
@@ -94,10 +92,9 @@ export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDel
 
     const parsed = deleteAccountRequestSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.IDeleteAccountRequest>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IDeleteAccountRequest>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const response = await UserService.deleteAccountRequest(req);
     output.api(req, res, response);
@@ -149,10 +146,9 @@ export const updateProfile: IRequestHandler<{}, {}, UserServiceTypes.IUserData> 
 
     const parsed = updateProfileSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.IUserData>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IUserData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const user = await UserService.updateProfile(req);
     output.api(req, res, UserUtils.getShareableUser(user));
@@ -188,10 +184,9 @@ export const verifyPasswordResetToken: IRequestHandler<{}, {}, UserServiceTypes.
 
     const parsed = verifyPasswordResetTokenSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.IVerifyTokenBody>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IVerifyTokenBody>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const data = await UserService.verifyPasswordResetToken(req);
     output.api(req, res, data);
@@ -208,10 +203,9 @@ export const checkIfEmailAlreadyInUse: IRequestHandler<{}, {}, UserServiceTypes.
 
     const parsed = checkIfEmailAlreadyInUseSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.IEmail>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmail>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const data = await UserVerificationService.verifyUserDoesNotAlreadyExist(req);
     output.api(req, res, data);
@@ -232,10 +226,9 @@ export const resetPasswordFromToken: IRequestHandler<{}, {}, UserServiceTypes.IL
 
     const parsed = resetPasswordFromTokenSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.ILoginData & UserServiceTypes.IUpdatePasswordBody>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.ILoginData & UserServiceTypes.IUpdatePasswordBody>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const user = await UserService.resetPasswordFromToken(req);
     output.api(req, res, UserUtils.getShareableUser(user));
@@ -262,10 +255,9 @@ export const verifyEmail: IRequestHandler<{}, {}, Partial<UserServiceTypes.IEmai
 
     const parsed = verifyEmailSchema.safeParse(req.body);
     if (!parsed.success) {
-      const formattedError = formatZodFieldErrors(
-        ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors,
-      );
-      throw new CustomError(`${formattedError || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
     const data = await UserVerificationService.verifyEmail(req);

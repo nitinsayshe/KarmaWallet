@@ -4,13 +4,12 @@ import isemail from 'isemail';
 import { FilterQuery, ObjectId, Types, UpdateQuery } from 'mongoose';
 import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import {
-  FieldValues,
   getSubscribedLists,
   subscribeContactToList,
   updateActiveCampaignContactData,
   updateCustomFields,
 } from '../../integrations/activecampaign';
-import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum } from '../../lib/constants';
+import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum, DateKarmaMembershipStoppedbBeingFree } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
@@ -110,9 +109,18 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
   ) {
     existingWebAppUser = 'true';
   }
-  let fields: undefined | FieldValues;
+
+  const isFreeMembershipUserCustomField = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser,
+  );
+  const isFreeMembershipUser = !!user?.integrations?.marqeta?.created_time
+    ? dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree)
+    : false;
+
+  const fields = [{ id: isFreeMembershipUserCustomField.id, value: isFreeMembershipUser.toString() }];
+
   if (!!existingWebAppUserCustomField?.id) {
-    fields = [{ id: existingWebAppUserCustomField?.id, value: existingWebAppUser }];
+    fields.push({ id: existingWebAppUserCustomField?.id, value: existingWebAppUser });
   }
 
   if (!!visitor) {
@@ -144,7 +152,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
       }
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
       try {
-        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
+        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fields || []);
       } catch (err) {
         console.error('Error subscribing user to lists', err);
       }
@@ -671,7 +679,7 @@ export const updateNewKWCardUserSubscriptions = async (user: IUserDocument, clie
     let existingWebAppUser: 'true' | 'false' = 'true';
     if (
       !!user?.integrations?.marqeta
-        || dayjs(user.dateJoined).isAfter(dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour'))
+      || dayjs(user.dateJoined).isAfter(dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour'))
     ) {
       existingWebAppUser = 'false';
     }

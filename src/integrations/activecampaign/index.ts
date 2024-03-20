@@ -559,10 +559,6 @@ export const updateActiveCampaignData = async (
       subscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
       unsubscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
     );
-
-    /* TODO: handle removing tags - this doesn't seem possible through the same active campaign
-     * import endpoint right now. Might need to make a DELETE HTTP request to https://youraccountname.api-us1.com/api/3/contactTags/{id} */
-
     const contacts = [
       {
         email: req.email,

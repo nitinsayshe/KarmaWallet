@@ -50,6 +50,8 @@ import { createPushUserNotificationFromUserAndPushData } from '../services/user_
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
 import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
+import { PersonaWebhookBody } from '../integrations/persona/types';
+import { verifyPersonaWebhook } from '../integrations/persona';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -513,6 +515,18 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
 
     output.api(req, res, { message: 'Marqeta webhook processed successfully.' });
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> = async (req, res) => {
+  try {
+    console.log('Persona Webhook Received');
+    await verifyPersonaWebhook(req);
+    // webhook passed verification
+    // take action based on the event
+    output.api(req, res, { message: 'Persona webhook processed successfully.' });
   } catch (err) {
     error(req, res, asCustomError(err));
   }

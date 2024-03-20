@@ -17,6 +17,7 @@ const checkToken: IRequestHandler = async (req, res, next) => {
   if (req?.url === '/webhook/paypal') return next();
   if (req?.url === '/webhook/kard') return next();
   if (req?.url === '/webhook/marqeta') return next();
+  if (req?.url === '/webhook/persona') return next();
   if (req?.url === '/webhook/comply-advantage') { return next(); }
 
   const token = req.headers.authorization;

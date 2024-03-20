@@ -24,12 +24,22 @@ import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/cons
 import { JobNames } from '../lib/constants/jobScheduler';
 import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
-import { IArticleDocument } from '../models/article';
 import { IUserDocument, UserModel } from '../models/user';
 import {
-  getArticleRecommendationsBasedOnTransactionHistory, getArticlesForCompany, getCompaniesWithArticles, URLs,
+  ArticleWithCompany,
+  getArticleRecommendationsBasedOnTransactionHistory,
+  getArticlesForCompany,
+  getCompaniesWithArticles,
+  URLs,
 } from '../services/article/utils/recommendations';
-import { getActiveCampaignSubscribedListIds, getNonActiveCampaignSubscriptions, getUserGroupSubscriptionsToUpdate, reconcileActiveCampaignListSubscriptions, updateNewKWCardUserSubscriptions, updateUserSubscriptions } from '../services/subscription';
+import {
+  getActiveCampaignSubscribedListIds,
+  getNonActiveCampaignSubscriptions,
+  getUserGroupSubscriptionsToUpdate,
+  reconcileActiveCampaignListSubscriptions,
+  updateNewKWCardUserSubscriptions,
+  updateUserSubscriptions,
+} from '../services/subscription';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
@@ -41,6 +51,7 @@ import {
 } from '../services/user/utils/metrics';
 import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
 import { IUser } from '../models/user/types';
+import { DateKarmaMembershipStoppedbBeingFree } from '../lib/constants';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes;
@@ -57,7 +68,7 @@ interface ISubscriptionLists {
 export type ArticleRecommedationsCustomFields = {
   startDate: Date;
   endDate: Date;
-  articlesByCompany: (IArticleDocument & { url: string })[][];
+  articlesByCompany: ArticleWithCompany[][];
 };
 
 export type SpendingAnalysisCustomFields = {};
@@ -639,6 +650,52 @@ const prepareArticleRecommendationSyncRequest = async (
     return contact;
   });
 
+  return { contacts };
+};
+
+const prepareKarmaCardMembershipTypeSyncRequest = async (
+  req: UserIterationRequest<ArticleRecommedationsCustomFields>,
+  userBatch: PaginateResult<IUser>,
+  customFields: { name: string; id: number }[],
+): Promise<IContactsImportData> => {
+  let membershipTypeData: { email: string; isFreeMembershipUser: boolean }[] = await Promise.all(
+    userBatch?.docs?.map(async (user) => {
+      const email = user?.emails?.find((e) => e.primary)?.email;
+      const isFreeMembershipUser = !!user?.integrations?.marqeta?.created_time
+        ? dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree)
+        : false;
+
+      return { email, isFreeMembershipUser };
+    }),
+  );
+
+  const emailSchema = z.string().email();
+  membershipTypeData = membershipTypeData?.filter((data) => {
+    const validationResult = emailSchema.safeParse(data?.email);
+    return !!data.email && !(validationResult as SafeParseError<string>)?.error;
+  });
+
+  // set the custom fields and update in active campaign
+  const isFreeMembershipUser = customFields.find((field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser);
+
+  if (!isFreeMembershipUser) {
+    return { contacts: [] };
+  }
+
+  const contacts = membershipTypeData.map((d) => {
+    const contact: IContactsData = {
+      email: d.email,
+      fields: [
+        {
+          id: isFreeMembershipUser?.id,
+          value: d.isFreeMembershipUser.toString(),
+        },
+      ],
+    };
+
+    return contact;
+  });
+
   console.log(JSON.stringify(contacts, null, 2));
   return { contacts };
 };
@@ -677,7 +734,11 @@ const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
             // add ids of any active subs not from active campaign
             const nonActiveCampaignSubs = await getNonActiveCampaignSubscriptions(user._id as unknown as Types.ObjectId);
             // update db with active campaign subscriptions
-            await reconcileActiveCampaignListSubscriptions(new Types.ObjectId(user._id.toString()), activeCampaignListIds, nonActiveCampaignSubs);
+            await reconcileActiveCampaignListSubscriptions(
+              new Types.ObjectId(user._id.toString()),
+              activeCampaignListIds,
+              nonActiveCampaignSubs,
+            );
           } catch (err) {
             console.error(`Error reconciling list subscriptions for user: ${err}`);
           }
@@ -699,7 +760,7 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
   const companiesWithArticles = await getCompaniesWithArticles();
 
   // each element in the array holds the articles for a given company
-  const articlesByCompany: (IArticleDocument & { url: string })[][] = await Promise.all(
+  const articlesByCompany: ArticleWithCompany[][] = await Promise.all(
     companiesWithArticles.map(async (company) => getArticlesForCompany(company)),
   );
 
@@ -715,6 +776,18 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
   };
 
   await iterateOverUsersAndExecImportReqWithDelay(req, prepareArticleRecommendationSyncRequest, msDelayBetweenBatches);
+};
+
+const syncKarmaCardMembershipTypeFields = async (httpClient?: AxiosInstance) => {
+  const msDelayBetweenBatches = 2000;
+
+  const req: UserIterationRequest<undefined> = {
+    httpClient,
+    batchQuery: {},
+    batchLimit: 100,
+  };
+
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareKarmaCardMembershipTypeSyncRequest, msDelayBetweenBatches);
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
@@ -808,6 +881,9 @@ export const exec = async ({ syncType, userSubscriptions, cardSignupUserId, http
         break;
       case ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION:
         await syncArticleRecommendationFields(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.KARMA_CARD_MEMBERSHIP_TYPE:
+        await syncKarmaCardMembershipTypeFields(httpClient);
         break;
       default:
         await syncAllUsers(syncType, httpClient);

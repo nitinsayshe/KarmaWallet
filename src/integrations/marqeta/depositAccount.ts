@@ -85,11 +85,12 @@ export const getDepositAccountByToken = async (token: string) => {
 };
 
 export const transitionDepositAccount = async (req: IRequest<{}, {}, IMarqetaDepositAccountTransition>) => {
-  const { accountToken, state } = req.body;
+  const { accountToken, state, reason } = req.body;
   const data = await depositAccountClient.transitionDepositAccount({
     accountToken,
     state,
     channel: IMarqetaDepositAccountChannel.API,
+    reason,
   });
   return data;
 };

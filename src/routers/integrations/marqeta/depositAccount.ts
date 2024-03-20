@@ -6,17 +6,24 @@ import { UserRoles } from '../../../lib/constants';
 
 const router = Router();
 
+router.route('/transition')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    DepositAccountController.transitionDepositAccount,
+  );
+
 router.route('/')
   .get(authenticate, DepositAccountController.listDepositAccounts);
 
 router.route('/:token')
   .get(authenticate, DepositAccountController.getDepositAccountByToken);
 
-router.route('/transition')
+router.route('/create/:userId')
   .post(
     authenticate,
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
-    DepositAccountController.transitionDepositAccount,
+    DepositAccountController.createDepositAccountForUser,
   );
 
 export default router;

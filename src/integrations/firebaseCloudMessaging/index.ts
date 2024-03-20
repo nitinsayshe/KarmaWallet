@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import admin from 'firebase-admin';
+import type { FirebaseMessagingError } from 'firebase-admin/lib/utils/error';
+import admin, { FirebaseError } from 'firebase-admin';
 import { IUserDocument } from '../../models/user';
 import { IFCMNotification, IPushNotification } from './types';
 
@@ -26,10 +27,41 @@ try {
 } catch (error) {
   console.log('Error in initializing firebase app', error);
 }
-export const sendPushNotification = async (
+
+const isFirebaseMessagingError = (error: FirebaseError): error is FirebaseMessagingError => error?.code?.startsWith('messaging/');
+
+const sendPushNotificationAndRemoveTokenIfNotRegistered = async (
   user: IUserDocument,
+  token: string,
   notificationObject: IFCMNotification,
 ) => {
+  try {
+    const pushNotification: IPushNotification = {
+      notification: {
+        title: notificationObject.title,
+        body: notificationObject.body,
+      },
+      token,
+      data: {
+        type: notificationObject.type,
+      },
+    };
+
+    await admin.messaging().send(pushNotification as any);
+  } catch (error) {
+    const err = error as FirebaseError;
+    if (isFirebaseMessagingError(err) && err.code === 'messaging/registration-token-not-registered') {
+      // remove invalid token from the database
+      console.log(`Removing unregistered token: ${token} for user: ${user._id}`);
+      user.integrations.fcm = user.integrations.fcm.filter((fcm) => fcm.token !== token);
+      await user.save();
+    } else {
+      throw error;
+    }
+  }
+};
+
+export const sendPushNotification = async (user: IUserDocument, notificationObject: IFCMNotification) => {
   // Get FCM token of the user
   try {
     const { integrations } = user;
@@ -38,18 +70,7 @@ export const sendPushNotification = async (
     const filteredFCM = fcm.filter((item) => item.token !== null);
     filteredFCM.forEach(async (fcmObject) => {
       // Send the notification to devices targeted by its FCM token
-      const pushNotification: IPushNotification = {
-        notification: {
-          title: notificationObject.title,
-          body: notificationObject.body,
-        },
-        token: fcmObject.token,
-        data: {
-          type: notificationObject.type,
-        },
-      };
-
-      await admin.messaging().send(pushNotification as any);
+      await sendPushNotificationAndRemoveTokenIfNotRegistered(user, fcmObject.token, notificationObject);
     });
   } catch (error) {
     console.log('Error in sending notification', error);

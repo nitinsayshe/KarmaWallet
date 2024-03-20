@@ -49,6 +49,7 @@ import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
+import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
 import { PersonaWebhookBody } from '../integrations/persona/types';
 import { verifyPersonaWebhook } from '../integrations/persona';
 
@@ -422,7 +423,15 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
+    const {
+      cards,
+      cardactions,
+      chargebacktransitions,
+      usertransitions,
+      banktransfertransitions,
+      transactions,
+      directdepositaccounttransitions,
+    } = req.body;
 
     // saving all webhooks for debugging purposes
     try {
@@ -450,6 +459,13 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
             { new: true },
           );
         }
+      }
+    }
+
+    if (!!directdepositaccounttransitions) {
+      console.log('////////// PROCESSING MARQETA DIRECTDEPOSITACCOUNTTRANSITION WEBHOOK ////////// ');
+      for (const directdepositaccounttransition of directdepositaccounttransitions) {
+        await handleMarqetaDirectDepositAccountTransitionWebhook(directdepositaccounttransition);
       }
     }
 

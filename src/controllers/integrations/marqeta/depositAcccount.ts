@@ -35,10 +35,8 @@ export const getDepositAccountByToken: IRequestHandler<{ token: string }, {}, {}
 
 export const createDepositAccountForUser: IRequestHandler<{ userId: string }, {}, {}> = async (req, res) => {
   try {
-    console.log('//// create deposit account!!!!!', req.params.userId);
     const user = await UserModel.findById(req.params.userId);
     if (!user) throw new Error('User not found');
-    console.log('//// create deposit account!!!!!', req.params.userId);
     const data = await DepositAccountService.createDepositAccount(user);
     output.api(req, res, data);
   } catch (err) {

@@ -35,7 +35,7 @@ const DepositAccountSchema = new Schema({
       },
     },
   },
-  createdTime: { type: Date },
+  createdOn: { type: Date },
   lastModified: { type: Date },
 });
 

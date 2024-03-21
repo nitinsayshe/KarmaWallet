@@ -47,7 +47,6 @@ export class DepositAccountClient {
   async transitionDepositAccount(params: IMarqetaDepositAccountTransition) {
     try {
       const { data } = await this._marqetaClient._client.post('/depositaccounts/transitions', camelToSnakeCase(params));
-      console.log('///// transitioning deposit account', data);
       return data;
     } catch (err) {
       console.log(err);

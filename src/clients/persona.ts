@@ -1,11 +1,13 @@
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
+import crypto from 'crypto';
 import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { getRandomInt } from '../lib/number';
-import { IPersonaAccountsRequest, IPersonaCreateAccountBody } from '../integrations/persona/types';
+import { IPersonaAccountsRequest, IPersonaCreateAccountBody, PersonaWebhookBody } from '../integrations/persona/types';
+import { IRequest } from '../types/request';
 
-const { PERSONA_API_KEY } = process.env;
+const { PERSONA_API_KEY, PERSONA_WEBHOOK_KEY } = process.env;
 
 export class PersonaClient extends SdkClient {
   _client: AxiosInstance;
@@ -15,7 +17,7 @@ export class PersonaClient extends SdkClient {
   }
 
   protected _init() {
-    if (!PERSONA_API_KEY) throw new Error('Persona credentials not found');
+    if (!PERSONA_API_KEY || !PERSONA_WEBHOOK_KEY) throw new Error('Persona credentials not found');
 
     this._client = axios.create({
       headers: {
@@ -51,9 +53,29 @@ export class PersonaClient extends SdkClient {
     }
   }
 
+  public async verifyWebhookSignature(req: IRequest<{}, {}, PersonaWebhookBody>) {
+    const t = req.headers['persona-signature'].split(',')[0].split('=')[1];
+    const signatures: string[] = [];
+    req.headers['persona-signature'].split(' ')
+      .forEach((pair: string) => {
+        const [_, value] = pair.split('v1=');
+        signatures.push(value);
+      });
+
+    const hmac = crypto.createHmac('sha256', PERSONA_WEBHOOK_KEY)
+      .update(`${t}.${JSON.stringify(req.body)}`)
+      .digest('hex');
+
+    if (crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signatures[0]))
+      || crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signatures[1]))) {
+      // Handle verified webhook event
+      return;
+    }
+    throw new Error('Invalid signature');
+  }
+
   public async listAllAccounts(queryParams: IPersonaAccountsRequest) {
     try {
-      console.log('////// liust all accounts');
       let queryString = '/account';
       if (!!queryParams) {
         queryString = `/accounts?${new URLSearchParams({ ...queryParams }).toString()}`;
@@ -69,9 +91,7 @@ export class PersonaClient extends SdkClient {
 
   public async createAccount(accountData: IPersonaCreateAccountBody) {
     try {
-      console.log('//// CREATE ACCOUNT!!!!!!', accountData);
       const account = await this._client.post('/accounts', accountData);
-      console.log('///// returned data', account);
       if (!!account.data) return account.data;
     } catch (err) {
       console.log(err);

@@ -43,7 +43,7 @@ const userSchema = new Schema({
         {
           type: {
             date: { type: Date, required: true },
-            article: { type: Schema.Types.ObjectId, ref: 'article', required: true },
+            article: { type: Schema.Types.ObjectId, ref: 'wp_article', required: true },
           },
         },
       ],

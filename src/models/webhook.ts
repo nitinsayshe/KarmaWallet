@@ -10,6 +10,7 @@ import { IModel } from '../types/model';
 export enum WebhookProviders {
   Marqeta = 'marqeta',
   Wildfire = 'wildfire',
+  Persona = 'persona',
   Rare = 'rare',
   Kard = 'kard',
   Plaid = 'plaid',

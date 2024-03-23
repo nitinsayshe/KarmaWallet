@@ -50,6 +50,9 @@ jobs:
     - run: echo 'PLAID_WEBHOOK_URI=https://backend.sandbox2.karmawallet.io/webhook/plaid' >> .env
     - run: echo 'PLAID_REDIRECT_URI=https://ui.staging.karmawallet.io/account' >> .env
     - run: echo 'PLAID_PRODUCTS=transactions' >> .env
+    - run: echo 'WP_SERVER=blog.karmawallet.io' >> .env
+    - run: echo 'WP_PORT=443' >> .env
+    - run: echo 'WP_PROTOCOL=https' >> .env
     - run: echo 'MAILCHIMP_KEY=' >> .env
     - run: echo 'MAILCHIMP_SERVER=' >> .env
     - run: echo 'RARE_API_KEY=${{ secrets.STAGING_RARE_API_KEY }}' >> .env
@@ -116,6 +119,7 @@ jobs:
     - run: echo 'FIREBASE_CLIENT_X509_CERT_URL=${{secrets.SANDBOX_FIREBASE_CLIENT_X509_CERT_URL}}' >> .env
     - run: echo 'COMPLYADVANTAGE_KEY=${{secrets.COMPLYADVANTAGE_KEY}}' >> .env
     - run: echo 'PERSONA_API_KEY=${{secrets.PERSONA_SANDBOX_API_KEY}}' >> .env
+    - run: echo 'PERSONA_WEBHOOK_KEY=${{secrets.PERSONA_SANDBOX_WEBHOOK_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

@@ -1,4 +1,5 @@
 import { createCard } from '../integrations/marqeta/card';
+import { createDepositAccount, listDepositAccountsForUser } from '../integrations/marqeta/depositAccount';
 import { MarqetaCardState } from '../integrations/marqeta/types';
 import { IUserDocument } from '../models/user';
 import { mapMarqetaCardtoCard } from '../services/card';
@@ -9,13 +10,13 @@ export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT
 export const exec = async (user: IUserDocument) => {
   let virtualCardResponse = null;
   let physicalCardResponse = null;
+  const karmaWalletCards = await karmaWalletCardBreakdown(user);
+  const karmaWalletDepositAccounts = await listDepositAccountsForUser(user._id);
 
   if (!user?.integrations?.marqeta?.userToken) {
     console.error('User does not have marqeta integration');
     return;
   }
-
-  const karmaWalletCards = await karmaWalletCardBreakdown(user);
 
   if (karmaWalletCards.virtualCards > 0 && karmaWalletCards.physicalCard > 0) {
     console.error(`User already has karma cards: ${user._id}`);
@@ -44,12 +45,18 @@ export const exec = async (user: IUserDocument) => {
       cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN,
     });
 
-    console.log('///// Ordering a card with product token', MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN);
+    console.log('[+] Ordering a card with product token', MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN);
 
     if (!!physicalCardResponse) {
       await mapMarqetaCardtoCard(user._id.toString(), physicalCardResponse); // map physical card
     } else {
       console.log(`[+] Card Creation Error: Error creating physical card for user with id: ${user._id}`);
     }
+  }
+
+  // Create new deposit account for active marqeta user, must have cards before can create a deposit account
+  if (karmaWalletDepositAccounts.data.length === 0) {
+    await createDepositAccount(user);
+    console.log('[+] Created a deposit account for userId', user._id);
   }
 };

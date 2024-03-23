@@ -1,7 +1,10 @@
+import fs from 'fs';
+import path from 'path';
+import { parse } from 'json2csv';
 import { PaginateResult } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, MarqetaUserModel } from '../../integrations/marqeta/types';
+import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, ListUsersResponse, MarqetaUserModel } from '../../integrations/marqeta/types';
 import { User } from '../../clients/marqeta/user';
 import { sleep } from '../../lib/misc';
 import { IUserDocument, UserModel } from '../../models/user';
@@ -10,14 +13,17 @@ import { mapMarqetaCardtoCard } from '../card';
 import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
+import { createDepositAccount, listDepositAccountsForUser, mapMarqetaDepositAccountToKarmaDB } from '../../integrations/marqeta/depositAccount';
+import { DepositAccountModel } from '../../models/depositAccount';
+import { CardModel } from '../../models/card';
 
 const backoffMs = 1000;
 
 export const getCardsFromMarqeta = async (userId: string) => {
   const user = await UserModel.findById(userId);
   const { userToken } = user.integrations.marqeta;
-  const marqetaClient = await new MarqetaClient();
-  const cardClient = await new Card(marqetaClient);
+  const marqetaClient = new MarqetaClient();
+  const cardClient = new Card(marqetaClient);
   const usersCards = await cardClient.listCards(userToken);
   for (const card of usersCards.data) {
     await mapMarqetaCardtoCard(userId, card);
@@ -115,4 +121,93 @@ export const updateClosedMarqetaAccounts = async () => {
   } catch (err) {
     console.error(err);
   }
+};
+
+export const addDepositAccountToMarqetaUsers = async () => {
+  try {
+    // Fetch all existing users from the database
+    const users = await UserModel.find({ 'integrations.marqeta.status': IMarqetaUserStatus.ACTIVE });
+    // Iterate through each user and generate an deposit account number for them
+    for (const user of users) {
+      // check for the user if he is already having any ACTIVE deposit acccount
+      const depositAccount = await listDepositAccountsForUser(user.integrations.marqeta.userToken);
+      const activeAccount = depositAccount.data.find((account: any) => account.state === 'ACTIVE');
+      const hasActiveMarqetaCard = await CardModel.findOne({ userId: user._id, 'integrations.marqeta.state': 'ACTIVE' });
+
+      if (!depositAccount.data.length || !activeAccount) {
+        // Generate deposit account number & map into database
+        if (hasActiveMarqetaCard) {
+          const depoistNumber = await createDepositAccount(user);
+          console.log(`Assigned deposit account number ${depoistNumber?.accountNumber} to user ${user._id}`);
+        }
+      }
+      console.log(`this user ${user._id} already have deposit account number`);
+    }
+    console.log('deposit account numbers assigned to all users successfully.');
+  } catch (err) {
+    console.error('Error assigning deposit account numbers to users:', err);
+  }
+};
+
+export const addDepositAccountsToKWDatabase = async () => {
+  const marqetaUsers = await UserModel.find({ 'integrations.marqeta.status': IMarqetaUserStatus.ACTIVE });
+
+  for (const marqetaUser of marqetaUsers) {
+    const _id = marqetaUser._id.toString();
+    const existingDepositAccount = await DepositAccountModel.findOne({ userId: _id });
+
+    if (!existingDepositAccount) {
+      const data = await listDepositAccountsForUser(marqetaUser.integrations.marqeta.userToken);
+      if (data.data.length > 0) {
+        for (const depositAccount of data.data) {
+          await mapMarqetaDepositAccountToKarmaDB(_id, depositAccount);
+        }
+      }
+    }
+  }
+};
+
+export const getUsersMissingPhoneNumber = async () => {
+  const marqetaClient = new MarqetaClient();
+  const userClient = new User(marqetaClient);
+
+  let usersMissingPhoneNumber: MarqetaUserModel[] = [];
+
+  let startIndex = 0;
+  let isMore = true;
+  while (isMore) {
+    try {
+      console.log('on startIndex: ', startIndex);
+      const userBatch: ListUsersResponse = await userClient.listMarqetaUsers({
+        isMore: isMore.toString(),
+        startIndex: startIndex.toString(),
+        count: '10',
+      });
+
+      isMore = userBatch.is_more;
+      startIndex = userBatch.end_index + 1;
+
+      // find any users that don't have a phone number
+      usersMissingPhoneNumber = [...usersMissingPhoneNumber, ...userBatch.data.filter((user) => !user.phone)];
+
+      console.log(`fetched ${userBatch.data.length} users`);
+    } catch (err) {
+      isMore = false;
+      console.error(err);
+    }
+  }
+
+  // filter out any that aren't in an active state
+  usersMissingPhoneNumber = usersMissingPhoneNumber.filter((user) => user.active);
+
+  console.log('found users missing phone number: ', usersMissingPhoneNumber.length);
+
+  const _userCSV = parse(
+    usersMissingPhoneNumber.map((user) => ({
+      name: `${user.first_name}${!!user.middle_name ? ` ${user.middle_name}` : ''}  ${user.last_name}`,
+      email: user.email,
+      token: user.token,
+    })),
+  );
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'marqeta_users_without_phone_number.csv'), _userCSV);
 };

@@ -49,6 +49,9 @@ import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
+import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
+import { PersonaWebhookBody } from '../integrations/persona/types';
+import { verifyPersonaWebhook } from '../integrations/persona';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -420,7 +423,15 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
     }
 
-    const { cards, cardactions, chargebacktransitions, usertransitions, banktransfertransitions, transactions } = req.body;
+    const {
+      cards,
+      cardactions,
+      chargebacktransitions,
+      usertransitions,
+      banktransfertransitions,
+      transactions,
+      directdepositaccounttransitions,
+    } = req.body;
 
     // saving all webhooks for debugging purposes
     try {
@@ -448,6 +459,13 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
             { new: true },
           );
         }
+      }
+    }
+
+    if (!!directdepositaccounttransitions) {
+      console.log('////////// PROCESSING MARQETA DIRECTDEPOSITACCOUNTTRANSITION WEBHOOK ////////// ');
+      for (const directdepositaccounttransition of directdepositaccounttransitions) {
+        await handleMarqetaDirectDepositAccountTransitionWebhook(directdepositaccounttransition);
       }
     }
 
@@ -497,6 +515,18 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
     }
 
     output.api(req, res, { message: 'Marqeta webhook processed successfully.' });
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> = async (req, res) => {
+  try {
+    console.log('Persona Webhook Received');
+    await verifyPersonaWebhook(req);
+    // webhook passed verification
+    // take action based on the event
+    output.api(req, res, { message: 'Persona webhook processed successfully.' });
   } catch (err) {
     error(req, res, asCustomError(err));
   }

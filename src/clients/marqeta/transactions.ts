@@ -56,9 +56,10 @@ export class Transactions {
   }
 
   // list transactions for single user
-  async listTransactionsForUser(userToken: string) {
+  async listTransactionsForUser(userToken: string, query?: string) {
     try {
-      const { data } = await this._marqetaClient._client.get(`transactions?user_token=${userToken}`);
+      const queryString = `transactions?user_token=${userToken}${query ? `&${query}` : ''}`;
+      const { data } = await this._marqetaClient._client.get(queryString);
       return data;
     } catch (err) {
       console.log(err);

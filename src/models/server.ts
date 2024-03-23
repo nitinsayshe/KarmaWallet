@@ -9,6 +9,7 @@ import { IModel } from '../types/model';
 
 export const ServerSourcesEnum = {
   ComplyAdvantage: 'comply-advantage',
+  Persona: 'persona',
 } as const;
 export type ServerSourcesEnumValue = typeof ServerSourcesEnum[keyof typeof ServerSourcesEnum];
 
@@ -31,8 +32,8 @@ export type IServerModel = IModel<IServer>;
 
 const serverSchema = new Schema({
   ip: { type: String },
-  source: { type: Object.values(ServerSourcesEnum) },
-  type: { type: Object.values(ServerTypesEnum) },
+  source: { type: String, enum: Object.values(ServerSourcesEnum) },
+  type: { type: String, enum: Object.values(ServerTypesEnum) },
   createdOn: { type: Date, default: () => getUtcDate() },
   lastUpdatedOn: { type: Date, default: () => getUtcDate() },
 });

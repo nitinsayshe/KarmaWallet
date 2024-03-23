@@ -878,6 +878,59 @@ export interface IGPABalanceResponse {
   gpa: IGPABalanceResponseData;
 }
 
+export enum IDeviceType {
+  MOBILE_PHONE = 'MOBILE_PHONE',
+  WATCH = 'WATCH',
+  TABLET = 'TABLET'
+}
+export interface IAppleWalletProvesion {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  certificates: string[]
+  nonce: string;
+  nonceSignature: string;
+}
+
+export interface IGoogleWalletProvesion {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string,
+  walletAccountId: string;
+  deviceId: string;
+}
+
+export interface ISamsungWalletProvesion {
+  cardToken: string;
+  deviceId: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string,
+  walletUserId: string;
+
+}
+
+enum IDigitalWalletTransitionChannel {
+  TOKEN_SERVICE_PROVIDER = 'TOKEN_SERVICE_PROVIDER',
+  TOKEN_SERVICE_PROVIDER_API = 'TOKEN_SERVICE_PROVIDER_API',
+  DIGITAL_WALLET = 'DIGITAL_WALLET',
+  API = 'API',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  ADMIN = 'ADMIN',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IDigitalWalletTokenTransaition {
+  channel?:IDigitalWalletTransitionChannel;
+  digitalWalletToken: {
+    token: string;
+    cardToken?: string;
+  },
+  state: string;
+  reason?: string;
+  reasonCode?: string;
+}
+
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
 export type GetUserByEmailResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
 export type ListCardsResponse = { cards: PaginatedMarqetaResponse<MarqetaCardModel[]> };

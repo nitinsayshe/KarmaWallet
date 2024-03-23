@@ -7,6 +7,12 @@ import { verifyRequiredFields } from '../../../lib/requestData';
 
 export const appleWalletProvision: IRequestHandler<{}, {}, IAppleWalletProvesion> = async (req, res) => {
   try {
+    const { body } = req;
+    const requiredFields = ['nonce', 'nonceSignature', 'certificates', 'provisioningAppVersion', 'deviceType', 'cardToken'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    if (!isValid) {
+      throw new Error(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`);
+    }
     const data = await DigitalWalletManagementService.appleWalletProvision(req);
     output.api(req, res, data);
   } catch (err) {

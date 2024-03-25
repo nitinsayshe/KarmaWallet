@@ -13,6 +13,9 @@ import { mapMarqetaCardtoCard } from '../card';
 import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
+import { createDepositAccount, listDepositAccountsForUser, mapMarqetaDepositAccountToKarmaDB } from '../../integrations/marqeta/depositAccount';
+import { DepositAccountModel } from '../../models/depositAccount';
+import { CardModel } from '../../models/card';
 
 const backoffMs = 1000;
 
@@ -117,6 +120,50 @@ export const updateClosedMarqetaAccounts = async () => {
     );
   } catch (err) {
     console.error(err);
+  }
+};
+
+export const addDepositAccountToMarqetaUsers = async () => {
+  try {
+    // Fetch all existing users from the database
+    const users = await UserModel.find({ 'integrations.marqeta.status': IMarqetaUserStatus.ACTIVE });
+    // Iterate through each user and generate an deposit account number for them
+    for (const user of users) {
+      // check for the user if he is already having any ACTIVE deposit acccount
+      const depositAccount = await listDepositAccountsForUser(user.integrations.marqeta.userToken);
+      const activeAccount = depositAccount.data.find((account: any) => account.state === 'ACTIVE');
+      const hasActiveMarqetaCard = await CardModel.findOne({ userId: user._id, 'integrations.marqeta.state': 'ACTIVE' });
+
+      if (!depositAccount.data.length || !activeAccount) {
+        // Generate deposit account number & map into database
+        if (hasActiveMarqetaCard) {
+          const depoistNumber = await createDepositAccount(user);
+          console.log(`Assigned deposit account number ${depoistNumber?.accountNumber} to user ${user._id}`);
+        }
+      }
+      console.log(`this user ${user._id} already have deposit account number`);
+    }
+    console.log('deposit account numbers assigned to all users successfully.');
+  } catch (err) {
+    console.error('Error assigning deposit account numbers to users:', err);
+  }
+};
+
+export const addDepositAccountsToKWDatabase = async () => {
+  const marqetaUsers = await UserModel.find({ 'integrations.marqeta.status': IMarqetaUserStatus.ACTIVE });
+
+  for (const marqetaUser of marqetaUsers) {
+    const _id = marqetaUser._id.toString();
+    const existingDepositAccount = await DepositAccountModel.findOne({ userId: _id });
+
+    if (!existingDepositAccount) {
+      const data = await listDepositAccountsForUser(marqetaUser.integrations.marqeta.userToken);
+      if (data.data.length > 0) {
+        for (const depositAccount of data.data) {
+          await mapMarqetaDepositAccountToKarmaDB(_id, depositAccount);
+        }
+      }
+    }
   }
 };
 

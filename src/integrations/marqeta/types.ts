@@ -465,8 +465,8 @@ export interface IMarqetaUserIntegrations {
   status?: IMarqetaUserStatus;
   created_time?: string;
   _id?: string;
-  reason? :string;
-  reason_code? :string;
+  reason?: string;
+  reason_code?: string;
 }
 
 export const ACHTransferTransitionStatusEnum = {
@@ -769,16 +769,6 @@ export interface IMarqetaBankTransferTransitionEvent {
   last_modified_time: Date;
 }
 
-export interface IMarqetaWebhookBody {
-  cards: IMarqetaWebhookCardsEvent[];
-  cardactions: IMarqetaCardActionEvent[];
-  chargebacktransitions: ChargebackTransition[];
-  usertransitions: IMarqetaUserTransitionsEvent[];
-  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
-  transactions: TransactionModel[];
-  cardtransitions: IMarqetaWebhookCardsEvent[];
-}
-
 export interface IMarqetaWebhookHeader {
   authorization: string;
 }
@@ -812,6 +802,70 @@ export const InsufficientFundsConstants = {
   CODES: ['1016', '1865', '1923'],
 };
 
+export enum DepositAccountTypes {
+  DEPOSIT_ACCOUNT = 'DEPOSIT_ACCOUNT',
+  CHECKING = 'CHECKING',
+}
+
+export interface IMarqetaDepositAccount {
+  userToken: string;
+  type: DepositAccountTypes;
+}
+
+export enum IMarqetaDepositAccountTransitionState {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+}
+
+export enum IMarqetaDepositAccountChannel {
+  API = 'API',
+  ADMIN = 'ADMIN',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IMarqetaDepositAccountTransition {
+  channel?: IMarqetaDepositAccountChannel;
+  accountToken: string;
+  state: IMarqetaDepositAccountTransitionState;
+  reason: string;
+}
+
+export interface IMarqetaDepositAccountData {
+  account_number: string;
+  created_time: Date;
+  last_modified_time: Date;
+  routing_number: string;
+  state: IMarqetaDepositAccountTransitionState;
+  token: string;
+  type: DepositAccountTypes;
+  user_token: string;
+}
+
+export interface IMarqetaDirectDepositWebhookEvent {
+  // webhook token
+  token: string;
+  user_token: string;
+  // direct deposit token
+  account_token: string;
+  state: IMarqetaDepositAccountTransitionState;
+  reason: string;
+  created_time: string;
+}
+
+export interface IMarqetaWebhookBody {
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  chargebacktransitions: ChargebackTransition[];
+  usertransitions: IMarqetaUserTransitionsEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: TransactionModel[];
+  cardtransitions: IMarqetaWebhookCardsEvent[];
+  directdepositaccounttransitions: IMarqetaDirectDepositWebhookEvent[];
+}
+
 export interface IGPABalanceResponseData {
   currency_code: string;
   ledger_balance: number;
@@ -822,6 +876,59 @@ export interface IGPABalanceResponseData {
 
 export interface IGPABalanceResponse {
   gpa: IGPABalanceResponseData;
+}
+
+export enum IDeviceType {
+  MOBILE_PHONE = 'MOBILE_PHONE',
+  WATCH = 'WATCH',
+  TABLET = 'TABLET'
+}
+
+export interface IAppleWalletProvision {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  certificates: string[];
+  nonce: string;
+  nonceSignature: string;
+}
+
+export interface IGoogleWalletProvision {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  walletAccountId: string;
+  deviceId: string;
+}
+
+export interface ISamsungWalletProvision {
+  cardToken: string;
+  deviceId: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  walletUserId: string;
+}
+
+enum IDigitalWalletTransitionChannel {
+  TOKEN_SERVICE_PROVIDER = 'TOKEN_SERVICE_PROVIDER',
+  TOKEN_SERVICE_PROVIDER_API = 'TOKEN_SERVICE_PROVIDER_API',
+  DIGITAL_WALLET = 'DIGITAL_WALLET',
+  API = 'API',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  ADMIN = 'ADMIN',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IDigitalWalletTokenTransition {
+  channel?:IDigitalWalletTransitionChannel;
+  digitalWalletToken: {
+    token: string;
+    cardToken?: string;
+  },
+  state: string;
+  reason?: string;
+  reasonCode?: string;
 }
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

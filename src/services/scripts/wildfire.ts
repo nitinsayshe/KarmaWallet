@@ -409,6 +409,8 @@ export const matchWildfireCompanies = async () => {
   let count = 0;
   let index = 0;
   for (const company of companies) {
+    count += 1;
+    if (count < 17777) continue;
     if (!!company.merchant) {
       const merchant = await MerchantModel.findById(company.merchant);
       if (!!merchant?.integrations?.wildfire) {
@@ -503,10 +505,11 @@ export const searchResultsProcessing = async () => {
 
     let merchantMatch = false;
     let domainMatch = false;
-    if (topMerchantMatchScore < 0.02) {
+    console.log('///// reviewing', companyName, url);
+    if (topMerchantMatchScore < 0.05) {
       merchantMatch = true;
     }
-    if (topDomainMatchScore < 0.03) {
+    if (topDomainMatchScore < 0.05) {
       domainMatch = true;
     }
     if (merchantMatch || domainMatch) {

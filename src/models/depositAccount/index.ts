@@ -4,8 +4,8 @@ import {
   Model,
 } from 'mongoose';
 import { IModel } from '../../types/model';
-import { IDepositAccount, IDepositAccountState, IDepositAccountDocument } from './types';
-import { DepositAccountTypes } from '../../integrations/marqeta/types';
+import { IDepositAccount, IDepositAccountDocument } from './types';
+import { DepositAccountTypes, IMarqetaDepositAccountTransitionState } from '../../integrations/marqeta/types';
 
 export type IDepositAccountModel = IModel<IDepositAccount>;
 
@@ -17,7 +17,7 @@ const DepositAccountSchema = new Schema({
   },
   routingNumber: { type: String },
   accountNumber: { type: String },
-  state: { type: String, enum: Object.values(IDepositAccountState) },
+  state: { type: String, enum: Object.values(IMarqetaDepositAccountTransitionState) },
   integrations: {
     marqeta: {
       token: { type: String },
@@ -25,7 +25,7 @@ const DepositAccountSchema = new Schema({
       allow_immediate_credit: { type: Boolean },
       state: {
         type: String,
-        enum: Object.values(IDepositAccountState),
+        enum: Object.values(IMarqetaDepositAccountTransitionState),
       },
       created_time: { type: Date },
       last_modified_time: { type: Date },

@@ -850,7 +850,7 @@ export interface IMarqetaDirectDepositWebhookEvent {
   user_token: string;
   // direct deposit token
   account_token: string;
-  state: DirectDepositStateEnumValues;
+  state: IMarqetaDepositAccountTransitionState;
   reason: string;
   created_time: string;
 }
@@ -876,6 +876,59 @@ export interface IGPABalanceResponseData {
 
 export interface IGPABalanceResponse {
   gpa: IGPABalanceResponseData;
+}
+
+export enum IDeviceType {
+  MOBILE_PHONE = 'MOBILE_PHONE',
+  WATCH = 'WATCH',
+  TABLET = 'TABLET'
+}
+
+export interface IAppleWalletProvision {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  certificates: string[];
+  nonce: string;
+  nonceSignature: string;
+}
+
+export interface IGoogleWalletProvision {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  walletAccountId: string;
+  deviceId: string;
+}
+
+export interface ISamsungWalletProvision {
+  cardToken: string;
+  deviceId: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  walletUserId: string;
+}
+
+enum IDigitalWalletTransitionChannel {
+  TOKEN_SERVICE_PROVIDER = 'TOKEN_SERVICE_PROVIDER',
+  TOKEN_SERVICE_PROVIDER_API = 'TOKEN_SERVICE_PROVIDER_API',
+  DIGITAL_WALLET = 'DIGITAL_WALLET',
+  API = 'API',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  ADMIN = 'ADMIN',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IDigitalWalletTokenTransition {
+  channel?:IDigitalWalletTransitionChannel;
+  digitalWalletToken: {
+    token: string;
+    cardToken?: string;
+  },
+  state: string;
+  reason?: string;
+  reasonCode?: string;
 }
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

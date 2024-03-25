@@ -1,19 +1,13 @@
 import { ObjectId, Document } from 'mongoose';
 import { IShareableUser } from '../user/types';
 import { IRef } from '../../types/model';
-
-export enum IDepositAccountState {
-  ACTIVE = 'ACTIVE',
-  SUSPENDED = 'SUSPENDED',
-  TERMINATED = 'TERMINATED',
-  UNACTIVATED = 'UNACTIVATED'
-}
+import { IMarqetaDepositAccountTransitionState } from '../../integrations/marqeta/types';
 
 export interface IMarqetaIntegration {
   allow_immediate_credit: boolean;
   created_time: Date;
   last_modified_time: Date;
-  state: IDepositAccountState;
+  state: IMarqetaDepositAccountTransitionState;
   token: string;
   type: string;
   user_token: string;
@@ -26,6 +20,7 @@ export interface IShareableDepositAccount {
   userId?: IRef<ObjectId, IShareableUser>;
   createdOn: Date;
   lastModified: Date;
+  state: IMarqetaDepositAccountTransitionState;
   integrations?: {
     marqeta?: IMarqetaIntegration;
   }

@@ -18,7 +18,7 @@ export const listDepositAccounts: IRequestHandler<{}, {}, {}> = async (req, res)
 export const transitionDepositAccount: IRequestHandler<{}, {}, IMarqetaDepositAccountTransition> = async (req, res) => {
   try {
     const data = await DepositAccountService.transitionDepositAccount(req);
-    return data;
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

@@ -1,11 +1,11 @@
-import { IAppleWalletProvesion, IGoogleWalletProvesion, ISamsungWalletProvesion } from '../../../integrations/marqeta/types';
 import * as DigitalWalletManagementService from '../../../integrations/marqeta/digitalWalletmanagement';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import { asCustomError } from '../../../lib/customError';
 import { verifyRequiredFields } from '../../../lib/requestData';
+import { IAppleWalletProvision, IGoogleWalletProvision, ISamsungWalletProvision } from '../../../integrations/marqeta/types';
 
-export const appleWalletProvision: IRequestHandler<{}, {}, IAppleWalletProvesion> = async (req, res) => {
+export const appleWalletProvision: IRequestHandler<{}, {}, IAppleWalletProvision> = async (req, res) => {
   try {
     const data = await DigitalWalletManagementService.appleWalletProvision(req);
     output.api(req, res, data);
@@ -14,7 +14,7 @@ export const appleWalletProvision: IRequestHandler<{}, {}, IAppleWalletProvesion
   }
 };
 
-export const googleWalletProvision: IRequestHandler<{}, {}, IGoogleWalletProvesion> = async (req, res) => {
+export const googleWalletProvision: IRequestHandler<{}, {}, IGoogleWalletProvision> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['deviceType', 'provisioningAppVersion', 'walletAccountId', 'deviceId', 'cardToken'];
@@ -29,7 +29,7 @@ export const googleWalletProvision: IRequestHandler<{}, {}, IGoogleWalletProvesi
   }
 };
 
-export const samsungWalletProvision: IRequestHandler<{}, {}, ISamsungWalletProvesion> = async (req, res) => {
+export const samsungWalletProvision: IRequestHandler<{}, {}, ISamsungWalletProvision> = async (req, res) => {
   try {
     const { body } = req;
     const requiredFields = ['deviceType', 'provisioningAppVersion', 'walletUserId', 'deviceId', 'cardToken'];

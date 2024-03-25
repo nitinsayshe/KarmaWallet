@@ -1,4 +1,4 @@
-import { IAppleWalletProvesion, IDigitalWalletTokenTransaition, IGoogleWalletProvesion, ISamsungWalletProvesion } from '../../integrations/marqeta/types';
+import { IAppleWalletProvision, IGoogleWalletProvision, ISamsungWalletProvision, IDigitalWalletTokenTransition } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';
@@ -11,7 +11,7 @@ export class DigitalWalletManagement {
   }
 
   // Create digital wallet token provisioning request for Apple Wallet
-  async appleWalletProvision(params: IAppleWalletProvesion) {
+  async appleWalletProvision(params: IAppleWalletProvision) {
     try {
       const { data } = await this._marqetaClient._client.post('/digitalwalletprovisionrequests/applepay', camelToSnakeCase(params));
       return data;
@@ -22,7 +22,7 @@ export class DigitalWalletManagement {
   }
 
   // Create digital wallet token provisioning request for Google Wallet
-  async googleWalletProvision(params: IGoogleWalletProvesion) {
+  async googleWalletProvision(params: IGoogleWalletProvision) {
     try {
       const { data } = await this._marqetaClient._client.post('/digitalwalletprovisionrequests/androidpay', camelToSnakeCase(params));
       return data;
@@ -33,7 +33,7 @@ export class DigitalWalletManagement {
   }
 
   // Create digital wallet token provisioning request for Samsung Wallet
-  async samsungWalletProvision(params: ISamsungWalletProvesion) {
+  async samsungWalletProvision(params: ISamsungWalletProvision) {
     try {
       const { data } = await this._marqetaClient._client.post('/digitalwalletprovisionrequests/samsungpay', camelToSnakeCase(params));
       return data;
@@ -44,7 +44,7 @@ export class DigitalWalletManagement {
   }
 
   // Create digital wallet token transition
-  async digitalWalletTransition(params: IDigitalWalletTokenTransaition) {
+  async digitalWalletTransition(params: IDigitalWalletTokenTransition) {
     try {
       const { data } = await this._marqetaClient._client.post('/digitalwallettokentransitions', camelToSnakeCase(params));
       return data;

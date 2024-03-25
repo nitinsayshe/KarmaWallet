@@ -850,7 +850,7 @@ export interface IMarqetaDirectDepositWebhookEvent {
   user_token: string;
   // direct deposit token
   account_token: string;
-  state: DirectDepositStateEnumValues;
+  state: IMarqetaDepositAccountTransitionState;
   reason: string;
   created_time: string;
 }
@@ -883,30 +883,30 @@ export enum IDeviceType {
   WATCH = 'WATCH',
   TABLET = 'TABLET'
 }
-export interface IAppleWalletProvesion {
+
+export interface IAppleWalletProvision {
   cardToken: string;
   deviceType: IDeviceType;
   provisioningAppVersion: string;
-  certificates: string[]
+  certificates: string[];
   nonce: string;
   nonceSignature: string;
 }
 
-export interface IGoogleWalletProvesion {
+export interface IGoogleWalletProvision {
   cardToken: string;
   deviceType: IDeviceType;
-  provisioningAppVersion: string,
+  provisioningAppVersion: string;
   walletAccountId: string;
   deviceId: string;
 }
 
-export interface ISamsungWalletProvesion {
+export interface ISamsungWalletProvision {
   cardToken: string;
   deviceId: string;
   deviceType: IDeviceType;
-  provisioningAppVersion: string,
+  provisioningAppVersion: string;
   walletUserId: string;
-
 }
 
 enum IDigitalWalletTransitionChannel {
@@ -920,7 +920,7 @@ enum IDigitalWalletTransitionChannel {
   SYSTEM = 'SYSTEM'
 }
 
-export interface IDigitalWalletTokenTransaition {
+export interface IDigitalWalletTokenTransition {
   channel?:IDigitalWalletTransitionChannel;
   digitalWalletToken: {
     token: string;

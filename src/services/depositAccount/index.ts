@@ -1,6 +1,6 @@
+import { IMarqetaDepositAccountTransitionState } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { DepositAccountModel } from '../../models/depositAccount';
-import { IDepositAccountState } from '../../models/depositAccount/types';
 
 export const getDepositAccounts = async (userId: string) => {
   try {
@@ -13,7 +13,7 @@ export const getDepositAccounts = async (userId: string) => {
 
 export const getActiveDepositAccount = async (userId: string) => {
   try {
-    const depositAccount = await DepositAccountModel.findOne({ userId, state: IDepositAccountState.ACTIVE });
+    const depositAccount = await DepositAccountModel.findOne({ userId, state: IMarqetaDepositAccountTransitionState.ACTIVE });
     return depositAccount;
   } catch (error) {
     throw asCustomError(error);

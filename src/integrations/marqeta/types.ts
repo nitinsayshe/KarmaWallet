@@ -850,7 +850,7 @@ export interface IMarqetaDirectDepositWebhookEvent {
   user_token: string;
   // direct deposit token
   account_token: string;
-  state: DirectDepositStateEnumValues;
+  state: IMarqetaDepositAccountTransitionState;
   reason: string;
   created_time: string;
 }

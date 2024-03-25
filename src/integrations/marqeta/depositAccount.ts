@@ -1,6 +1,7 @@
 import { DepositAccountClient } from '../../clients/marqeta/depositAccount';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { asCustomError } from '../../lib/customError';
+import { getUtcDate } from '../../lib/date';
 import { DepositAccountModel } from '../../models/depositAccount';
 import { IUserDocument } from '../../models/user';
 import { IRequest } from '../../types/request';
@@ -36,22 +37,16 @@ export const mapMarqetaDepositAccountToKarmaDB = async (_userId: string, deposit
 
 export const updateMarqetaDepositAccountInKarmaDB = async (depositAccountData: IMarqetaDirectDepositWebhookEvent) => {
   try {
-    const depositAccount = await DepositAccountModel.findOneAndUpdate(
-      { 'integrations.marqeta.token': depositAccountData.token },
-      {
-        $set: {
-          lastModified: depositAccountData.created_time,
-          state: depositAccountData.state,
-          integrations: {
-            marqeta: {
-              state: depositAccountData.state,
-              last_modified_time: depositAccountData.created_time,
-            },
-          },
-        },
-      },
-      { new: true },
-    );
+    const depositAccount = await DepositAccountModel.findOne({ 'integrations.marqeta.token': depositAccountData.account_token });
+    if (!depositAccount) {
+      throw new Error(`[+] updateMarqetaDepositAccountInKarmaDB: Deposit account not found for token ${depositAccountData.account_token}. Account transitioned, but database not updated`);
+    }
+    const currentTime = getUtcDate().toDate();
+    depositAccount.lastModified = currentTime;
+    depositAccount.state = depositAccountData.state;
+    depositAccount.integrations.marqeta.state = depositAccountData.state;
+    depositAccount.integrations.marqeta.last_modified_time = currentTime;
+    await depositAccount.save();
     return depositAccount;
   } catch (error) {
     throw asCustomError(error);
@@ -92,6 +87,8 @@ export const transitionDepositAccount = async (req: IRequest<{}, {}, IMarqetaDep
     channel: IMarqetaDepositAccountChannel.API,
     reason,
   });
+
+  await updateMarqetaDepositAccountInKarmaDB(data);
   return data;
 };
 

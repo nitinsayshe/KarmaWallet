@@ -212,7 +212,8 @@ export const updateMarqetaCards = async (
               barcode: card?.barcode,
             },
           });
-          return existingCard.save();
+          const updatedCard = await existingCard.save();
+          return updatedCard;
         } catch (err) {
           console.error(`error saving user ${existingCard._id}: ${err}`);
           return null;

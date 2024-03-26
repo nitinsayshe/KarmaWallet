@@ -469,6 +469,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     existingCard.lastModified = dayjs().utc().toDate();
     existingCard.createdOn = origCreatedTime;
     existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
+    existingCard.integrations.marqeta.state = cardFromWebhook?.state || existingCard.integrations.marqeta.state;
     existingCard.integrations.marqeta.fulfillment_status = cardFromWebhook?.fulfillment_status || existingCard.integrations.marqeta.fulfillment_status;
     existingCard.integrations.marqeta.pin_is_set = cardFromWebhook?.pin_is_set || existingCard.integrations.marqeta.pin_is_set;
     await existingCard.save();

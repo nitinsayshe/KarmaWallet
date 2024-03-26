@@ -7,6 +7,12 @@ import { IAppleWalletProvision, IGoogleWalletProvision, ISamsungWalletProvision 
 
 export const appleWalletProvision: IRequestHandler<{}, {}, IAppleWalletProvision> = async (req, res) => {
   try {
+    const { body } = req;
+    const requiredFields = ['nonce', 'nonceSignature', 'certificates', 'provisioningAppVersion', 'deviceType', 'cardToken'];
+    const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
+    if (!isValid) {
+      throw new Error(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`);
+    }
     const data = await DigitalWalletManagementService.appleWalletProvision(req);
     output.api(req, res, data);
   } catch (err) {
@@ -22,7 +28,7 @@ export const googleWalletProvision: IRequestHandler<{}, {}, IGoogleWalletProvisi
     if (!isValid) {
       throw new Error(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`);
     }
-    const { data } = await DigitalWalletManagementService.googleWalletProvision(req);
+    const data = await DigitalWalletManagementService.googleWalletProvision(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -37,7 +43,7 @@ export const samsungWalletProvision: IRequestHandler<{}, {}, ISamsungWalletProvi
     if (!isValid) {
       throw new Error(`Invalid input. Body requires the following fields: ${missingFields.join(', ')}.`);
     }
-    const { data } = await DigitalWalletManagementService.samsungWalletProvision(req);
+    const data = await DigitalWalletManagementService.samsungWalletProvision(req);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -47,7 +53,7 @@ export const samsungWalletProvision: IRequestHandler<{}, {}, ISamsungWalletProvi
 export const listDigitalWalletForUserCard: IRequestHandler<{ cardToken: string }, {}, {}> = async (req, res) => {
   try {
     const { cardToken } = req.params;
-    const { data } = await DigitalWalletManagementService.listDigitalWalletForUserCard(cardToken);
+    const data = await DigitalWalletManagementService.listDigitalWalletForUserCard(cardToken);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

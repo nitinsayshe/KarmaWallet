@@ -18,13 +18,13 @@ export const appleWalletProvision = async (req: IRequest<{}, {}, IAppleWalletPro
 export const googleWalletProvision = async (req: IRequest<{}, {}, IGoogleWalletProvision>) => {
   const params = { ...req.body };
   const data = await digitalWalletManagement.googleWalletProvision(params);
-  return { data };
+  return data;
 };
 
 export const samsungWalletProvision = async (req: IRequest<{}, {}, ISamsungWalletProvision>) => {
   const params = { ...req.body };
   const data = await digitalWalletManagement.samsungWalletProvision(params);
-  return { data };
+  return data;
 };
 
 export const listDigitalWalletForUserCard = async (cardToken: string) => {

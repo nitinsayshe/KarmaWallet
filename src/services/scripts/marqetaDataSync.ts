@@ -212,7 +212,8 @@ export const updateMarqetaCards = async (
               barcode: card?.barcode,
             },
           });
-          return existingCard.save();
+          const updatedCard = await existingCard.save();
+          return updatedCard;
         } catch (err) {
           console.error(`error saving user ${existingCard._id}: ${err}`);
           return null;
@@ -332,10 +333,12 @@ export const marqetaCardSync = async () => {
   for (const marqetaUser of usersWithMarqetaIntegrations) {
     const marqetaCardsForUser = await getMarqetaCardsForUser(marqetaUser?.integrations?.marqeta?.userToken);
     if (!marqetaCardsForUser?.length) {
-      throw new Error('error retrieving marqeta users');
+      console.log('Error retrieving cards for user, skipping');
+      continue;
+    } else {
+      savedCards.push(await updateMarqetaCards(marqetaCardsForUser, cardsWithMarqetaIntegration));
+      await sleep(SleepMS);
     }
-    savedCards.push(await updateMarqetaCards(marqetaCardsForUser, cardsWithMarqetaIntegration));
-    await sleep(SleepMS);
   }
   const flattenedSavedCards = savedCards.flat().filter((c) => !!c);
 

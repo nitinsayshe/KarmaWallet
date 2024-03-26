@@ -435,16 +435,6 @@ export const handleMarqetaCardNotificationFromWebhook = async (
         title: 'Security Alert!',
       });
     }
-
-    // Notification for events of card suspension or termination.
-    if (newCardStatus === MarqetaCardState.SUSPENDED || newCardStatus === MarqetaCardState.TERMINATED) {
-      console.log('// Sending card deactivated notification //');
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
-        body: `Your ${cardType} card has been deactivated.`,
-        title: 'Security Alert!',
-      });
-    }
   }
 };
 
@@ -475,18 +465,13 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
     await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
   } else {
-    if (existingCard?.integrations?.marqeta?.instrument_type) {
-      newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
-    }
-
-    if (existingCard?.integrations?.marqeta?.barcode) {
-      newData.barcode = existingCard?.integrations?.marqeta?.barcode;
-    }
-
     existingCard.integrations.marqeta = newData;
     existingCard.lastModified = dayjs().utc().toDate();
     existingCard.createdOn = origCreatedTime;
     existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
+    existingCard.integrations.marqeta.state = cardFromWebhook?.state || existingCard.integrations.marqeta.state;
+    existingCard.integrations.marqeta.fulfillment_status = cardFromWebhook?.fulfillment_status || existingCard.integrations.marqeta.fulfillment_status;
+    existingCard.integrations.marqeta.pin_is_set = cardFromWebhook?.pin_is_set || existingCard.integrations.marqeta.pin_is_set;
     await existingCard.save();
   }
 };

@@ -505,10 +505,6 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user?._id) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
-  if (!prevCardData) {
-    console.log('///// there was not a prebious card');
-    await mapMarqetaCardtoCard(user._id.toString(), cardDataInMarqeta);
-  }
   await updateCardFromMarqetaCardWebhook(cardDataInMarqeta);
   await sendCardUpdateEmails(cardDataInMarqeta);
   await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);

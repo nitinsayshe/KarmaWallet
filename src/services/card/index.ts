@@ -435,16 +435,6 @@ export const handleMarqetaCardNotificationFromWebhook = async (
         title: 'Security Alert!',
       });
     }
-
-    // Notification for events of card suspension or termination.
-    if (newCardStatus === MarqetaCardState.SUSPENDED || newCardStatus === MarqetaCardState.TERMINATED) {
-      console.log('// Sending card deactivated notification //');
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
-        body: `Your ${cardType} card has been deactivated.`,
-        title: 'Security Alert!',
-      });
-    }
   }
 };
 

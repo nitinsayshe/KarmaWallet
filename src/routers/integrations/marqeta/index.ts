@@ -24,5 +24,5 @@ marqetaRouter.use('/pin', pinRouter);
 marqetaRouter.use('/transaction', transactionRouter);
 marqetaRouter.use('/cardproduct', cardProductRouter);
 marqetaRouter.use('/deposit-account', authenticate, depositAccountRouter);
-marqetaRouter.use('/digital-wallet', digitalWalletRouter);
+marqetaRouter.use('/digital-wallet', authenticate, digitalWalletRouter);
 export default marqetaRouter;

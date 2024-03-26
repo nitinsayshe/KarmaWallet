@@ -52,6 +52,7 @@ import { WebhookModel, WebhookProviders } from '../models/webhook';
 import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
 import { PersonaWebhookBody } from '../integrations/persona/types';
 import { verifyPersonaWebhook } from '../integrations/persona';
+import { encrypt } from '../lib/encryption';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -214,6 +215,13 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
     const signedJwt = req.headers?.['plaid-verification'];
     const client = new PlaidClient();
     await client.verifyWebhook({ signedJwt, requestBody: req.body });
+
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Plaid, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Plaid webhook. processing will continue. error: ${e}---`);
+    }
+
     const { webhook_type, webhook_code, item_id } = req.body;
     // Historical Transactions Ready
     if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
@@ -242,6 +250,13 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
         throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
       }
       // do work here
+
+      try {
+        await WebhookModel.create({ provider: WebhookProviders.Wildfire, body: req.body });
+      } catch (e) {
+        console.log(`-- error saving Wildfire webhook. processing will continue. error: ${e}---`);
+      }
+
       console.log('Wildfire webhook processed successfully.');
       console.log('------- BEG WF Transaction -------\n');
       console.log(JSON.stringify(body, null, 2));
@@ -281,6 +296,13 @@ export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = 
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
     }
+
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Paypal, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Paypal webhook. processing will continue. error: ${e}---`);
+    }
+
     processPaypalWebhook(req.body);
     api(req, res, { message: 'Paypal webhook processed successfully.' });
   } catch (e) {
@@ -317,6 +339,15 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
     }
     kardEnv = !!errorVerifyingAggregatorEnvSignature ? KardEnvironmentEnum.Issuer : KardEnvironmentEnum.Aggregator;
+
+    try {
+      const webhookBodyToSave = { ...req.body };
+      webhookBodyToSave.card.bin = encrypt(req.body?.card?.bin);
+      webhookBodyToSave.card.last4 = encrypt(req.body?.card?.last4);
+      await WebhookModel.create({ provider: WebhookProviders.Kard, body: webhookBodyToSave });
+    } catch (e) {
+      console.log(`-- error saving Kard webhook. processing will continue. error: ${e}---`);
+    }
 
     const processingError = await processKardWebhook(kardEnv, req.body);
     if (!!processingError) {

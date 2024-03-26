@@ -513,7 +513,7 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   if (!prevCardData) {
     await mapMarqetaCardtoCard(user._id.toString(), cardDataInMarqeta);
   }
-  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
   await updateCardFromMarqetaCardWebhook(cardDataInMarqeta);
   await sendCardUpdateEmails(cardDataInMarqeta);
+  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
 };

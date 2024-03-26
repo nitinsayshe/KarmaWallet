@@ -476,6 +476,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     existingCard.integrations.marqeta.state = cardFromWebhook?.state || existingCard.integrations.marqeta.state;
     existingCard.integrations.marqeta.fulfillment_status = cardFromWebhook?.fulfillment_status || existingCard.integrations.marqeta.fulfillment_status;
     existingCard.integrations.marqeta.pin_is_set = cardFromWebhook?.pin_is_set || existingCard.integrations.marqeta.pin_is_set;
+    console.log('/////// existing card updated', existingCard);
     await existingCard.save();
   }
 };

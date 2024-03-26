@@ -465,6 +465,10 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
     await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
   } else {
+    console.log(cardFromWebhook, '///// Updating existing card from Marqeta card webhook /////', {
+      state: cardFromWebhook?.state,
+      fulfillment_status: cardFromWebhook?.fulfillment_status,
+    });
     existingCard.integrations.marqeta = newData;
     existingCard.lastModified = dayjs().utc().toDate();
     existingCard.createdOn = origCreatedTime;
@@ -472,6 +476,7 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     existingCard.integrations.marqeta.state = cardFromWebhook?.state || existingCard.integrations.marqeta.state;
     existingCard.integrations.marqeta.fulfillment_status = cardFromWebhook?.fulfillment_status || existingCard.integrations.marqeta.fulfillment_status;
     existingCard.integrations.marqeta.pin_is_set = cardFromWebhook?.pin_is_set || existingCard.integrations.marqeta.pin_is_set;
+    console.log('/////// existing card updated', existingCard);
     await existingCard.save();
   }
 };

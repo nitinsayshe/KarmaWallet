@@ -68,10 +68,10 @@ export const sendPushNotification = async (user: IUserDocument, notificationObje
     const { fcm } = integrations;
     // Filter out the fcm array having non null token
     const filteredFCM = fcm.filter((item) => item.token !== null);
-    filteredFCM.forEach(async (fcmObject) => {
+    for (const fcmObject of filteredFCM) {
       // Send the notification to devices targeted by its FCM token
       await sendPushNotificationAndRemoveTokenIfNotRegistered(user, fcmObject.token, notificationObject);
-    });
+    }
   } catch (error) {
     console.log('Error in sending notification', error);
   }

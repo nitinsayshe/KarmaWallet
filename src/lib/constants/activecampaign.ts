@@ -59,4 +59,6 @@ export enum ActiveCampaignCustomFields {
   removedAccountsPastThirtyDays = 'removedAccountsPastThirtyDays',
   unlinkedAccountsPastThirtyDays = 'unlinkedAccountsPastThirtyDays',
   userId = 'userId',
+  monthlyReforestationDonations = 'monthlyReforestationDonations',
+  monthlyHungerAlleviationDonations = 'monthlyHungerAlleviationDonations',
 }

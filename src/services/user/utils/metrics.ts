@@ -16,6 +16,8 @@ import { UserImpactYearData } from '../../../models/userImpactTotals';
 import { UserLogModel } from '../../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../../models/userMonthlyImpactReport';
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../../impact/utils';
+import { UserNotificationModel } from '../../../models/user_notification';
+import { NotificationTypeEnum } from '../../../lib/constants/notification';
 
 export type LeanTransactionDocuments = LeanDocument<ITransactionDocument & { _id: any }>[];
 
@@ -748,4 +750,54 @@ export const getUsersWithTransactionPastThirtyDays = async (): Promise<Types.Obj
       _id: '$user',
     });
   return users?.map((u) => u?._id) || [];
+};
+
+export const getMonthlyMealsDonationCount = async (user: IUserDocument): Promise<number> => {
+  try {
+    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+    const userNotifications = await UserNotificationModel.find({
+      $and: [
+        { user: user._id },
+        {
+          type: NotificationTypeEnum.DiningTransaction,
+        },
+        { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { createdOn: { $lte: oneMonthAgo.endOf('month').toDate() } },
+      ],
+    });
+
+    if (!userNotifications) {
+      return 0;
+    }
+
+    return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getMonthlyReforestationDonationCount = async (user: IUserDocument): Promise<number> => {
+  try {
+    const oneMonthAgo = dayjs().utc().subtract(1, 'month');
+    const userNotifications = await UserNotificationModel.find({
+      $and: [
+        { user: user._id },
+        {
+          type: NotificationTypeEnum.GasTransaction,
+        },
+        { createdOn: { $gte: oneMonthAgo.startOf('month').toDate() } },
+        { createdOn: { $lte: oneMonthAgo.endOf('month').toDate() } },
+      ],
+    });
+
+    if (!userNotifications) {
+      return 0;
+    }
+
+    return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
 };

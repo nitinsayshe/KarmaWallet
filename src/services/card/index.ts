@@ -435,26 +435,15 @@ export const handleMarqetaCardNotificationFromWebhook = async (
         title: 'Security Alert!',
       });
     }
-
-    // Notification for events of card suspension or termination.
-    if (newCardStatus === MarqetaCardState.SUSPENDED || newCardStatus === MarqetaCardState.TERMINATED) {
-      console.log('// Sending card deactivated notification //');
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
-        body: `Your ${cardType} card has been deactivated.`,
-        title: 'Security Alert!',
-      });
-    }
   }
 };
 
 export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
   const { year, month } = extractYearAndMonth(cardFromWebhook.expiration_time);
-  const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
-  const origCreatedTime = existingCard?.createdOn;
+  const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.token });
 
   const newData: any = {
-    card_token: cardFromWebhook?.card_token,
+    card_token: cardFromWebhook?.token,
     user_token: cardFromWebhook?.user_token,
     card_product_token: cardFromWebhook?.card_product_token,
     pan: encrypt(cardFromWebhook?.pan),
@@ -475,17 +464,8 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
     if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
     await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
   } else {
-    if (existingCard?.integrations?.marqeta?.instrument_type) {
-      newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
-    }
-
-    if (existingCard?.integrations?.marqeta?.barcode) {
-      newData.barcode = existingCard?.integrations?.marqeta?.barcode;
-    }
-
     existingCard.integrations.marqeta = newData;
     existingCard.lastModified = dayjs().utc().toDate();
-    existingCard.createdOn = origCreatedTime;
     existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
     await existingCard.save();
   }
@@ -525,10 +505,7 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user?._id) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
-  if (!prevCardData) {
-    await mapMarqetaCardtoCard(user._id.toString(), cardDataInMarqeta);
-  }
-  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
   await updateCardFromMarqetaCardWebhook(cardDataInMarqeta);
   await sendCardUpdateEmails(cardDataInMarqeta);
+  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
 };

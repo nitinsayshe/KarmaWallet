@@ -410,7 +410,6 @@ export const matchWildfireCompanies = async () => {
   let index = 0;
   for (const company of companies) {
     count += 1;
-    if (count < 17777) continue;
     if (!!company.merchant) {
       const merchant = await MerchantModel.findById(company.merchant);
       if (!!merchant?.integrations?.wildfire) {

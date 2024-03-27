@@ -11,6 +11,7 @@ export enum WebhookProviders {
   Marqeta = 'marqeta',
   Wildfire = 'wildfire',
   Persona = 'persona',
+  Paypal = 'paypal',
   Rare = 'rare',
   Kard = 'kard',
   Plaid = 'plaid',

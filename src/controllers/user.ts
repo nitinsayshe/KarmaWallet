@@ -43,26 +43,29 @@ export const login: IRequestHandler<{}, {}, UserServiceTypes.ILoginData> = async
   try {
     // TODO: limit failed attempts w/ https://github.com/animir/node-rate-limiter-flexible/wiki/Overall-example#minimal-protection-against-password-brute-force
     const { password, email, biometricSignature, fcmToken, deviceInfo } = req.body;
-
-    const loginSchema = z.object({
+    const loginSchemaData: any = {
       email: z.string().email(),
-      password: z.string(),
-      biometricSignature: z.string().optional(),
       fcmToken: z.string().optional(),
-      deviceInfo: z
-        .object({
-          manufacturer: z.string().optional(),
-          bundleId: z.string().optional(),
-          deviceId: z.string().optional(),
-          apiLevel: z.string().optional(),
-          applicationName: z.string().optional(),
-          model: z.string().optional(),
-          buildNumber: z.string().optional(),
-        })
-        .optional(),
-    });
+      deviceInfo: z.object({
+        manufacturer: z.string().optional(),
+        bundleId: z.string().optional(),
+        deviceId: z.string().optional(),
+        apiLevel: z.string().optional(),
+        applicationName: z.string().optional(),
+        model: z.string().optional(),
+        buildNumber: z.string().optional(),
+      }).optional(),
+    };
 
+    if (!!biometricSignature && !password) {
+      loginSchemaData.biometricSignature = z.string();
+    } else {
+      loginSchemaData.password = z.string();
+    }
+
+    const loginSchema = z.object(loginSchemaData);
     const parsed = loginSchema.safeParse(req.body);
+
     if (!parsed.success) {
       const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.ILoginData>)?.error as ZodError)?.formErrors?.fieldErrors;
       console.log(formatZodFieldErrors(fieldErrors));

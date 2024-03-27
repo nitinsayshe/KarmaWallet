@@ -366,7 +366,7 @@ export interface IMarqetaWebhookCardsEvent {
   fulfillment_status: MarqetaCardFulfillmentStatus;
   last_four: string;
   pan: string;
-  pin_is_set: Boolean;
+  pin_is_set: boolean;
   reason: string;
   reason_code: string;
   state: MarqetaCardState;

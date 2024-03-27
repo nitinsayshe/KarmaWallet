@@ -18,7 +18,6 @@ import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integration
 import {
   IMarqetaWebhookBody,
   IMarqetaWebhookHeader,
-  InsufficientFundsConstants,
   MarqetaWebhookConstants,
 } from '../integrations/marqeta/types';
 import { processPaypalWebhook } from '../integrations/paypal';
@@ -28,7 +27,6 @@ import { IRareRelayedQueryParams } from '../integrations/rare/types';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { ErrorTypes } from '../lib/constants';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { PushNotificationTypes } from '../lib/constants/notification';
 import CustomError, { asCustomError } from '../lib/customError';
 import { CardModel } from '../models/card';
 import { WildfireCommissionStatus } from '../models/commissions';
@@ -46,12 +44,12 @@ import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { handleTransactionDisputeMacros, handleTransactionNotifications } from '../services/transaction';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
-import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
 import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
 import { PersonaWebhookBody } from '../integrations/persona/types';
 import { verifyPersonaWebhook } from '../integrations/persona';
+import { encrypt } from '../lib/encryption';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -214,6 +212,13 @@ export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = as
     const signedJwt = req.headers?.['plaid-verification'];
     const client = new PlaidClient();
     await client.verifyWebhook({ signedJwt, requestBody: req.body });
+
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Plaid, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Plaid webhook. processing will continue. error: ${e}---`);
+    }
+
     const { webhook_type, webhook_code, item_id } = req.body;
     // Historical Transactions Ready
     if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
@@ -242,6 +247,13 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
         throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
       }
       // do work here
+
+      try {
+        await WebhookModel.create({ provider: WebhookProviders.Wildfire, body: req.body });
+      } catch (e) {
+        console.log(`-- error saving Wildfire webhook. processing will continue. error: ${e}---`);
+      }
+
       console.log('Wildfire webhook processed successfully.');
       console.log('------- BEG WF Transaction -------\n');
       console.log(JSON.stringify(body, null, 2));
@@ -281,6 +293,13 @@ export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = 
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
     }
+
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Paypal, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Paypal webhook. processing will continue. error: ${e}---`);
+    }
+
     processPaypalWebhook(req.body);
     api(req, res, { message: 'Paypal webhook processed successfully.' });
   } catch (e) {
@@ -317,6 +336,15 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
     }
     kardEnv = !!errorVerifyingAggregatorEnvSignature ? KardEnvironmentEnum.Issuer : KardEnvironmentEnum.Aggregator;
+
+    try {
+      const webhookBodyToSave = { ...req.body };
+      webhookBodyToSave.card.bin = encrypt(req.body?.card?.bin);
+      webhookBodyToSave.card.last4 = encrypt(req.body?.card?.last4);
+      await WebhookModel.create({ provider: WebhookProviders.Kard, body: webhookBodyToSave });
+    } catch (e) {
+      console.log(`-- error saving Kard webhook. processing will continue. error: ${e}---`);
+    }
 
     const processingError = await processKardWebhook(kardEnv, req.body);
     if (!!processingError) {
@@ -493,15 +521,6 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         // Handle any code that tees off of the transaction code here before mapping to a transaction
         const user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
         if (!user) throw new CustomError('User not found', ErrorTypes.SERVER);
-        const { code } = transaction.response as any;
-        // Insufficent funds from code
-        if (InsufficientFundsConstants.CODES.includes(code)) {
-          await createPushUserNotificationFromUserAndPushData(user, {
-            pushNotificationType: PushNotificationTypes.BALANCE_THRESHOLD,
-            body: 'Your account has a low balance. Click to reload your Karma Wallet Card.',
-            title: 'Low Balance Alert',
-          });
-        }
       }
       const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
       await handleTransactionDisputeMacros(savedTransactions);

@@ -19,6 +19,7 @@ import {
   removeDuplicateContactAutomations,
   UserLists,
   UserSubscriptions,
+  prepareBiweeklyUpdatedFields,
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
@@ -174,6 +175,9 @@ const prepareSyncUsersRequest = async (
             break;
           case ActiveCampaignSyncTypes.WEEKLY:
             fields = await prepareWeeklyUpdatedFields(userDocument, customFields, fields);
+            break;
+          case ActiveCampaignSyncTypes.BIWEEKLY:
+            fields = await prepareBiweeklyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.MONTHLY:
             fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);

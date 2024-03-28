@@ -18,6 +18,8 @@ import { UserMontlyImpactReportModel } from '../../../models/userMonthlyImpactRe
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../../impact/utils';
 import { UserNotificationModel } from '../../../models/user_notification';
 import { NotificationTypeEnum } from '../../../lib/constants/notification';
+import { ACHTransferModel } from '../../../models/achTransfer';
+import { IACHTransferTypes } from '../../../models/achTransfer/types';
 
 export type LeanTransactionDocuments = LeanDocument<ITransactionDocument & { _id: any }>[];
 
@@ -796,6 +798,29 @@ export const getMonthlyReforestationDonationCount = async (user: IUserDocument):
     }
 
     return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getMoneyLoadedCountInTwoWeeks = async (user: IUserDocument): Promise<number> => {
+  try {
+    const twoWeeksAgo = dayjs().utc().subtract(2, 'week');
+    const achTransfers = await ACHTransferModel.find({
+      $and: [
+        { userId: user._id },
+        { type: IACHTransferTypes.PULL },
+        { created_time: { $gte: twoWeeksAgo.startOf('day').toDate() } },
+        { created_time: { $lte: dayjs().utc().toDate() } },
+      ],
+    });
+
+    if (!achTransfers) {
+      return 0;
+    }
+
+    return achTransfers.length;
   } catch (err) {
     console.error(err);
     return 0;

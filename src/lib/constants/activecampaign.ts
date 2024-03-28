@@ -18,6 +18,7 @@ export enum ActiveCampaignSyncTypes {
   UNLINKED_AND_REMOVED_ACCOUNTS = 'unlinkedAndRemovedAccounts',
   WEEKLY = 'weekly',
   YEARLY = 'yearly',
+  BIWEEKLY = 'biweekly',
 }
 
 export enum ActiveCampaignCustomFields {
@@ -61,4 +62,5 @@ export enum ActiveCampaignCustomFields {
   userId = 'userId',
   monthlyReforestationDonations = 'monthlyReforestationDonations',
   monthlyHungerAlleviationDonations = 'monthlyHungerAlleviationDonations',
+  hasntLoadedMoneyInTwoWeeks = 'hasntLoadedMoneyInTwoWeeks',
 }

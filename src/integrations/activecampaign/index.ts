@@ -25,6 +25,7 @@ import {
   getYearlyLoginCount,
   getMonthlyMealsDonationCount,
   getMonthlyReforestationDonationCount,
+  getMoneyLoadedCountInTwoWeeks,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -363,6 +364,28 @@ export const prepareDailyUpdatedFields = async (
   return fieldValues;
 };
 
+export const prepareBiweeklyUpdatedFields = async (
+  user: IUserDocument,
+  customFields: FieldIds,
+  fieldValues: FieldValues,
+): Promise<FieldValues> => {
+  if (!customFields) {
+    console.log('No custom fields provided');
+    return fieldValues;
+  }
+  if (!fieldValues) {
+    fieldValues = [];
+  }
+
+  const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasntLoadedMoneyInTwoWeeks);
+  if (!!customField) {
+    const moneyLoadedCount = await getMoneyLoadedCountInTwoWeeks(user);
+    fieldValues.push({ id: customField.id, value: (moneyLoadedCount === 0).toString() });
+  }
+
+  return fieldValues;
+};
+
 export const prepareInitialSyncFields = async (
   user: IUserDocument,
   customFields: FieldIds,
@@ -648,6 +671,7 @@ export const prepareBackfillSyncFields = async (
   fieldValues = await prepareMonthlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareQuarterlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareYearlyUpdatedFields(user, customFields, fieldValues);
+  fieldValues = await prepareBiweeklyUpdatedFields(user, customFields, fieldValues);
 
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);

@@ -18,7 +18,6 @@ import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integration
 import {
   IMarqetaWebhookBody,
   IMarqetaWebhookHeader,
-  InsufficientFundsConstants,
   MarqetaWebhookConstants,
 } from '../integrations/marqeta/types';
 import { processPaypalWebhook } from '../integrations/paypal';
@@ -28,7 +27,6 @@ import { IRareRelayedQueryParams } from '../integrations/rare/types';
 import * as UserPlaidTransactionMapJob from '../jobs/userPlaidTransactionMap';
 import { ErrorTypes } from '../lib/constants';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { PushNotificationTypes } from '../lib/constants/notification';
 import CustomError, { asCustomError } from '../lib/customError';
 import { CardModel } from '../models/card';
 import { WildfireCommissionStatus } from '../models/commissions';
@@ -46,7 +44,6 @@ import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
 import { handleTransactionDisputeMacros, handleTransactionNotifications } from '../services/transaction';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
-import { createPushUserNotificationFromUserAndPushData } from '../services/user_notification';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
 import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
@@ -524,15 +521,6 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         // Handle any code that tees off of the transaction code here before mapping to a transaction
         const user = await UserModel.findOne({ 'integrations.marqeta.userToken': transaction?.user_token });
         if (!user) throw new CustomError('User not found', ErrorTypes.SERVER);
-        const { code } = transaction.response as any;
-        // Insufficent funds from code
-        if (InsufficientFundsConstants.CODES.includes(code)) {
-          await createPushUserNotificationFromUserAndPushData(user, {
-            pushNotificationType: PushNotificationTypes.BALANCE_THRESHOLD,
-            body: 'Your account has a low balance. Click to reload your Karma Wallet Card.',
-            title: 'Low Balance Alert',
-          });
-        }
       }
       const savedTransactions = await mapAndSaveMarqetaTransactionsToKarmaTransactions(transactions);
       await handleTransactionDisputeMacros(savedTransactions);

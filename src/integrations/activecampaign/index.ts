@@ -23,6 +23,8 @@ import {
   getYearlyEmissionsTotal,
   getYearlyKarmaScore,
   getYearlyLoginCount,
+  getMonthlyMealsDonationCount,
+  getMonthlyReforestationDonationCount,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -288,6 +290,18 @@ export const prepareMonthlyUpdatedFields = async (
     fieldValues.push({ id: customField.id, value: 'true' });
   } else {
     fieldValues.push({ id: customField.id, value: 'false' });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.monthlyHungerAlleviationDonations);
+  if (!!customField) {
+    const mealsDonationCount = await getMonthlyMealsDonationCount(user);
+    fieldValues.push({ id: customField.id, value: mealsDonationCount.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.monthlyReforestationDonations);
+  if (!!customField) {
+    const reforestationDonationCount = await getMonthlyReforestationDonationCount(user);
+    fieldValues.push({ id: customField.id, value: reforestationDonationCount.toString() });
   }
 
   return fieldValues;

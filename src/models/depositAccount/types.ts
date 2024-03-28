@@ -21,6 +21,8 @@ export interface IShareableDepositAccount {
   createdOn: Date;
   lastModified: Date;
   state: IMarqetaDepositAccountTransitionState;
+  routingNumber: string;
+  accountNumber: string;
   integrations?: {
     marqeta?: IMarqetaIntegration;
   }

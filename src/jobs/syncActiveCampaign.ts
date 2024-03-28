@@ -19,6 +19,7 @@ import {
   removeDuplicateContactAutomations,
   UserLists,
   UserSubscriptions,
+  prepareQuarterlyUpdatedFields,
   prepareBiweeklyUpdatedFields,
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
@@ -183,7 +184,7 @@ const prepareSyncUsersRequest = async (
             fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.QUARTERLY:
-            fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);
+            fields = await prepareQuarterlyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.YEARLY:
             fields = await prepareYearlyUpdatedFields(userDocument, customFields, fields);

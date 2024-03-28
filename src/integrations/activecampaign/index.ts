@@ -25,6 +25,7 @@ import {
   getYearlyLoginCount,
   getMonthlyMealsDonationCount,
   getMonthlyReforestationDonationCount,
+  userHasFundedAccountButNotTransactedInLastQuarter,
   getMoneyLoadedCountInTwoWeeks,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
@@ -212,6 +213,13 @@ export const prepareQuarterlyUpdatedFields = async (
   if (!fieldValues) {
     fieldValues = [];
   }
+
+  const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasntTranactedInPastQuarter);
+  if (!!customField) {
+    const hasFundedAccountAndNotTransactedInPastQuarter = await userHasFundedAccountButNotTransactedInLastQuarter(user);
+    fieldValues.push({ id: customField.id, value: hasFundedAccountAndNotTransactedInPastQuarter.toString() });
+  }
+
   return fieldValues;
 };
 

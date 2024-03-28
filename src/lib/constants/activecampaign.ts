@@ -62,5 +62,6 @@ export enum ActiveCampaignCustomFields {
   userId = 'userId',
   monthlyReforestationDonations = 'monthlyReforestationDonations',
   monthlyHungerAlleviationDonations = 'monthlyHungerAlleviationDonations',
+  hasntTranactedInPastQuarter = 'hasntTranactedInPastQuarter',
   hasntLoadedMoneyInTwoWeeks = 'hasntLoadedMoneyInTwoWeeks',
 }

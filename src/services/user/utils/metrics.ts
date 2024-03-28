@@ -1,8 +1,9 @@
 import dayjs from 'dayjs';
+import quarterOfYear from 'dayjs/plugin/quarterOfYear';
 import { FilterQuery, LeanDocument, Types } from 'mongoose';
 import { CardStatus, UserCommissionPercentage } from '../../../lib/constants';
 import { CompanyRating } from '../../../lib/constants/company';
-import { sectorsToExcludeFromTransactions } from '../../../lib/constants/transaction';
+import { sectorsToExcludeFromTransactions, TransactionTypeEnum } from '../../../lib/constants/transaction';
 import { roundToPercision } from '../../../lib/misc';
 import { CardModel } from '../../../models/card';
 import { CommissionModel, KarmaCommissionStatus } from '../../../models/commissions';
@@ -18,8 +19,11 @@ import { UserMontlyImpactReportModel } from '../../../models/userMonthlyImpactRe
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../../impact/utils';
 import { UserNotificationModel } from '../../../models/user_notification';
 import { NotificationTypeEnum } from '../../../lib/constants/notification';
+import { getGPABalance } from '../../../integrations/marqeta/gpa';
 import { ACHTransferModel } from '../../../models/achTransfer';
 import { IACHTransferTypes } from '../../../models/achTransfer/types';
+
+dayjs.extend(quarterOfYear);
 
 export type LeanTransactionDocuments = LeanDocument<ITransactionDocument & { _id: any }>[];
 
@@ -804,6 +808,31 @@ export const getMonthlyReforestationDonationCount = async (user: IUserDocument):
   }
 };
 
+export const getTransactionsCountInLastQuarter = async (user: IUserDocument): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const transactions = await TransactionModel.find({
+      $and: [
+        { user: user._id },
+        { 'integrations.marqeta': { $exists: true } },
+        { type: TransactionTypeEnum.Debit },
+        { createdOn: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { createdOn: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!transactions) {
+      return 0;
+    }
+
+    return transactions.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
 export const getMoneyLoadedCountInTwoWeeks = async (user: IUserDocument): Promise<number> => {
   try {
     const twoWeeksAgo = dayjs().utc().subtract(2, 'week');
@@ -824,5 +853,22 @@ export const getMoneyLoadedCountInTwoWeeks = async (user: IUserDocument): Promis
   } catch (err) {
     console.error(err);
     return 0;
+  }
+};
+
+export const userHasFundedAccountButNotTransactedInLastQuarter = async (user: IUserDocument): Promise<boolean> => {
+  if (!user.integrations?.marqeta?.userToken) {
+    return false;
+  }
+
+  try {
+    const hasPositiveAvailableBalance = (await getGPABalance(user.integrations.marqeta.userToken))?.data?.gpa?.available_balance > 0;
+    if (!hasPositiveAvailableBalance) {
+      return false;
+    }
+
+    return ((await getTransactionsCountInLastQuarter(user)) === 0);
+  } catch (err) {
+    return false;
   }
 };

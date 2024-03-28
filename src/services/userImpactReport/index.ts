@@ -79,7 +79,7 @@ export const getUserImpactReport = async (req: IRequest<IUserImpactReportParams>
   const monthlyEquivalencies = CarbonService.getEquivalencies(monthlyEmissions);
   const monthlyEquivalenciesFiltered = monthlyEquivalencies.negative.filter(eq => eq.icon !== totalEquivalency.icon);
   const monthlyEquivalency = monthlyEquivalenciesFiltered[getRandomInt(0, monthlyEquivalenciesFiltered.length - 1)];
-  monthlyEquivalency.type = CarbonService.EquivalencyObjectType.Monthly;
+  if (monthlyEquivalency) monthlyEquivalency.type = CarbonService.EquivalencyObjectType.Monthly;
 
   const equivalencies = [totalEquivalency, monthlyEquivalency];
 

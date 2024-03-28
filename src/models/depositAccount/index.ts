@@ -23,6 +23,8 @@ const DepositAccountSchema = new Schema({
       token: { type: String },
       user_token: { type: String },
       allow_immediate_credit: { type: Boolean },
+      account_number: { type: String },
+      routing_number: { type: String },
       state: {
         type: String,
         enum: Object.values(IMarqetaDepositAccountTransitionState),

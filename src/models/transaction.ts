@@ -3,6 +3,7 @@ import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { TransactionStatus, EarnedRewardTransaction } from '../clients/kard';
 import {
+  DepositDepositResponseTypeEnumValues,
   TransactionModel as MarqetaTransactionModel,
   TransactionModelStateEnum,
   TransactionModelStateEnumValues,
@@ -103,6 +104,11 @@ export interface IRareTransactionIntegration {
   fee_amt?: number;
   subtotal_amt?: number;
   tonnes_amt?: number;
+}
+
+export interface IMarqetaDirectDepositData {
+  type: DepositDepositResponseTypeEnumValues;
+  company_name: string;
 }
 
 export type IMarqetaTransactionIntegration = Partial<MarqetaTransactionModel> & {

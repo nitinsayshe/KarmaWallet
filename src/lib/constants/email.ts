@@ -1,5 +1,6 @@
 // values for EmailTemplates should map to the directory names in /src/templates/email/
 export enum EmailTemplateKeys {
+  ContactUs = 'contactUs',
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
   ACHTransferCancelled = 'achTransferCancelled',

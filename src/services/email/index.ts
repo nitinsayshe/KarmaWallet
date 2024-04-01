@@ -30,6 +30,7 @@ export const buildTemplate = ({ templateName, data, templatePath, templateType }
   // Add Template Content and Styles for this particular email
   const _bodyPath = templatePath || path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'template.hbs');
   const _templateStylePath = path.join(__dirname, '..', '..', 'templates', 'email', templateName, 'style.hbs');
+  console.log(_bodyPath, '-/-/-/-/-/-/-/-/-/');
   if (!fs.existsSync(_bodyPath)) throw new CustomError('Template not found for email', ErrorTypes.INVALID_ARG);
   const bodyString = fs.readFileSync(_bodyPath, 'utf8');
   Handlebars.registerPartial('body', bodyString);
@@ -922,5 +923,49 @@ export const sendKarmaCardDeclinedEmail = async ({
   if (user) jobData.user = user._id;
 
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+interface IContactUsEmail {
+  recipientEmail?: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
+  sendEmail?: boolean;
+  name: string;
+  message: string;
+  email: string;
+  phone?: string;
+  firstName?: string;
+  lastName?: string;
+  topic?: string;
+}
+
+export const sendContactUsEmail = async ({
+  recipientEmail = 'senad@theimpactkarma.com',
+  senderEmail = 'senad@theimpactkarma.com',
+  replyToAddresses = ['senad@theimpactkarma.com'],
+  name,
+  email,
+  topic,
+}: IContactUsEmail) => {
+  console.log(recipientEmail, senderEmail, replyToAddresses, name, email, topic);
+  const emailTemplateConfig = EmailTemplateConfigs.AccountDeleteRequest;
+  // const { isValid, missingFields } = verifyRequiredFields(['user', 'deleteReason', 'deleteAccountRequestId'], {
+  //   user,
+  //   deleteReason,
+  //   deleteAccountRequestId,
+  // });
+  // if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { deleteReason: topic, userEmail: email, name } });
+  const subject = 'New Contact Us Request';
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+  };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

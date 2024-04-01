@@ -1,7 +1,7 @@
 import { Document, model, ObjectId, Schema } from 'mongoose';
 import mongooseAggregatePaginate from 'mongoose-aggregate-paginate-v2';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { TransactionStatus, EarnedRewardTransaction } from '../clients/kard';
+import { TransactionStatus, EarnedRewardTransaction } from '../clients/kard/types';
 import {
   DepositDepositResponseTypeEnumValues,
   TransactionModel as MarqetaTransactionModel,

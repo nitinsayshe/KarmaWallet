@@ -1,5 +1,5 @@
 import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
-import { MerchantSource, OfferType, OfferSource, CommissionType } from '../clients/kard';
+import { CommissionType, OfferType, OfferSource, MerchantSource } from '../clients/kard/types';
 import { CardNetwork } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';

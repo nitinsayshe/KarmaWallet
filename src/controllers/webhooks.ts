@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
 import { MainBullClient } from '../clients/bull/main';
-import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard';
+import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard/types';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
 import { getExistingUserOrVisitorFromClientRef, getExistingUserOrVisitorFromSearchId, updateSearchForUser, verifyComplyAdvantageWebhookSource } from '../integrations/complyAdvantage';

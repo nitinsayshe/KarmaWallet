@@ -30,7 +30,6 @@ import { CompanyModel, ICompanyDocument, ICompanySector, IShareableCompany } fro
 import { GroupModel } from '../../models/group';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import {
-  IMarqetaTransactionIntegration,
   IShareableTransaction,
   ITransaction,
   ITransactionDocument,
@@ -429,11 +428,6 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
   });
 };
 
-export const getMarqetaTransactionType = (marqetaData: IMarqetaTransactionIntegration) => {
-  if (!!marqetaData.direct_deposit && !!marqetaData.direct_deposit.token) return 'direct_deposit';
-  return 'authorization';
-};
-
 export const getShareableTransaction = async ({
   _id,
   user,
@@ -548,7 +542,7 @@ export const getShareableTransaction = async ({
       token,
       userToken,
       cardToken,
-      type: getMarqetaTransactionType(integrations.marqeta) as any,
+      type: integrations.marqeta.type,
       state,
       createdTime,
       requestAmount,
@@ -561,6 +555,13 @@ export const getShareableTransaction = async ({
 
     if (!!integrations?.marqeta?.gpa_order) {
       marqetaIntegration.gpa_order = integrations.marqeta.gpa_order;
+    }
+
+    if (!!integrations?.marqeta?.direct_deposit) {
+      marqetaIntegration.direct_deposit = {
+        type: integrations.marqeta?.direct_deposit?.type,
+        company_name: integrations.marqeta?.direct_deposit?.company_name,
+      };
     }
 
     shareableTransaction.integrations = {

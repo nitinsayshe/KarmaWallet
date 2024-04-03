@@ -2,19 +2,25 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { IRequest } from '../../types/request';
 import { sendContactUsEmail } from '../email';
+import { createCreateAccountVisitor } from '../visitor';
 
-enum Topic {
-  Support = 'support',
-  Press = 'press',
-  Inf = 'influencerAffiliateProgram',
-  B2B = 'partnership',
-  Employer = 'employerProgram',
-  NonProfit = 'nonProfitPartnership',
-  Data = 'dataPartner',
-  Other = 'other'
+export enum Topic {
+  Support = 'Support',
+  Press = 'Press',
+  Inf = 'Influencer/Affiliate Program',
+  B2B = 'B2B Partnership',
+  Employer = 'Employer Program',
+  NonProfit = 'Non-Profit Partnership',
+  Data = 'Data Partner',
+  Other = 'Other'
 }
 
-export interface ISubmitContactUsEmailRequest {
+const supportTopicGroups = [Topic.Support, Topic.Other];
+const marketingTopicGroups = [Topic.Press, Topic.Inf, Topic.B2B, Topic.Employer, Topic.NonProfit];
+const dataTopicGroups = [Topic.Data];
+
+export interface ISubmitContactUsEmailRequest extends IRequest{
+  id?: string;
   message: string;
   email: string;
   phone?: string;
@@ -24,23 +30,52 @@ export interface ISubmitContactUsEmailRequest {
 }
 
 export const submitContactUsEmail = async (req: IRequest<{}, {}, ISubmitContactUsEmailRequest>) => {
-  const { message, email, phone, firstName, lastName, topic } = req.body; //eslint-disable-line
+  let visitorId;
+
+  const { message, email, phone, firstName, lastName, topic, id } = req.body;
+
+  if (!!id) {
+    // const user = await UserModel.findOne({ _id: id });
+    visitorId = id;
+  } else {
+    try {
+      const visitor = await createCreateAccountVisitor({ email });
+      visitorId = visitor._id;
+    } catch (error) {
+      throw new CustomError('An error occurred while creating a visitor.', ErrorTypes.UNPROCESSABLE);
+    }
+  }
 
   if (!firstName) throw new CustomError('A first name is required.', ErrorTypes.INVALID_ARG);
   if (!email) throw new CustomError('An email is required.', ErrorTypes.INVALID_ARG);
   if (!message) throw new CustomError('A message is required.', ErrorTypes.INVALID_ARG);
   if (!topic) throw new CustomError('A topic is required.', ErrorTypes.INVALID_ARG);
 
+  let recipientEmail;
+  let department;
+
+  if (supportTopicGroups.includes(topic)) {
+    recipientEmail = 'support@karmawallet.io';
+    department = 'Support Team at Karma Wallet';
+  } else if (marketingTopicGroups.includes(topic)) {
+    recipientEmail = 'marketing@karmawallet.io';
+    department = 'Marketing Team at Karma Wallet';
+  } else if (dataTopicGroups.includes(topic)) {
+    recipientEmail = 'data@karmawallet.io';
+    department = 'Data Team at Karma Wallet';
+  }
+
   sendContactUsEmail({
-    message,
-    email,
-    phone,
+    recipientEmail,
+    department,
+    visitor: visitorId,
+    topic,
     firstName,
     lastName,
-    topic,
-    name: `${firstName} ${lastName}`,
+    email,
+    message,
+    phone,
   });
-  // send email to approriate team
-  console.log('Sending email to support team');
-  return { success: true, data: req.body };
+
+  return 'success';
 };

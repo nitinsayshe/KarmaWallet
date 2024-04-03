@@ -40,6 +40,7 @@ export enum EmailTemplateTypes {
   CashbackNotification = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
+  ContactUs = 'contactUs',
   Dispute = 'dispute',
   Essential = 'essential',
   Marketing = 'marketing',
@@ -176,6 +177,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardDeclined: {
     name: EmailTemplateKeys.KarmaCardDeclined,
     type: EmailTemplateTypes.KarmaCardDeclined,
+  },
+  ContactUs: {
+    name: EmailTemplateKeys.ContactUs,
+    type: EmailTemplateTypes.ContactUs,
   },
 };
 

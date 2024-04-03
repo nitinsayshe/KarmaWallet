@@ -92,6 +92,21 @@ export interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   submittedClaimDate?: string;
 }
 
+export interface IContactUsEmail {
+  department?: string;
+  visitor?: string;
+  user?: string;
+  recipientEmail?: string;
+  senderEmail?: string;
+  replyToAddresses?: string[];
+  message: string;
+  email: string;
+  phone?: string;
+  firstName: string;
+  lastName?: string;
+  topic: string;
+}
+
 export interface ISupportEmailVerificationTemplateParams {
   domain?: string;
   message: string;
@@ -118,6 +133,7 @@ export interface IEmailJobData {
   companyName?: string;
   currentYear?: string;
   date?: string;
+  department?: string;
   deleteAccountRequestId?: string;
   deleteReason?: string;
   domain?: string;
@@ -132,6 +148,7 @@ export interface IEmailJobData {
   name?: string;
   newUser?: boolean;
   passwordResetLink?: string;
+  phone?: string;
   reason?: string;
   recipientEmail: string;
   replyToAddresses: string[];

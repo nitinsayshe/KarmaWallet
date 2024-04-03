@@ -94,19 +94,20 @@ export type EarnedReward = {
   type: RewardType;
   status: RewardStatus;
   commissionToIssuer: number; // commission to Karma Wallet
+  offerId?: string;
 };
 
 export type EarnedRewardTransaction = {
   issuerTransactionId: string; // id that is added when we send the transaction to kard
-  transactionId: string; // only for affiliates
+  transactionId?: string; // only for affiliates
   transactionAmountInCents: number;
   status: TransactionStatus;
-  itemsOrdered: Partial<AffiliateTransactionData>[];
+  itemsOrdered?: Partial<AffiliateTransactionData>[];
   transactionTimeStamp: string;
 };
 
 export type EarnedRewardWebhookBody = {
-  issuer: string; // should always be KARD_ISSUER_NAME
+  issuer?: string; // should always be KARD_ISSUER_NAME
   user: {
     referringPartnerUserId: string; // UserMode.integrations.kard.userId -- a uuuid
   };
@@ -117,8 +118,8 @@ export type EarnedRewardWebhookBody = {
     network: string;
   };
   transaction: EarnedRewardTransaction;
-  postDineInLinkURL: string;
-  error: any;
+  postDineInLinkURL?: string;
+  error?: any;
 };
 
 export type QueueTransactionsRequest = Transaction[];

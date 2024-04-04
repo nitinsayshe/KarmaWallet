@@ -1,5 +1,6 @@
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
+import { ContactUsModel } from '../../models/contactUs';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { sendContactUsEmail } from '../email';
@@ -24,6 +25,17 @@ export interface ISubmitContactUsEmailRequest extends IRequest {
   firstName: string;
   lastName?: string;
   topic: Topic;
+}
+
+interface IContactUsDBEntry {
+  user: string;
+  visitor: string;
+  message: string;
+  topic: Topic;
+  email: string;
+  emailSentTo: string;
+  phone?: string;
+  userName?: string;
 }
 
 const supportTopicGroups = [Topic.Support, Topic.Other];
@@ -67,6 +79,27 @@ export const submitContactUsEmail = async (req: IRequest<{}, {}, ISubmitContactU
   } else if (dataTopicGroups.includes(topic)) {
     recipientEmail = 'data@karmawallet.io';
     department = 'Data Team at Karma Wallet';
+  }
+
+  try {
+    const contactUsDbEntryInfo: IContactUsDBEntry = {
+      user,
+      message,
+      visitor: visitor?._id,
+      topic,
+      email,
+      emailSentTo: recipientEmail,
+      userName: `${firstName}${lastName ? ` ${lastName}` : ''}`,
+    };
+
+    if (phone) {
+      contactUsDbEntryInfo.phone = phone;
+    }
+
+    const contactUsDBEntry = new ContactUsModel(contactUsDbEntryInfo);
+    await contactUsDBEntry.save();
+  } catch (error) {
+    throw new CustomError('An error occurred while saving the contact us entry.', ErrorTypes.UNPROCESSABLE);
   }
 
   await sendContactUsEmail({

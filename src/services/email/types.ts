@@ -94,7 +94,7 @@ export interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
 
 export interface IContactUsEmail {
   department?: string;
-  visitor?: string;
+  visitor?: string | IVisitorDocument | Types.ObjectId;
   user?: string;
   recipientEmail?: string;
   senderEmail?: string;

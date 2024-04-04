@@ -1,5 +1,6 @@
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { sendContactUsEmail } from '../email';
 import { createCreateAccountVisitor } from '../visitor';
@@ -15,11 +16,7 @@ export enum Topic {
   Other = 'Other'
 }
 
-const supportTopicGroups = [Topic.Support, Topic.Other];
-const marketingTopicGroups = [Topic.Press, Topic.Inf, Topic.B2B, Topic.Employer, Topic.NonProfit];
-const dataTopicGroups = [Topic.Data];
-
-export interface ISubmitContactUsEmailRequest extends IRequest{
+export interface ISubmitContactUsEmailRequest extends IRequest {
   id?: string;
   message: string;
   email: string;
@@ -29,27 +26,34 @@ export interface ISubmitContactUsEmailRequest extends IRequest{
   topic: Topic;
 }
 
+const supportTopicGroups = [Topic.Support, Topic.Other];
+const marketingTopicGroups = [Topic.Press, Topic.Inf, Topic.B2B, Topic.Employer, Topic.NonProfit];
+const dataTopicGroups = [Topic.Data];
+
 export const submitContactUsEmail = async (req: IRequest<{}, {}, ISubmitContactUsEmailRequest>) => {
-  let visitorId;
+  let visitor: IVisitorDocument;
+  let user: string;
 
   const { message, email, phone, firstName, lastName, topic, id } = req.body;
-
-  if (!!id) {
-    // const user = await UserModel.findOne({ _id: id });
-    visitorId = id;
-  } else {
-    try {
-      const visitor = await createCreateAccountVisitor({ email });
-      visitorId = visitor._id;
-    } catch (error) {
-      throw new CustomError('An error occurred while creating a visitor.', ErrorTypes.UNPROCESSABLE);
-    }
-  }
 
   if (!firstName) throw new CustomError('A first name is required.', ErrorTypes.INVALID_ARG);
   if (!email) throw new CustomError('An email is required.', ErrorTypes.INVALID_ARG);
   if (!message) throw new CustomError('A message is required.', ErrorTypes.INVALID_ARG);
   if (!topic) throw new CustomError('A topic is required.', ErrorTypes.INVALID_ARG);
+
+  if (!!id) {
+    user = id;
+  } else {
+    try {
+      visitor = await VisitorModel.findOne({ email });
+
+      if (!visitor) {
+        visitor = await createCreateAccountVisitor({ email });
+      }
+    } catch (error) {
+      throw new CustomError('An error occurred while creating a visitor.', ErrorTypes.UNPROCESSABLE);
+    }
+  }
 
   let recipientEmail;
   let department;
@@ -65,10 +69,11 @@ export const submitContactUsEmail = async (req: IRequest<{}, {}, ISubmitContactU
     department = 'Data Team at Karma Wallet';
   }
 
-  sendContactUsEmail({
+  await sendContactUsEmail({
     recipientEmail,
     department,
-    visitor: visitorId,
+    visitor,
+    user,
     topic,
     firstName,
     lastName,

@@ -78,7 +78,13 @@ export const getTransactionData = (transaction: ITransaction) => {
   // Deposit Transaction
   if (type === TransactionTypeEnum.Deposit) {
     transactionData.amountPrefix = '+';
-    transactionData.descriptionText = 'ACH Transfer';
+    transactionData.descriptionText = 'ACH Deposit';
+  }
+
+  // Withdrawal Transaction
+  if (type === TransactionTypeEnum.Withdrawal) {
+    transactionData.amountPrefix = '-';
+    transactionData.descriptionText = 'ACH Withdrawal';
   }
 
   return transactionData;
@@ -106,6 +112,10 @@ export const getTypeText = (transaction: ITransaction) => {
   if (transaction.type === TransactionTypeEnum.Deposit) {
     return 'Deposit';
   }
+
+  if (transaction.type === TransactionTypeEnum.Withdrawal) {
+    return 'Withdrawal';
+  }
 };
 
 export const buildTransactionsTable = (transactions: ITransaction[]) => {
@@ -123,6 +133,8 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
       const balance = hasRelatedTransactions ? t.integrations.marqeta.relatedTransactions[0].gpa.ledger_balance : integrations.marqeta.gpa.ledger_balance;
       const transactionData = getTransactionData(t);
 
+      console.log('transactionData', transactionData);
+
       return [
         !!settledDate ? dayjs(settledDate).utc().format('MM/DD') : dayjs(date).utc().format('MM/DD'),
         getTypeText(t),
@@ -137,7 +149,7 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
 };
 
 export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
-  const { startBalance, endBalance, debits, deposits, adjustments, cashback, credits } = statement.transactionTotals;
+  const { startBalance, endBalance, debits, deposits, adjustments, cashback, credits, withdrawals } = statement.transactionTotals;
   const { startDate, endDate } = statement;
 
   const totalsTable: any = {
@@ -161,16 +173,20 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
         debits === 0 ? '$0.00' : `$${debits.toFixed(2)}`,
       ],
       [
-        'Deposits (ACH)',
+        'Deposits',
         deposits === 0 ? '$0.00' : `$${deposits.toFixed(2)}`,
-        'Adjustments/Disputes',
-        `$${adjustments.toFixed(2)}`,
+        'Withdrawals',
+        withdrawals === 0 ? '$0.00' : `$${withdrawals.toFixed(2)}`,
       ],
       [
         'Cashback',
         `$${cashback.toFixed(2)}`,
         'Ending Balance',
         endBalance === 0 ? '$0.00' : `$${endBalance.toFixed(2)}`,
+      ],
+      [
+        'Adjustments/Disputes',
+        `$${adjustments.toFixed(2)}`,
       ],
     ],
   };

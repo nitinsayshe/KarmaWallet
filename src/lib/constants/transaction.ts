@@ -29,6 +29,7 @@ export const TransactionTypeEnum = {
   Credit: 'credit',
   Debit: 'debit',
   Deposit: 'deposit',
+  Withdrawal: 'withdrawal',
 } as const;
 export type TransactionTypeEnumValues = (typeof TransactionTypeEnum)[keyof typeof TransactionTypeEnum];
 
@@ -173,18 +174,21 @@ export type DebitTransactionTypeEnumValues = (typeof DebitTransactionTypeEnum)[k
 export const DepositTransactionTypeEnum = {
   AchCancel: TransactionModelTypeEnum.AchCancel,
   AchPull: TransactionModelTypeEnum.AchPull,
-  AchPullPending: TransactionModelTypeEnum.AchPullPending,
-  AchPullReturned: TransactionModelTypeEnum.AchPullReturned,
-  AchPush: TransactionModelTypeEnum.AchPush,
-  AchPushPending: TransactionModelTypeEnum.AchPushPending,
   AchPushReturned: TransactionModelTypeEnum.AchPushReturned,
+  AchPullPending: TransactionModelTypeEnum.AchPullPending,
   DirectdepositCredit: TransactionModelTypeEnum.DirectdepositCredit,
   DirectdepositCreditPending: TransactionModelTypeEnum.DirectdepositCreditPending,
   DirectdepositCreditReject: TransactionModelTypeEnum.DirectdepositCreditReject,
   DirectdepositCreditReversal: TransactionModelTypeEnum.DirectdepositCreditReversal,
+} as const;
+export type DepositTransactionTypeEnumValues = (typeof DepositTransactionTypeEnum)[keyof typeof DepositTransactionTypeEnum];
+
+export const WithdrawalTransactionTypeEnum = {
+  AchPush: TransactionModelTypeEnum.AchPush,
+  AchPushPending: TransactionModelTypeEnum.AchPushPending,
   DirectdepositDebit: TransactionModelTypeEnum.DirectdepositDebit,
   DirectdepositDebitPending: TransactionModelTypeEnum.DirectdepositDebitPending,
   DirectdepositDebitReject: TransactionModelTypeEnum.DirectdepositDebitReject,
   DirectdepositDebitReversal: TransactionModelTypeEnum.DirectdepositDebitReversal,
 } as const;
-export type DepositTransactionTypeEnumValues = (typeof DepositTransactionTypeEnum)[keyof typeof DepositTransactionTypeEnum];
+export type WithdrawalTransactionTypeEnumValues = (typeof WithdrawalTransactionTypeEnum)[keyof typeof WithdrawalTransactionTypeEnum];

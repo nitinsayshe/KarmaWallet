@@ -133,8 +133,6 @@ export const buildTransactionsTable = (transactions: ITransaction[]) => {
       const balance = hasRelatedTransactions ? t.integrations.marqeta.relatedTransactions[0].gpa.ledger_balance : integrations.marqeta.gpa.ledger_balance;
       const transactionData = getTransactionData(t);
 
-      console.log('transactionData', transactionData);
-
       return [
         !!settledDate ? dayjs(settledDate).utc().format('MM/DD') : dayjs(date).utc().format('MM/DD'),
         getTypeText(t),

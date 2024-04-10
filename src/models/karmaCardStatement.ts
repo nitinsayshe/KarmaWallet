@@ -9,6 +9,7 @@ export interface IKarmaCardStatementTransactionTotals {
   adjustments: number;
   cashback: number;
   deposits: number;
+  withdrawals: number;
   startBalance: number;
   endBalance: number;
 }

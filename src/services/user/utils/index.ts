@@ -49,7 +49,7 @@ export const getShareableUser = ({
       state: integrations.marqeta.state,
       address1: integrations.marqeta.address1,
       address2: integrations.marqeta.address2 || '',
-      phone: integrations.marqeta.phone,
+      phone: integrations.marqeta.phone || '',
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
       reason: integrations?.marqeta?.reason || '',

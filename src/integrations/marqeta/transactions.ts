@@ -28,6 +28,7 @@ import {
   TriggerClearedTransactionTypeEnum,
   TriggerDeclinedTransactionTypeEnum,
   TriggerPendingTransactionTypeEnum,
+  WithdrawalTransactionTypeEnum,
 } from '../../lib/constants/transaction';
 import CustomError from '../../lib/customError';
 import { saveDocuments } from '../../lib/model';
@@ -233,6 +234,9 @@ const getTransactionTypeFromMarqetaTransactionType = (
   if (!!Object.values(AdjustmentTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
     return TransactionTypeEnum.Adjustment;
   }
+  if (!!Object.values(WithdrawalTransactionTypeEnum).find((t) => t === marqetaTransactionType)) {
+    return TransactionTypeEnum.Withdrawal;
+  }
   return undefined;
 };
 
@@ -373,7 +377,7 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
       // gpa transactions are always cleared on the same day
       existingTransaction.settledDate = existingTransaction.date;
       existingTransaction.sortableDate = existingTransaction.date;
-    } else if (t.marqeta_transaction.type === TransactionModelTypeEnum.AchPull) {
+    } else if (t.marqeta_transaction.type === TransactionModelTypeEnum.AchPull || t.marqeta_transaction.type === TransactionModelTypeEnum.AchPush || t.marqeta_transaction.type === TransactionModelTypeEnum.DirectdepositCredit || t.marqeta_transaction.type === TransactionModelTypeEnum.DirectdepositDebit) {
       const settledDate = dayjs(t.marqeta_transaction.created_time).utc().toDate();
       existingTransaction.sortableDate = settledDate;
       existingTransaction.settledDate = settledDate;

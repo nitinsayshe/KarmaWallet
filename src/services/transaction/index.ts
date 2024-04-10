@@ -162,6 +162,9 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
         $match: companyQuery,
       },
       {
+        $match: { status: { $ne: TransactionModelStateEnum.Declined } },
+      },
+      {
         $sort: { date: -1 },
       },
     ]);

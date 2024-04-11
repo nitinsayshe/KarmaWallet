@@ -19,9 +19,8 @@ const {
   WILDFIRE_ADMIN_APP_ID,
   WILDFIRE_CLIENT_APP_KEY,
   WILDFIRE_CLIENT_APP_ID,
-  WILDFIRE_DEVICE_KEY,
-  WILDFIRE_DEVICE_TOKEN,
-  WIDLFIRE_DEVICE_UUID,
+  WILDFIRE_MOBILE_CLIENT_APP_KEY,
+  WILDFIRE_MOBILE_CLIENT_APP_ID,
 } = process.env;
 
 export const getWildfireAuthorization = (
@@ -41,6 +40,7 @@ export class WildfireClient extends SdkClient {
   _client: AxiosInstance;
   _adminClient: AxiosInstance;
   _clientClient: AxiosInstance;
+  _mobileClientClient: AxiosInstance;
 
   constructor() {
     super('Wildfire');
@@ -54,7 +54,7 @@ export class WildfireClient extends SdkClient {
       },
       baseURL: `https://www.wildlink.me/data/${WILDFIRE_CLIENT_APP_ID}`,
     });
-
+    // create admin client
     const {
       authorization: adminAuthorization,
       wfTime: adminWfTime,
@@ -69,7 +69,7 @@ export class WildfireClient extends SdkClient {
       },
       baseURL: 'https://api.wfi.re',
     });
-
+    // create website client
     const {
       authorization: clientAuthorization,
       wfTime: clientWfTime,
@@ -84,11 +84,27 @@ export class WildfireClient extends SdkClient {
       },
       baseURL: 'https://api.wfi.re',
     });
+
+    // create movile app client
+    const {
+      authorization: mobileClientAuthorization,
+      wfTime: mobileClientWfTime,
+    } = getWildfireAuthorization(WILDFIRE_MOBILE_CLIENT_APP_ID, WILDFIRE_MOBILE_CLIENT_APP_KEY);
+
+    this._mobileClientClient = axios.create({
+      headers: {
+        Authorization: mobileClientAuthorization,
+        'Content-Type': 'application/json',
+        'X-WF-DateTime': mobileClientWfTime,
+        Accept: 'application/json',
+      },
+      baseURL: 'https://api.wfi.re',
+    });
   }
 
   adminCreateDevice = async () => {
     try {
-      const data = await this._adminClient.post('/v2/device', { data: { DeviceKey: '' } });
+      const data = await this._adminClient.post('/v3/device', { data: { DeviceKey: '' } });
       return data;
     } catch (err) {
       console.log(err);
@@ -97,7 +113,17 @@ export class WildfireClient extends SdkClient {
 
   clientCreateDevice = async () => {
     try {
-      const data = await this._clientClient.post('/v2/device', { data: { DeviceKey: '' } });
+      const data = await this._clientClient.post('/v3/device', { data: { DeviceKey: '' } });
+      console.log(data);
+      return data;
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  mobileClientCreateDevice = async () => {
+    try {
+      const data = await this._mobileClientClient.post('/v3/device', { data: { DeviceKey: '' } });
       return data;
     } catch (err) {
       console.log(err);

@@ -13,3 +13,12 @@ export const getRareProjectAverage = async () => {
   if (!rareProjectAverage) throw new CustomError('No rare project average found.', ErrorTypes.INVALID_ARG);
   return parseFloat(rareProjectAverage.value);
 };
+
+// beta for beta, live for live
+export const getCurrentAppVersion = async () => {
+  const currentAppVersion = await MiscModel.findOne({ key: 'AppVersion' });
+  if (!currentAppVersion) throw new CustomError('No current app version found.', ErrorTypes.INVALID_ARG);
+  return {
+    version: currentAppVersion.value,
+  };
+};

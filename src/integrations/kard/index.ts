@@ -2,18 +2,22 @@ import { AxiosResponse } from 'axios';
 import { Types } from 'mongoose';
 import { v4 as uuid } from 'uuid';
 import { SafeParseError, z } from 'zod';
+import { KardIssuerName, KardClient } from '../../clients/kard';
 import {
-  AddCardToUserResponse,
   CardInfo,
-  CreateUserRequest,
-  EarnedRewardWebhookBody,
-  KardClient,
-  KardEnvironmentEnum,
-  KardIssuerName,
+  AddCardToUserResponse,
   QueueTransactionsRequest,
+  EarnedRewardWebhookBody,
+  KardEnvironmentEnum,
+  CreateUserRequest,
   Transaction,
-} from '../../clients/kard';
-import { CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
+  KardMerchantLocation,
+  GetLocationsByMerchantIdRequest,
+  KardMerchantLocations,
+  GetLocationsRequest,
+  KardEnvironmentEnumValues,
+} from '../../clients/kard/types';
+import { CardStatus, CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
@@ -320,5 +324,77 @@ export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebh
     const errorText = 'Error verifying aggregator environment webhook signature';
     console.error(`${errorText}: `, err);
     return new Error(errorText);
+  }
+};
+
+export const getLocation = async (locationId: string): Promise<KardMerchantLocation> => {
+  try {
+    const client = new KardClient();
+    const res = await client.getLocationById(locationId);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting location');
+    }
+    return res.data;
+  } catch (err) {
+    throw new Error(`Error getting location with id: ${locationId}`);
+  }
+};
+
+export const getLocationsByMerchantId = async (req: GetLocationsByMerchantIdRequest): Promise<KardMerchantLocations> => {
+  try {
+    const client = new KardClient();
+    const res = await client.getLocationsByMerchantId(req);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting locations');
+    }
+    return res.data;
+  } catch (err) {
+    throw new Error(`Error getting locations for merchant with id: ${req.id}`);
+  }
+};
+
+export const getLocations = async (req: GetLocationsRequest = {}): Promise<KardMerchantLocations> => {
+  try {
+    const client = new KardClient();
+    const res = await client.getLocations(req);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting locations');
+    }
+    return res.data;
+  } catch (err) {
+    throw new Error('Error getting locations');
+  }
+};
+
+export const getRefferingPartnerUserIdFromKardEnv = async (env: KardEnvironmentEnumValues, user: IUserDocument): Promise<string> => {
+  if (env === KardEnvironmentEnum.Issuer) {
+    return user?.integrations?.marqeta?.userToken;
+  }
+  if (env === KardEnvironmentEnum.Aggregator) {
+    const cards = await CardModel.find({ userId: user._id, 'integrations.kard': { $exists: true }, status: CardStatus.Linked });
+    if (!cards || !cards.length) {
+      throw new Error('No linked cards with kard integration found');
+    }
+    return cards[0]?.integrations?.kard?.userId;
+  }
+  return null;
+};
+
+export const getEligibleLocations = async (user: IUserDocument, req: GetLocationsRequest = {}): Promise<KardMerchantLocations> => {
+  try {
+    const client = new KardClient();
+    const referringPartnerUserId = await getRefferingPartnerUserIdFromKardEnv(client.getEnv(), user);
+    if (!referringPartnerUserId) {
+      throw new Error('Error getting referring partner user id');
+    }
+
+    const res = await client.getEligibleLocations({ referringPartnerUserId, ...req });
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting eligible locations');
+    }
+    return res.data;
+  } catch (err) {
+    console.log(err);
+    throw new Error('Error getting eligible locations');
   }
 };

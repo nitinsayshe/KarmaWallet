@@ -20,9 +20,10 @@ import {
   updateKardMerchantRates,
   updateKardMerchants,
 } from '../kardMerchantUpdate';
-import { MerchantSource, CardNetwork, CommissionType, OfferType } from '../../../clients/kard';
 import { IMerchantRateDocument, MerchantRateModel } from '../../../models/merchantRate';
 import { cleanUpDocuments } from '../../../lib/model';
+import { MerchantSource, OfferType, CommissionType } from '../../../clients/kard/types';
+import { CardNetwork } from '../../../lib/constants';
 
 describe.skip('tests kardMerchantUpdate logic', () => {
   let testCompanyNameMatchWithNoMerchant: ICompanyDocument;

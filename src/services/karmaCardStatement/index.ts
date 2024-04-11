@@ -60,6 +60,7 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
   let adjustments = 0;
   let cashback = 0;
   let credits = 0;
+  let withdrawals = 0;
 
   if (!!hasTransactions) {
     transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.sortableDate).isBefore(dayjs(b.sortableDate)) ? -1 : 1));
@@ -70,12 +71,14 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
     const adjustmentsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Adjustment, transactionsSortedByDate);
     const cashbackTotal = getSumOfTransactionsByTransactionSubType(TransactionCreditSubtypeEnum.Cashback, transactionsSortedByDate);
     const creditTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Credit, transactionsSortedByDate) - cashbackTotal;
+    const withdrawalTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Withdrawal, transactionsSortedByDate);
 
     debits = debitsTotal;
     deposits = depositsTotal;
     adjustments = adjustmentsTotal;
     cashback = cashbackTotal;
     credits = creditTotal;
+    withdrawals = withdrawalTotal;
   } else {
     endBalanceFromLastStatement = lastStatement?.transactionTotals?.endBalance;
     if (!previousStatements.length) {
@@ -95,6 +98,7 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
     adjustments,
     cashback,
     credits,
+    withdrawals,
   };
 };
 

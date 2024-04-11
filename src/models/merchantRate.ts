@@ -2,7 +2,7 @@ import { Schema, model, Document, PaginateModel, ObjectId } from 'mongoose';
 import { IModel, IRef } from '../types/model';
 import { getUtcDate } from '../lib/date';
 import { IKardOffer, IMerchantModel } from './merchant';
-import { OfferType, OfferSource, CommissionType } from '../clients/kard';
+import { OfferType, OfferSource, CommissionType } from '../clients/kard/types';
 
 export interface IWildfireMerchantRateIntegration {
   merchantId: number;

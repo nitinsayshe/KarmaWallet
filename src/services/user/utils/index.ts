@@ -8,7 +8,7 @@ import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../midd
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
-import { IUser, IUserIntegrations } from '../../../models/user/types';
+import { IUser, IUserIntegrations, KarmaMembershipStatusEnum } from '../../../models/user/types';
 import { getMarqetaUser } from '../../../integrations/marqeta/user';
 import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 
@@ -33,6 +33,7 @@ export const getShareableUser = ({
   zipcode,
   role,
   legacyId,
+  karmaMemberships,
   integrations,
 }: IUserDocument) => {
   const _integrations: Partial<IUserIntegrations> = {};
@@ -49,6 +50,7 @@ export const getShareableUser = ({
       state: integrations.marqeta.state,
       address1: integrations.marqeta.address1,
       address2: integrations.marqeta.address2 || '',
+      phone: integrations.marqeta.phone || '',
       country: integrations.marqeta.country,
       status: integrations.marqeta.status,
       reason: integrations?.marqeta?.reason || '',
@@ -56,6 +58,10 @@ export const getShareableUser = ({
     };
   }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;
+  let activeMembership;
+  if (!!karmaMemberships) {
+    activeMembership = karmaMemberships.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
+  }
   return {
     _id,
     email,
@@ -65,6 +71,7 @@ export const getShareableUser = ({
     zipcode,
     role,
     legacyId,
+    karmaMembership: activeMembership,
     integrations: _integrations,
   };
 };

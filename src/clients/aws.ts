@@ -7,8 +7,9 @@ import { Logger } from '../services/logger';
 import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
-import { KardKarmaWalletAwsRole, KardAwsRole, EarnedRewardWebhookBody, KardEnvironmentEnumValues, KardEnvironmentEnum, KardIssuerAwsRole } from './kard';
 import { sleep } from '../lib/misc';
+import { KardEnvironmentEnum, EarnedRewardWebhookBody, KardEnvironmentEnumValues } from './kard/types';
+import { KardKarmaWalletAwsRole, KardAwsRole, KardIssuerAwsRole } from './kard/index';
 
 dayjs.extend(utc);
 

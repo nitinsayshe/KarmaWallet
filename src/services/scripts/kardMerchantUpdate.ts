@@ -2,14 +2,8 @@ import fs from 'fs';
 import Fuse from 'fuse.js';
 import { Types } from 'mongoose';
 import path from 'path';
-import {
-  CommissionType,
-  KardClient,
-  KardEnvironmentEnum,
-  Merchant,
-  Offer,
-  OfferType,
-} from '../../clients/kard';
+import { KardClient } from '../../clients/kard/index';
+import { Offer, Merchant, CommissionType, KardEnvironmentEnum, OfferType } from '../../clients/kard/types';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import {
   IKardMerchantIntegration,
@@ -684,14 +678,14 @@ export const narrowDownMatchesByScore = async (
       };
 
       let minScore = topMerchantMatchScore;
-      if (!!topMerchantMatchScore && topMerchantMatchScore < 0.01) {
+      if (!!topMerchantMatchScore && topMerchantMatchScore < 0.0000001) {
         merchantMatch = true;
         candidate.name = topMerchantMatchMerchantName;
         candidate.url = topMerchantMatchDomain;
         candidate.companyId = topMerchantMatches?.[0]?.item?.Merchant?.ID;
         candidate.merchantId = topMerchantMatchMerchantId;
       }
-      if (!!topDomainMatchScore && topDomainMatchScore < 0.01) {
+      if (!!topDomainMatchScore && topDomainMatchScore < 0.0000001) {
         domainMatch = true;
         minScore = topDomainMatchScore;
         candidate.name = topDomainMatchMerchantName;

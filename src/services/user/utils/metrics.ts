@@ -872,3 +872,136 @@ export const userHasFundedAccountButNotTransactedInLastQuarter = async (user: IU
     return false;
   }
 };
+
+export const getCollectiveReforestationDonationCount = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const userNotifications = await UserNotificationModel.find({
+      $and: [
+        { type: NotificationTypeEnum.GasTransaction },
+        { createdOn: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { createdOn: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!userNotifications) {
+      return 0;
+    }
+
+    return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getCollectiveMealsDonationCount = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const userNotifications = await UserNotificationModel.find({
+      $and: [
+        { type: NotificationTypeEnum.DiningTransaction },
+        { createdOn: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { createdOn: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!userNotifications) {
+      return 0;
+    }
+
+    return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getCollectiveCarbonOffset = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const impactReports = await UserMontlyImpactReportModel.find({
+      $and: [
+        { date: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { date: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!impactReports) {
+      return 0;
+    }
+    const totalOffset = impactReports.reduce((partialSum, report) => partialSum + report.carbon.offsets.totalOffset, 0);
+    return totalOffset;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getAverageKarmaScore = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const impactReports = await UserMontlyImpactReportModel.find({
+      $and: [
+        { date: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { date: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!impactReports) {
+      return 0;
+    }
+    const karmaScore = impactReports.reduce((partialSum, report) => partialSum + report.impact.score, 0);
+    return (karmaScore / impactReports.length);
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getCollectiveCommunityImpact = async (): Promise<{
+  positiveImpact: number,
+  negativeImpact: number,
+  neutralImpact: number,
+}> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const impactReports = await UserMontlyImpactReportModel.find({
+      $and: [
+        { date: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { date: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!impactReports) {
+      return {
+        positiveImpact: 0,
+        negativeImpact: 0,
+        neutralImpact: 0,
+      };
+    }
+
+    const total = impactReports.length;
+    const positive = impactReports.reduce((partialSum, report) => partialSum + report.impact.positive, 0);
+    const negative = impactReports.reduce((partialSum, report) => partialSum + report.impact.negative, 0);
+    const netural = impactReports.reduce((partialSum, report) => partialSum + report.impact.neutral, 0);
+
+    return {
+      positiveImpact: positive / total,
+      negativeImpact: negative / total,
+      neutralImpact: netural / total,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      positiveImpact: 0,
+      negativeImpact: 0,
+      neutralImpact: 0,
+    };
+  }
+};

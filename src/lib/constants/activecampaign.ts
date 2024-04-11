@@ -64,4 +64,11 @@ export enum ActiveCampaignCustomFields {
   monthlyHungerAlleviationDonations = 'monthlyHungerAlleviationDonations',
   hasntTranactedInPastQuarter = 'hasntTranactedInPastQuarter',
   hasntLoadedMoneyInTwoWeeks = 'hasntLoadedMoneyInTwoWeeks',
+  collectiveReforestationDonations = 'collectiveReforestationDonations',
+  collectiveHungerAlleviationDonations = 'collectiveHungerAlleviationDonations',
+  collectiveCarbonOffset = 'collectiveCarbonOffset',
+  averageKarmaScore = 'averageKarmaScore',
+  collectivePositiveImpact = 'collectivePositiveImpact',
+  collectiveNegativeImpact = 'collectiveNegativeImpact',
+  collectiveNeutralImpact = 'collectiveNeutralImpact',
 }

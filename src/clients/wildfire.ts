@@ -41,6 +41,8 @@ export class WildfireClient extends SdkClient {
   _adminClient: AxiosInstance;
   _clientClient: AxiosInstance;
   _mobileClientClient: AxiosInstance;
+  _mobileAdminClient: AxiosInstance;
+  _mobileJsonClient: AxiosInstance;
 
   constructor() {
     super('Wildfire');
@@ -85,11 +87,13 @@ export class WildfireClient extends SdkClient {
       baseURL: 'https://api.wfi.re',
     });
 
-    // create movile app client
+    // create mobile app client
     const {
       authorization: mobileClientAuthorization,
       wfTime: mobileClientWfTime,
     } = getWildfireAuthorization(WILDFIRE_MOBILE_CLIENT_APP_ID, WILDFIRE_MOBILE_CLIENT_APP_KEY);
+
+    console.log('////// do mobile client', WILDFIRE_MOBILE_CLIENT_APP_ID, WILDFIRE_MOBILE_CLIENT_APP_KEY);
 
     this._mobileClientClient = axios.create({
       headers: {
@@ -99,6 +103,14 @@ export class WildfireClient extends SdkClient {
         Accept: 'application/json',
       },
       baseURL: 'https://api.wfi.re',
+    });
+
+    this._mobileJsonClient = axios.create({
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      baseURL: `https://www.wildlink.me/data/${WILDFIRE_MOBILE_CLIENT_APP_ID}`,
     });
   }
 
@@ -142,6 +154,18 @@ export class WildfireClient extends SdkClient {
     return data;
   };
 
+  getMobileMerchantRates = async () => {
+    let data;
+    try {
+      data = await this._mobileJsonClient.get('/merchant-rate/1');
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+    if (!data) throw new CustomError('No merchant rate data returned from Wildfire');
+    return data;
+  };
+
   getCoupons = async () => {
     let data;
     try {
@@ -166,10 +190,34 @@ export class WildfireClient extends SdkClient {
     return data;
   };
 
+  getMobileActiveDomains = async () => {
+    let data;
+    try {
+      data = await this._mobileJsonClient.get('/active-domain/1');
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+    if (!data) throw new CustomError('No active-domain data returned from Wildfire');
+    return data;
+  };
+
   getMerchants = async () => {
     let data;
     try {
       data = await this._client.get('/merchant/1');
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+    if (!data) throw new CustomError('No merchant data returned from Wildfire');
+    return data;
+  };
+
+  getMobileMerchants = async () => {
+    let data;
+    try {
+      data = await this._mobileJsonClient.get('/merchant/1');
     } catch (err) {
       console.log(err);
       throw asCustomError(err);

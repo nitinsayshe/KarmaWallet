@@ -2,8 +2,8 @@ import { AqpQuery } from 'api-query-params';
 import { ObjectId } from 'mongoose';
 import { TransactionIntegrationTypesEnumValues } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
-import { ICompanyProtocol } from '../company';
 import { TransactionCreditSubtypeEnumValues } from '../../lib/constants/transaction';
+import { ICompanyProtocol } from '../company/types';
 
 export enum ITransactionsConfig {
   MostRecent = 'recent',

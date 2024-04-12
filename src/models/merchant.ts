@@ -89,6 +89,7 @@ export interface IShareableMerchant {
   maxRateType?: string;
   maxAmount?: string;
   maxDescription?: string;
+  mobileCompliant?: boolean;
 }
 
 export interface IMerchant extends IShareableMerchant {
@@ -105,6 +106,7 @@ export interface IMerchantDocument extends IMerchant, Document {
 const merchant = new Schema({
   name: { type: String },
   karmaCollectiveMember: { type: Boolean },
+  mobileCompliant: { type: Boolean },
   integrations: {
     wildfire: {
       type: {

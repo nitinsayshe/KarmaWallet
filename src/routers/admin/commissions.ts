@@ -6,6 +6,9 @@ import protectedRequirements from '../../middleware/protected';
 
 const router = Router();
 
+router.route('/pay-commission-payout-overview/:commissionPayoutOverviewId')
+  .put(authenticate, protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AdminCommissionsController.sendCommissionPayoutOverview);
+
 router.route('/commission-payouts-overviews')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }), AdminCommissionsController.getAllCommissionPayoutOverviews);
 

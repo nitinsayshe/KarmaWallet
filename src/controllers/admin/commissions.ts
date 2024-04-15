@@ -29,3 +29,14 @@ export const updateCommissionPayoutOverviewStatus: IRequestHandler<CommissionSer
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const sendCommissionPayoutOverview: IRequestHandler<CommissionService.ISendCommissionPayoutOverviewRequestParams, {}, {}> = async (req, res) => {
+  try {
+    const id = req.params.commissionPayoutOverviewId;
+    if (!id) throw new Error('Missing commissionPayoutOverviewId');
+    await CommissionService.sendCommissionPayouts(id);
+    output.api(req, res, 'Commission payouts successfully sent!');
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

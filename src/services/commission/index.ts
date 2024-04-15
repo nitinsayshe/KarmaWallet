@@ -19,7 +19,6 @@ import {
   ICommissionPayoutOverviewDocument,
   KarmaCommissionPayoutOverviewStatus,
 } from '../../models/commissionPayoutOverview';
-import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
 import CustomError from '../../lib/customError';
 import { IPromo } from '../../models/promo';
 import { getUtcDate } from '../../lib/date';
@@ -28,6 +27,7 @@ import { MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN } from '../../clients/marqeta/acco
 import { sleep } from '../../lib/misc';
 import { createPayoutNotificationsFromCommissionPayout } from '../user_notification';
 import { addFundsToGPAFromProgramFundingSource } from '../../controllers/integrations/marqeta/gpa';
+import { ISendPayoutBatchHeader, ISendPayoutBatchItem, PaypalClient } from '../../clients/paypal';
 
 dayjs.extend(utc);
 
@@ -45,6 +45,10 @@ export interface IAddKarmaCommissionToUserRequestParams {
 
 export interface IGetCommissionsForUserQuery {
   id: string;
+}
+
+export interface ISendCommissionPayoutOverviewRequestParams {
+  commissionPayoutOverviewId: string;
 }
 
 export interface ICommissionsRequestParams {

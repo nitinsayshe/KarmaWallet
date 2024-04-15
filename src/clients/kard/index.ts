@@ -21,6 +21,8 @@ import {
   GetLocationsByMerchantIdRequest,
   KardMerchantLocations,
   KardMerchantLocation,
+  Merchant,
+  PaginationFields,
 } from './types';
 
 const {
@@ -273,15 +275,37 @@ export class KardClient extends SdkClient {
     }
   }
 
-  public async getRewardsMerchants(token?: KardAccessToken): Promise<GetRewardsMerchantsResponse> {
+  public async getRewardsMerchantById(id: string, token?: KardAccessToken): Promise<Merchant> {
     if (!token) {
       const sessionToken = await this.getSessionToken();
       if (!sessionToken) throw new Error('Unable to get session token');
       token = sessionToken.access_token;
     }
     try {
+      const { data } = await this._client.get(`/rewards/merchant/${id}`, {
+        headers: { Authorization: token },
+      });
+      return data;
+    } catch (err) {
+      console.error(err);
+      if (axios.isAxiosError(err)) {
+        console.error(`Error Fetching Merchant with id ${id}: ${(err as AxiosError).toJSON()}`);
+      }
+      throw asCustomError(err);
+    }
+  }
+
+  public async getRewardsMerchants(pagination?: PaginationFields, token?: KardAccessToken): Promise<GetRewardsMerchantsResponse> {
+    if (!token) {
+      const sessionToken = await this.getSessionToken();
+      if (!sessionToken) throw new Error('Unable to get session token');
+      token = sessionToken.access_token;
+    }
+    try {
+      const queryParams = { ...pagination };
       const { data } = await this._client.get('/rewards/merchant/', {
         headers: { Authorization: token },
+        params: queryParams,
       });
       return data;
     } catch (err) {

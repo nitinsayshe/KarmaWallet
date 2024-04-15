@@ -201,7 +201,9 @@ export type Offer = {
   merchantId: string;
   merchantLocationIds?: string[]; // locatin ids when isLocationSpecific is true
   offerType: OfferType;
-  source: OfferSource;
+  source?: OfferSource;
+  status?: string;
+  isTargeted?: boolean;
   commissionType: CommissionType;
   isLocationSpecific: boolean;
   optInRequired: boolean;
@@ -210,11 +212,12 @@ export type Offer = {
   createdDate: string;
   lastModified: string;
   totalCommission: number;
-  minRewardAmount: number;
-  maxRewardAmount: number;
-  minTransactionAmount: number;
-  maxTransactionAmount: number;
+  minRewardAmount?: number;
+  maxRewardAmount?: number;
+  minTransactionAmount?: number;
+  maxTransactionAmount?: number;
   redeemableOnce: boolean;
+  startDate?: string
 };
 
 export type Merchant = {
@@ -223,7 +226,7 @@ export type Merchant = {
   source: MerchantSource;
   description: string;
   imgUrl: string;
-  bannerImgUrl: string;
+  bannerImgUrl?: string;
   websiteURL: string;
   acceptedCards: CardNetwork[];
   category: KardMerchantCategoryEnumValues;
@@ -246,7 +249,7 @@ export const KardEnvironmentEnum = {
 
 export type PaginationFields = {
   page?: number; // Page number (number >= 0)
-  limit?: number; // Maximum number of locations (number [1..200])
+  limit?: number; // number [1..200]
 };
 
 type BaseGetLocationFields =

@@ -16,6 +16,8 @@ import {
   KardMerchantLocations,
   GetLocationsRequest,
   KardEnvironmentEnumValues,
+  GetRewardsMerchantsResponse,
+  Merchant,
 } from '../../clients/kard/types';
 import { CardStatus, CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
@@ -33,6 +35,16 @@ const uuidSchema = z.string().uuid();
 const QueueTransactionBatchSize = 50;
 const QueueTransactionBackoffMs = 1000;
 
+export type KardMerchantIterationRequest<T> = {
+  client?: KardClient;
+  batchLimit: number;
+  fields?: T;
+};
+
+export type KardMerchantIterationResponse<T> = {
+  merchantId?: string;
+  fields?: T;
+};
 export const getFormattedUserName = (name: string): string => name?.trim()?.split(' ')?.join('') || '';
 
 export const getCardInfo = (card: ICardDocument): CardInfo => {
@@ -397,4 +409,65 @@ export const getEligibleLocations = async (user: IUserDocument, req: GetLocation
     console.log(err);
     throw new Error('Error getting eligible locations');
   }
+};
+
+export const iterateOverKardMerchantsAndExecWithDelay = async <Req, Res>(
+  request: KardMerchantIterationRequest<Req>,
+  exec: (
+    req: KardMerchantIterationRequest<Req>,
+    merchantBatch: GetRewardsMerchantsResponse
+  ) => Promise<KardMerchantIterationResponse<Res>[]>,
+  msDelayBetweenBatches: number,
+): Promise<KardMerchantIterationResponse<Res>[]> => {
+  let report: KardMerchantIterationResponse<Res>[] = [];
+  const kardClient = request.client || new KardClient();
+
+  let page = 0;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    try {
+      const merchantBatch = await kardClient.getRewardsMerchants({ page, limit: request.batchLimit });
+      console.log(`total merchants in page ${page} batch: `, merchantBatch.length);
+
+      const merchantReports = await exec(request, merchantBatch);
+
+      console.log(`Prepared ${merchantReports.length} merchant reports`);
+      report = report.concat(merchantReports);
+
+      await sleep(msDelayBetweenBatches);
+
+      hasNextPage = !merchantBatch?.length || merchantBatch?.length === request.batchLimit;
+
+      page++;
+    } catch (err) {
+      console.error('Error iterating over merchants: ', err);
+      hasNextPage = false;
+    }
+  }
+  return report;
+};
+
+export const findMerchantsInBatch = async (
+  req: KardMerchantIterationRequest<string[]>,
+  merchantBatch: GetRewardsMerchantsResponse,
+): Promise<KardMerchantIterationResponse<Merchant>[]> => {
+  const lowercaseFields = req.fields.map((f) => f.toLowerCase());
+  const foundMerchants = merchantBatch.filter((m) => lowercaseFields.includes(m.name.toLowerCase()));
+  return foundMerchants.map((m) => ({ merchantId: m._id, fields: m }));
+};
+
+export const getMerchantsByNames = async (names: string[]): Promise<Merchant[]> => {
+  const req = {
+    client: new KardClient(),
+    batchLimit: 50,
+    fields: names,
+  };
+
+  const merchants = await iterateOverKardMerchantsAndExecWithDelay(
+    req,
+    findMerchantsInBatch,
+    1000,
+  );
+  return merchants.map((m) => m.fields);
 };

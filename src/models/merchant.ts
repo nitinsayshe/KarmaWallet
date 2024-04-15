@@ -11,6 +11,8 @@ export interface IKardOffer {
   merchantLocationIds?: string[]; // location ids when isLocationSpecific is true
   offerType: OfferType;
   source?: OfferSource;
+  status?: string;
+  isTargeted?: boolean;
   commissionType: CommissionType;
   isLocationSpecific: boolean;
   optInRequired?: boolean;
@@ -62,7 +64,7 @@ export interface IKardMerchantIntegration {
   source: MerchantSource;
   description: string;
   imgUrl: string;
-  bannerImgUrl: string;
+  bannerImgUrl?: string;
   websiteURL: string;
   acceptedCards: CardNetwork[];
   category: string;
@@ -158,6 +160,8 @@ const merchant = new Schema({
           merchantLocationIds: [{ type: String }],
           offerType: { type: String, enum: Object.values(OfferType) },
           source: { type: String, enum: Object.values(OfferSource) },
+          status: { type: String },
+          isTargeted: { type: Boolean },
           commissionType: { type: String, enum: Object.values(CommissionType) },
           isLocationSpecific: { type: Boolean },
           optInRequired: { type: Boolean },

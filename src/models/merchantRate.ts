@@ -61,6 +61,8 @@ const merchantRate = new Schema({
         merchantLocationIds: [{ type: String }],
         offerType: { type: String, enum: Object.values(OfferType) },
         source: { type: String, enum: Object.values(OfferSource) },
+        status: { type: String },
+        isTargeted: { type: Boolean },
         commissionType: { type: String, enum: Object.values(CommissionType) },
         isLocationSpecific: { type: Boolean },
         optInRequired: { type: Boolean },

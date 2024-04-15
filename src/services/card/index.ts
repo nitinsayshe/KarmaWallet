@@ -110,14 +110,18 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
   const client = new PlaidClient();
   if (!!card?.integrations?.plaid?.accessToken) {
     await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+    const cards = await CardModel.find({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken });
 
-    await CardModel.updateMany(
-      { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
-      {
-        'integrations.plaid.accessToken': null,
-        $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
-      },
-    );
+    for (const currentCard of cards) {
+      currentCard.integrations.plaid.accessToken = null;
+      if (currentCard.integrations.plaid.unlinkedAccessTokens === null) {
+        currentCard.integrations.plaid.unlinkedAccessTokens = [card.integrations.plaid.accessToken];
+      } else {
+        currentCard.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
+      }
+
+      await currentCard.save();
+    }
   }
 
   if (removeData) {

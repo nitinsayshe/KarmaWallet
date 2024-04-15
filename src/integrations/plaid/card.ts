@@ -73,7 +73,7 @@ class Card {
         publicToken: this._publicToken,
         linkSessionId: this._linkSessionId,
         institutionId: this._institution?.institution_id,
-        unlinkedAccessTokens: null,
+        unlinkedAccessTokens: [],
       };
     }
     return karmaFormatObj;

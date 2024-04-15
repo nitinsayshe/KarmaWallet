@@ -93,8 +93,6 @@ export class WildfireClient extends SdkClient {
       wfTime: mobileClientWfTime,
     } = getWildfireAuthorization(WILDFIRE_MOBILE_CLIENT_APP_ID, WILDFIRE_MOBILE_CLIENT_APP_KEY);
 
-    console.log('////// do mobile client', WILDFIRE_MOBILE_CLIENT_APP_ID, WILDFIRE_MOBILE_CLIENT_APP_KEY);
-
     this._mobileClientClient = axios.create({
       headers: {
         Authorization: mobileClientAuthorization,

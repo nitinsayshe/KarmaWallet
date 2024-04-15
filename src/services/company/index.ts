@@ -310,7 +310,6 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
 
 // exclude karma collective cashback offers, mobile app will need to pass thru `includeKarmaCollective=true`
 export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
-  console.log('///// this is the request', request);
   const { filter } = query;
   let unsdgQuery = {};
   let searchQuery = {};

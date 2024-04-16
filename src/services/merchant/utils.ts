@@ -1,4 +1,4 @@
-import { CommissionType } from '../../clients/kard';
+import { CommissionType } from '../../clients/kard/types';
 
 export const getMerchantRateDescription = (
   Kind: string | CommissionType,

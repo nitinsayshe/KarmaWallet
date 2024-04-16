@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
-import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, RewardStatus } from '../../../clients/kard';
+import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, RewardStatus } from '../../../clients/kard/types';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
 import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
 import CustomError from '../../../lib/customError';

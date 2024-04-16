@@ -1,5 +1,5 @@
 import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
-import { EarnedReward, RewardStatus, RewardType } from '../clients/kard';
+import { EarnedReward, RewardType, RewardStatus } from '../clients/kard/types';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableCompany } from './company';

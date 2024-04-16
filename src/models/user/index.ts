@@ -4,7 +4,7 @@ import { UserRoles } from '../../lib/constants';
 import { getUtcDate } from '../../lib/date';
 import { IModel } from '../../types/model';
 import { ComplyAdvantageIntegrationSchema } from '../types';
-import { IUser, UserEmailStatus } from './types';
+import { IUser, KarmaMembershipPaymentPlanEnum, KarmaMembershipStatusEnum, KarmaMembershipTypeEnum, UserEmailStatus } from './types';
 
 export interface IUserDocument extends IUser, Document { }
 export type IUserModel = IModel<IUser>;
@@ -49,6 +49,16 @@ const userSchema = new Schema({
       ],
     },
   },
+  karmaMemberships: [
+    {
+      type: { type: String, required: true, enum: Object.values(KarmaMembershipTypeEnum) },
+      status: { type: String, required: true, enum: Object.values(KarmaMembershipStatusEnum) },
+      paymentPlan: { type: String, required: true, enum: Object.values(KarmaMembershipPaymentPlanEnum) },
+      startDate: { type: Date, default: () => getUtcDate().toDate() },
+      cancelledOn: { type: Date },
+      lastModified: { type: Date, default: () => getUtcDate().toDate() },
+    },
+  ],
   integrations: {
     marqeta: {
       type: {

@@ -1,5 +1,5 @@
 import { randomInt } from 'crypto';
-import { Types } from 'mongoose';
+import { ObjectId, Types } from 'mongoose';
 import { KardClient } from '../../clients/kard';
 import { getUtcDate } from '../../lib/date';
 import {
@@ -12,6 +12,18 @@ import {
 import { ICardDocument } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { createTestTransactions, getCompaniesByName } from '../user/testIdentities';
+
+const addMockCategoryAndSubcategoryScores = (company: ICompanyDocument) => {
+  company.categoryScores = [{
+    category: new Types.ObjectId('629b9a6c91571911cc170f1b') as unknown as ObjectId,
+    score: 0.5,
+  }];
+  company.subcategoryScores = [{
+    subcategory: new Types.ObjectId('629b9a6c91571911cc170f21') as unknown as ObjectId,
+    score: 0.5,
+  }];
+  return company;
+};
 
 export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocument[]> => {
   if (process.env.NODE_ENV === 'production') {
@@ -31,7 +43,7 @@ export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocume
           mcc = randomInt(1000, 9999);
         }
         mccs.add(mcc);
-        const company = new CompanyModel({
+        let company = new CompanyModel({
           companyName: merchant.name,
           url: merchant.websiteURL,
           createdAt: getUtcDate(),
@@ -42,6 +54,7 @@ export const createCompaniesFromKardMerchants = async (): Promise<ICompanyDocume
           sectors: await getSomeCompanySectors(),
           mcc,
         });
+        company = addMockCategoryAndSubcategoryScores(company);
         return company;
       }),
     );

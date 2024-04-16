@@ -12,6 +12,25 @@ export enum UserEmailStatus {
   Complained = 'complained',
 }
 
+export const KarmaMembershipStatusEnum = {
+  active: 'active',
+  cancelled: 'cancelled',
+} as const;
+export type KarmaMembershipStatusEnumValues = typeof KarmaMembershipStatusEnum[keyof typeof KarmaMembershipStatusEnum];
+
+export const KarmaMembershipPaymentPlanEnum = {
+  free: 'free',
+  monthly: 'monthly',
+  annual: 'annual',
+} as const;
+export type KarmaMembershipPaymentPlanEnumValues = typeof KarmaMembershipPaymentPlanEnum[keyof typeof KarmaMembershipPaymentPlanEnum];
+
+export const KarmaMembershipTypeEnum = {
+  standard: 'standard',
+  premium: 'premium',
+} as const;
+export type KarmaMembershipTypeEnumValues = typeof KarmaMembershipTypeEnum[keyof typeof KarmaMembershipTypeEnum];
+
 // TODO: remove alt emails after mapping
 export interface IAltEmail {
   email: string;
@@ -105,6 +124,15 @@ export interface IDeviceInfo {
   buildNumber: string;
 }
 
+export interface IKarmaMembershipData {
+  type: KarmaMembershipTypeEnumValues;
+  status: KarmaMembershipStatusEnumValues;
+  paymentPlan: KarmaMembershipPaymentPlanEnumValues;
+  lastModified: Date;
+  startDate: Date;
+  cancelledOn?: Date;
+}
+
 export interface IUser extends IShareableUser {
   emails: IEmail[];
   // TODO: remove alt emails after mapping
@@ -120,5 +148,6 @@ export interface IUser extends IShareableUser {
       article: IRef<ObjectId, IWPArticle>;
     }[];
   };
+  karmaMemberships?: IKarmaMembershipData[];
   deviceInfo?:IDeviceInfo[]
 }

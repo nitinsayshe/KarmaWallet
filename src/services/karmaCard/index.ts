@@ -19,7 +19,13 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 import * as VisitorService from '../visitor';
-import { ReasonCode, getShareableMarqetaUser, hasKarmaWalletCards, openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from './utils';
+import {
+  ReasonCode,
+  getShareableMarqetaUser,
+  hasKarmaWalletCards,
+  openBrowserAndAddShareASaleCode,
+  updateActiveCampaignDataAndJoinGroupForApplicant,
+} from './utils';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
@@ -34,6 +40,13 @@ import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import { createShareasaleTrackingId } from '../user/utils';
 import { IUrlParam } from '../user/types';
+import {
+  IKarmaMembershipData,
+  KarmaMembershipPaymentPlanEnumValues,
+  KarmaMembershipStatusEnum,
+  KarmaMembershipTypeEnumValues,
+} from '../../models/user/types';
+import { getUtcDate } from '../../lib/date';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -71,9 +84,17 @@ export interface IUpdateLegalTextRequestParams {
   legalTextId: string;
 }
 
-export interface KycData extends Partial<ICreateSearchForUserData> { }
+export interface KycData extends Partial<ICreateSearchForUserData> {}
 
-export const performInternalKyc = async (user: IUserDocument | IVisitorDocument, data: KycData): Promise<IUserDocument | IVisitorDocument> => {
+export type AddKarmaMembershipToUserRequest = {
+  type: KarmaMembershipTypeEnumValues;
+  paymentPlan: KarmaMembershipPaymentPlanEnumValues;
+};
+
+export const performInternalKyc = async (
+  user: IUserDocument | IVisitorDocument,
+  data: KycData,
+): Promise<IUserDocument | IVisitorDocument> => {
   try {
     const { firstName, lastName, birthYear } = data;
     const clientRef = user?.integrations?.complyAdvantage?.client_ref || uuid();
@@ -152,7 +173,9 @@ export const isUserKYCVerifiedFromIntegration = (marqetaIntegration: IMarqetaUse
 };
 
 // This function expects the user to have a marqeta integration
-export const performKycForUserOrVisitor = async (user: IUserDocument | IVisitorDocument): Promise<{ virtualCardResponse: any, physicalCardResponse: any }> => {
+export const performKycForUserOrVisitor = async (
+  user: IUserDocument | IVisitorDocument,
+): Promise<{ virtualCardResponse: any; physicalCardResponse: any }> => {
   if (!user?.integrations?.marqeta?.userToken) {
     console.error('User does not have marqeta integration PERFORMKYCFORUSERORVISITOR');
     return;
@@ -165,8 +188,14 @@ export const performKycForUserOrVisitor = async (user: IUserDocument | IVisitorD
   if (!isUserKYCVerifiedFromIntegration(marqetaIntegration)) {
     kycResponse = await processUserKyc(marqetaIntegration.userToken);
     if (kycResponse?.result?.status === IMarqetaKycState.success) {
-      const virtualCardResponse = await createCard({ userToken: marqetaIntegration.userToken, cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN });
-      const physicalCardResponse = await createCard({ userToken: marqetaIntegration.userToken, cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN });
+      const virtualCardResponse = await createCard({
+        userToken: marqetaIntegration.userToken,
+        cardProductToken: MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN,
+      });
+      const physicalCardResponse = await createCard({
+        userToken: marqetaIntegration.userToken,
+        cardProductToken: MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN,
+      });
       return { virtualCardResponse, physicalCardResponse };
     }
   }
@@ -180,14 +209,12 @@ export const performKycAndSendWelcomeEmailForUser = async (user: IUserDocument) 
   }
 
   try {
-  // check if they've received the welcome email
-    const welcomeNotification = await UserNotificationModel.findOne(
-      {
-        user: user._id,
-        type: NotificationTypeEnum.KarmaCardWelcome,
-        channel: NotificationChannelEnum.Email,
-      },
-    );
+    // check if they've received the welcome email
+    const welcomeNotification = await UserNotificationModel.findOne({
+      user: user._id,
+      type: NotificationTypeEnum.KarmaCardWelcome,
+      channel: NotificationChannelEnum.Email,
+    });
 
     if (!welcomeNotification) await createKarmaCardWelcomeUserNotification(user, false);
   } catch (err) {
@@ -297,7 +324,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   if (!requestor && !email) throw new Error('Missing required fields');
 
-  if (!!requestor && requestor.emails.find(e => !!e.primary).email !== email) {
+  if (!!requestor && requestor.emails.find((e) => !!e.primary).email !== email) {
     requestor = null;
   }
 
@@ -306,7 +333,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   email = email.toLowerCase();
 
   const existingVisitor = await VisitorModel.findOne({ email });
-  const existingUser = await UserModel.findOne({ 'emails.email': email }) as IUserDocument;
+  const existingUser = (await UserModel.findOne({ 'emails.email': email })) as IUserDocument;
   const newUser = !existingUser;
   // if an applicant is using an email that belongs to a user
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
@@ -548,5 +575,87 @@ export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
     return legalTextDeleted;
   } catch (err) {
     throw asCustomError(err);
+  }
+};
+
+export const addKarmaMembershipToUser = async (
+  user: IUserDocument,
+  membershipType: KarmaMembershipTypeEnumValues,
+  paymentPlan: KarmaMembershipPaymentPlanEnumValues,
+) => {
+  try {
+    const existingMembership = user.karmaMemberships?.find(
+      (membership) => membership.type === membershipType && membership.status === KarmaMembershipStatusEnum.active,
+    );
+    if (!!existingMembership) throw new CustomError('User already has an active membership of this type', ErrorTypes.CONFLICT);
+
+    const existingActiveMembership = user.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
+    if (!!existingActiveMembership) {
+      existingActiveMembership.status = 'cancelled';
+      existingActiveMembership.cancelledOn = getUtcDate().toDate();
+    }
+
+    const newMembership: IKarmaMembershipData = {
+      type: membershipType,
+      status: KarmaMembershipStatusEnum.active,
+      paymentPlan,
+      lastModified: getUtcDate().toDate(),
+      startDate: getUtcDate().toDate(),
+    };
+
+    if (!user.karmaMemberships) user.karmaMemberships = [];
+    user.karmaMemberships.push(newMembership);
+    return user.save();
+  } catch (err) {
+    console.error(
+      `Error subscribing user to karma membership ${membershipType} using ${paymentPlan} payment plan for user ${user._id} : ${err}`,
+    );
+    if ((err as CustomError)?.isCustomError) {
+      throw err;
+    }
+    throw new CustomError('Error subscribing user to karma membership', ErrorTypes.SERVER);
+  }
+};
+
+export const updateKarmaMembershipPaymentPlan = async (
+  user: IUserDocument,
+  paymentPlan: KarmaMembershipPaymentPlanEnumValues,
+) => {
+  try {
+    const existingMembership = user.karmaMemberships?.find(
+      (membership) => membership.status === KarmaMembershipStatusEnum.active,
+    );
+    if (!existingMembership) throw new CustomError('User does not have an active membership to update', ErrorTypes.NOT_FOUND);
+    if (existingMembership.paymentPlan === paymentPlan) throw new CustomError('User already has this payment plan', ErrorTypes.CONFLICT);
+
+    existingMembership.paymentPlan = paymentPlan;
+    existingMembership.lastModified = getUtcDate().toDate();
+    return user.save();
+  } catch (err) {
+    console.error(`Error updating to ${paymentPlan} for user ${user._id}: ${err}`);
+    if ((err as CustomError)?.isCustomError) {
+      throw err;
+    }
+    throw new CustomError('Error updating karma membership payment plan', ErrorTypes.SERVER);
+  }
+};
+
+export const cancelKarmaMembership = async (user: IUserDocument, membershipType: KarmaMembershipTypeEnumValues) => {
+  try {
+    const existingMembership = user.karmaMemberships?.find(
+      (membership) => membership.type === membershipType && membership.status === KarmaMembershipStatusEnum.active,
+    );
+    if (!existingMembership) throw new CustomError('User does not have an active membership to cancel', ErrorTypes.NOT_FOUND);
+
+    existingMembership.status = KarmaMembershipStatusEnum.cancelled;
+    existingMembership.lastModified = getUtcDate().toDate();
+    existingMembership.cancelledOn = getUtcDate().toDate();
+    return user.save();
+  } catch (err) {
+    console.error(`Error cancelling ${membershipType} membership for user ${user._id}: ${err}`);
+    if ((err as CustomError)?.isCustomError) {
+      throw err;
+    }
+    throw new CustomError('Error cancelling karma membership', ErrorTypes.SERVER);
   }
 };

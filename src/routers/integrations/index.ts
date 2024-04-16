@@ -5,6 +5,7 @@ import paypalRouter from './paypal';
 import marqetaRouter from './marqeta';
 import biometricRouter from './biometric';
 import personaRouter from './persona';
+import kardRouter from './kard';
 
 /**
  * this file is used for direct communication with the integration APIs
@@ -21,5 +22,6 @@ integrationsRouter.use('/paypal', paypalRouter);
 integrationsRouter.use('/marqeta', marqetaRouter);
 integrationsRouter.use('/biometric', biometricRouter);
 integrationsRouter.use('/persona', personaRouter);
+integrationsRouter.use('/kard', kardRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

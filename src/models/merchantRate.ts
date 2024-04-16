@@ -2,7 +2,7 @@ import { Schema, model, Document, PaginateModel, ObjectId } from 'mongoose';
 import { IModel, IRef } from '../types/model';
 import { getUtcDate } from '../lib/date';
 import { IKardOffer, IMerchantModel } from './merchant';
-import { OfferType, OfferSource, CommissionType } from '../clients/kard';
+import { OfferType, OfferSource, CommissionType } from '../clients/kard/types';
 
 export interface IWildfireMerchantRateIntegration {
   merchantId: number;
@@ -61,6 +61,8 @@ const merchantRate = new Schema({
         merchantLocationIds: [{ type: String }],
         offerType: { type: String, enum: Object.values(OfferType) },
         source: { type: String, enum: Object.values(OfferSource) },
+        status: { type: String },
+        isTargeted: { type: Boolean },
         commissionType: { type: String, enum: Object.values(CommissionType) },
         isLocationSpecific: { type: Boolean },
         optInRequired: { type: Boolean },

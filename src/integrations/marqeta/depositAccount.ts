@@ -3,7 +3,7 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { DepositAccountModel } from '../../models/depositAccount';
-import { IUserDocument } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IRequest } from '../../types/request';
 import { DepositAccountTypes, IMarqetaDepositAccount, IMarqetaDepositAccountChannel, IMarqetaDepositAccountData, IMarqetaDepositAccountTransition, IMarqetaDirectDepositWebhookEvent } from './types';
 
@@ -92,7 +92,36 @@ export const transitionDepositAccount = async (req: IRequest<{}, {}, IMarqetaDep
   return data;
 };
 
+export const getDepositAccountFromMarqetaAndAddToDB = async (userId: string, accountToken: string) => {
+  const depositClient = new DepositAccountClient(marqetaClient);
+  const depositAccountInfo = await depositClient.getDepositAccount(accountToken);
+
+  const newDepositAccount = await mapMarqetaDepositAccountToKarmaDB(userId, {
+    account_number: depositAccountInfo.account_number,
+    routing_number: depositAccountInfo.routing_number,
+    created_time: depositAccountInfo.created_time,
+    last_modified_time: depositAccountInfo.last_modified_time,
+    state: depositAccountInfo.state,
+    token: accountToken,
+    user_token: depositAccountInfo.user_token,
+    type: depositAccountInfo.type,
+  });
+
+  return newDepositAccount;
+};
+
 export const handleMarqetaDirectDepositAccountTransitionWebhook = async (eventData: IMarqetaDirectDepositWebhookEvent) => {
-  const { account_token: accountToken, state } = eventData;
-  await updateMarqetaDepositAccountInKarmaDB({ token: accountToken, state, ...eventData });
+  const { account_token: accountToken, state, user_token: userToken } = eventData;
+  const existingAccount = await DepositAccountModel.findOne({ 'integrations.marqeta.token': accountToken });
+  const user = await UserModel.findOne({ 'integrations.marqeta.userToken': userToken });
+  if (existingAccount) {
+    await updateMarqetaDepositAccountInKarmaDB({ token: accountToken, state, ...eventData });
+  } else {
+    const newAccount = await getDepositAccountFromMarqetaAndAddToDB(user._id.toString(), accountToken);
+    if (!newAccount) {
+      console.log(`[+] handleMarqetaDirectDepositAccountTransitionWebhook: Could not find or create deposit account for token ${accountToken}`);
+    } else {
+      console.log(`[+] handleMarqetaDirectDepositAccountTransitionWebhook: Created new deposit account for token ${accountToken}`);
+    }
+  }
 };

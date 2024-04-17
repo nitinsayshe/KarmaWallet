@@ -74,6 +74,7 @@ interface IApplySuccessData {
   lastName: string;
   urlParams?: IUrlParam[];
   visitorId?: string;
+  postalCode: string;
 }
 
 export interface INewLegalTextRequestBody {
@@ -284,6 +285,7 @@ export const handleKarmaCardApplySuccess = async ({
   lastName,
   urlParams,
   visitorId,
+  postalCode,
 }: IApplySuccessData): Promise<IUserDocument> => {
   // find the user again since there is a potential race condition
   let userObject = await UserModel.findOne({ 'emails.email': email });
@@ -291,6 +293,7 @@ export const handleKarmaCardApplySuccess = async ({
   if (!!userObject) {
     await handleExistingUserApplySuccess(userObject, urlParams);
     userObject.name = `${firstName} ${lastName}`;
+    userObject.zipcode = postalCode;
   }
 
   // NEW USER
@@ -488,6 +491,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     firstName,
     lastName,
     visitorId: _visitor?._id || '',
+    postalCode,
   };
 
   if (!!urlParams) successData.urlParams = urlParams;

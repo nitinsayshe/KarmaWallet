@@ -15,11 +15,8 @@ export const getCompanyValues: IRequestHandler<{}, ValuesService.IGetCompanyValu
 
 export const getCompaniesValues: IRequestHandler<{}, {}, ValuesService.IGetCompaniesValuesRequestBody> = async (req, res) => {
   try {
-    const companiesWithValues = await ValuesService.getCompaniesValues(req);
-    companiesWithValues.forEach(company => {
-      company.values = company.values.map(mapping => ValuesService.getShareableCompanyValue(mapping as IValueDocument));
-    });
-    output.api(req, res, companiesWithValues);
+    const result = await ValuesService.getCompaniesValues(req);
+    output.api(req, res, result.map(mapping => ({ company: mapping.company, values: mapping.values.map(value => ValuesService.getShareableCompanyValue(value as IValueDocument)) })));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

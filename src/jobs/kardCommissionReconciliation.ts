@@ -1,5 +1,6 @@
 import { AwsClient } from '../clients/aws';
-import { KardAwsEnv, KardEnvironmentEnum, KardEnvironmentEnumValues, KardIssuerIssuerName } from '../clients/kard';
+import { KardAwsEnv, KardIssuerIssuerName } from '../clients/kard';
+import { KardEnvironmentEnumValues, KardEnvironmentEnum } from '../clients/kard/types';
 import { mapKardCommissionToKarmaCommisison } from '../services/commission/utils';
 import { createEarnedCashbackNotificationsFromCommission } from '../services/user_notification';
 

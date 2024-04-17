@@ -1,5 +1,6 @@
 // values for EmailTemplates should map to the directory names in /src/templates/email/
 export enum EmailTemplateKeys {
+  ContactUs = 'contactUs',
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
   ACHTransferCancelled = 'achTransferCancelled',
@@ -39,6 +40,7 @@ export enum EmailTemplateTypes {
   CashbackNotification = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
+  ContactUs = 'contactUs',
   Dispute = 'dispute',
   Essential = 'essential',
   Marketing = 'marketing',
@@ -175,6 +177,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardDeclined: {
     name: EmailTemplateKeys.KarmaCardDeclined,
     type: EmailTemplateTypes.KarmaCardDeclined,
+  },
+  ContactUs: {
+    name: EmailTemplateKeys.ContactUs,
+    type: EmailTemplateTypes.ContactUs,
   },
 };
 

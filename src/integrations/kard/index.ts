@@ -2,18 +2,24 @@ import { AxiosResponse } from 'axios';
 import { Types } from 'mongoose';
 import { v4 as uuid } from 'uuid';
 import { SafeParseError, z } from 'zod';
+import { KardIssuerName, KardClient } from '../../clients/kard';
 import {
-  AddCardToUserResponse,
   CardInfo,
-  CreateUserRequest,
-  EarnedRewardWebhookBody,
-  KardClient,
-  KardEnvironmentEnum,
-  KardIssuerName,
+  AddCardToUserResponse,
   QueueTransactionsRequest,
+  EarnedRewardWebhookBody,
+  KardEnvironmentEnum,
+  CreateUserRequest,
   Transaction,
-} from '../../clients/kard';
-import { CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
+  KardMerchantLocation,
+  GetLocationsByMerchantIdRequest,
+  KardMerchantLocations,
+  GetLocationsRequest,
+  KardEnvironmentEnumValues,
+  GetRewardsMerchantsResponse,
+  Merchant,
+} from '../../clients/kard/types';
+import { CardStatus, CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
@@ -29,6 +35,16 @@ const uuidSchema = z.string().uuid();
 const QueueTransactionBatchSize = 50;
 const QueueTransactionBackoffMs = 1000;
 
+export type KardMerchantIterationRequest<T> = {
+  client?: KardClient;
+  batchLimit: number;
+  fields?: T;
+};
+
+export type KardMerchantIterationResponse<T> = {
+  merchantId?: string;
+  fields?: T;
+};
 export const getFormattedUserName = (name: string): string => name?.trim()?.split(' ')?.join('') || '';
 
 export const getCardInfo = (card: ICardDocument): CardInfo => {
@@ -321,4 +337,137 @@ export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebh
     console.error(`${errorText}: `, err);
     return new Error(errorText);
   }
+};
+
+export const getLocation = async (locationId: string): Promise<KardMerchantLocation> => {
+  try {
+    const client = new KardClient();
+    const res = await client.getLocationById(locationId);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting location');
+    }
+    return res.data;
+  } catch (err) {
+    throw new Error(`Error getting location with id: ${locationId}`);
+  }
+};
+
+export const getLocationsByMerchantId = async (req: GetLocationsByMerchantIdRequest): Promise<KardMerchantLocations> => {
+  try {
+    const client = new KardClient();
+    const res = await client.getLocationsByMerchantId(req);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting locations');
+    }
+    return res.data;
+  } catch (err) {
+    throw new Error(`Error getting locations for merchant with id: ${req.id}`);
+  }
+};
+
+export const getLocations = async (req: GetLocationsRequest = {}): Promise<KardMerchantLocations> => {
+  try {
+    const client = new KardClient();
+    const res = await client.getLocations(req);
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting locations');
+    }
+    return res.data;
+  } catch (err) {
+    throw new Error('Error getting locations');
+  }
+};
+
+export const getRefferingPartnerUserIdFromKardEnv = async (env: KardEnvironmentEnumValues, user: IUserDocument): Promise<string> => {
+  if (env === KardEnvironmentEnum.Issuer) {
+    return user?.integrations?.marqeta?.userToken;
+  }
+  if (env === KardEnvironmentEnum.Aggregator) {
+    const cards = await CardModel.find({ userId: user._id, 'integrations.kard': { $exists: true }, status: CardStatus.Linked });
+    if (!cards || !cards.length) {
+      throw new Error('No linked cards with kard integration found');
+    }
+    return cards[0]?.integrations?.kard?.userId;
+  }
+  return null;
+};
+
+export const getEligibleLocations = async (user: IUserDocument, req: GetLocationsRequest = {}): Promise<KardMerchantLocations> => {
+  try {
+    const client = new KardClient();
+    const referringPartnerUserId = await getRefferingPartnerUserIdFromKardEnv(client.getEnv(), user);
+    if (!referringPartnerUserId) {
+      throw new Error('Error getting referring partner user id');
+    }
+
+    const res = await client.getEligibleLocations({ referringPartnerUserId, ...req });
+    if (!res || res.status !== 200 || !res.data) {
+      throw new Error('Error getting eligible locations');
+    }
+    return res.data;
+  } catch (err) {
+    console.log(err);
+    throw new Error('Error getting eligible locations');
+  }
+};
+
+export const iterateOverKardMerchantsAndExecWithDelay = async <Req, Res>(
+  request: KardMerchantIterationRequest<Req>,
+  exec: (
+    req: KardMerchantIterationRequest<Req>,
+    merchantBatch: GetRewardsMerchantsResponse
+  ) => Promise<KardMerchantIterationResponse<Res>[]>,
+  msDelayBetweenBatches: number,
+): Promise<KardMerchantIterationResponse<Res>[]> => {
+  let report: KardMerchantIterationResponse<Res>[] = [];
+  const kardClient = request.client || new KardClient();
+
+  let page = 0;
+  let hasNextPage = true;
+
+  while (hasNextPage) {
+    try {
+      const merchantBatch = await kardClient.getRewardsMerchants({ page, limit: request.batchLimit });
+      console.log(`total merchants in page ${page} batch: `, merchantBatch.length);
+
+      const merchantReports = await exec(request, merchantBatch);
+
+      console.log(`Prepared ${merchantReports.length} merchant reports`);
+      report = report.concat(merchantReports);
+
+      await sleep(msDelayBetweenBatches);
+
+      hasNextPage = !merchantBatch?.length || merchantBatch?.length === request.batchLimit;
+
+      page++;
+    } catch (err) {
+      console.error('Error iterating over merchants: ', err);
+      hasNextPage = false;
+    }
+  }
+  return report;
+};
+
+export const findMerchantsInBatch = async (
+  req: KardMerchantIterationRequest<string[]>,
+  merchantBatch: GetRewardsMerchantsResponse,
+): Promise<KardMerchantIterationResponse<Merchant>[]> => {
+  const lowercaseFields = req.fields.map((f) => f.toLowerCase());
+  const foundMerchants = merchantBatch.filter((m) => lowercaseFields.includes(m.name.toLowerCase()));
+  return foundMerchants.map((m) => ({ merchantId: m._id, fields: m }));
+};
+
+export const getMerchantsByNames = async (names: string[]): Promise<Merchant[]> => {
+  const req = {
+    client: new KardClient(),
+    batchLimit: 50,
+    fields: names,
+  };
+
+  const merchants = await iterateOverKardMerchantsAndExecWithDelay(
+    req,
+    findMerchantsInBatch,
+    1000,
+  );
+  return merchants.map((m) => m.fields);
 };

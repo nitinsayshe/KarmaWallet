@@ -20,9 +20,11 @@ import {
   updateKardMerchantRates,
   updateKardMerchants,
 } from '../kardMerchantUpdate';
-import { MerchantSource, CardNetwork, CommissionType, OfferType } from '../../../clients/kard';
 import { IMerchantRateDocument, MerchantRateModel } from '../../../models/merchantRate';
 import { cleanUpDocuments } from '../../../lib/model';
+import { MerchantSource, OfferType, CommissionType, KardEnvironmentEnum } from '../../../clients/kard/types';
+import { CardNetwork } from '../../../lib/constants';
+import { KardClient } from '../../../clients/kard';
 
 describe.skip('tests kardMerchantUpdate logic', () => {
   let testCompanyNameMatchWithNoMerchant: ICompanyDocument;
@@ -344,7 +346,9 @@ describe.skip('tests kardMerchantUpdate logic', () => {
   // TODO: Modify to work even if the testMerchantToBeUpdated is already in the db
   it.skip('updateKardMerchants pulls data from Kard and updates websiteUrl, maxOffer, and lastModified', async () => {
     try {
-      await updateKardMerchants();
+      const kc = new KardClient(KardEnvironmentEnum.Issuer);
+      const merchants = await kc.getRewardsMerchants();
+      await updateKardMerchants(merchants);
       // check that the merchant to be updated has new websiteUrl, maxOffer, and lastModified
       const updatedMerchant = await MerchantModel.findById(testMerchantToBeUpdated._id);
       expect(updatedMerchant?.integrations?.kard?.websiteURL).toEqual('https://www.kardfocalpoint.com');
@@ -358,7 +362,9 @@ describe.skip('tests kardMerchantUpdate logic', () => {
   // check the kard offers get updated
   it('updateKardMerchantRates pulls data from Kard and updates all merchant rates associated with the merchant', async () => {
     try {
-      await updateKardMerchantRates();
+      const kc = new KardClient(KardEnvironmentEnum.Issuer);
+      const merchants = await kc.getRewardsMerchants();
+      await updateKardMerchantRates(merchants);
       // test that old merchant rates are removed and new ones are added
       const updatedMerchantRates = await MerchantRateModel.find({ merchant: testMerchantToBeUpdated._id });
       expect(updatedMerchantRates.length).toEqual(2);

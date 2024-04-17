@@ -8,7 +8,7 @@ import {
   getPendingPayoutDisbursementBreakdown,
   getPendingPayoutsWithUsersOnCommissions,
 } from '..';
-import { MerchantSource, RewardType, RewardStatus } from '../../../clients/kard';
+import { MerchantSource, RewardType, RewardStatus } from '../../../clients/kard/types';
 import { MongoClient } from '../../../clients/mongo';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';

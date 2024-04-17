@@ -13,6 +13,18 @@ export const getCompanyValues: IRequestHandler<{}, ValuesService.IGetCompanyValu
   }
 };
 
+export const getCompaniesValues: IRequestHandler<{}, {}, ValuesService.IGetCompaniesValuesRequestBody> = async (req, res) => {
+  try {
+    const companiesWithValues = await ValuesService.getCompaniesValues(req);
+    companiesWithValues.forEach(company => {
+      company.values = company.values.map(mapping => ValuesService.getShareableCompanyValue(mapping as IValueDocument));
+    });
+    output.api(req, res, companiesWithValues);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const updateCompanyValues: IRequestHandler<ValuesService.IUpdateCompanyValuesRequestParams, {}, ValuesService.IUpdateCompanyValuesRequestBody> = async (req, res) => {
   try {
     const values = await ValuesService.updateCompanyValues(req);

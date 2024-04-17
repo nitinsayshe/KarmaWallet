@@ -9,6 +9,9 @@ router.route('/company/:companyId')
 router.route('/company')
   .get(ValuesController.getCompanyValues);
 
+router.route('/companies')
+  .get(ValuesController.getCompaniesValues);
+
 router.route('/')
   .get(ValuesController.getValues);
 

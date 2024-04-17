@@ -2,7 +2,7 @@ import { isValidObjectId, Types } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
-import { IValueDocument, ValueModel } from '../../models/value';
+import { IValue, IValueDocument, ValueModel } from '../../models/value';
 import { IValueCompanyMappingDocument, ValueCompanyAssignmentType, ValueCompanyMappingModel, ValueCompanyWeightMultiplier } from '../../models/valueCompanyMapping';
 import { IRequest } from '../../types/request';
 import { Logger } from '../logger';
@@ -20,6 +20,68 @@ export interface IUpdateCompanyValuesRequestBody {
 export interface IUpdateCompanyValuesRequestParams {
   companyId: string;
 }
+
+export interface IGetCompaniesValuesRequestBody {
+  companies: string[];
+}
+
+export interface ICompanyWithMappings {
+  company: string;
+  valuesMappings?: IValue[];
+}
+
+export const getCompaniesValues = async (req: IRequest<{}, {}, IGetCompaniesValuesRequestBody>) => {
+  if (!req.body.companies.length) throw new CustomError('At least one companyId is required', ErrorTypes.INVALID_ARG);
+
+  req.body.companies.forEach(companyId => {
+    if (!isValidObjectId(companyId)) throw new CustomError(`Invalid companyId: ${companyId}`, ErrorTypes.INVALID_ARG);
+  });
+
+  const companiesToMap: ICompanyWithMappings[] = [];
+  req.body.companies.forEach(company => companiesToMap.push({ company }));
+
+  try {
+    const companiesMappings = await Promise.all(companiesToMap.map(async company => {
+      const mappings = await ValueCompanyMappingModel
+        .find({ company: company.company })
+        .populate([
+          {
+            path: 'value',
+            model: ValueModel,
+            populate: [
+              {
+                path: 'category',
+                model: UnsdgCategoryModel,
+              },
+            ],
+          },
+        ]);
+
+      const values = mappings
+        .map(mapping => {
+          (mapping.value as IValueDocument).weight *= mapping.weightMultiplier;
+          return mapping.value;
+        })
+        .sort((a, b) => (b as IValueDocument).weight - (a as IValueDocument).weight);
+
+      const uniqueValues: IValue[] = [];
+      const uniqueValueIds = new Set();
+
+      for (const value of values) {
+        if (!uniqueValueIds.has((value as IValueDocument)._id.toString())) {
+          uniqueValueIds.add((value as IValueDocument)._id.toString());
+          uniqueValues.push(value as IValue);
+        }
+      }
+
+      return { company, values: uniqueValues };
+    }));
+
+    return companiesMappings;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
 
 export const getCompanyValues = async (req: IRequest<{}, IGetCompanyValuesRequestQuery>) => {
   const { companyId } = req.query;

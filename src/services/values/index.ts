@@ -36,12 +36,12 @@ export interface IGetUniqueSortedValuesForCompanyParams {
 }
 
 export const getUniqueSortedValuesForCompany = async ({ companyId, mappings }: IGetUniqueSortedValuesForCompanyParams): Promise<ICompanyWithMappings> => {
-  const values = mappings
+  const values = mappings.filter(mapping => mapping.company.toString() === companyId.toString())
     .map(mapping => {
       (mapping.value as IValueDocument).weight *= mapping.weightMultiplier;
       return mapping.value;
     })
-    .sort((a, b) => (b as IValueDocument).weight - (a as IValueDocument).weight);
+    .sort((a, b) => (b as IValueDocument).weight - (a as IValue).weight);
 
   // remove duplicate values
   const uniqueValues: IValueDocument[] = [];

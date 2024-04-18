@@ -9,7 +9,7 @@ import {
   RewardStatus,
   RewardType,
   TransactionStatus,
-} from '../../../../clients/kard';
+} from '../../../../clients/kard/types';
 import { MongoClient } from '../../../../clients/mongo';
 import { CardStatus, KardEnrollmentStatus } from '../../../../lib/constants';
 import { NotificationTypeEnum } from '../../../../lib/constants/notification';

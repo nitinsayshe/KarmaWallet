@@ -32,6 +32,7 @@ import faqs from './faq';
 import achTransfer from './achTransfer';
 import karmaCardStatement from './karmaCardStatement';
 import depositAccount from './depositAccount';
+import contactUs from './contactUs';
 import misc from './misc';
 
 const routers = (app: Express) => {
@@ -68,6 +69,7 @@ const routers = (app: Express) => {
   achTransfer(app);
   karmaCardStatement(app);
   depositAccount(app);
+  contactUs(app);
   misc(app);
   // notFound is a catch all and should be last
   notFound(app);

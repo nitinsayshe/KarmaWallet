@@ -30,7 +30,7 @@ export const formatZodFieldErrors = (fieldErrors: { [key: string]: string[] }): 
 export const getShareableFieldErrors = (fieldErrors: { [key: string]: string[] }): string => {
   let error = '';
   Object.keys(fieldErrors).forEach((field) => {
-    error += `Invalid value provided for ${field} field\n`;
+    error += `Invalid or missing value provided for ${field} field\n`;
   });
   return error;
 };

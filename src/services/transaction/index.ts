@@ -1013,14 +1013,6 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
 
     await createEmployerGiftEmailUserNotification(user, transaction);
   }
-
-  if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
-    await createPushUserNotificationFromUserAndPushData(user, {
-      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${transaction?.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
-      title: 'Karma Cash Deposited!',
-    });
-  }
 };
 
 export const handleDebitNotification = async (transaction: ITransactionDocument) => {

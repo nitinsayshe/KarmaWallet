@@ -223,7 +223,8 @@ export const getTransactionsWithCashbackCompaniesInDateRange = async (
   user: IUserDocument,
   startDate: Date,
   endDate: Date,
-): Promise<IShareableTransaction[] | null> => {
+): Promise<(IShareableTransaction | {company: ICompanyDocument}
+  )[] | null> => {
   if (!user || !user._id) return null;
   try {
     const transactions = await TransactionModel.aggregate()
@@ -258,7 +259,8 @@ export const getTransactionsWithCashbackCompaniesInDateRange = async (
 
 export const getMonthlyTransactionsWithCashbackCompanies = async (
   user: IUserDocument,
-): Promise<IShareableTransaction[] | null> => {
+): Promise<(IShareableTransaction | {company: ICompanyDocument}
+  )[] | null> => {
   if (!user || !user._id) return null;
   const oneMonthAgo = dayjs().utc().subtract(1, 'month');
   return getTransactionsWithCashbackCompaniesInDateRange(
@@ -405,17 +407,17 @@ const getMaxCommissionRate = async (merchant: IMerchant): Promise<number> => {
   }, 0);
 };
 
-const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransaction): Promise<number> => {
+const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransaction | {company: ICompanyDocument}): Promise<number> => {
   // get the merchant rate for the transaction merchant
   // TODO: handle matching to specific category rate
-  const merchant = (transaction?.company as IShareableCompany)?.merchant as IMerchant;
+  const merchant = ((transaction as IShareableTransaction)?.company as IShareableCompany)?.merchant as IMerchant;
   if (!merchant) {
     return 0;
   }
 
   const highestRate = await getMaxCommissionRate(merchant);
 
-  const totalCommission = (highestRate / 100) * transaction.amount;
+  const totalCommission = (highestRate / 100) * (transaction as IShareableTransaction).amount;
   return roundToPercision(totalCommission * UserCommissionPercentage, 2);
 };
 
@@ -539,6 +541,7 @@ export const getTransactionBreakdownByCompanyRating = async (
     };
   }
 };
+
 export const getMissedCashBackForDateRange = async (
   user: IUserDocument,
   startDate: Date,
@@ -550,6 +553,7 @@ export const getMissedCashBackForDateRange = async (
   estimatedMissedCommissionsAmount: number;
   averageMissedCommissionAmount: number;
   largestMissedCommissionAmount: number;
+  estimatedMissedCashbackCompanies: string[],
 }> => {
   const email = user?.emails?.find((e) => e.primary)?.email || '';
   try {
@@ -572,6 +576,10 @@ export const getMissedCashBackForDateRange = async (
     // adding up all missed commissions
     const missedCashbackDollars = missedCashbackAmounts.reduce((prev, current) => prev + current, 0);
 
+    // fetch missed cashback company list
+    const companies = userTransactions.map((transaction) => transaction.company);
+    const missedCashbackCompanies = [...new Set(companies.map((company) => ((company as ICompanyDocument).companyName)))];
+
     return {
       id: user._id,
       email,
@@ -579,6 +587,7 @@ export const getMissedCashBackForDateRange = async (
       estimatedMissedCommissionsCount: missedCashbackAmounts.length,
       averageMissedCommissionAmount,
       largestMissedCommissionAmount,
+      estimatedMissedCashbackCompanies: missedCashbackCompanies,
     };
   } catch (err) {
     return {
@@ -588,6 +597,7 @@ export const getMissedCashBackForDateRange = async (
       estimatedMissedCommissionsCount: 0,
       averageMissedCommissionAmount: 0,
       largestMissedCommissionAmount: 0,
+      estimatedMissedCashbackCompanies: [],
     };
   }
 };
@@ -621,6 +631,7 @@ export const getMonthlyMissedCashBack = async (
   email: string;
   estimatedMonthlyMissedCommissionsCount: number;
   estimatedMonthlyMissedCommissionsAmount: number;
+  estimatedMissedCashbackCompanies: string[],
 }> => {
   const oneMonthAgo = dayjs().utc().subtract(1, 'month');
   const metric = await getMissedCashBackForDateRange(
@@ -633,6 +644,7 @@ export const getMonthlyMissedCashBack = async (
     email: metric.email,
     estimatedMonthlyMissedCommissionsCount: metric.estimatedMissedCommissionsCount,
     estimatedMonthlyMissedCommissionsAmount: metric.estimatedMissedCommissionsAmount,
+    estimatedMissedCashbackCompanies: metric.estimatedMissedCashbackCompanies,
   };
 };
 

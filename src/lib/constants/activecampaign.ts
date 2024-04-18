@@ -64,6 +64,7 @@ export enum ActiveCampaignCustomFields {
   monthlyHungerAlleviationDonations = 'monthlyHungerAlleviationDonations',
   hasntTranactedInPastQuarter = 'hasntTranactedInPastQuarter',
   hasntLoadedMoneyInTwoWeeks = 'hasntLoadedMoneyInTwoWeeks',
+  missedCashbackCompaniesLastMonth = 'missedCashbackCompaniesLastMonth',
   collectiveReforestationDonations = 'collectiveReforestationDonations',
   collectiveHungerAlleviationDonations = 'collectiveHungerAlleviationDonations',
   collectiveCarbonOffset = 'collectiveCarbonOffset',

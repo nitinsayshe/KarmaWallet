@@ -415,7 +415,7 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
         // update the address data in marqeta and km Db
         if (updates?.integrations?.marqeta) {
           const { marqeta } = updates.integrations;
-          const {userToken} = requestor.integrations.marqeta;
+          const { userToken } = requestor.integrations.marqeta;
           await updateMarqetaUser(userToken, marqeta);
           requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, marqeta);
         }

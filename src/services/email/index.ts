@@ -144,6 +144,46 @@ export const sendEmailVerification = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
+export interface IChangeEmailConfirmationParams {
+  domain?: string;
+  user?: any;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+}
+
+export const sendChangeEmailRequestConfirmationEmail = async ({
+  user,
+  recipientEmail,
+  token,
+  domain = process.env.FRONTEND_DOMAIN,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  senderEmail = EmailAddresses.NoReply,
+  sendEmail = true,
+  name,
+}: IChangeEmailConfirmationParams) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ChangeEmailRequestVerification;
+  const { isValid, missingFields } = verifyRequiredFields(['name', 'domain', 'token', 'recipientEmail'], {
+    name,
+    domain,
+    token,
+    recipientEmail,
+  });
+
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+
+  const verificationLink = `${domain}?verifyEmailChange=${token}`;
+
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
+  const subject = 'Verify your Email Address change request';
+  const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
 export const sendAccountCreationVerificationEmail = async ({
   name,
   visitor,

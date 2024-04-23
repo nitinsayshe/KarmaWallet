@@ -27,6 +27,7 @@ const registerRoutes = async (app: Express) => {
   router.get('/session', authenticate, UserController.getProfile);
   router.put('/password', authenticate, UserController.updatePassword);
   router.post('/support-ticket', authenticate, UserController.submitSupportTicket);
+  router.post('/email/request-change', authenticate, UserController.requestEmailChange);
   router.post('/email/token/create', authenticate, UserController.resendEmailVerification);
   router.post('/email/token/verify', authenticate, UserController.verifyEmail);
 };

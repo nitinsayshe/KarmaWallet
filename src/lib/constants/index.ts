@@ -56,6 +56,10 @@ export enum SocketNamespaces {
 export enum TokenTypes {
   Email = 'email',
   Password = 'password',
+  EmailChange = 'emailChange',
+  AffirmEmailChange = 'affirmEmailChange',
+  CancelEmailChange = 'cancelEmailChange',
+  VerifyEmailChange = 'verifyEmailChange',
 }
 
 export enum EmailAddresses {

@@ -28,7 +28,7 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
+import { sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
@@ -45,6 +45,7 @@ import { closeKarmaCard, openBrowserAndAddShareASaleCode, updateActiveCampaignDa
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { ChangeEmailRequestModel, IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest';
 
 dayjs.extend(utc);
 
@@ -347,6 +348,41 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   // TODO: remove when legacy users are removed
   await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
   return updatedUser;
+};
+export interface IRequestEmailChangeBody {
+  password: string;
+}
+
+export const requestEmailChange = async (req: IRequest<{}, {}, IRequestEmailChangeBody>) => {
+  const userPassword = req.body.password;
+  const requestorPassword = req.requestor.password;
+  const passwordMatch = await argon2.verify(requestorPassword, userPassword);
+
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
+
+  const user = req.requestor;
+  const email = user.emails.find(e => e.primary)?.email;
+  const { name } = user;
+
+  const verificationToken = await TokenService.createToken({
+    user: user._id,
+    type: TokenTypes.VerifyEmailChange,
+    days: 1,
+  });
+
+  const changeEmailRequest = await ChangeEmailRequestModel.create({
+    user: user._id,
+    status: IChangeEmailProcessStatus.INCOMPLETE,
+    verified: IChangeEmailVerificationStatus.UNVERIFIED,
+    currentEmail: email,
+    verificationToken,
+  });
+
+  if (!changeEmailRequest) throw new CustomError('Error creating email change request', ErrorTypes.SERVER);
+
+  const sentEmail = await sendChangeEmailRequestConfirmationEmail({ token: verificationToken.value, recipientEmail: email, name, user: user._id });
+  console.log(sentEmail);
+  return `Email change request sent to ${email}`;
 };
 
 export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpdateUserEmailParams) => {

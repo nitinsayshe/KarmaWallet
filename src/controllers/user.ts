@@ -106,6 +106,15 @@ export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDel
   }
 };
 
+export const requestEmailChange: IRequestHandler<{}, {}, UserService.IRequestEmailChangeBody> = async (req, res) => {
+  try {
+    const response = await UserService.requestEmailChange(req);
+    output.api(req, res, response);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const submitSupportTicket: IRequestHandler<{}, {}, SupportTicketService.ISubmitSupportTicketRequest> = async (req, res) => {
   try {
     const response = await SupportTicketService.submitSupportTicket(req);

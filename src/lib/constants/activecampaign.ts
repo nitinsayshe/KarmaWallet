@@ -72,4 +72,5 @@ export enum ActiveCampaignCustomFields {
   collectivePositiveImpact = 'collectivePositiveImpact',
   collectiveNegativeImpact = 'collectiveNegativeImpact',
   collectiveNeutralImpact = 'collectiveNeutralImpact',
+  membershipType = 'membershipType',
 }

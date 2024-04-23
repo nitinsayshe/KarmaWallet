@@ -165,6 +165,7 @@ export interface IEmailJobData {
   userEmail?: string;
   userId?: string;
   verificationLink?: string;
+  affirmationLink?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
 }
 

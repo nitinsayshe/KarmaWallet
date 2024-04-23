@@ -28,7 +28,7 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
+import { sendChangeEmailRequestAffirmationEmail, sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
@@ -46,6 +46,7 @@ import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { ChangeEmailRequestModel, IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest';
+import * as UserServiceTypes from './types';
 
 dayjs.extend(utc);
 
@@ -329,7 +330,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
 // provides endpoint for UI to check if an email already exists on a user
 export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
   const email = req.body.email?.toLowerCase();
-  const userExists = checkIfUserWithEmailExists(email);
+  const userExists = await checkIfUserWithEmailExists(email);
   if (!userExists) return 'User with this email does not exist';
   throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
 };
@@ -380,8 +381,7 @@ export const requestEmailChange = async (req: IRequest<{}, {}, IRequestEmailChan
 
   if (!changeEmailRequest) throw new CustomError('Error creating email change request', ErrorTypes.SERVER);
 
-  const sentEmail = await sendChangeEmailRequestConfirmationEmail({ token: verificationToken.value, recipientEmail: email, name, user: user._id });
-  console.log(sentEmail);
+  await sendChangeEmailRequestConfirmationEmail({ token: verificationToken.value, recipientEmail: email, name, user: user._id });
   return `Email change request sent to ${email}`;
 };
 
@@ -780,4 +780,30 @@ export const updateVisitorUrlParams = async (
   visitorObject.integrations.urlParams = duplicatesRemoved;
   visitorObject.integrations.urlParams = duplicatesRemoved;
   await visitorObject.save();
+};
+
+export const verifyEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IVerifyEmailChange>) => {
+  const { verifyToken, email, password } = req.body;
+
+  const checkIfNewEmailAlreadyInUse = await verifyUserDoesNotAlreadyExist(req);
+  if (!checkIfNewEmailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+
+  const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: verifyToken, type: TokenTypes.VerifyEmailChange });
+  if (!checkIfTokenExists) throw new CustomError('Invalid token.', ErrorTypes.INVALID_ARG);
+
+  const user = await UserModel.findById(checkIfTokenExists.user);
+
+  const checkIfPasswordMatches = await argon2.verify(user.password, password);
+  if (!checkIfPasswordMatches) throw new CustomError('Invalid password.', ErrorTypes.INVALID_ARG);
+
+  const affirmationToken = await TokenService.createToken({
+    user,
+    type: TokenTypes.AffirmEmailChange,
+    days: 1,
+  });
+
+  const emailSent = await sendChangeEmailRequestAffirmationEmail({ token: affirmationToken.value, recipientEmail: email, name: user.name, user: user._id });
+
+  console.log(emailSent, email, '[][]][][][][][]');
+  return 'Email change verified, check your new email for further instructions';
 };

@@ -291,3 +291,25 @@ export const getTestIdentities: IRequestHandler<{}, {}, {}> = async (req, res) =
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const verifyEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IVerifyEmailChange> = async (req, res) => {
+  try {
+    const verifyEmailChangeSchema = z.object({
+      email: z.string().email(),
+      password: z.string(),
+      verifyToken: nanoIdValidation,
+    });
+
+    const parsed = verifyEmailChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const data = await UserService.verifyEmailChange(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

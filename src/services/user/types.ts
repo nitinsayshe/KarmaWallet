@@ -66,6 +66,12 @@ export interface IEmailVerificationData {
   tokenValue: string;
 }
 
+export interface IVerifyEmailChange {
+  email: string;
+  verifyToken: string;
+  password: string;
+}
+
 export interface IUpdateUserEmailParams {
   user: IUserDocument;
   email: string;

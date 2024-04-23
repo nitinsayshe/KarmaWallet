@@ -19,6 +19,7 @@ const registerRoutes = async (app: Express) => {
   router.put('/password/token', UserController.resetPasswordFromToken);
   router.post('/check-email', UserController.checkIfEmailAlreadyInUse);
   router.get('/test-identities', UserController.getTestIdentities);
+  router.post('/email/request-change/verify', UserController.verifyEmailChange);
 
   // Authenticated
   router.post('/logout', authenticate, UserController.logout);

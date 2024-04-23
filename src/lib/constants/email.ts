@@ -32,6 +32,7 @@ export enum EmailTemplateKeys {
   CaseLostProvisionalCreditNotAlreadyIssued = 'caseLostProvisionalCreditNotAlreadyIssued',
   KarmaCardDeclined = 'karmaCardDeclined',
   ChangeEmailRequestVerification = 'changeEmailRequestVerification',
+  ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
 }
 
 export enum EmailTemplateTypes {
@@ -51,6 +52,7 @@ export enum EmailTemplateTypes {
   EmployerGift = 'employerGift',
   KarmaCardDeclined = 'karmaCardDeclined',
   ChangeEmailRequestVerification = 'changeEmailRequestVerification',
+  ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
 }
 
 export interface IEmailTemplateConfig {
@@ -187,6 +189,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   ChangeEmailRequestVerification: {
     name: EmailTemplateKeys.ChangeEmailRequestVerification,
     type: EmailTemplateTypes.ChangeEmailRequestVerification,
+  },
+  ChangeEmailRequestAffirmation: {
+    name: EmailTemplateKeys.ChangeEmailRequestAffirmation,
+    type: EmailTemplateTypes.ChangeEmailRequestAffirmation,
   },
 };
 

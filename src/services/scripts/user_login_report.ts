@@ -199,7 +199,7 @@ export const getUserLoginReport = async (): Promise<UserLoginReport[]> => {
     );
     report.push(...res);
 
-    sleep(msDelayBetweenBatches);
+    await sleep(msDelayBetweenBatches);
 
     hasNextPage = userBatch?.hasNextPage || false;
     page++;

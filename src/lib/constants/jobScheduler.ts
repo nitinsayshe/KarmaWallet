@@ -53,6 +53,8 @@ export enum JobNames {
   SendAccountCreationReminderEmail = 'send-account-creation-reminder-email',
   GenerateKarmaCardStatements = 'generate-karma-card-statements',
   KardCommissionReconciliation = 'kard-commission-reconciliation',
+  OrderKarmaWalletCards = 'order-karma-wallet-cards',
+  WordpressArticleSync = 'wordpress-article-sync',
 }
 
 export const MarqetaDataSyncTypeEnum = {

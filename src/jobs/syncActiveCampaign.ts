@@ -19,18 +19,30 @@ import {
   removeDuplicateContactAutomations,
   UserLists,
   UserSubscriptions,
+  prepareQuarterlyUpdatedFields,
+  prepareBiweeklyUpdatedFields,
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
-import { IArticleDocument } from '../models/article';
-import { IUser, IUserDocument, UserModel } from '../models/user';
+import { IUserDocument, UserModel } from '../models/user';
 import {
-  getArticleRecommendationsBasedOnTransactionHistory, getArticlesForCompany, getCompaniesWithArticles, URLs,
+  ArticleWithCompany,
+  getArticleRecommendationsBasedOnTransactionHistory,
+  getArticlesForCompany,
+  getCompaniesWithArticles,
+  URLs,
 } from '../services/article/utils/recommendations';
-import { getActiveCampaignSubscribedListIds, getNonActiveCampaignSubscriptions, getUserGroupSubscriptionsToUpdate, reconcileActiveCampaignListSubscriptions, updateNewKWCardUserSubscriptions, updateUserSubscriptions } from '../services/subscription';
-import { iterateOverUsersAndExecWithDelay, IterationRequest, IterationResponse } from '../services/user/utils';
+import {
+  getActiveCampaignSubscribedListIds,
+  getNonActiveCampaignSubscriptions,
+  getUserGroupSubscriptionsToUpdate,
+  reconcileActiveCampaignListSubscriptions,
+  updateNewKWCardUserSubscriptions,
+  updateUserSubscriptions,
+} from '../services/subscription';
+import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
   getMonthlyMissedCashBack,
@@ -40,6 +52,8 @@ import {
   getWeeklyMissedCashBack,
 } from '../services/user/utils/metrics';
 import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
+import { IUser } from '../models/user/types';
+import { DateKarmaMembershipStoppedbBeingFree } from '../lib/constants';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes;
@@ -56,7 +70,7 @@ interface ISubscriptionLists {
 export type ArticleRecommedationsCustomFields = {
   startDate: Date;
   endDate: Date;
-  articlesByCompany: (IArticleDocument & { url: string })[][];
+  articlesByCompany: ArticleWithCompany[][];
 };
 
 export type SpendingAnalysisCustomFields = {};
@@ -86,9 +100,9 @@ const getGroupSubscriptionListsToUpdate = async (user: IUserDocument): Promise<I
 const getBackfillSubscriptionLists = async (user: IUserDocument): Promise<ISubscriptionLists> => getGroupSubscriptionListsToUpdate(user);
 
 const iterateOverUsersAndExecImportReqWithDelay = async <T>(
-  request: IterationRequest<T>,
+  request: UserIterationRequest<T>,
   prepareBulkImportRequest: (
-    req: IterationRequest<T>,
+    req: UserIterationRequest<T>,
     userBatch: PaginateResult<IUser>,
     customFields: { name: string; id: number }[]
   ) => Promise<IContactsImportData>,
@@ -124,7 +138,7 @@ const iterateOverUsersAndExecImportReqWithDelay = async <T>(
 };
 
 const prepareSyncUsersRequest = async (
-  req: IterationRequest<SyncAllUsersCustomFields>,
+  req: UserIterationRequest<SyncAllUsersCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: FieldIds,
 ): Promise<IContactsImportData> => {
@@ -163,11 +177,14 @@ const prepareSyncUsersRequest = async (
           case ActiveCampaignSyncTypes.WEEKLY:
             fields = await prepareWeeklyUpdatedFields(userDocument, customFields, fields);
             break;
+          case ActiveCampaignSyncTypes.BIWEEKLY:
+            fields = await prepareBiweeklyUpdatedFields(userDocument, customFields, fields);
+            break;
           case ActiveCampaignSyncTypes.MONTHLY:
             fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.QUARTERLY:
-            fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);
+            fields = await prepareQuarterlyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.YEARLY:
             fields = await prepareYearlyUpdatedFields(userDocument, customFields, fields);
@@ -214,7 +231,7 @@ export const onFailed = (_: SandboxedJob, err: Error) => {
 
 const syncAllUsers = async (syncType: ActiveCampaignSyncTypes, httpClient: AxiosInstance) => {
   const msDelayBetweenBatches = 1500;
-  const req: IterationRequest<SyncAllUsersCustomFields> = {
+  const req: UserIterationRequest<SyncAllUsersCustomFields> = {
     httpClient,
     batchQuery: {},
     batchLimit: 150,
@@ -306,7 +323,7 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
 };
 
 const prepareMonthlyCashbackSimulationImportRequest = async (
-  request: IterationRequest<CashbackSimulationCustomFields>,
+  request: UserIterationRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -321,13 +338,14 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
 
   // set any that have a total below the threshold to 0 and round amount
   missedCashbackMetrics = missedCashbackMetrics?.map((metric) => {
-    const { id, email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount } = metric;
+    const { id, email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount, estimatedMissedCashbackCompanies } = metric;
     if (estimatedMonthlyMissedCommissionsAmount <= request.fields.missingCashbackThresholdDollars) {
       return {
         id,
         email,
         estimatedMonthlyMissedCommissionsAmount: 0,
         estimatedMonthlyMissedCommissionsCount: 0,
+        estimatedMissedCashbackCompanies: [],
       };
     }
     return {
@@ -335,6 +353,7 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
       email,
       estimatedMonthlyMissedCommissionsAmount: roundToPercision(estimatedMonthlyMissedCommissionsAmount, 0),
       estimatedMonthlyMissedCommissionsCount,
+      estimatedMissedCashbackCompanies,
     };
   });
 
@@ -342,6 +361,9 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
   const missedDollarsFieldId = customFields.find((field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastMonth);
   const missedCashbackTransactionCountFieldId = customFields.find(
     (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastMonth,
+  );
+  const missedCashbackCompaniesFieldId = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.missedCashbackCompaniesLastMonth,
   );
 
   const contacts = missedCashbackMetrics.map((metric) => {
@@ -362,6 +384,13 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
       });
     }
 
+    if (!!missedCashbackCompaniesFieldId) {
+      contact.fields.push({
+        id: missedCashbackCompaniesFieldId.id,
+        value: metric.estimatedMissedCashbackCompanies.join('||'),
+      });
+    }
+
     return contact;
   });
 
@@ -369,7 +398,7 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
 };
 
 const prepareWeeklyCashbackSimulationImportRequest = async (
-  request: IterationRequest<CashbackSimulationCustomFields>,
+  request: UserIterationRequest<CashbackSimulationCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -435,7 +464,7 @@ const syncEstimatedCashbackFieldsWeekly = async (httpClient?: AxiosInstance) => 
 
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<CashbackSimulationCustomFields> = {
+  const req: UserIterationRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: {
       _id: { $nin: usersWithCommissionsLastWeek },
@@ -455,7 +484,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
 
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<CashbackSimulationCustomFields> = {
+  const req: UserIterationRequest<CashbackSimulationCustomFields> = {
     httpClient,
     batchQuery: { _id: { $nin: usersWithCommissionsLastMonth } },
     batchLimit: 100,
@@ -468,7 +497,7 @@ const syncEstimatedCashbackFieldsMonthly = async (httpClient?: AxiosInstance) =>
 };
 
 const prepareSpendingAnalysisImportRequest = async (
-  _: IterationRequest<SpendingAnalysisCustomFields>,
+  _: UserIterationRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -538,7 +567,7 @@ const prepareSpendingAnalysisImportRequest = async (
 const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<{}> = {
+  const req: UserIterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -548,7 +577,7 @@ const syncSpendingAnalysisFields = async (httpClient?: AxiosInstance) => {
 };
 
 const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
-  _: IterationRequest<SpendingAnalysisCustomFields>,
+  _: UserIterationRequest<SpendingAnalysisCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -594,7 +623,7 @@ const prepareRemovedOrUnlinkedAccountsSyncRequest = async (
 };
 
 const prepareArticleRecommendationSyncRequest = async (
-  req: IterationRequest<ArticleRecommedationsCustomFields>,
+  req: UserIterationRequest<ArticleRecommedationsCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
@@ -638,6 +667,52 @@ const prepareArticleRecommendationSyncRequest = async (
     return contact;
   });
 
+  return { contacts };
+};
+
+const prepareKarmaCardMembershipTypeSyncRequest = async (
+  req: UserIterationRequest<ArticleRecommedationsCustomFields>,
+  userBatch: PaginateResult<IUser>,
+  customFields: { name: string; id: number }[],
+): Promise<IContactsImportData> => {
+  let membershipTypeData: { email: string; isFreeMembershipUser: boolean }[] = await Promise.all(
+    userBatch?.docs?.map(async (user) => {
+      const email = user?.emails?.find((e) => e.primary)?.email;
+      const isFreeMembershipUser = !!user?.integrations?.marqeta?.created_time
+        ? dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree)
+        : false;
+
+      return { email, isFreeMembershipUser };
+    }),
+  );
+
+  const emailSchema = z.string().email();
+  membershipTypeData = membershipTypeData?.filter((data) => {
+    const validationResult = emailSchema.safeParse(data?.email);
+    return !!data.email && !(validationResult as SafeParseError<string>)?.error;
+  });
+
+  // set the custom fields and update in active campaign
+  const isFreeMembershipUser = customFields.find((field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser);
+
+  if (!isFreeMembershipUser) {
+    return { contacts: [] };
+  }
+
+  const contacts = membershipTypeData.map((d) => {
+    const contact: IContactsData = {
+      email: d.email,
+      fields: [
+        {
+          id: isFreeMembershipUser?.id,
+          value: d.isFreeMembershipUser.toString(),
+        },
+      ],
+    };
+
+    return contact;
+  });
+
   console.log(JSON.stringify(contacts, null, 2));
   return { contacts };
 };
@@ -645,7 +720,7 @@ const prepareArticleRecommendationSyncRequest = async (
 const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<{}> = {
+  const req: UserIterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -657,7 +732,7 @@ const syncUnlinkedAndRemovedAccountsFields = async (httpClient?: AxiosInstance) 
 const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
 
-  const req: IterationRequest<{}> = {
+  const req: UserIterationRequest<{}> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -665,7 +740,7 @@ const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
 
   await iterateOverUsersAndExecWithDelay(
     req,
-    async (_: IterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<IterationResponse<{}>[]> => {
+    async (_: UserIterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<UserIterationResponse<{}>[]> => {
       await Promise.all(
         userBatch.docs.map(async (user: IUserDocument) => {
           const email = user?.emails?.find((e) => e.primary)?.email;
@@ -676,7 +751,11 @@ const reconcileUserSubscriptions = async (httpClient?: AxiosInstance) => {
             // add ids of any active subs not from active campaign
             const nonActiveCampaignSubs = await getNonActiveCampaignSubscriptions(user._id as unknown as Types.ObjectId);
             // update db with active campaign subscriptions
-            await reconcileActiveCampaignListSubscriptions(new Types.ObjectId(user._id.toString()), activeCampaignListIds, nonActiveCampaignSubs);
+            await reconcileActiveCampaignListSubscriptions(
+              new Types.ObjectId(user._id.toString()),
+              activeCampaignListIds,
+              nonActiveCampaignSubs,
+            );
           } catch (err) {
             console.error(`Error reconciling list subscriptions for user: ${err}`);
           }
@@ -698,11 +777,11 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
   const companiesWithArticles = await getCompaniesWithArticles();
 
   // each element in the array holds the articles for a given company
-  const articlesByCompany: (IArticleDocument & { url: string })[][] = await Promise.all(
+  const articlesByCompany: ArticleWithCompany[][] = await Promise.all(
     companiesWithArticles.map(async (company) => getArticlesForCompany(company)),
   );
 
-  const req: IterationRequest<ArticleRecommedationsCustomFields> = {
+  const req: UserIterationRequest<ArticleRecommedationsCustomFields> = {
     httpClient,
     batchQuery: {},
     batchLimit: 100,
@@ -714,6 +793,18 @@ const syncArticleRecommendationFields = async (httpClient?: AxiosInstance) => {
   };
 
   await iterateOverUsersAndExecImportReqWithDelay(req, prepareArticleRecommendationSyncRequest, msDelayBetweenBatches);
+};
+
+const syncKarmaCardMembershipTypeFields = async (httpClient?: AxiosInstance) => {
+  const msDelayBetweenBatches = 2000;
+
+  const req: UserIterationRequest<undefined> = {
+    httpClient,
+    batchQuery: {},
+    batchLimit: 100,
+  };
+
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareKarmaCardMembershipTypeSyncRequest, msDelayBetweenBatches);
 };
 
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
@@ -807,6 +898,9 @@ export const exec = async ({ syncType, userSubscriptions, cardSignupUserId, http
         break;
       case ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION:
         await syncArticleRecommendationFields(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.KARMA_CARD_MEMBERSHIP_TYPE:
+        await syncKarmaCardMembershipTypeFields(httpClient);
         break;
       default:
         await syncAllUsers(syncType, httpClient);

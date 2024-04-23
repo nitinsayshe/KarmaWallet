@@ -1,5 +1,6 @@
 import aqp from 'api-query-params';
 import * as GroupService from '../services/groups';
+import * as GroupUtils from '../services/groups/utils';
 import * as output from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
@@ -99,7 +100,7 @@ export const deleteGroup: IRequestHandler<GroupService.IGroupRequestParams> = as
 
 export const joinGroup: IRequestHandler<{}, {}, GroupService.IJoinGroupRequest> = async (req, res) => {
   try {
-    const userGroup = await GroupService.joinGroup(req);
+    const userGroup = await GroupUtils.joinGroup(req);
     output.api(req, res, GroupService.getShareableUserGroup(userGroup));
   } catch (err) {
     output.error(req, res, asCustomError(err));

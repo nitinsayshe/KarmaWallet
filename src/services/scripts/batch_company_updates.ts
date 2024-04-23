@@ -223,10 +223,13 @@ const handleDeleteDataSource = async (update: any) => {
 
 const handleExpireAllDataSources = async (update: any) => {
   console.log('Expiring all data sources', update);
-  const { _id } = update;
-  await DataSourceModel.updateOne({ _id }, { hidden: true });
-  await CompanyDataSourceModel.updateMany({ source: _id }, { 'dateRange.end': new Date(), status: 0 });
+  const { _id, expiration } = update;
+  const _expiration = dayjs(expiration).toDate();
+  if (!_expiration) throw new CustomError(`No expiration date found for update: ${JSON.stringify(update)}`);
+  await CompanyDataSourceModel.updateMany({ source: _id }, { 'dateRange.end': _expiration, status: 0 });
 };
+
+// TODO: HANDLE ADD PARENT
 
 export const updateDataSources = async () => {
   const errors: any[] = [];
@@ -378,6 +381,7 @@ export const updateValueCompanyMappings = async () => {
 // Company Data Source Updates
 enum CompanyDataSourceUpdateActions {
   Add = 'ADD',
+  Update = 'UPDATE',
   Delete = 'DELETE',
 }
 
@@ -393,33 +397,57 @@ const handleAddCompanyDataSource = async (update: any) => {
     companyId = company._id;
   }
   if (!isValidObjectId(dataSourceId)) {
-    const _dataSourceId = await DataSourceModel.findOne({ name: dataSourceId });
+    const { dataSourceName } = update;
+    if (!dataSourceName) throw new Error(`No data source name found for update: ${JSON.stringify(update)}`);
+    const _dataSourceId = await DataSourceModel.findOne({ name: dataSourceName });
     if (!_dataSourceId) throw new Error(`No data source found for update: ${JSON.stringify(update)}`);
     dataSourceId = _dataSourceId._id;
   }
-  const expiration = update?.expiration ? dayjs(update.expiration).toDate() : dayjs().add(1, 'year').toDate();
-  const value = parseInt(update?.value, 10);
-  if (!companyId || !dataSourceId || Number.isNaN(value)) throw new Error(`Invalid update: ${JSON.stringify(update)}`);
 
-  const newCompanyDataSource = await CompanyDataSourceModel.findOneAndUpdate(
-    {
-      company: companyId,
-      source: dataSourceId,
-    },
-    {
-      dateRange: {
-        start: dayjs().toDate(),
-        end: expiration,
+  const expiration = update?.expiration ? dayjs(update.expiration).toDate() : dayjs().add(1, 'year').toDate();
+  const startDate = update?.startDate ? dayjs(update.startDate).toDate() : dayjs().toDate();
+  const value = parseInt(update?.value, 10);
+
+  const addCompanyDataSource = async () => {
+    const newCompanyDataSource = await CompanyDataSourceModel.findOneAndUpdate(
+      {
+        company: companyId,
+        source: dataSourceId,
       },
-      status: value,
-    },
-    {
-      new: true,
-      upsert: true,
-    },
-  );
-  if (!newCompanyDataSource) throw new Error(`No company data source found for update: ${JSON.stringify(update)}`);
-  console.log(`[+] added/updated company data source ${newCompanyDataSource._id}`);
+      {
+        dateRange: {
+          start: startDate,
+          end: expiration,
+        },
+        status: value,
+      },
+      {
+        new: true,
+        upsert: true,
+      },
+    );
+    console.log(`[+] added company data source ${newCompanyDataSource._id}`);
+  };
+
+  const existingCompanyDataSource = await CompanyDataSourceModel.findOne({ company: companyId, source: dataSourceId });
+
+  // if no existing cds, create a new one
+  if (!existingCompanyDataSource) return addCompanyDataSource();
+
+  // if the cds has expired and new start date is after expiration, create a new one
+  if (existingCompanyDataSource && startDate > existingCompanyDataSource.dateRange.end) return addCompanyDataSource();
+
+  // if the cds is active, update it
+  if (existingCompanyDataSource && existingCompanyDataSource.dateRange.end > startDate) {
+    existingCompanyDataSource.dateRange.end = expiration;
+    existingCompanyDataSource.status = value;
+    await existingCompanyDataSource.save();
+    console.log(`[+] updated company data source ${existingCompanyDataSource._id}`);
+    return;
+  }
+
+  if (!companyId || !dataSourceId || Number.isNaN(value)) throw new Error(`Invalid update: ${JSON.stringify(update)}`);
+  throw new Error(`No action found for update: ${JSON.stringify(update)}`);
 };
 
 const handleDeleteCompanyDataSource = async (update: any) => {
@@ -437,6 +465,27 @@ const handleDeleteCompanyDataSource = async (update: any) => {
   if (!existingCompanyDataSource) throw new Error(`No existing company data source found for update: ${JSON.stringify(update)}`);
 };
 
+const handleUpdateCompanyDataSource = async (update: any) => {
+  const { companyId, dataSourceId, expiration, startDate, value } = update;
+  const companyDataSource = await CompanyDataSourceModel.findOne({ company: companyId, source: dataSourceId });
+  if (!companyDataSource) throw new Error(`No company data source found for update: ${JSON.stringify(update)}`);
+  if (startDate) {
+    const _startDate = dayjs(startDate).toDate();
+    companyDataSource.dateRange.start = _startDate;
+  }
+  if (expiration) {
+    const _expiration = dayjs(expiration).toDate();
+    companyDataSource.dateRange.end = _expiration;
+  }
+  if (value) {
+    const _value = parseInt(value, 10);
+    if (Number.isNaN(_value)) throw new Error(`Invalid value for company data source update: ${JSON.stringify(update)}`);
+    companyDataSource.status = _value;
+  }
+  await companyDataSource.save();
+  console.log(`[+] updated company data source ${companyDataSource._id}`);
+};
+
 export const updateCompanyDataSources = async () => {
   const errors: any[] = [];
   const updatePath = path.resolve(__dirname, '.tmp', 'batchCompanyDataSources.csv');
@@ -448,6 +497,9 @@ export const updateCompanyDataSources = async () => {
       switch (action) {
         case CompanyDataSourceUpdateActions.Add:
           await handleAddCompanyDataSource(update);
+          break;
+        case CompanyDataSourceUpdateActions.Update:
+          await handleUpdateCompanyDataSource(update);
           break;
         case CompanyDataSourceUpdateActions.Delete:
           await handleDeleteCompanyDataSource(update);

@@ -1,5 +1,5 @@
 /* eslint-disable camelcase */
-import { isValidObjectId, Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
@@ -20,7 +20,7 @@ import {
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { roundToPercision } from '../../lib/misc';
-import { formatZodFieldErrors, getZodEnumScemaFromTypescriptEnum } from '../../lib/validation';
+import { formatZodFieldErrors, getZodEnumSchemaFromTypescriptEnum, optionalObjectReferenceValidation } from '../../lib/validation';
 import { IChargebackDocument } from '../../models/chargeback';
 import { CommissionPayoutModel, ICommissionPayoutDocument } from '../../models/commissionPayout';
 import { CommissionModel, ICommissionDocument } from '../../models/commissions';
@@ -42,8 +42,9 @@ import {
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
-import { IACHTransferEmailData } from '../email/types';
+import { IACHTransferEmailData, IDeclinedData } from '../email/types';
 import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
+import { VisitorModel } from '../../models/visitor';
 
 dayjs.extend(utc);
 
@@ -51,7 +52,8 @@ export type CreateNotificationRequest<T = undefined> = {
   type: NotificationTypeEnumValue;
   status: UserNotificationStatusEnumValue;
   channel?: NotificationChannelEnumValue;
-  user: Types.ObjectId;
+  user?: Types.ObjectId;
+  visitor?: Types.ObjectId;
   resource?: Types.ObjectId;
   data?: T;
 };
@@ -161,17 +163,11 @@ const prepareZodCreateUserNotificationSchema = <DataType>(
 ): z.ZodSchema | void => {
   try {
     return z.object({
-      type: getZodEnumScemaFromTypescriptEnum(NotificationTypeEnum),
-      status: getZodEnumScemaFromTypescriptEnum(UserNotificationStatusEnum),
-      channel: getZodEnumScemaFromTypescriptEnum(NotificationChannelEnum).optional(),
-      user: z
-        .string()
-        .refine((val) => isValidObjectId(val), { message: 'Must be a object reference' })
-        .optional(),
-      resource: z
-        .string()
-        .refine((val) => isValidObjectId(val), { message: 'Must be a valid object reference' })
-        .optional(),
+      type: getZodEnumSchemaFromTypescriptEnum(NotificationTypeEnum),
+      status: getZodEnumSchemaFromTypescriptEnum(UserNotificationStatusEnum),
+      channel: getZodEnumSchemaFromTypescriptEnum(NotificationChannelEnum).optional(),
+      user: optionalObjectReferenceValidation,
+      resource: optionalObjectReferenceValidation,
       resourceType: z
         .string()
         .optional()
@@ -217,7 +213,7 @@ export const saveUserNotification = async (notification: IUserNotificationDocume
 export const createUserNotification = async <DataType>(
   req: IRequest<{}, {}, CreateNotificationRequest<DataType>>,
 ): Promise<IUserNotificationDocument | void> => {
-  const { type, status, channel, resource, user, data } = req.body;
+  const { type, status, channel, resource, user, data, visitor } = req.body;
 
   const createNotificationSchema = prepareZodCreateUserNotificationSchema(req.body, !!resource);
   if (!createNotificationSchema) {
@@ -243,23 +239,39 @@ export const createUserNotification = async <DataType>(
     ({ resource: resourceDoc, resourceType } = r);
   }
 
-  const userDoc = await getUserById(user);
-  if (!userDoc) {
-    throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
-  }
-
-  const notification = new UserNotificationModel({
+  const notificationData: any = {
     type,
     status,
     channel,
-    user: userDoc,
     resource: resourceDoc || undefined,
     resourceType,
     data,
     createdOn: getUtcDate(),
-  });
+  };
 
-  await executeUserNotificationEffects(notification, userDoc);
+  if (!!user) {
+    const userDoc = await getUserById(user);
+
+    if (!userDoc) {
+      throw new CustomError('User not found', ErrorTypes.NOT_FOUND);
+    }
+
+    notificationData.user = userDoc;
+  }
+
+  if (!!visitor) {
+    const visitorDoc = await VisitorModel.findById(visitor);
+
+    if (!visitorDoc) {
+      throw new CustomError('Visitor not found', ErrorTypes.NOT_FOUND);
+    }
+
+    notificationData.visitor = visitorDoc;
+  }
+
+  const notification = new UserNotificationModel(notificationData);
+
+  await executeUserNotificationEffects(notification);
   return saveUserNotification(notification);
 };
 
@@ -333,7 +345,7 @@ export const createEmployerGiftEmailUserNotification = async (
         user: user?._id?.toString(),
         data: {
           name: user.name,
-          amount: transaction.amount,
+          amount: transaction.amount.toFixed(2),
         },
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
@@ -968,5 +980,31 @@ export const createACHTransferReturnedUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating ACH returned email notification: ${e}`);
+  }
+};
+
+export const createDeclinedKarmaWalletCardUserNotification = async (
+  declinedData: IDeclinedData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.KarmaCardDeclined,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        data: declinedData,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    if (!!declinedData.user) {
+      mockRequest.body.user = declinedData.user._id.toString();
+    }
+
+    if (!!declinedData.visitor) {
+      mockRequest.body.visitor = declinedData.visitor._id.toString();
+    }
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating Karma Wallet application declined email: ${e}`);
   }
 };

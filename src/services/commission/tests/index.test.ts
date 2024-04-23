@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from '@jest/glob
 import { randomUUID } from 'crypto';
 import { ObjectId, Types } from 'mongoose';
 import { generateCommissionPayoutOverview } from '..';
-import { MerchantSource, RewardStatus, RewardType } from '../../../clients/kard';
+import { MerchantSource, RewardStatus, RewardType } from '../../../clients/kard/types';
 import { MongoClient } from '../../../clients/mongo';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
@@ -23,7 +23,8 @@ import { ICommissionPayoutOverviewDocument } from '../../../models/commissionPay
 import { ICommissionDocument, KarmaCommissionStatus, WildfireCommissionStatus } from '../../../models/commissions';
 import { ICompanyDocument } from '../../../models/company';
 import { IMerchantDocument } from '../../../models/merchant';
-import { IUserDocument, UserEmailStatus } from '../../../models/user';
+import { UserEmailStatus } from '../../../models/user/types';
+import { IUserDocument } from '../../../models/user';
 import { aggregateCommissionTotalAndIds } from '../utils';
 
 describe('tests commission service logic', () => {

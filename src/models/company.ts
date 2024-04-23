@@ -123,6 +123,7 @@ export interface ICompany extends IShareableCompany {
 
 export interface ICompanyDocument extends ICompany, Document {
   _id: ObjectId;
+  companyName: string;
 }
 
 export type ICompanyModel = IModel<ICompany>;

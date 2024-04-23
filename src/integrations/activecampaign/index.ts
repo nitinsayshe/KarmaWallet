@@ -5,6 +5,8 @@ import {
   ActiveCampaignClient,
   IContactAutomation,
   IContactList,
+  IContactsData,
+  ICreateContactData,
   IGetContactResponse,
   UpdateContactListStatusEnum,
 } from '../../clients/activeCampaign';
@@ -21,6 +23,15 @@ import {
   getYearlyEmissionsTotal,
   getYearlyKarmaScore,
   getYearlyLoginCount,
+  getMonthlyMealsDonationCount,
+  getMonthlyReforestationDonationCount,
+  userHasFundedAccountButNotTransactedInLastQuarter,
+  getMoneyLoadedCountInTwoWeeks,
+  getCollectiveCarbonOffset,
+  getAverageKarmaScore,
+  getCollectiveCommunityImpact,
+  getCollectiveReforestationDonationCount,
+  getCollectiveMealsDonationCount,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -207,6 +218,52 @@ export const prepareQuarterlyUpdatedFields = async (
   if (!fieldValues) {
     fieldValues = [];
   }
+
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasntTranactedInPastQuarter);
+  if (!!customField) {
+    const hasFundedAccountAndNotTransactedInPastQuarter = await userHasFundedAccountButNotTransactedInLastQuarter(user);
+    fieldValues.push({ id: customField.id, value: hasFundedAccountAndNotTransactedInPastQuarter.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveReforestationDonations);
+  if (!!customField) {
+    const mealsDonationCount = await getCollectiveReforestationDonationCount();
+    fieldValues.push({ id: customField.id, value: mealsDonationCount.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveHungerAlleviationDonations);
+  if (!!customField) {
+    const reforestationDonationCount = await getCollectiveMealsDonationCount();
+    fieldValues.push({ id: customField.id, value: reforestationDonationCount.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveCarbonOffset);
+  if (!!customField) {
+    const totalCarbonOffset = await getCollectiveCarbonOffset();
+    fieldValues.push({ id: customField.id, value: totalCarbonOffset.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.averageKarmaScore);
+  if (!!customField) {
+    const avgKarmaScore = await getAverageKarmaScore();
+    fieldValues.push({ id: customField.id, value: avgKarmaScore.toFixed(2) });
+  }
+
+  const communityImpact = await getCollectiveCommunityImpact();
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectivePositiveImpact);
+  if (!!customField) {
+    fieldValues.push({ id: customField.id, value: communityImpact.positiveImpact.toFixed(2) });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveNegativeImpact);
+  if (!!customField) {
+    fieldValues.push({ id: customField.id, value: communityImpact.negativeImpact.toFixed(2) });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveNeutralImpact);
+  if (!!customField) {
+    fieldValues.push({ id: customField.id, value: communityImpact.neutralImpact.toFixed(2) });
+  }
   return fieldValues;
 };
 
@@ -288,6 +345,18 @@ export const prepareMonthlyUpdatedFields = async (
     fieldValues.push({ id: customField.id, value: 'false' });
   }
 
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.monthlyHungerAlleviationDonations);
+  if (!!customField) {
+    const mealsDonationCount = await getMonthlyMealsDonationCount(user);
+    fieldValues.push({ id: customField.id, value: mealsDonationCount.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.monthlyReforestationDonations);
+  if (!!customField) {
+    const reforestationDonationCount = await getMonthlyReforestationDonationCount(user);
+    fieldValues.push({ id: customField.id, value: reforestationDonationCount.toString() });
+  }
+
   return fieldValues;
 };
 
@@ -344,6 +413,28 @@ export const prepareDailyUpdatedFields = async (
     const totalLoginCount = await getTotalLoginCount(user);
     fieldValues.push({ id: customField.id, value: totalLoginCount.toString() });
   }
+  return fieldValues;
+};
+
+export const prepareBiweeklyUpdatedFields = async (
+  user: IUserDocument,
+  customFields: FieldIds,
+  fieldValues: FieldValues,
+): Promise<FieldValues> => {
+  if (!customFields) {
+    console.log('No custom fields provided');
+    return fieldValues;
+  }
+  if (!fieldValues) {
+    fieldValues = [];
+  }
+
+  const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasntLoadedMoneyInTwoWeeks);
+  if (!!customField) {
+    const moneyLoadedCount = await getMoneyLoadedCountInTwoWeeks(user);
+    fieldValues.push({ id: customField.id, value: (moneyLoadedCount === 0).toString() });
+  }
+
   return fieldValues;
 };
 
@@ -557,10 +648,6 @@ export const updateActiveCampaignData = async (
       subscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
       unsubscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
     );
-
-    /* TODO: handle removing tags - this doesn't seem possible through the same active campaign
-     * import endpoint right now. Might need to make a DELETE HTTP request to https://youraccountname.api-us1.com/api/3/contactTags/{id} */
-
     const contacts = [
       {
         email: req.email,
@@ -636,6 +723,7 @@ export const prepareBackfillSyncFields = async (
   fieldValues = await prepareMonthlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareQuarterlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareYearlyUpdatedFields(user, customFields, fieldValues);
+  fieldValues = await prepareBiweeklyUpdatedFields(user, customFields, fieldValues);
 
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);
@@ -669,7 +757,7 @@ export const getCustomFieldIDsAndUpdateSetFields = async (userId: string, setFie
 };
 
 export const updateActiveCampaignContactData = async (
-  userData: {email: string, name?: string},
+  userData: { email: string, name?: string },
   subscribe: ActiveCampaignListId[],
   unsubscribe: ActiveCampaignListId[],
   tags?: string[],
@@ -682,27 +770,28 @@ export const updateActiveCampaignContactData = async (
   let firstName = '';
   let lastName = '';
 
-  if (userData?.name.includes(' ')) {
-    firstName = userData.name?.split(' ')?.[0];
-    lastName = userData.name?.split(' ')?.pop();
+  if (userData?.name?.includes(' ')) {
+    firstName = userData?.name?.split(' ')?.[0];
+    lastName = userData?.name?.split(' ')?.pop();
   } else {
-    firstName = userData.name;
+    firstName = userData?.name;
   }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
-  const contacts = [
+  const contacts: Array<IContactsData> = [
     {
-      first_name: firstName,
-      last_name: lastName,
       email: userData.email,
-      subscribe: sub,
-      unsubscribe: unsub,
-      tags,
-      fields,
     },
   ];
+
+  if (!!firstName) contacts[0].first_name = firstName;
+  if (!!lastName) contacts[0].last_name = lastName;
+  if (!!sub) contacts[0].subscribe = sub;
+  if (!!unsub) contacts[0].unsubscribe = unsub;
+  if (!!tags) contacts[0].tags = tags;
+  if (!!fields) contacts[0].fields = fields;
 
   await ac.importContacts({ contacts });
 };
@@ -777,6 +866,21 @@ export const removeDuplicateContactAutomations = async (email: string, client?: 
     console.log('done removing duplicate automations for ', email);
   } catch (err) {
     console.error('Error removing duplicate automation enrollments', err);
+  }
+};
+
+export const updateContactEmail = async (oldEmail: string, newEmail: string, client?: AxiosInstance) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    // get active campaign id for user
+    const rs = await ac.getContacts({ email: oldEmail });
+    if (rs?.contacts?.length > 0) {
+      return await ac.updateContact({ id: parseInt(rs.contacts[0].id, 10), contact: { email: newEmail } });
+    }
+  } catch (err) {
+    console.error('Error updating contact email', err);
   }
 };
 
@@ -888,5 +992,15 @@ export const updateCustomFields = async (
     await ac.importContacts({ contacts });
   } catch (err) {
     console.error(`error updating custom fields: ${JSON.stringify(fieldUpdates)}`, err);
+  }
+};
+
+export const createContact = async (contact: ICreateContactData, client?: AxiosInstance) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+    return ac.createContact({ email: contact.email });
+  } catch (err) {
+    console.error('error creating contact', err);
   }
 };

@@ -7,7 +7,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { UserGroupStatus } from '../types/groups';
 import { IModel, IRef } from '../types/model';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 import { getUtcDate } from '../lib/date';
 import { GroupTagsEnumValues, GroupTagsEnum } from '../lib/constants';
 

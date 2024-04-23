@@ -7,7 +7,7 @@ import {
 import { UserRoles } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IPlaidItemDocument } from './plaidItem';
-import { IUserIntegrations, IEmail, UserEmailStatus } from './user';
+import { IUserIntegrations, IEmail, UserEmailStatus } from './user/types';
 
 export interface ILegacyUser {
   _id: string;

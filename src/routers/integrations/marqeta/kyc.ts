@@ -11,4 +11,5 @@ router.route('/list/:userToken')
 
 router.route('/:kycToken')
   .get(KycController.getKycResult);
+
 export default router;

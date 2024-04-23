@@ -1,12 +1,12 @@
 import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
-import { EarnedReward, RewardStatus, RewardType } from '../clients/kard';
+import { EarnedReward, RewardType, RewardStatus } from '../clients/kard/types';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableCompany } from './company';
 import { IShareableMerchant } from './merchant';
 import { IPromo } from './promo';
 import { IShareableTransaction } from './transaction';
-import { IShareableUser } from './user';
+import { IShareableUser } from './user/types';
 
 // https://kb.wildfire-corp.com/article/ygwr-commission-history
 export enum WildfireCommissionStatus {

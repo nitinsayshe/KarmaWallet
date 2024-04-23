@@ -1,16 +1,15 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
-import { isValidObjectId, FilterQuery, ObjectId } from 'mongoose';
+import { FilterQuery, ObjectId } from 'mongoose';
 import { SafeParseError, z, ZodError } from 'zod';
 import { PlaidClient } from '../../clients/plaid';
 import { createKardUserAndAddIntegrations, deleteKardUserForCard } from '../../integrations/kard';
 import { CardStatus, ErrorTypes, IMapMarqetaCard, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { encrypt } from '../../lib/encryption';
-import { formatZodFieldErrors } from '../../lib/validation';
+import { formatZodFieldErrors, objectReferenceValidation } from '../../lib/validation';
 import { CardModel, ICard, ICardDocument, IShareableCard, IMarqetaCardIntegration } from '../../models/card';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
@@ -21,8 +20,11 @@ import {
   createPushUserNotificationFromUserAndPushData,
 } from '../user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
-// eslint-disable-next-line import/no-cycle
-import { getShareableUser } from '../user';
+import { getShareableUser } from '../user/utils';
+import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { Card } from '../../clients/marqeta/card';
+import { IUserDocument, UserModel } from '../../models/user';
+import { IShareableUser } from '../../models/user/types';
 
 dayjs.extend(utc);
 
@@ -106,9 +108,18 @@ export const _updateCards = async (query: FilterQuery<ICard>, updates: Partial<I
 // when a user removes a card
 const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   const client = new PlaidClient();
-  if (card?.integrations?.plaid?.accessToken) {
+  if (!!card?.integrations?.plaid?.accessToken) {
     await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+
+    await CardModel.updateMany(
+      { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
+      {
+        'integrations.plaid.accessToken': null,
+        $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
+      },
+    );
   }
+
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
     // TODO: these jobs should ideally be broken down into jobs for users and jobs to get totals
@@ -117,19 +128,12 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
     // MainBullClient.createJob(JobNames.GenerateUserTransactionTotals, {});
     // MainBullClient.createJob(JobNames.GenerateUserImpactTotals, {});
   }
-
-  await CardModel.updateMany(
-    { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
-    {
-      'integrations.plaid.accessToken': null,
-      $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
-    },
-  );
 };
 
 const _removeKardUser = async (card: ICardDocument): Promise<void> => {
   await deleteKardUserForCard(card);
 };
+
 const _removeRareCard = async (requestor: IUserDocument, card: ICardDocument, removeData: boolean) => {
   if (removeData) {
     // await TransactionModel.deleteMany({ user: requestor._id, card: card._id });
@@ -207,7 +211,7 @@ export const enrollInKardRewards = async (req: IRequest<KardRewardsParams, {}, K
       .refine((val) => !!getNetworkFromBin(val), {
         message: 'Must be with a participating network: Visa, MasterCard, Discover, or American Express',
       }),
-    card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object id' }),
+    card: objectReferenceValidation,
   });
 
   const parsed = kardRewardsRegisterRequestSchema.safeParse({ ...req.body, card: req.params.card });
@@ -267,7 +271,7 @@ export const enrollInKardRewards = async (req: IRequest<KardRewardsParams, {}, K
 export const unenrollFromKardRewards = async (req: IRequest<KardRewardsParams, {}, {}>): Promise<ICardDocument> => {
   // validate data
   const kardRewardsRegisterRequestSchema = z.object({
-    card: z.string().refine((val) => isValidObjectId(val), { message: 'Must be a valid object reference' }),
+    card: objectReferenceValidation,
   });
   const parsed = kardRewardsRegisterRequestSchema.safeParse(req.params);
   if (!parsed.success) {
@@ -431,57 +435,40 @@ export const handleMarqetaCardNotificationFromWebhook = async (
         title: 'Security Alert!',
       });
     }
-
-    // Notification for events of card suspension or termination.
-    if (newCardStatus === MarqetaCardState.SUSPENDED || newCardStatus === MarqetaCardState.TERMINATED) {
-      console.log('// Sending card deactivated notification //');
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.CARD_TRANSITION,
-        body: `Your ${cardType} card has been deactivated.`,
-        title: 'Security Alert!',
-      });
-    }
   }
 };
 
 export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
   const { year, month } = extractYearAndMonth(cardFromWebhook.expiration_time);
-  const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.card_token });
-  const origCreatedTime = existingCard?.createdOn;
-
-  if (!existingCard) {
-    return;
-  }
+  const existingCard = await CardModel.findOne({ 'integrations.marqeta.card_token': cardFromWebhook?.token });
 
   const newData: any = {
-    card_token: cardFromWebhook?.card_token,
+    card_token: cardFromWebhook?.token,
     user_token: cardFromWebhook?.user_token,
     card_product_token: cardFromWebhook?.card_product_token,
     pan: encrypt(cardFromWebhook?.pan),
     last_four: encrypt(cardFromWebhook?.last_four),
     expr_month: month,
     expr_year: year,
-    created_time: existingCard?.integrations.marqeta.created_time,
+    created_time: existingCard?.integrations?.marqeta?.created_time,
     pin_is_set: existingCard?.integrations?.marqeta?.pin_is_set,
     state: cardFromWebhook?.state,
     fulfillment_status: cardFromWebhook?.fulfillment_status,
-    reson: cardFromWebhook.reason,
-    reson_code: cardFromWebhook.reason_code,
+    reason: cardFromWebhook?.reason,
+    reason_code: cardFromWebhook?.reason_code,
   };
 
-  if (existingCard?.integrations?.marqeta?.instrument_type) {
-    newData.instrument_type = existingCard?.integrations?.marqeta?.instrument_type;
+  // if not an existing card, create a new card
+  if (!existingCard) {
+    // if virtual card ensure set to active when first created
+    if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
+    await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
+  } else {
+    existingCard.integrations.marqeta = newData;
+    existingCard.lastModified = dayjs().utc().toDate();
+    existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
+    await existingCard.save();
   }
-
-  if (existingCard?.integrations?.marqeta?.barcode) {
-    newData.barcode = existingCard?.integrations?.marqeta?.barcode;
-  }
-
-  existingCard.integrations.marqeta = newData;
-  existingCard.lastModified = dayjs().utc().toDate();
-  existingCard.createdOn = origCreatedTime;
-  existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
-  await existingCard.save();
 };
 
 export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCardsEvent) => {
@@ -495,18 +482,30 @@ export const sendCardUpdateEmails = async (cardFromWebhook: IMarqetaWebhookCards
 };
 
 export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookCardsEvent) => {
-  // if reason attribute is missing in cardWebhookData then populate the reson based on reson_code
-  if (!cardWebhookData.reason) {
-    const { reason_code } = cardWebhookData;
-    cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+  // Instantiate the MarqetaClient
+  const marqetaClient = new MarqetaClient();
+
+  // Instantiate the CARD class
+  const cardClient = new Card(marqetaClient);
+  const cardDataInMarqeta = await cardClient.getCardDetails(cardWebhookData?.card_token);
+
+  if (!cardDataInMarqeta) throw new CustomError(`Card with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
+  // if reason attribute is missing in cardWebhookData then populate the reason based on reason_code
+  console.log('[+] Handling Marqeta Card Webhook', {
+    cardWebhookData,
+  });
+
+  if (cardWebhookData.state === cardDataInMarqeta.state) {
+    if (!cardWebhookData.reason) {
+      const { reason_code } = cardWebhookData;
+      cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+    }
   }
+
   const user = await UserModel.findOne({ 'integrations.marqeta.userToken': cardWebhookData?.user_token });
   if (!user?._id) throw new CustomError(`User with marqeta user token of ${cardWebhookData?.user_token} not found`, ErrorTypes.NOT_FOUND);
   const prevCardData = await CardModel.findOne({ 'integrations.marqeta.card_token': cardWebhookData?.card_token });
-  if (!prevCardData) {
-    await mapMarqetaCardtoCard(user._id.toString(), cardWebhookData);
-  }
-  await handleMarqetaCardNotificationFromWebhook(cardWebhookData, prevCardData, user);
-  await updateCardFromMarqetaCardWebhook(cardWebhookData);
-  await sendCardUpdateEmails(cardWebhookData);
+  await updateCardFromMarqetaCardWebhook(cardDataInMarqeta);
+  await sendCardUpdateEmails(cardDataInMarqeta);
+  await handleMarqetaCardNotificationFromWebhook(cardDataInMarqeta, prevCardData, user);
 };

@@ -15,11 +15,12 @@ const gpa = new GPA(marqetaClient);
 
 export const fundUserGPAFromProgramFundingSource = async (params: IMarqetaLoadGpaFromProgramFundingSource) => {
   const { userId, amount, tags, memo } = params;
-
+  // we must keep 25000 in the program funding source at all times
+  const minimumBalance = 25000 + amount;
   // get the program funding source balance
   const programFundingResponse = await gpa.getProgramFundingBalance();
 
-  if (process.env.MARQETA_APPLICATION_TOKEN === 'immxmgr_prod_api_consumer' && programFundingResponse?.available_balance < amount) {
+  if (process.env.MARQETA_APPLICATION_TOKEN === 'immxmgr_prod_api_consumer' && programFundingResponse?.available_balance < minimumBalance) {
     throw new CustomError('Program funding source balance is not enough to make a cashBack !', ErrorTypes.UNPROCESSABLE);
   }
   // find the user in DB
@@ -28,6 +29,7 @@ export const fundUserGPAFromProgramFundingSource = async (params: IMarqetaLoadGp
   if (!userData || !userData.integrations?.marqeta?.userToken) {
     throw new CustomError(!userData ? 'User not found' : 'Marqeta userToken not found', ErrorTypes.NOT_FOUND);
   }
+
   // format the marqeta GPA order payload
   const marqetaGPAOrder: IMarqetaCreateGPAorder = {
     userToken: userData.integrations.marqeta.userToken,

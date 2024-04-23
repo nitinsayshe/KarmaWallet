@@ -2,8 +2,9 @@
 import { GetPaginiatedResourceParams } from '.';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { ICardDocument } from '../../models/card';
 import { IRequest } from '../../types/request';
-import { IMarqetaCardTransition, IMarqetaCreateCard, IVGSToken, ListCardsResponse, MarqetaCardModel, PaginatedMarqetaResponse } from './types';
+import { IMarqetaCardTransition, IMarqetaCreateCard, IVGSToken, ListCardsResponse, MarqetaCardModel, MarqetaCardState, PaginatedMarqetaResponse } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
@@ -11,6 +12,7 @@ const marqetaClient = new MarqetaClient();
 const cardClient = new Card(marqetaClient);
 
 export const createCard = async (params: IMarqetaCreateCard) => {
+  console.log('///// Ordering a card with product token:', params.cardProductToken);
   const cardResponse = await cardClient.createCard(params);
   return cardResponse;
 };
@@ -46,4 +48,24 @@ export const tokenizeCard = async (req: IRequest<{ cardToken: string }, {}, {}>)
 export const deTokenizeCard = async (params: IVGSToken) => {
   const userResponse = await cardClient.deTokenizeCard(params);
   return { data: userResponse };
+};
+
+export const terminateMarqetaCards = async (cards: ICardDocument[]) => {
+  const transitionedCards = [];
+  // terminate the cards in marqeta
+  for (const card of cards) {
+    try {
+      const transitionCard = await cardClient.cardTransition({
+        cardToken: card.integrations.marqeta.card_token,
+        channel: 'API',
+        state: MarqetaCardState.TERMINATED,
+        reasonCode: '01',
+      });
+      transitionedCards.push(transitionCard);
+    } catch (err) {
+      throw new Error('Error terminating Marqeta card');
+    }
+  }
+
+  return transitionedCards;
 };

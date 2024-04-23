@@ -1,10 +1,7 @@
 import isemail from 'isemail';
 import dayjs from 'dayjs';
 import crypto from 'crypto';
-import {
-  IUserDocument, UserModel,
-  UserEmailStatus,
-} from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import CustomError from '../../lib/customError';
 import {
   TokenTypes, emailVerificationDays, ErrorTypes,
@@ -15,6 +12,7 @@ import { sendEmailVerification } from '../email';
 import { UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { checkIfUserWithEmailExists } from './utils';
+import { UserEmailStatus } from '../../models/user/types';
 
 export interface IEmailVerificationData {
   email: string;
@@ -62,7 +60,6 @@ export const verifyBiometric = async (email: string, biometricSignature: string,
 export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificationData>>) => {
   const { requestor } = req;
   const { tokenValue } = req.body;
-  if (!tokenValue) throw new CustomError('No token value included.', ErrorTypes.INVALID_ARG);
   const token = await TokenService.getTokenAndConsume({ user: requestor, value: tokenValue, type: TokenTypes.Email });
   if (!token) throw new CustomError('Token not found. Please request email verification again.', ErrorTypes.INVALID_ARG);
   const email = token?.resource?.email;
@@ -76,7 +73,6 @@ export const verifyEmail = async (req: IRequest<{}, {}, Partial<IEmailVerificati
 // provides endpoint for UI to check if an email already exists on a user
 export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
   const email = req.body.email?.toLowerCase();
-  if (!email) throw new CustomError('No email provided.', ErrorTypes.INVALID_ARG);
   const userExists = await checkIfUserWithEmailExists(email);
   if (!!userExists) throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
   return 'User with this email does not exist';

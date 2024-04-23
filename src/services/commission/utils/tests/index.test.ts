@@ -9,7 +9,7 @@ import {
   RewardStatus,
   RewardType,
   TransactionStatus,
-} from '../../../../clients/kard';
+} from '../../../../clients/kard/types';
 import { MongoClient } from '../../../../clients/mongo';
 import { CardStatus, KardEnrollmentStatus } from '../../../../lib/constants';
 import { NotificationTypeEnum } from '../../../../lib/constants/notification';
@@ -30,7 +30,8 @@ import { ICommissionDocument } from '../../../../models/commissions';
 import { ICompanyDocument } from '../../../../models/company';
 import { IMerchantDocument } from '../../../../models/merchant';
 import { ITransactionDocument } from '../../../../models/transaction';
-import { IUserDocument, UserEmailStatus } from '../../../../models/user';
+import { IUserDocument } from '../../../../models/user';
+import { UserEmailStatus } from '../../../../models/user/types';
 import { IUserNotificationDocument } from '../../../../models/user_notification';
 import { createEarnedCashbackEmailNotificationFromCommission } from '../../../user_notification';
 

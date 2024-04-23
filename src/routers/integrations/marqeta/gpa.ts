@@ -6,14 +6,25 @@ import { UserRoles } from '../../../lib/constants';
 
 const router = Router();
 
-router.route('/addfund')
-  .post(GPAController.fundUserGPAFromProgramFundingSource);
+router.post(
+  '/addfund',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+  GPAController.fundUserGPAFromProgramFundingSource,
+);
 
-router.route('/balance')
-  .get(authenticate, GPAController.getGPAbalance);
+router.get(
+  '/balance',
+  authenticate,
+  GPAController.getGPAbalance,
+);
 
-router.route('/program-balance')
-  .get(GPAController.getProgramFundingBalance);
+router.get(
+  '/program-balance',
+  authenticate,
+  protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+  GPAController.getProgramFundingBalance,
+);
 
 router.post(
   '/unload',

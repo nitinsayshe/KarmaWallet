@@ -35,21 +35,21 @@ export const getSumOfTransactionsByTransactionSubType = (transactionSubType: Tra
   return sum;
 };
 
-export const getStartBalance = (transaction: ITransaction) => {
+export const getEndBalance = (transaction: ITransaction) => {
   if (!!transaction?.integrations?.marqeta?.relatedTransactions && !!transaction?.integrations?.marqeta?.relatedTransactions.length) {
     const sortByNewestFirst = transaction.integrations.marqeta.relatedTransactions.sort((a, b) => (dayjs(a.local_transaction_date).isBefore(dayjs(b.local_transaction_date)) ? 1 : -1));
     const mostRecentTransaction = sortByNewestFirst[0];
-    return mostRecentTransaction.gpa.available_balance;
+    return mostRecentTransaction.gpa.ledger_balance;
   }
-  return transaction.integrations.marqeta.gpa.available_balance;
-};
 
-export const getEndBalance = (transaction: ITransaction) => transaction.integrations.marqeta.gpa.available_balance;
+  return transaction.integrations?.marqeta?.gpa?.ledger_balance;
+};
 
 export const getStatementData = async (transactionsArray: ITransaction[], userId: string) => {
   const hasTransactions = transactionsArray.length > 0;
   const previousStatements = await KarmaCardStatementModel.find({ userId });
   const isFirstStatement = previousStatements.length === 0;
+  const lastStatement = !isFirstStatement ? previousStatements[previousStatements.length - 1] : null;
 
   let endBalanceFromLastStatement = 0;
   let transactionsSortedByDate: ITransaction[] | [] = [];
@@ -60,27 +60,28 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
   let adjustments = 0;
   let cashback = 0;
   let credits = 0;
+  let withdrawals = 0;
 
   if (!!hasTransactions) {
-    transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.date).isBefore(dayjs(b.date)) ? -1 : 1));
-    startBalance = !!isFirstStatement ? 0 : getStartBalance(transactionsSortedByDate[0]);
+    transactionsSortedByDate = transactionsArray.sort((a, b) => (dayjs(a.sortableDate).isBefore(dayjs(b.sortableDate)) ? -1 : 1));
+    startBalance = !!isFirstStatement ? 0 : lastStatement.transactionTotals.endBalance;
     endBalance = getEndBalance(transactionsSortedByDate[transactionsSortedByDate.length - 1]);
     const debitsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Debit, transactionsSortedByDate);
     const depositsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Deposit, transactionsSortedByDate);
     const adjustmentsTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Adjustment, transactionsSortedByDate);
     const cashbackTotal = getSumOfTransactionsByTransactionSubType(TransactionCreditSubtypeEnum.Cashback, transactionsSortedByDate);
     const creditTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Credit, transactionsSortedByDate) - cashbackTotal;
+    const withdrawalTotal = getSumOfTransactionsByTransactionType(TransactionTypeEnum.Withdrawal, transactionsSortedByDate);
 
     debits = debitsTotal;
     deposits = depositsTotal;
     adjustments = adjustmentsTotal;
     cashback = cashbackTotal;
     credits = creditTotal;
+    withdrawals = withdrawalTotal;
   } else {
-    const statements = await KarmaCardStatementModel.find({ userId });
-    const lastStatement = statements[statements.length - 1];
     endBalanceFromLastStatement = lastStatement?.transactionTotals?.endBalance;
-    if (!statements.length) {
+    if (!previousStatements.length) {
       endBalance = 0;
       startBalance = 0;
     } else {
@@ -97,6 +98,7 @@ export const getStatementData = async (transactionsArray: ITransaction[], userId
     adjustments,
     cashback,
     credits,
+    withdrawals,
   };
 };
 
@@ -119,7 +121,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
   } else {
     const transactions = await TransactionModel.find({
       user: userId,
-      date: {
+      sortableDate: {
         $gte: startDate,
         $lte: endDate,
       },
@@ -161,6 +163,16 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
 
   // placeholder for testing, if generation fails we would also want to delete the statement maybe?
   await statement.save();
+};
+
+export const generateKarmaCardStatementForAllUsers = async (startDate: string, endDate: string) => {
+  const usersWithKarmaCards = await UserModel.find({
+    'integrations.marqeta': { $exists: true },
+  });
+
+  for (const cardholder of usersWithKarmaCards) {
+    await generateKarmaCardStatement(cardholder._id.toString(), startDate, endDate);
+  }
 };
 
 export const getKarmaCardStatementPDF = async (req: IRequest<IKarmaCardStatementIdParam, {}, {}>) => {

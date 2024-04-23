@@ -14,6 +14,8 @@ import { sleep } from '../../lib/misc';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IUserDocument, UserModel } from '../../models/user';
 import { getCardStatusFromMarqetaCardState } from '../card';
+import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 
 dayjs.extend(utc);
 
@@ -210,7 +212,8 @@ export const updateMarqetaCards = async (
               barcode: card?.barcode,
             },
           });
-          return existingCard.save();
+          const updatedCard = await existingCard.save();
+          return updatedCard;
         } catch (err) {
           console.error(`error saving user ${existingCard._id}: ${err}`);
           return null;
@@ -223,39 +226,33 @@ export const updateMarqetaCards = async (
   }
 };
 
-export const updateMarqetaUser = async (user: MarqetaUserModel, usersWithMarqetaIntegrations: IUserDocument[]) => {
-  console.log(`syncing user with marqeta user token: ${user.token}`);
-  const existingUser = usersWithMarqetaIntegrations.find((u) => u.integrations.marqeta.userToken === user.token);
-  if (!existingUser) {
-    console.error(`Marqeta user with token: ${user.token} is missing from our database`);
-    return null;
-  }
+export const updateUserVisitorModelWithMarqetaUserData = async (existingUser: IVisitorDocument | IUserDocument, newUserDataFromMarqeta: MarqetaUserModel) => {
   try {
     // update the existing user with the marqeta user info
     const existingIntegration = existingUser?.integrations?.marqeta;
     const userDataToSet: any = {
       lastModified: dayjs().utc().toDate(),
       'integrations.marqeta': {
-        userToken: user.token,
+        userToken: newUserDataFromMarqeta.token,
         kycResult: existingIntegration?.kycResult,
-        email: user?.email,
-        address1: user?.address1,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        birth_date: user.birth_date,
-        city: user.city,
-        state: user.state,
-        country: user.country,
-        postal_code: user.postal_code,
+        email: newUserDataFromMarqeta?.email,
+        address1: newUserDataFromMarqeta?.address1,
+        first_name: newUserDataFromMarqeta.first_name,
+        last_name: newUserDataFromMarqeta.last_name,
+        birth_date: newUserDataFromMarqeta.birth_date,
+        city: newUserDataFromMarqeta.city,
+        state: newUserDataFromMarqeta.state,
+        country: newUserDataFromMarqeta.country,
+        postal_code: newUserDataFromMarqeta.postal_code,
         account_holder_group_token: existingUser.integrations.marqeta.account_holder_group_token,
         identifications: existingUser.integrations.marqeta.identifications,
-        status: user.status,
-        created_time: user.created_time,
+        status: newUserDataFromMarqeta.status,
+        created_time: newUserDataFromMarqeta.created_time,
       },
     };
 
-    if (!!user.address2) userDataToSet.address2 = user.address2;
-    if (!!user.phone) userDataToSet.phone_number = user.phone;
+    if (!!newUserDataFromMarqeta.address2) userDataToSet.address2 = newUserDataFromMarqeta.address2;
+    if (!!newUserDataFromMarqeta.phone) userDataToSet.phone_number = newUserDataFromMarqeta.phone;
 
     existingUser.set(userDataToSet);
     return existingUser.save();
@@ -265,34 +262,50 @@ export const updateMarqetaUser = async (user: MarqetaUserModel, usersWithMarqeta
   }
 };
 
+export const executeMarqetaUserUpdates = async (user: IUserDocument | IVisitorDocument, marqetaUser: MarqetaUserModel) => {
+  await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(user, marqetaUser);
+  await updateUserVisitorModelWithMarqetaUserData(user, marqetaUser);
+};
+
 export const marqetaUserSync = async () => {
   const overallTimeString = `Marqeta user sync on: ${dayjs().toISOString()}`;
+  let visitorCount = 0;
+  let userCount = 0;
+
   console.time(overallTimeString);
   console.log('\n');
   console.log(`marqeta user sync started for ${dayjs().toISOString()}`);
 
   // pull all users with marqeta integration
-  const usersWithMarqetaIntegrations = await UserModel.find({ 'integrations.marqeta.userToken': { $exists: true } });
-  if (!usersWithMarqetaIntegrations?.length) {
+  const usersWithMarqetaIntegration = await UserModel.find({ 'integrations.marqeta.userToken': { $exists: true } });
+  const visitorsWithMarqetaIntegration = await VisitorModel.find({ 'integrations.marqeta.userToken': { $exists: true } });
+  if (!usersWithMarqetaIntegration?.length && !visitorsWithMarqetaIntegration?.length) {
     throw new Error('error retrieving users with marqeta integration');
   }
 
   // get all our users from marqeta
   const marqetaUsers = await getMarqetaUsers();
-  if (!marqetaUsers?.length) {
-    throw new Error('error retrieving marqeta users');
+  if (!marqetaUsers?.length) throw new Error('error retrieving marqeta users');
+
+  for (const marqetaUser of marqetaUsers) {
+    const existingUser = usersWithMarqetaIntegration.find((u) => u.integrations.marqeta.userToken === marqetaUser.token);
+    const existingVisitor = visitorsWithMarqetaIntegration.find((v) => v.integrations.marqeta.userToken === marqetaUser.token);
+
+    if (!!existingUser) {
+      userCount += 1;
+      console.log(`[+] Updating user ${existingUser._id} with data from Marqeta`);
+      await executeMarqetaUserUpdates(existingUser, marqetaUser);
+    } else if (!!existingVisitor) {
+      visitorCount += 1;
+      console.log(`[+] Updating visitor ${existingUser._id} with data from Marqeta`);
+      await executeMarqetaUserUpdates(existingVisitor, marqetaUser);
+    }
   }
 
-  // make sure each one is already in usersWithMarqetaIntegrations
-  const savedUsers = (
-    await Promise.all(marqetaUsers.map(async (marqetaUser) => updateMarqetaUser(marqetaUser, usersWithMarqetaIntegrations)))
-  ).filter((u) => !!u);
-
-  console.log(`saved/updated ${savedUsers.length} users`);
-
+  console.log(`[+] Saved/updated ${userCount} users and ${visitorCount} visitor with data from Marqeta job sync`);
   console.log('\n');
   console.timeEnd(overallTimeString);
-  console.log('user sync complete');
+  console.log('[+] Marqeta user sync complete');
   console.log('\n');
 };
 
@@ -320,10 +333,12 @@ export const marqetaCardSync = async () => {
   for (const marqetaUser of usersWithMarqetaIntegrations) {
     const marqetaCardsForUser = await getMarqetaCardsForUser(marqetaUser?.integrations?.marqeta?.userToken);
     if (!marqetaCardsForUser?.length) {
-      throw new Error('error retrieving marqeta users');
+      console.log('Error retrieving cards for user, skipping');
+      continue;
+    } else {
+      savedCards.push(await updateMarqetaCards(marqetaCardsForUser, cardsWithMarqetaIntegration));
+      await sleep(SleepMS);
     }
-    savedCards.push(await updateMarqetaCards(marqetaCardsForUser, cardsWithMarqetaIntegration));
-    await sleep(SleepMS);
   }
   const flattenedSavedCards = savedCards.flat().filter((c) => !!c);
 

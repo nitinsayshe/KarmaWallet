@@ -7,8 +7,9 @@ import { IEmailTemplateConfig, EmailTemplateTypes } from '../lib/constants/email
 import { AwsClient } from '../clients/aws';
 import { JobNames } from '../lib/constants/jobScheduler';
 import { createSentEmailDocument } from '../services/email';
-import { UserEmailStatus, UserModel } from '../models/user';
+import { UserModel } from '../models/user';
 import { IVisitorDocument } from '../models/visitor';
+import { UserEmailStatus } from '../models/user/types';
 
 /**
  * !IMPORTANT!

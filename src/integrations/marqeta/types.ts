@@ -2,7 +2,6 @@ import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
 import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
-import { NACHAACHReturnCodeEnumValues } from '../../services/achTransfers/types';
 
 interface Identification {
   type: string;
@@ -223,20 +222,6 @@ export interface IACHTransition {
   last_modified_time: Date;
 }
 
-export interface IACHBankTransfer {
-  token: string;
-  amount: number;
-  channel: string;
-  funding_source_token: string;
-  type: string;
-  currency_code: string;
-  transfer_speed: string;
-  status: string;
-  transitions: IACHTransition;
-  created_time: Date;
-  last_modified_time: Date;
-}
-
 export interface IACHFundingSource {
   token: string;
   accessToken?: string;
@@ -384,7 +369,7 @@ export interface IMarqetaWebhookCardsEvent {
   fulfillment_status: MarqetaCardFulfillmentStatus;
   last_four: string;
   pan: string;
-  pin_is_set: Boolean;
+  pin_is_set: boolean;
   reason: string;
   reason_code: string;
   state: MarqetaCardState;
@@ -433,6 +418,7 @@ export type MarqetaUserModel = {
   token: string;
   active?: boolean;
   first_name?: string;
+  middle_name?: string;
   last_name?: string;
   email?: string;
   address1?: string;
@@ -445,13 +431,46 @@ export type MarqetaUserModel = {
   phone?: string;
   uses_parent_account?: boolean;
   corporate_card_holder?: boolean;
-  created_time?: string;
-  last_modified_time?: string;
+  created_time?: Date;
+  last_modified_time?: Date;
   metadata?: Record<string, any>;
   account_holder_group_token?: string;
-  status?: string;
+  status?: IMarqetaUserStatus;
   identifications?: Identification[];
 };
+
+export interface IMarqetaKycResult {
+  status: IMarqetaKycState;
+  codes: string[];
+}
+
+interface IMarqetaIdentification {
+  type: string,
+  value: string,
+}
+
+export interface IMarqetaUserIntegrations {
+  userToken: string;
+  email?: string;
+  kycResult?: IMarqetaKycResult;
+  first_name?: string;
+  last_name?: string;
+  birth_date?: string;
+  phone?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  postal_code?: string;
+  account_holder_group_token?: string;
+  identifications?: IMarqetaIdentification[];
+  status?: IMarqetaUserStatus;
+  created_time?: string;
+  _id?: string;
+  reason?: string;
+  reason_code?: string;
+}
 
 export const ACHTransferTransitionStatusEnum = {
   Pending: 'PENDING',
@@ -687,6 +706,49 @@ export enum MarqetaUserTransitionReasonCode {
   'other' = '31',
 }
 
+export const NACHAACHReturnCodesEnum = {
+  R01: 'Insufficient Funds',
+  R02: 'Account Closed',
+  R03: 'No Account/Unable to Locate Account',
+  R04: 'Invalid Account Number',
+  R05: 'Improper Debit to Consumer Account',
+  R06: 'Returned per ODFI Request',
+  R07: 'Authorization Revoked by Customer',
+  R08: 'Payment Stopped',
+  R09: 'Uncollected Funds',
+  R10: 'Customer Advises Originator is Not Known to Receiver and/or Originator is Not Authorized by Receiver to Debit Receiver’s Account',
+  R11: 'Customer Advises Entry Not in Accordance with the Terms of the Authorization',
+  R12: 'Branch Sold to Another DFI',
+  R13: 'RDFI Not Qualified to Participate',
+  R14: 'Representative Payee Deceased or Unable to Continue in that Capacity',
+  R15: 'Beneficiary or Account Holder Deceased',
+  R16: 'Bank Account Frozen',
+  R17: 'File Record Edit Criteria',
+  R18: 'Improper Effective Entry Date',
+  R19: 'Amount Field Error',
+  R20: 'Non-Transaction Account',
+  R21: 'Invalid Company Identification',
+  R22: 'Invalid Individual ID Number',
+  R23: 'Credit Entry Refused by Receiver',
+  R24: 'Duplicate Entry',
+  R25: 'Addenda Error',
+  R26: 'Mandatory Field Error',
+  R27: 'Trace Number Error',
+  R28: 'Routing Number Check Digit Error',
+  R29: 'Corporate Customer Advises Not Authorized',
+  R30: 'RDFI Not Participant in Check Truncation Program',
+  R31: 'Permissible Return Entry',
+  R32: 'RDFI Non-Settlement',
+  R33: 'Return of XCK Entry',
+  R34: 'Limited Participation DFI',
+  R35: 'Return of Improper Debit Entry',
+  R36: 'Return of Improper Credit Entry',
+  R37: 'Source Document Presented for Payment',
+  R38: 'Stop Payment on Source Document',
+  R39: 'Improper Source Document',
+} as const;
+export type NACHAACHReturnCodeEnumValues = (typeof NACHAACHReturnCodesEnum)[keyof typeof NACHAACHReturnCodesEnum];
+
 export interface IMarqetaUserTransitionsEvent {
   token: string;
   status: IMarqetaUserStatus;
@@ -708,16 +770,6 @@ export interface IMarqetaBankTransferTransitionEvent {
   channel: string;
   created_time: Date;
   last_modified_time: Date;
-}
-
-export interface IMarqetaWebhookBody {
-  cards: IMarqetaWebhookCardsEvent[];
-  cardactions: IMarqetaCardActionEvent[];
-  chargebacktransitions: ChargebackTransition[];
-  usertransitions: IMarqetaUserTransitionsEvent[];
-  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
-  transactions: TransactionModel[];
-  cardtransitions: IMarqetaWebhookCardsEvent[];
 }
 
 export interface IMarqetaWebhookHeader {
@@ -752,6 +804,135 @@ export const MCCStandards = {
 export const InsufficientFundsConstants = {
   CODES: ['1016', '1865', '1923'],
 };
+
+export enum DepositAccountTypes {
+  DEPOSIT_ACCOUNT = 'DEPOSIT_ACCOUNT',
+  CHECKING = 'CHECKING',
+}
+
+export interface IMarqetaDepositAccount {
+  userToken: string;
+  type: DepositAccountTypes;
+}
+
+export enum IMarqetaDepositAccountTransitionState {
+  ACTIVE = 'ACTIVE',
+  SUSPENDED = 'SUSPENDED',
+  TERMINATED = 'TERMINATED',
+}
+
+export enum IMarqetaDepositAccountChannel {
+  API = 'API',
+  ADMIN = 'ADMIN',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IMarqetaDepositAccountTransition {
+  channel?: IMarqetaDepositAccountChannel;
+  accountToken: string;
+  state: IMarqetaDepositAccountTransitionState;
+  reason: string;
+}
+
+export interface IMarqetaDepositAccountData {
+  account_number: string;
+  created_time: Date;
+  last_modified_time: Date;
+  routing_number: string;
+  state: IMarqetaDepositAccountTransitionState;
+  token: string;
+  type: DepositAccountTypes;
+  user_token: string;
+}
+
+export interface IMarqetaDirectDepositWebhookEvent {
+  // webhook token
+  token: string;
+  user_token: string;
+  // direct deposit token
+  account_token: string;
+  state: IMarqetaDepositAccountTransitionState;
+  reason: string;
+  created_time: string;
+}
+
+export interface IMarqetaWebhookBody {
+  cards: IMarqetaWebhookCardsEvent[];
+  cardactions: IMarqetaCardActionEvent[];
+  chargebacktransitions: ChargebackTransition[];
+  usertransitions: IMarqetaUserTransitionsEvent[];
+  banktransfertransitions: IMarqetaBankTransferTransitionEvent[];
+  transactions: TransactionModel[];
+  cardtransitions: IMarqetaWebhookCardsEvent[];
+  directdepositaccounttransitions: IMarqetaDirectDepositWebhookEvent[];
+}
+
+export interface IGPABalanceResponseData {
+  currency_code: string;
+  ledger_balance: number;
+  available_balance: number;
+  credit_balance: number;
+  pending_credits: number;
+}
+
+export interface IGPABalanceResponse {
+  gpa: IGPABalanceResponseData;
+}
+
+export enum IDeviceType {
+  MOBILE_PHONE = 'MOBILE_PHONE',
+  WATCH = 'WATCH',
+  TABLET = 'TABLET'
+}
+
+export interface IAppleWalletProvision {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  certificates: string[];
+  nonce: string;
+  nonceSignature: string;
+}
+
+export interface IGoogleWalletProvision {
+  cardToken: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  walletAccountId: string;
+  deviceId: string;
+}
+
+export interface ISamsungWalletProvision {
+  cardToken: string;
+  deviceId: string;
+  deviceType: IDeviceType;
+  provisioningAppVersion: string;
+  walletUserId: string;
+}
+
+enum IDigitalWalletTransitionChannel {
+  TOKEN_SERVICE_PROVIDER = 'TOKEN_SERVICE_PROVIDER',
+  TOKEN_SERVICE_PROVIDER_API = 'TOKEN_SERVICE_PROVIDER_API',
+  DIGITAL_WALLET = 'DIGITAL_WALLET',
+  API = 'API',
+  IVR = 'IVR',
+  FRAUD = 'FRAUD',
+  ADMIN = 'ADMIN',
+  SYSTEM = 'SYSTEM'
+}
+
+export interface IDigitalWalletTokenTransition {
+  channel?:IDigitalWalletTransitionChannel;
+  digitalWalletToken: {
+    token: string;
+    cardToken?: string;
+  },
+  state: string;
+  reason?: string;
+  reasonCode?: string;
+}
 
 export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
 export type GetUserByEmailResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;

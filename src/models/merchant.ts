@@ -1,5 +1,5 @@
 import { Document, model, ObjectId, PaginateModel, Schema } from 'mongoose';
-import { MerchantSource, OfferType, OfferSource, CommissionType } from '../clients/kard';
+import { CommissionType, OfferType, OfferSource, MerchantSource } from '../clients/kard/types';
 import { CardNetwork } from '../lib/constants';
 import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
@@ -11,6 +11,8 @@ export interface IKardOffer {
   merchantLocationIds?: string[]; // location ids when isLocationSpecific is true
   offerType: OfferType;
   source?: OfferSource;
+  status?: string;
+  isTargeted?: boolean;
   commissionType: CommissionType;
   isLocationSpecific: boolean;
   optInRequired?: boolean;
@@ -62,7 +64,7 @@ export interface IKardMerchantIntegration {
   source: MerchantSource;
   description: string;
   imgUrl: string;
-  bannerImgUrl: string;
+  bannerImgUrl?: string;
   websiteURL: string;
   acceptedCards: CardNetwork[];
   category: string;
@@ -86,6 +88,9 @@ export interface IShareableMerchant {
   name: string;
   integrations: IMerchantIntegrations;
   karmaCollectiveMember?: boolean;
+  maxRateType?: string;
+  maxAmount?: string;
+  maxDescription?: string;
 }
 
 export interface IMerchant extends IShareableMerchant {
@@ -155,6 +160,8 @@ const merchant = new Schema({
           merchantLocationIds: [{ type: String }],
           offerType: { type: String, enum: Object.values(OfferType) },
           source: { type: String, enum: Object.values(OfferSource) },
+          status: { type: String },
+          isTargeted: { type: Boolean },
           commissionType: { type: String, enum: Object.values(CommissionType) },
           isLocationSpecific: { type: Boolean },
           optInRequired: { type: Boolean },

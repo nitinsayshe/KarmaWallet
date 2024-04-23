@@ -87,13 +87,21 @@ export interface IGetCompanyDataParams {
   page: string;
   limit: string;
 }
+
 export interface IGetPartnerQuery {
   companyId: string;
+}
+
+export enum FeaturedCashbackSortOptions {
+  HighestCashback = 'highestCashback',
+  Alphabetical = 'alphabetical',
 }
 
 export interface IGetFeaturedCashbackCompaniesQuery {
   location?: CashbackCompanyDisplayLocation;
   'sectors.sector'?: string;
+  sort?: FeaturedCashbackSortOptions;
+  number?: string;
 }
 
 export interface IGetFeaturedCashbackCompaniesRequest {
@@ -423,7 +431,7 @@ export const getCompanyById = async (req: IRequest, _id: string, includeHidden =
   }
 };
 
-// exclude karma collective cashback offers by default (web), mobile app will need to pass thru `includeKarmaCollective=true`
+// exclude karma collective cashback offers, mobile app will need to pass thru `includeKarmaCollective=true`
 export const getCompanies = async (request: ICompanySearchRequest, query: FilterQuery<ICompany>, includeHidden = false) => {
   const { filter } = query;
   let unsdgQuery = {};
@@ -437,6 +445,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const cashbackOnly = !!filter?.merchant;
   const karmaCollectiveMember = !!filter?.karmaCollectiveMember;
   const includeKarmaCollective = !!filter?.includeKarmaCollective;
+  const hideKardOffers = !!filter?.hideKardOffers;
 
   if (unsdgs) {
     delete filter.evaluatedUnsdgs;
@@ -540,6 +549,15 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       aggregateSteps.push({
         $match: {
           'merchant.karmaCollectiveMember': { $ne: true },
+        },
+      });
+    }
+
+    if (hideKardOffers) {
+      delete filter.hideKardOffers;
+      aggregateSteps.push({
+        $match: {
+          'merchant.integrations.kard': { $exists: false },
         },
       });
     }
@@ -1182,6 +1200,79 @@ export const getPartner = async (req: IRequest<{}, IGetPartnerQuery, {}>) => {
   return partner;
 };
 
+export const sortByMaxRate = (companies: any[]) => companies.sort((a, b) => {
+  const aRate = parseFloat(a.merchant.maxAmount.slice(0, -1));
+  const bRate = parseFloat(b.merchant.maxAmount.slice(0, -1));
+  return bRate - aRate;
+});
+
+export const getKarmaCollectiveCompanies = async () => {
+  const karmaCollectiveMerchants = await MerchantModel.find({
+    karmaCollectiveMember: true,
+    $or: [
+      { 'merchant.integrations.wildfire.domains.Merchant.MaxRate': { $ne: null } },
+      { $and:
+          [
+            { 'merchant.integrations.kard': { $exists: true } },
+            { 'merchant.integrations.kard.maxOffer.totalCommission': { $ne: 0 } },
+          ],
+      },
+    ],
+  });
+
+  const merchantIds = karmaCollectiveMerchants.map(m => m._id.toString());
+
+  const companies = await CompanyModel
+    .find({
+      merchant: {
+        $in: merchantIds,
+      },
+    })
+    .populate([
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+    ]);
+
+  const shareableCompanies = companies.map(c => getShareableCompany(c));
+  const sortedCompanies = sortByMaxRate(shareableCompanies);
+  return sortedCompanies;
+};
+
+export const getFeaturedCashbackCompaniesUnpaginated = async (req: IGetFeaturedCashbackCompaniesRequest) => {
+  const { location, number, sort } = req.query;
+  const numberToReturn: number = !!number ? parseInt(number) : 10;
+
+  if (!location) throw new CustomError('Location is required', ErrorTypes.INVALID_ARG);
+  const locationArray = location.split(',');
+
+  const companies = await CompanyModel
+    .find({
+      'featuredCashback.location': { $in: locationArray },
+      'featuredCashback.status': true,
+      rating: { $ne: CompanyRating.Negative },
+      merchant: { $ne: null },
+    })
+    .populate([
+      {
+        path: 'merchant',
+        model: MerchantModel,
+      },
+    ])
+    .sort({ companyName: 1 });
+
+  const shareableCompanies = companies.map(c => getShareableCompany(c));
+
+  if (!!sort && sort === FeaturedCashbackSortOptions.HighestCashback) {
+    const sortedByMax = sortByMaxRate(shareableCompanies);
+    sortedByMax.length = numberToReturn;
+    return sortedByMax;
+  }
+
+  return shareableCompanies;
+};
+
 export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackCompaniesRequest, query: FilterQuery<ICompany>) => {
   const { location } = req.query;
   let sectorQuery = {};
@@ -1277,7 +1368,6 @@ export const getFeaturedCashbackCompanies = async (req: IGetFeaturedCashbackComp
 
   const companyAggregate = CompanyModel.aggregate(aggregateSteps);
   const companies = await CompanyModel.aggregatePaginate(companyAggregate, options);
-
   return companies;
 };
 
@@ -1293,4 +1383,16 @@ export const updateCompaniesFeaturedCashbackStatus = async (companiesToUpdate: I
     company.featuredCashback = data;
     await company.save();
   }
+};
+
+export const printCompaniesAndIdsForBlogCustomField = async () => {
+  // get all companies
+  const companies = await CompanyModel.find({});
+  // sort alphabetically
+  companies.sort((a, b) => {
+    if (a.companyName.toLowerCase() <= b.companyName.toLowerCase()) return -1;
+    if (a.companyName.toLowerCase() > b.companyName.toLowerCase()) return 1;
+    return 0;
+  });
+  companies.map((c) => console.log(`${c._id} : ${c.companyName}`));
 };

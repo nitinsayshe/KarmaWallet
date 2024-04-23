@@ -1,5 +1,6 @@
 // values for EmailTemplates should map to the directory names in /src/templates/email/
 export enum EmailTemplateKeys {
+  ContactUs = 'contactUs',
   AccountDeleteRequest = 'accountDeleteRequest',
   ACHTransferInitiation = 'achTransferInitiation',
   ACHTransferCancelled = 'achTransferCancelled',
@@ -29,6 +30,7 @@ export enum EmailTemplateKeys {
   DisputeReceivedNoProvisionalCreditIssued = 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped = 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued = 'caseLostProvisionalCreditNotAlreadyIssued',
+  KarmaCardDeclined = 'karmaCardDeclined',
 }
 
 export enum EmailTemplateTypes {
@@ -38,6 +40,7 @@ export enum EmailTemplateTypes {
   CashbackNotification = 'cashbackNotification',
   CreateAccountEmailReminder = 'createAccountEmailReminder',
   CreateAccountVerification = 'createAccountVerification',
+  ContactUs = 'contactUs',
   Dispute = 'dispute',
   Essential = 'essential',
   Marketing = 'marketing',
@@ -45,6 +48,7 @@ export enum EmailTemplateTypes {
   Support = 'support',
   Verification = 'verification',
   EmployerGift = 'employerGift',
+  KarmaCardDeclined = 'karmaCardDeclined',
 }
 
 export interface IEmailTemplateConfig {
@@ -169,6 +173,14 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   EmployerGift: {
     name: EmailTemplateKeys.EmployerGift,
     type: EmailTemplateTypes.EmployerGift,
+  },
+  KarmaCardDeclined: {
+    name: EmailTemplateKeys.KarmaCardDeclined,
+    type: EmailTemplateTypes.KarmaCardDeclined,
+  },
+  ContactUs: {
+    name: EmailTemplateKeys.ContactUs,
+    type: EmailTemplateTypes.ContactUs,
   },
 };
 

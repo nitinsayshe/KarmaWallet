@@ -13,7 +13,7 @@ import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperato
 import { verifyRequiredFields } from '../../lib/requestData';
 import { SentEmailModel } from '../../models/sentEmail';
 import { IRequest } from '../../types/request';
-import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
+import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -874,6 +874,101 @@ export const sendEmployerGiftEmail = async ({
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, amount } } as IBuildTemplateParams);
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user: user._id.toString() };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendKarmaCardDeclinedEmail = async ({
+  acceptedDocuments,
+  domain = process.env.FRONTEND_DOMAIN,
+  message,
+  name,
+  reason,
+  recipientEmail,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+  senderEmail = EmailAddresses.NoReply,
+  solutionText,
+  status,
+  user,
+  visitor,
+}: IKarmaCardDeclinedEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardDeclined;
+  const subject = 'Action Needed: Complete Your Identity Verification with Karma Wallet';
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'reason', 'acceptedDocuments'], {
+    domain,
+    recipientEmail,
+    name,
+    reason,
+    acceptedDocuments,
+    status,
+    solutionText,
+  });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { name, reason, acceptedDocuments, solutionText, message, kycStatus: status },
+  });
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+  };
+
+  if (visitor) jobData.visitor = visitor._id;
+  if (user) jobData.user = user._id;
+
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendContactUsEmail = async ({
+  department,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  firstName,
+  lastName,
+  email,
+  topic,
+  message,
+  visitor,
+  user,
+  phone,
+}: IContactUsEmail) => {
+  const emailTemplateConfig = EmailTemplateConfigs.ContactUs;
+  const { isValid, missingFields } = verifyRequiredFields(['firstName', 'email', 'topic', 'message'], {
+    recipientEmail,
+    firstName,
+    topic,
+    message,
+    email,
+  });
+
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+
+  const name = `${firstName}${lastName ? ` ${lastName}` : ''}`;
+
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { userEmail: email, name, reason: topic, message, department, phone },
+  });
+
+  const subject = `New Contact Us Submission - ${topic}`;
+  const jobData: IEmailJobData = {
+    user,
+    visitor,
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+  };
+
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

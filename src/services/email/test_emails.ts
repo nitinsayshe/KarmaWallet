@@ -17,11 +17,13 @@ import {
   sendEmployerGiftEmail,
   sendACHCancelledEmail,
   sendACHReturnedEmail,
+  sendKarmaCardDeclinedEmail,
 } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { UserModel } from '../../models/user';
 import { IRequest } from '../../types/request';
+import { IMarqetaKycState } from '../../integrations/marqeta/types';
 
 dayjs.extend(utc);
 
@@ -401,6 +403,31 @@ export const testEmployerGiftEmail = async (req: IRequest<{}, {}, {}>) => {
       name: user.name,
       recipientEmail: email,
       amount: '100.00',
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testKarmaCardDeclinedEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendKarmaCardDeclinedEmail({
+      user: req.requestor._id,
+      acceptedDocuments: ['Driver\'s License', 'Passport', 'Some Other Really long text about some documentation that is needed'],
+      message: 'Your application is pending due to a missing, invalid or mismatched Social Security Number (SSN).',
+      name: 'Sara',
+      reason: 'Your application is pending due to a missing invalid or mismatched Social Security Number (SSN).',
+      solutionText: 'Please submit a photo of the following items to support@karmawallet.io',
+      status: IMarqetaKycState.pending,
+      recipientEmail: email,
     });
 
     if (!!emailResponse) {

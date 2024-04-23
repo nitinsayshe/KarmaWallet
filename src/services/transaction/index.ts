@@ -30,27 +30,23 @@ import { CompanyModel, ICompanyDocument, ICompanySector, IShareableCompany } fro
 import { GroupModel } from '../../models/group';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import {
-  IMarqetaTransactionIntegration,
   IShareableTransaction,
   ITransaction,
   ITransactionDocument,
   TransactionModel,
 } from '../../models/transaction';
-import { IShareableUser, IUserDocument, UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { V2TransactionFalsePositiveModel } from '../../models/v2_transaction_falsePositive';
 import { V2TransactionManualMatchModel } from '../../models/v2_transaction_manualMatch';
 import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transaction_matchedCompanyName';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
-// eslint-disable-next-line import/no-cycle
 import { getShareableCard } from '../card';
 import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, ICompanyProtocol, _getPaginatedCompanies } from '../company';
 import { getCompanyRatingsThresholds } from '../misc';
 import { calculateCompanyScore } from '../scripts/calculate_company_scores';
 import { getShareableSector } from '../sectors';
-// eslint-disable-next-line import/no-cycle
-import { getShareableUser } from '../user';
-import { _getTransactions } from './utils';
+import { _getTransactions, getTransactionCount } from './utils';
 import {
   ITransactionsAggregationRequestQuery,
   ITransactionsRequestQuery,
@@ -75,18 +71,18 @@ import { PushNotificationTypes } from '../../lib/constants/notification';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
 import { MCCStandards } from '../../integrations/marqeta/types';
-// eslint-disable-next-line import/no-cycle
-import { checkIfUserInGroup } from '../groups';
+import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
-
-const plaidIntegrationPath = 'integrations.plaid.category';
-const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
-const paymentExclusion = { [plaidIntegrationPath]: { $nin: ['Payment'] } };
-const excludePaymentQuery = { ...taxRefundExclusion, ...paymentExclusion };
+import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
+import { IShareableACHTransfer } from '../../models/achTransfer/types';
+import { IShareableUser } from '../../models/user/types';
+import { IValue, ValueModel } from '../../models/value';
+import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
+import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
-export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>) => {
+export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggregationRequestQuery>): Promise<IAggregatePaginateResult<ITransactionDocument & { values: IValue[] }>> => {
   try {
     const { ratings, userId, page, limit } = req.query;
 
@@ -166,6 +162,9 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
         $match: companyQuery,
       },
       {
+        $match: { status: { $ne: TransactionModelStateEnum.Declined } },
+      },
+      {
         $sort: { date: -1 },
       },
     ]);
@@ -175,7 +174,7 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
       limit: limit ?? 10,
     };
 
-    const transactions = await TransactionModel.aggregatePaginate(transactionAggregate, options);
+    const transactions = (await TransactionModel.aggregatePaginate(transactionAggregate, options) as IAggregatePaginateResult<ITransactionDocument & { values: IValue[], company: ICompanyDocument }>);
 
     const pageIncludesOffsets = transactions.docs.filter((transaction) => !!transaction.integrations?.rare).length;
 
@@ -195,6 +194,15 @@ export const getRatedTransactions = async (req: IRequest<{}, ITransactionsAggreg
         console.log(err);
       }
     }
+
+    // map the values to the transaction
+    const valueMappings = await ValueCompanyMappingModel.find({ company: { $in: transactions.docs.map((t) => t.company) } });
+    const values = await ValueModel.find({ _id: { $in: valueMappings.map((v) => v.value) } });
+
+    transactions.docs.forEach((transaction) => {
+      const matchedValueCompanyMappings = valueMappings.filter((v) => v.company.toString() === transaction.company._id.toString());
+      transaction.values = matchedValueCompanyMappings.map((v) => values.find((value) => value._id.toString() === v.value.toString()));
+    });
 
     return transactions;
   } catch (err) {
@@ -218,7 +226,7 @@ const getTransactionIntegrationFilter = (integrationType: TransactionIntegration
 };
 
 export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate, includeDeclined } = req.query;
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};
@@ -288,6 +296,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
+      { status: { $ne: TransactionModelStateEnum.Declined } },
       { amount: { $gt: 0 } },
     ],
   };
@@ -312,7 +321,6 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
   if (!!startDate) filter.$and.push(startDateQuery);
   if (!!endDate) filter.$and.push(endDateQuery);
-  if (!includeDeclined) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
 
   const transactions = await TransactionModel.paginate(filter, paginationOptions);
 
@@ -396,23 +404,6 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
   }
 };
 
-export const getTransactionTotal = async (query: FilterQuery<ITransaction>): Promise<number> => {
-  const aggResult = await TransactionModel.aggregate()
-    .match({ sector: { $nin: sectorsToExcludeFromTransactions }, amount: { $gt: 0 }, ...query, ...excludePaymentQuery })
-    .group({ _id: '$user', total: { $sum: '$amount' } });
-
-  return aggResult?.length ? aggResult[0].total : 0;
-};
-
-// await needed her for TS to resolve the type of aggregations output
-// eslint-disable-next-line no-return-await
-export const getTransactionCount = async (query = {}) => await TransactionModel.find({
-  sector: { $nin: sectorsToExcludeFromTransactions },
-  amount: { $gt: 0 },
-  ...query,
-  ...excludePaymentQuery,
-}).count();
-
 export const getCarbonOffsetTransactions = async (req: IRequest) => {
   const Rare = new RareClient();
   const transactions: ITransactionDocument[] = await TransactionModel.find({
@@ -440,11 +431,6 @@ export const getCarbonOffsetTransactions = async (req: IRequest) => {
   });
 };
 
-export const getMarqetaTransactionType = (marqetaData: IMarqetaTransactionIntegration) => {
-  if (!!marqetaData.direct_deposit && !!marqetaData.direct_deposit.token) return 'direct_deposit';
-  return 'authorization';
-};
-
 export const getShareableTransaction = async ({
   _id,
   user,
@@ -454,6 +440,7 @@ export const getShareableTransaction = async ({
   status,
   amount,
   date,
+  achTransfer,
   reversed,
   createdOn,
   lastModified,
@@ -463,10 +450,12 @@ export const getShareableTransaction = async ({
   type,
   subType,
   group,
-}: ITransactionDocument) => {
+}: ITransactionDocument, skipKard = false) => {
   const _user: IRef<ObjectId, IShareableUser> = !!(user as IUserDocument)?.name ? getShareableUser(user as IUserDocument) : user;
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
+
+  const _achtransfer: IRef<ObjectId, IShareableACHTransfer> = achTransfer;
 
   const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
     ? getShareableCompany(company as ICompanyDocument)
@@ -493,6 +482,8 @@ export const getShareableTransaction = async ({
     group,
   };
 
+  if (!!_achtransfer) shareableTransaction.achTransfer = _achtransfer;
+
   if (integrations?.rare) {
     const { projectName, tonnes_amt: offsetsPurchased, certificateUrl } = integrations.rare;
 
@@ -510,7 +501,7 @@ export const getShareableTransaction = async ({
 
   let earnedCommission;
 
-  if (!!integrations?.kard) {
+  if (!!integrations?.kard && !skipKard) {
     // does a commission exist for this transaction?
     if (!!integrations?.kard?.rewardData) {
       // if so, add it to the shareable transaction
@@ -550,23 +541,35 @@ export const getShareableTransaction = async ({
       currency_code: currencyCode,
     } = integrations.marqeta;
 
+    let mechantNameToUse = !!integrations.marqeta?.card_acceptor?.name ? integrations?.marqeta?.card_acceptor?.name : null;
+    if (!!integrations.marqeta?.direct_deposit) {
+      mechantNameToUse = integrations.marqeta?.direct_deposit?.company_name || null;
+    }
+
     const marqetaIntegration: any = {
       token,
       userToken,
       cardToken,
-      type: getMarqetaTransactionType(integrations.marqeta) as any,
+      type: integrations.marqeta.type,
       state,
       createdTime,
       requestAmount,
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: integrations?.marqeta?.card_acceptor?.name || null,
+      merchantName: mechantNameToUse,
       cardMask: integrations.marqeta?.card?.last_four || null,
     };
 
     if (!!integrations?.marqeta?.gpa_order) {
       marqetaIntegration.gpa_order = integrations.marqeta.gpa_order;
+    }
+
+    if (!!integrations?.marqeta?.direct_deposit) {
+      marqetaIntegration.direct_deposit = {
+        type: integrations.marqeta?.direct_deposit?.type,
+        company_name: integrations.marqeta?.direct_deposit?.company_name,
+      };
     }
 
     shareableTransaction.integrations = {
@@ -576,6 +579,15 @@ export const getShareableTransaction = async ({
   }
 
   return shareableTransaction;
+};
+
+export const getShareableTransactionWithValues = async (transaction: (ITransactionDocument & {values: IValue[]})): Promise<(Partial<IShareableTransaction> & {values: IValue[]})> => {
+  const shareableTransaction = await getShareableTransaction(transaction, true) as Partial<IShareableTransaction>;
+  const shareableTransactionWithValues = {
+    ...shareableTransaction,
+    values: transaction?.values?.length > 0 ? transaction.values : undefined,
+  };
+  return shareableTransactionWithValues;
 };
 
 export const hasTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>) => {
@@ -941,7 +953,8 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
     user: req.requestor._id,
   })
     .populate('company')
-    .populate('sector');
+    .populate('sector')
+    .populate({ path: 'achTransfer', options: { strictPopulate: false } });
 
   if (!matchedTransaction) throw new CustomError('No transaction found with given id.', ErrorTypes.NOT_FOUND);
 
@@ -999,7 +1012,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
     // add notifiction here?
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.EMPLOYER_GIFT,
-      body: `An employer gift of $${transaction?.amount} has been deposited onto your Karma Wallet Card`,
+      body: `An employer gift of $${transaction?.amount.toFixed(2)} has been deposited onto your Karma Wallet Card`,
       title: 'Employer Gift Received!',
     });
 
@@ -1009,7 +1022,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${transaction?.amount} in Karma Cash has been deposited onto your Karma Wallet Card`,
+      body: `$${transaction?.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
       title: 'Karma Cash Deposited!',
     });
   }
@@ -1095,6 +1108,12 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
   for (const deposit of gpaDeposits) {
     const tags = `groupId=${groupId},type=${type}`;
     const userInGroup = await checkIfUserInGroup(deposit.userId, groupId);
+    const userActiveInMarqeta = await checkIfUserActiveInMarqeta(deposit.userId);
+
+    // Update this later to return a list of errors or something to person running script
+    if (!userActiveInMarqeta) {
+      console.log(`[+] Use ${deposit.userId} not active in Marqeta, skipping deposit`);
+    }
 
     if (!userInGroup) {
       console.error(`User ${deposit.userId} is not in group ${groupId}`);
@@ -1105,7 +1124,7 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : `Deposit from ${group.name}`,
+      memo: !!memo ? memo : `You received money from ${group.name}`,
     });
 
     if (!gpaFundResponse.data) {
@@ -1125,7 +1144,7 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
       userId: deposit.userId,
       amount: deposit.amount,
       tags,
-      memo: !!memo ? memo : 'Quarterly Karma Cash deposit',
+      memo: !!memo ? memo : 'You earned Karma Cash!',
     });
 
     if (!gpaFundResponse.data) {

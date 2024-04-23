@@ -1,7 +1,8 @@
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { LegacyUserModel } from '../../models/legacyUser';
-import { IAltEmail, UserEmailStatus, UserModel } from '../../models/user';
+import { UserModel } from '../../models/user';
+import { IAltEmail, UserEmailStatus } from '../../models/user/types';
 
 export const mapUserEmailsToArray = async () => {
   const { APP_USER_ID } = process.env;

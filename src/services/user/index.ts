@@ -789,7 +789,8 @@ export const verifyEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.I
   if (!checkIfNewEmailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
 
   const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: verifyToken, type: TokenTypes.VerifyEmailChange });
-  if (!checkIfTokenExists) throw new CustomError('Invalid token.', ErrorTypes.INVALID_ARG);
+  if (!checkIfTokenExists) throw new CustomError('Invalid or expired link, please request a new email change.', ErrorTypes.INVALID_ARG);
+
   const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
   if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
 
@@ -815,27 +816,28 @@ export const affirmEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.I
   const { affirmToken } = req.body;
 
   const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: affirmToken, type: TokenTypes.AffirmEmailChange });
-  if (!checkIfTokenExists) throw new CustomError('Invalid token.', ErrorTypes.INVALID_ARG);
+  if (!checkIfTokenExists) throw new CustomError('Invalid or expired link, please request a new email change.', ErrorTypes.INVALID_ARG);
+
   const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
   if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
 
-  const user = await UserModel.findById(checkIfTokenExists.user);
-  if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+  try {
+    const user = await UserModel.findById(checkIfTokenExists.user);
+    if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
 
-  const changeEmailRequest = await ChangeEmailRequestModel.findOne({ user: user._id });
-  if (!changeEmailRequest) throw new CustomError('Email change request not found.', ErrorTypes.NOT_FOUND);
+    const changeEmailRequest = await ChangeEmailRequestModel.findOne({ user: user._id });
+    if (!changeEmailRequest) throw new CustomError('Email change request not found.', ErrorTypes.NOT_FOUND);
 
-  const currentPrimaryEmail = user.emails.find(email => email.primary === true);
-  currentPrimaryEmail.primary = false;
+    const currentPrimaryEmail = user.emails.find(email => email.primary === true);
+    currentPrimaryEmail.email = changeEmailRequest.proposedEmail;
 
-  await user.save();
+    const saveEmailChange = await user.save();
+    if (!saveEmailChange) throw new CustomError('Error saving email change.', ErrorTypes.SERVER);
 
-  const result = await UserModel.findOneAndUpdate(
-    { _id: user._id },
-    { $push: { emails: { email: changeEmailRequest.proposedEmail, status: UserEmailStatus.Verified, primary: true } } },
-  );
+    await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { status: IChangeEmailProcessStatus.COMPLETE });
 
-  await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { status: IChangeEmailProcessStatus.COMPLETE });
-
-  return 'Email change completed.';
+    return 'Email change completed.';
+  } catch (err) {
+    return err;
+  }
 };

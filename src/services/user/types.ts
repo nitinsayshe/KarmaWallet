@@ -72,6 +72,10 @@ export interface IVerifyEmailChange {
   password: string;
 }
 
+export interface IAffirmEmailChange {
+  affirmToken: string;
+}
+
 export interface IUpdateUserEmailParams {
   user: IUserDocument;
   email: string;

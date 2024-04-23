@@ -20,6 +20,7 @@ const registerRoutes = async (app: Express) => {
   router.post('/check-email', UserController.checkIfEmailAlreadyInUse);
   router.get('/test-identities', UserController.getTestIdentities);
   router.post('/email/request-change/verify', UserController.verifyEmailChange);
+  router.post('/email/request-change/affirm', UserController.affirmEmailChange);
 
   // Authenticated
   router.post('/logout', authenticate, UserController.logout);

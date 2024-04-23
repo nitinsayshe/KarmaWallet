@@ -43,11 +43,12 @@ export const exec = async ({
   recipientEmail,
   replyToAddresses,
 }: ISendEmailParams) => {
+  debugger; // eslint-disable-line
   const { name, type } = emailTemplateConfig;
   if (!user && !visitor) throw new Error('Must provide either user or visitor');
   let _user;
   let userEmailObject;
-  if (!!user && type !== EmailTemplateTypes.Support) {
+  if (!!user && type !== EmailTemplateTypes.Support && type !== EmailTemplateTypes.ChangeEmailRequestAffirmation) {
     _user = await UserModel.findOne({ _id: user });
     userEmailObject = _user.emails.find(u => u.email === recipientEmail);
     if (!userEmailObject) return;
@@ -76,6 +77,7 @@ export const exec = async ({
 
   let emailResponse;
   if (!DEV_TEST) {
+    debugger; // eslint-disable-line
     const awsClient = new AwsClient();
 
     emailResponse = await awsClient.sendMail({

@@ -790,11 +790,15 @@ export const verifyEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.I
 
   const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: verifyToken, type: TokenTypes.VerifyEmailChange });
   if (!checkIfTokenExists) throw new CustomError('Invalid token.', ErrorTypes.INVALID_ARG);
+  const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
+  if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
 
   const user = await UserModel.findById(checkIfTokenExists.user);
 
   const checkIfPasswordMatches = await argon2.verify(user.password, password);
   if (!checkIfPasswordMatches) throw new CustomError('Invalid password.', ErrorTypes.INVALID_ARG);
+
+  await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { verified: IChangeEmailVerificationStatus.VERIFIED, proposedEmail: email });
 
   const affirmationToken = await TokenService.createToken({
     user,
@@ -802,8 +806,36 @@ export const verifyEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.I
     days: 1,
   });
 
-  const emailSent = await sendChangeEmailRequestAffirmationEmail({ token: affirmationToken.value, recipientEmail: email, name: user.name, user: user._id });
+  await sendChangeEmailRequestAffirmationEmail({ token: affirmationToken.value, recipientEmail: email, name: user.name, user: user._id });
 
-  console.log(emailSent, email, '[][]][][][][][]');
   return 'Email change verified, check your new email for further instructions';
+};
+
+export const affirmEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IAffirmEmailChange>) => {
+  const { affirmToken } = req.body;
+
+  const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: affirmToken, type: TokenTypes.AffirmEmailChange });
+  if (!checkIfTokenExists) throw new CustomError('Invalid token.', ErrorTypes.INVALID_ARG);
+  const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
+  if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const user = await UserModel.findById(checkIfTokenExists.user);
+  if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+
+  const changeEmailRequest = await ChangeEmailRequestModel.findOne({ user: user._id });
+  if (!changeEmailRequest) throw new CustomError('Email change request not found.', ErrorTypes.NOT_FOUND);
+
+  const currentPrimaryEmail = user.emails.find(email => email.primary === true);
+  currentPrimaryEmail.primary = false;
+
+  await user.save();
+
+  const result = await UserModel.findOneAndUpdate(
+    { _id: user._id },
+    { $push: { emails: { email: changeEmailRequest.proposedEmail, status: UserEmailStatus.Verified, primary: true } } },
+  );
+
+  await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { status: IChangeEmailProcessStatus.COMPLETE });
+
+  return 'Email change completed.';
 };

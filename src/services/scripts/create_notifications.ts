@@ -111,6 +111,12 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Push, NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendPushNotification, NotificationEffectsEnum.SendACHReturnedEmail],
   // },
+  // [NotificationTypeEnum.KarmaCardDeclined]: {
+  //   type: NotificationTypeEnum.KarmaCardDeclined,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendKarmaCardDeclinedEmail],
+  // },
+  // },
   [NotificationTypeEnum.KarmaCardDeclined]: {
     type: NotificationTypeEnum.KarmaCardDeclined,
     channels: [NotificationChannelEnum.Email],

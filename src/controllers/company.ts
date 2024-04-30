@@ -1,6 +1,7 @@
 import aqp from 'api-query-params';
 import { IRequestHandler } from '../types/request';
 import * as CompanyService from '../services/company';
+import * as CompanyTypes from '../services/company/types';
 import * as output from '../services/output';
 import CustomError, { asCustomError } from '../lib/customError';
 import { ErrorTypes } from '../lib/constants';
@@ -115,7 +116,7 @@ export const getAllPartners: IRequestHandler = async (req, res) => {
   }
 };
 
-export const getPartner: IRequestHandler<{}, CompanyService.IGetPartnerQuery, {}> = async (req, res) => {
+export const getPartner: IRequestHandler<{}, CompanyTypes.IGetPartnerQuery, {}> = async (req, res) => {
   try {
     const result = await CompanyService.getPartner(req);
     output.api(req, res, CompanyService.getShareableCompany(result));

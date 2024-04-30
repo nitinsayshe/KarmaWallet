@@ -87,6 +87,7 @@ const createKardMerchant = async (merchant: Merchant, offers: Offer[]): Promise<
     };
     const merchantInstance = new MerchantModel({
       name: merchant.name,
+      mobileCompliant: true,
       integrations: {
         kard: kardMerchant,
       },
@@ -232,6 +233,7 @@ const addKardIntegrationToMerchant = async (merchantId: Types.ObjectId, kardMerc
 
     // update merchant to have kard integration
     if (!existingMerchant?.integrations) existingMerchant.integrations = {};
+    existingMerchant.mobileCompliant = true;
     const integrationMerchant = { id: kardMerchant._id, ...kardMerchant };
     delete integrationMerchant._id;
 
@@ -407,6 +409,7 @@ export const updateKardMerchants = async (merchants: Merchant[]): Promise<IMerch
           existingMerchant.integrations.kard.websiteURL = domain.Domain;
           existingMerchant.integrations.kard.maxOffer = domain.Merchant.MaxRate.ref;
           existingMerchant.lastModified = lastModifiedDate;
+          existingMerchant.mobileCompliant = true;
           await existingMerchant.save();
 
           console.log('[+] updated existing merchant domain for ', existingMerchant.name);

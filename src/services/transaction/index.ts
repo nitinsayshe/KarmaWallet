@@ -86,6 +86,8 @@ export const getMarqetaMerchantName = (marqetaData: IMarqetaTransactionIntegrati
     }
     return marqetaData?.card_acceptor?.name || '';
   }
+
+  return marqetaData?.card_acceptor?.name || '';
 };
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);

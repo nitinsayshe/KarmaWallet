@@ -9,6 +9,7 @@ import { IShareableKarmaCardStatement } from '../../../models/karmaCardStatement
 import { ITransaction, TransactionModel } from '../../../models/transaction';
 import { UserModel } from '../../../models/user';
 import { TransactionSubtypeEnum, TransactionTypeEnum } from '../../../lib/constants/transaction';
+import { getMarqetaMerchantName } from '../../transaction';
 
 dayjs.extend(utc);
 
@@ -65,7 +66,7 @@ export const getTransactionData = (transaction: ITransaction) => {
     }
 
     if (marqetaType.includes('authorization')) {
-      transactionData.descriptionText = transaction.integrations.marqeta.card_acceptor.name;
+      transactionData.descriptionText = getMarqetaMerchantName(transaction.integrations.marqeta);
     }
   }
 

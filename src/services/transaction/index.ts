@@ -17,9 +17,7 @@ import {
 } from '../../lib/constants';
 import { CompanyRating } from '../../lib/constants/company';
 import {
-  AdjustmentTransactionTypeEnum,
   TransactionCreditSubtypeEnum,
-  TransactionTypeEnum,
   sectorsToExcludeFromTransactions,
 } from '../../lib/constants/transaction';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -30,6 +28,7 @@ import { CompanyModel, ICompanyDocument, ICompanySector, IShareableCompany } fro
 import { GroupModel } from '../../models/group';
 import { ISector, ISectorDocument, SectorModel } from '../../models/sector';
 import {
+  IMarqetaTransactionIntegration,
   IShareableTransaction,
   ITransaction,
   ITransactionDocument,
@@ -67,10 +66,7 @@ import {
 } from './types';
 import { fundUserGPAFromProgramFundingSource } from '../../integrations/marqeta/gpa';
 import { TransactionModelStateEnum } from '../../clients/marqeta/types';
-import { PushNotificationTypes } from '../../lib/constants/notification';
 import { CombinedPartialTransaction } from '../../types/transaction';
-import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
-import { MCCStandards } from '../../integrations/marqeta/types';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
 import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
@@ -80,6 +76,17 @@ import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
 import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 import { ICompanyProtocol } from '../company/types';
+
+export const getMarqetaMerchantName = (marqetaData: IMarqetaTransactionIntegration) => {
+  const relatedTransactions = marqetaData?.relatedTransactions;
+  if (!!relatedTransactions.length) {
+    const completedTransaction = relatedTransactions.find((t) => t.state === TransactionModelStateEnum.Completion);
+    if (!!completedTransaction) {
+      return completedTransaction?.card_acceptor?.name || '';
+    }
+    return marqetaData?.card_acceptor?.name || '';
+  }
+};
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
@@ -553,7 +560,7 @@ export const getShareableTransaction = async ({
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: integrations?.marqeta?.card_acceptor?.name || null,
+      merchantName: getMarqetaMerchantName(integrations.marqeta),
       cardMask: integrations.marqeta?.card?.last_four || null,
     };
 
@@ -973,118 +980,6 @@ export const getTransaction = async (req: IRequest<ITransactionIdParam, {}, {}>)
     groupName,
     transaction: await getShareableTransaction(matchedTransaction),
   };
-};
-
-// This is a placeholder for adding logic that handles the dispute macros
-export const handleTransactionDisputeMacros = async (transactions: ITransactionDocument[]): Promise<void> => {
-  await Promise.all(
-    transactions.map(async (c) => {
-      try {
-        switch (c?.integrations?.marqeta?.type) {
-          case AdjustmentTransactionTypeEnum.AuthorizationClearingChargebackProvisionalCredit:
-            // call function
-            break;
-          case AdjustmentTransactionTypeEnum.PindebitChargebackProvisionalCredit:
-            // call function
-            break;
-          default:
-            console.log(`No notification created for transaction with type: ${c?.integrations?.marqeta?.type}`);
-        }
-      } catch (err) {
-        console.error(`Error creating notification from transaction transition: ${JSON.stringify(c)}`);
-        console.error(err);
-        return null;
-      }
-    }),
-  );
-};
-
-export const handleCreditNotification = async (transaction: ITransactionDocument) => {
-  if (transaction.status !== TransactionModelStateEnum.Completion) return;
-  const user = await UserModel.findById(transaction.user);
-  // This is a reversal do not send a notification
-  if (!!transaction?.integrations?.marqeta?.relatedTransactions && transaction.integrations.marqeta.relatedTransactions.length) return;
-  if (transaction.subType === TransactionCreditSubtypeEnum.Employer) {
-    // add notifiction here?
-    await createPushUserNotificationFromUserAndPushData(user, {
-      pushNotificationType: PushNotificationTypes.EMPLOYER_GIFT,
-      body: `An employer gift of $${transaction?.amount.toFixed(2)} has been deposited onto your Karma Wallet Card`,
-      title: 'Employer Gift Received!',
-    });
-
-    await createEmployerGiftEmailUserNotification(user, transaction);
-  }
-};
-
-const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
-  // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
-  if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
-  if (transaction.status === TransactionModelStateEnum.Pending) return true;
-  if (transaction.status === TransactionModelStateEnum.Completion && transaction.integrations.marqeta.relatedTransactions) return true;
-  return false;
-};
-
-export const handleDebitNotification = async (transaction: ITransactionDocument) => {
-  const user = await UserModel.findById(transaction.user);
-  const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
-  const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
-
-  // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
-  if (_sendTransactionNotifications(transaction)) {
-    // any notification
-    await createPushUserNotificationFromUserAndPushData(user, {
-      pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
-      title: 'Transaction Alert',
-      body: `New transaction from ${merchantName}`,
-    });
-
-    // Dining out notification
-    if (MCCStandards.DINING.includes(mccCode)) {
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
-        title: 'Donation Alert!',
-        body: 'You dined out. We donated to hunger alleviation!',
-      });
-    }
-
-    // Gas notification
-    if (MCCStandards.GAS.includes(mccCode)) {
-      await createPushUserNotificationFromUserAndPushData(user, {
-        pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
-        title: 'Donation Alert!',
-        body: 'You bought gas. We donated to reforestation.',
-      });
-    }
-  }
-};
-
-export const handleTransactionNotifications = async (transactions: ITransactionDocument[]): Promise<void> => {
-  await Promise.all(
-    transactions.map(async (t) => {
-      try {
-        switch (t.type) {
-          case TransactionTypeEnum.Credit:
-            handleCreditNotification(t);
-            break;
-          case TransactionTypeEnum.Debit:
-            handleDebitNotification(t);
-            break;
-          case TransactionTypeEnum.Deposit:
-            // add code as needed
-            break;
-          case TransactionTypeEnum.Adjustment:
-            // add code as needed
-            break;
-          default:
-            console.log(`No notification created for transaction with type: ${t.type}`);
-        }
-      } catch (err) {
-        console.error(`Error creating notification from transaction transition: ${JSON.stringify(t)}`);
-        console.error(err);
-        return null;
-      }
-    }),
-  );
 };
 
 export const isValidMemoLength = (memo: string) => memo.length > 99;

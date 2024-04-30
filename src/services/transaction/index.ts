@@ -42,7 +42,7 @@ import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transactio
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getShareableCard } from '../card';
-import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, ICompanyProtocol, _getPaginatedCompanies } from '../company';
+import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, _getPaginatedCompanies } from '../company';
 import { getCompanyRatingsThresholds } from '../misc';
 import { calculateCompanyScore } from '../scripts/calculate_company_scores';
 import { getShareableSector } from '../sectors';
@@ -79,6 +79,7 @@ import { IShareableUser } from '../../models/user/types';
 import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
 import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
+import { ICompanyProtocol } from '../company/types';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
@@ -1012,14 +1013,6 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
     });
 
     await createEmployerGiftEmailUserNotification(user, transaction);
-  }
-
-  if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
-    await createPushUserNotificationFromUserAndPushData(user, {
-      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${transaction?.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
-      title: 'Karma Cash Deposited!',
-    });
   }
 };
 

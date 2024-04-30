@@ -50,7 +50,7 @@ export interface IMarqetaCardIntegration {
   state: MarqetaCardState;
   user_token: string;
   reason?: string;
-  reason_code:string;
+  reason_code?: string;
 }
 
 export interface ICardIntegrations {

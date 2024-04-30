@@ -1016,7 +1016,7 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   }
 };
 
-const _sendTransactionNotifications = async (transaction: ITransactionDocument) => {
+const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
   // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
   if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
   if (transaction.status === TransactionModelStateEnum.Pending) return true;

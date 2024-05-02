@@ -57,7 +57,7 @@ export class DigitalWalletManagement {
   // List digital wallet tokens for card
   async listDigitalWalletForUserCard(cardToken: string) {
     try {
-      const { data } = await this._marqetaClient._client.get(`/digitalwallettokens/card/${cardToken}?count=100`);
+      const { data } = await this._marqetaClient._client.get(`/digitalwallettokens/card/${cardToken}?count=500`);
       return data;
     } catch (err) {
       console.log(err);

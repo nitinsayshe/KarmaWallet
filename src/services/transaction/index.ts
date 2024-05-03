@@ -1016,17 +1016,21 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   }
 };
 
+const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
+  // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
+  if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
+  if (transaction.status === TransactionModelStateEnum.Pending) return true;
+  if (transaction.status === TransactionModelStateEnum.Completion && transaction.integrations.marqeta.relatedTransactions) return true;
+  return false;
+};
+
 export const handleDebitNotification = async (transaction: ITransactionDocument) => {
   const user = await UserModel.findById(transaction.user);
-  const { status } = transaction;
   const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
   const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
 
   // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
-  if (
-    status === TransactionModelStateEnum.Pending
-    || (status === TransactionModelStateEnum.Completion && !transaction.integrations.marqeta.relatedTransactions)
-  ) {
+  if (_sendTransactionNotifications(transaction)) {
     // any notification
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,

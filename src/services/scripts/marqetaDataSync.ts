@@ -13,7 +13,7 @@ import { encrypt } from '../../lib/encryption';
 import { sleep } from '../../lib/misc';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IUserDocument, UserModel } from '../../models/user';
-import { getCardStatusFromMarqetaCardState } from '../card';
+import { getCardStatusFromMarqetaCardState, mapMarqetaCardtoCard } from '../card';
 import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 
@@ -187,9 +187,21 @@ export const updateMarqetaCards = async (
         const existingCard = cardsWithMarqetaIntegrations.find(
           (c) => c.integrations.marqeta.card_token === card.token || c.integrations.marqeta.token === card.token,
         );
+
         if (!existingCard) {
           console.error(`Marqeta card with token: ${card.token} is missing from our database`);
-          return null;
+          const internalUserId = await UserModel.findOne({ 'integrations.marqeta.userToken': card.user_token });
+          if (!internalUserId) {
+            console.error(`error retrieving user for marqeta card: ${card.token}`);
+            return null;
+          }
+          const newCard = await mapMarqetaCardtoCard(internalUserId?._id.toString(), card);
+          if (!newCard) {
+            console.error(`error mapping marqeta card to karma card: ${card.token}`);
+            return null;
+          }
+
+          return newCard;
         }
         try {
           const { year, month } = extractYearAndMonth(new Date(card.expiration_time));

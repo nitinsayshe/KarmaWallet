@@ -1,5 +1,6 @@
 import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
+import * as CompanyTypes from '../../services/company/types';
 import * as CompanyService from '../../services/company';
 import { asCustomError } from '../../lib/customError';
 import { BatchCSVUploadType, uploadBatchCsv } from '../../services/upload';
@@ -25,7 +26,7 @@ export const mapBatchedCompaniesToDataSources: IRequestHandler = async (req, res
   }
 };
 
-export const updateCompany: IRequestHandler<CompanyService.ICompanyRequestParams, {}, CompanyService.IUpdateCompanyRequestBody> = async (req, res) => {
+export const updateCompany: IRequestHandler<CompanyTypes.ICompanyRequestParams, {}, CompanyTypes.IUpdateCompanyRequestBody> = async (req, res) => {
   try {
     const company = await CompanyService.updateCompany(req);
     output.api(req, res, CompanyService.getShareableCompany(company));

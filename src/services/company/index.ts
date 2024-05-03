@@ -18,7 +18,6 @@ import {
   ICompany,
   ICompanyDocument,
   IShareableCompany,
-  CashbackCompanyDisplayLocation,
 } from '../../models/company';
 import { CompanyUnsdgModel, ICompanyUnsdg, ICompanyUnsdgDocument } from '../../models/companyUnsdg';
 import { IJobReportDocument, JobReportModel, JobReportStatus } from '../../models/jobReport';
@@ -40,133 +39,11 @@ import { getShareableCategory, getShareableSubCategory, getShareableUnsdg } from
 import { CompanyDataSourceModel } from '../../models/companyDataSource';
 import { DataSourceModel, IDataSourceDocument } from '../../models/dataSource';
 import { getUtcDate } from '../../lib/date';
+import { IBatchedCompaniesRequestBody, ICompanySearchRequest, ICompanySampleRequest, IBatchedCompanyParentChildRelationshipsRequestBody, ICompanyRequestParams, IUpdateCompanyRequestBody, IGetCompaniesResponse, ICompanyProtocol, IGetCompanyDataParams, IGetPartnerQuery, IGetFeaturedCashbackCompaniesRequest, FeaturedCashbackSortOptions, IFeaturedCashbackUpdatesParams } from './types';
 
 dayjs.extend(utc);
 
 const MAX_SAMPLE_SIZE = 25;
-
-export interface ICompanyRequestParams {
-  companyId: string;
-}
-
-export interface ICompanyRequestQuery {
-  includeHidden?: boolean;
-  search?: string;
-  rating?: string;
-  evaluatedUnsdgs?: string;
-  cashback?: string;
-  'sectors.sector'?: string;
-}
-
-export interface ICompanySearchRequest extends IRequest {
-  query: ICompanyRequestQuery;
-}
-
-export interface IUpdateCompanyRequestBody {
-  companyName: string;
-  url: string;
-  logo: string;
-}
-
-export interface ICompanySampleRequest {
-  count?: number;
-  sectors?: string;
-  excludedCompanyIds?: string;
-  ratings?: string;
-}
-
-export interface IBatchedCompaniesRequestBody {
-  fileUrl: string;
-}
-
-export interface IBatchedCompanyParentChildRelationshipsRequestBody extends IBatchedCompaniesRequestBody {
-  jobReportId?: string;
-}
-
-export interface IGetCompanyDataParams {
-  page: string;
-  limit: string;
-}
-
-export interface IGetPartnerQuery {
-  companyId: string;
-}
-
-export enum FeaturedCashbackSortOptions {
-  HighestCashback = 'highestCashback',
-  Alphabetical = 'alphabetical',
-}
-
-export interface IGetFeaturedCashbackCompaniesQuery {
-  location?: CashbackCompanyDisplayLocation;
-  'sectors.sector'?: string;
-  sort?: FeaturedCashbackSortOptions;
-  number?: string;
-}
-
-export interface IGetFeaturedCashbackCompaniesRequest {
-  query: IGetFeaturedCashbackCompaniesQuery;
-}
-
-interface ISubcategoryScore {
-  subcategory: string;
-  score: number;
-}
-
-interface ICategoryScore {
-  category: string;
-  score: number;
-}
-
-interface ISectorScores {
-  avgScore: number;
-  avgPlanetScore: number;
-  avgPeopleScore: number;
-  avgSustainabilityScore: number;
-  avgClimateActionScore: number;
-  avgCommunityWelfareScore: number;
-  avgDiversityInclusionScore: number;
-}
-
-interface ISector {
-  name: string;
-  scores: ISectorScores;
-}
-
-export interface ICompanyProtocol {
-  companyName: string;
-  values: string[];
-  rating: CompanyRating;
-  score: number;
-  karmaWalletUrl: string;
-  companyUrl: string;
-  subcategoryScores: ISubcategoryScore[];
-  categoryScores: ICategoryScore[];
-  wildfireId?: number;
-  sector: ISector;
-}
-
-interface IPagination {
-  page: number;
-  totalPages: number;
-  limit: number;
-  totalCompanies: number;
-}
-
-export interface IGetCompaniesResponse {
-  companies: ICompanyProtocol[];
-  pagination: IPagination;
-}
-
-export interface ISearchCompaniesQuery {
-  search: string;
-}
-
-interface IFeaturedCashbackUpdatesParams {
-  companyId: string;
-  status: boolean;
-  location: CashbackCompanyDisplayLocation[];
-}
 
 export const _getPaginatedCompanies = (query: FilterQuery<ICompany> = {}, includeHidden = false) => {
   const options = {
@@ -445,6 +322,7 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
   const cashbackOnly = !!filter?.merchant;
   const karmaCollectiveMember = !!filter?.karmaCollectiveMember;
   const includeKarmaCollective = !!filter?.includeKarmaCollective;
+  const isMobile = !!filter?.isMobile;
   const hideKardOffers = !!filter?.hideKardOffers;
 
   if (unsdgs) {
@@ -549,6 +427,15 @@ export const getCompanies = async (request: ICompanySearchRequest, query: Filter
       aggregateSteps.push({
         $match: {
           'merchant.karmaCollectiveMember': { $ne: true },
+        },
+      });
+    }
+
+    if (!!isMobile) {
+      delete filter.isMobile;
+      aggregateSteps.push({
+        $match: {
+          'merchant.mobileCompliant': true,
         },
       });
     }

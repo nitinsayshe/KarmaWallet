@@ -22,6 +22,7 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
       token: nanoIdValidation,
       name: nameValidation,
       promo: optionalObjectReferenceValidation,
+      zipcode: optionalZipCodeValidation,
     });
 
     const parsed = registerUserSchema.safeParse(req.body);
@@ -31,8 +32,8 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
-    const { password, name, token, promo } = body;
-    const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo });
+    const { password, name, token, promo, zipcode } = body;
+    const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo, zipcode });
     output.api(req, res, { user: UserUtils.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));

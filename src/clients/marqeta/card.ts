@@ -1,5 +1,4 @@
-import { HttpProxyAgent, HttpsProxyAgent } from 'hpagent';
-import { IMarqetaCardTransition, IMarqetaCreateCard, IVGSToken } from '../../integrations/marqeta/types';
+import { IMarqetaCardTransition, IMarqetaCreateCard } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { VgsClient } from '../vgs';
@@ -51,34 +50,6 @@ export class Card {
   async getCardDetails(cardToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/cards/${cardToken}`);
-      return data;
-    } catch (err) {
-      console.log(err);
-      throw asCustomError(err);
-    }
-  }
-
-  // tokenize card through VGS
-  async tokenizeCard(cardToken: string) {
-    try {
-      const { data } = await this._marqetaClient._client.get(`/cards/${cardToken}/showpan?show_cvv_number=true`, {
-        httpAgent: new HttpProxyAgent(this._vgsClient.agentOptions),
-        httpsAgent: new HttpsProxyAgent({
-          ...this._vgsClient.agentOptions,
-          rejectUnauthorized: false,
-        }),
-      });
-
-      return data;
-    } catch (err) {
-      console.log(err);
-      throw asCustomError(err);
-    }
-  }
-
-  async deTokenizeCard(params: IVGSToken) {
-    try {
-      const { data } = await this._vgsClient._reverseProxyClient.post('/post', params);
       return data;
     } catch (err) {
       console.log(err);

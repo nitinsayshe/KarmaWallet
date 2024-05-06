@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import * as CardController from '../../../controllers/integrations/marqeta/card';
+import * as CardTokenizationController from '../../../controllers/integrations/marqeta/cardTokenization';
+
 import authenticate from '../../../middleware/authenticate';
 
 const router = Router();
@@ -17,9 +19,9 @@ router.route('/transition')
   .post(authenticate, CardController.cardTransition);
 
 router.route('/tokenization/:cardToken')
-  .post(CardController.tokenizeCard);
+  .post(CardTokenizationController.tokenizeCard);
 
 router.route('/detokenization')
-  .post(CardController.deTokenizeCard);
+  .post(CardTokenizationController.deTokenizeCard);
 
 export default router;

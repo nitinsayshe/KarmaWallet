@@ -4,7 +4,7 @@ import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ICardDocument } from '../../models/card';
 import { IRequest } from '../../types/request';
-import { IMarqetaCardTransition, IMarqetaCreateCard, IVGSToken, ListCardsResponse, MarqetaCardModel, MarqetaCardState, PaginatedMarqetaResponse } from './types';
+import { IMarqetaCardTransition, IMarqetaCreateCard, ListCardsResponse, MarqetaCardModel, MarqetaCardState, PaginatedMarqetaResponse } from './types';
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();
 
@@ -37,17 +37,6 @@ export const getCardDetails = async (req: IRequest<{ cardToken: string }, {}, {}
 export const getCardsForUser = async (queryParams: GetPaginiatedResourceParams): Promise<PaginatedMarqetaResponse<MarqetaCardModel[]>> => {
   const cards = await cardClient.listCards(queryParams?.userToken, queryParams);
   return cards;
-};
-
-export const tokenizeCard = async (req: IRequest<{ cardToken: string }, {}, {}>) => {
-  const { cardToken } = req.params;
-  const userResponse = await cardClient.tokenizeCard(cardToken);
-  return { data: userResponse };
-};
-
-export const deTokenizeCard = async (params: IVGSToken) => {
-  const userResponse = await cardClient.deTokenizeCard(params);
-  return { data: userResponse };
 };
 
 export const terminateMarqetaCards = async (cards: ICardDocument[]) => {

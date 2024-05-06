@@ -14,6 +14,7 @@ export interface IValue {
   weight: number;
   name: string;
   icon?: string;
+  company?: string;
 }
 
 export interface IValueDocument extends IValue, Document {}

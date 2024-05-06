@@ -18,6 +18,9 @@ export const joinRole = (socket: ISocket) => {
   socket.on(`${path}/join/role`, RoomController.joinRole(socket));
 };
 
+export const joinCardApplicaiton = (socket: ISocket) => {
+  socket.on(`${path}/join/card-application`, RoomController.joinCardApplication(socket));
+};
 // export const joinGroup = (socket: ISocket) => {
 //   socket.on(`${path}/join/group`, RoomController.joinGroup(socket));
 // };
@@ -30,16 +33,22 @@ export const leaveRole = (socket: ISocket) => {
   socket.on(`${path}/leave/role`, RoomController.leaveRole(socket));
 };
 
+export const leaveCardApplication = (socket: ISocket) => {
+  socket.on(`${path}/leave/card-application`, RoomController.leaveCardApplication(socket));
+};
+
 export const leaveGroup = (socket: ISocket) => {
   socket.on(`${path}/leave/group`, RoomController.leaveGroup(socket));
 };
 
 export default (socket: ISocket) => {
   joinRole(socket);
+  joinCardApplicaiton(socket);
   joinUser(socket);
   // joinGroup(socket);
   leaveUser(socket);
   leaveRole(socket);
+  leaveCardApplication(socket);
   leaveGroup(socket);
   msgTest(socket);
 };

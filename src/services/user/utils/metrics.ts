@@ -1,8 +1,9 @@
 import dayjs from 'dayjs';
+import quarterOfYear from 'dayjs/plugin/quarterOfYear';
 import { FilterQuery, LeanDocument, Types } from 'mongoose';
 import { CardStatus, UserCommissionPercentage } from '../../../lib/constants';
 import { CompanyRating } from '../../../lib/constants/company';
-import { sectorsToExcludeFromTransactions } from '../../../lib/constants/transaction';
+import { sectorsToExcludeFromTransactions, TransactionTypeEnum } from '../../../lib/constants/transaction';
 import { roundToPercision } from '../../../lib/misc';
 import { CardModel } from '../../../models/card';
 import { CommissionModel, KarmaCommissionStatus } from '../../../models/commissions';
@@ -18,6 +19,12 @@ import { UserMontlyImpactReportModel } from '../../../models/userMonthlyImpactRe
 import { getUserImpactRatings, getYearlyImpactBreakdown } from '../../impact/utils';
 import { UserNotificationModel } from '../../../models/user_notification';
 import { NotificationTypeEnum } from '../../../lib/constants/notification';
+import { getGPABalance } from '../../../integrations/marqeta/gpa';
+import { ACHTransferModel } from '../../../models/achTransfer';
+import { IACHTransferTypes } from '../../../models/achTransfer/types';
+import { IKarmaMembershipData, KarmaMembershipStatusEnum, KarmaMembershipPaymentPlanEnumValues } from '../../../models/user/types';
+
+dayjs.extend(quarterOfYear);
 
 export type LeanTransactionDocuments = LeanDocument<ITransactionDocument & { _id: any }>[];
 
@@ -217,7 +224,8 @@ export const getTransactionsWithCashbackCompaniesInDateRange = async (
   user: IUserDocument,
   startDate: Date,
   endDate: Date,
-): Promise<IShareableTransaction[] | null> => {
+): Promise<(IShareableTransaction | {company: ICompanyDocument}
+  )[] | null> => {
   if (!user || !user._id) return null;
   try {
     const transactions = await TransactionModel.aggregate()
@@ -252,7 +260,8 @@ export const getTransactionsWithCashbackCompaniesInDateRange = async (
 
 export const getMonthlyTransactionsWithCashbackCompanies = async (
   user: IUserDocument,
-): Promise<IShareableTransaction[] | null> => {
+): Promise<(IShareableTransaction | {company: ICompanyDocument}
+  )[] | null> => {
   if (!user || !user._id) return null;
   const oneMonthAgo = dayjs().utc().subtract(1, 'month');
   return getTransactionsWithCashbackCompaniesInDateRange(
@@ -399,17 +408,17 @@ const getMaxCommissionRate = async (merchant: IMerchant): Promise<number> => {
   }, 0);
 };
 
-const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransaction): Promise<number> => {
+const getEstimatedMissedCommissionAmounts = async (transaction: IShareableTransaction | {company: ICompanyDocument}): Promise<number> => {
   // get the merchant rate for the transaction merchant
   // TODO: handle matching to specific category rate
-  const merchant = (transaction?.company as IShareableCompany)?.merchant as IMerchant;
+  const merchant = ((transaction as IShareableTransaction)?.company as IShareableCompany)?.merchant as IMerchant;
   if (!merchant) {
     return 0;
   }
 
   const highestRate = await getMaxCommissionRate(merchant);
 
-  const totalCommission = (highestRate / 100) * transaction.amount;
+  const totalCommission = (highestRate / 100) * (transaction as IShareableTransaction).amount;
   return roundToPercision(totalCommission * UserCommissionPercentage, 2);
 };
 
@@ -533,6 +542,7 @@ export const getTransactionBreakdownByCompanyRating = async (
     };
   }
 };
+
 export const getMissedCashBackForDateRange = async (
   user: IUserDocument,
   startDate: Date,
@@ -544,6 +554,7 @@ export const getMissedCashBackForDateRange = async (
   estimatedMissedCommissionsAmount: number;
   averageMissedCommissionAmount: number;
   largestMissedCommissionAmount: number;
+  estimatedMissedCashbackCompanies: string[],
 }> => {
   const email = user?.emails?.find((e) => e.primary)?.email || '';
   try {
@@ -566,6 +577,10 @@ export const getMissedCashBackForDateRange = async (
     // adding up all missed commissions
     const missedCashbackDollars = missedCashbackAmounts.reduce((prev, current) => prev + current, 0);
 
+    // fetch missed cashback company list
+    const companies = userTransactions.map((transaction) => transaction.company);
+    const missedCashbackCompanies = [...new Set(companies.map((company) => ((company as ICompanyDocument).companyName)))];
+
     return {
       id: user._id,
       email,
@@ -573,6 +588,7 @@ export const getMissedCashBackForDateRange = async (
       estimatedMissedCommissionsCount: missedCashbackAmounts.length,
       averageMissedCommissionAmount,
       largestMissedCommissionAmount,
+      estimatedMissedCashbackCompanies: missedCashbackCompanies,
     };
   } catch (err) {
     return {
@@ -582,6 +598,7 @@ export const getMissedCashBackForDateRange = async (
       estimatedMissedCommissionsCount: 0,
       averageMissedCommissionAmount: 0,
       largestMissedCommissionAmount: 0,
+      estimatedMissedCashbackCompanies: [],
     };
   }
 };
@@ -615,6 +632,7 @@ export const getMonthlyMissedCashBack = async (
   email: string;
   estimatedMonthlyMissedCommissionsCount: number;
   estimatedMonthlyMissedCommissionsAmount: number;
+  estimatedMissedCashbackCompanies: string[],
 }> => {
   const oneMonthAgo = dayjs().utc().subtract(1, 'month');
   const metric = await getMissedCashBackForDateRange(
@@ -627,6 +645,7 @@ export const getMonthlyMissedCashBack = async (
     email: metric.email,
     estimatedMonthlyMissedCommissionsCount: metric.estimatedMissedCommissionsCount,
     estimatedMonthlyMissedCommissionsAmount: metric.estimatedMissedCommissionsAmount,
+    estimatedMissedCashbackCompanies: metric.estimatedMissedCashbackCompanies,
   };
 };
 
@@ -799,5 +818,218 @@ export const getMonthlyReforestationDonationCount = async (user: IUserDocument):
   } catch (err) {
     console.error(err);
     return 0;
+  }
+};
+
+export const getTransactionsCountInLastQuarter = async (user: IUserDocument): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const transactions = await TransactionModel.find({
+      $and: [
+        { user: user._id },
+        { 'integrations.marqeta': { $exists: true } },
+        { type: TransactionTypeEnum.Debit },
+        { createdOn: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { createdOn: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!transactions) {
+      return 0;
+    }
+
+    return transactions.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getMoneyLoadedCountInTwoWeeks = async (user: IUserDocument): Promise<number> => {
+  try {
+    const twoWeeksAgo = dayjs().utc().subtract(2, 'week');
+    const achTransfers = await ACHTransferModel.find({
+      $and: [
+        { userId: user._id },
+        { type: IACHTransferTypes.PULL },
+        { created_time: { $gte: twoWeeksAgo.startOf('day').toDate() } },
+        { created_time: { $lte: dayjs().utc().toDate() } },
+      ],
+    });
+
+    if (!achTransfers) {
+      return 0;
+    }
+
+    return achTransfers.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const userHasFundedAccountButNotTransactedInLastQuarter = async (user: IUserDocument): Promise<boolean> => {
+  if (!user.integrations?.marqeta?.userToken) {
+    return false;
+  }
+
+  try {
+    const hasPositiveAvailableBalance = (await getGPABalance(user.integrations.marqeta.userToken))?.data?.gpa?.available_balance > 0;
+    if (!hasPositiveAvailableBalance) {
+      return false;
+    }
+
+    return ((await getTransactionsCountInLastQuarter(user)) === 0);
+  } catch (err) {
+    return false;
+  }
+};
+
+export const getCollectiveReforestationDonationCount = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const userNotifications = await UserNotificationModel.find({
+      $and: [
+        { type: NotificationTypeEnum.GasTransaction },
+        { createdOn: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { createdOn: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!userNotifications) {
+      return 0;
+    }
+
+    return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getCollectiveMealsDonationCount = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const userNotifications = await UserNotificationModel.find({
+      $and: [
+        { type: NotificationTypeEnum.DiningTransaction },
+        { createdOn: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { createdOn: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!userNotifications) {
+      return 0;
+    }
+
+    return userNotifications.length;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getCollectiveCarbonOffset = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const impactReports = await UserMontlyImpactReportModel.find({
+      $and: [
+        { date: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { date: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!impactReports) {
+      return 0;
+    }
+    const totalOffset = impactReports.reduce((partialSum, report) => partialSum + report.carbon.offsets.totalOffset, 0);
+    return totalOffset;
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getAverageKarmaScore = async (): Promise<number> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const impactReports = await UserMontlyImpactReportModel.find({
+      $and: [
+        { date: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { date: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!impactReports) {
+      return 0;
+    }
+    const karmaScore = impactReports.reduce((partialSum, report) => partialSum + report.impact.score, 0);
+    return (karmaScore / impactReports.length);
+  } catch (err) {
+    console.error(err);
+    return 0;
+  }
+};
+
+export const getCollectiveCommunityImpact = async (): Promise<{
+  positiveImpact: number,
+  negativeImpact: number,
+  neutralImpact: number,
+}> => {
+  try {
+    const lastQuarter = dayjs().utc().subtract(1, 'quarter');
+
+    const impactReports = await UserMontlyImpactReportModel.find({
+      $and: [
+        { date: { $gte: lastQuarter.startOf('quarter').toDate() } },
+        { date: { $lte: lastQuarter.endOf('quarter').toDate() } },
+      ],
+    });
+
+    if (!impactReports) {
+      return {
+        positiveImpact: 0,
+        negativeImpact: 0,
+        neutralImpact: 0,
+      };
+    }
+
+    const total = impactReports.length;
+    const positive = impactReports.reduce((partialSum, report) => partialSum + report.impact.positive, 0);
+    const negative = impactReports.reduce((partialSum, report) => partialSum + report.impact.negative, 0);
+    const netural = impactReports.reduce((partialSum, report) => partialSum + report.impact.neutral, 0);
+
+    return {
+      positiveImpact: positive / total,
+      negativeImpact: negative / total,
+      neutralImpact: netural / total,
+    };
+  } catch (err) {
+    console.error(err);
+    return {
+      positiveImpact: 0,
+      negativeImpact: 0,
+      neutralImpact: 0,
+    };
+  }
+};
+
+export const getKarmaMembershipPlanType = async (
+  karmaMemberships: IKarmaMembershipData[],
+): Promise<KarmaMembershipPaymentPlanEnumValues | null> => {
+  try {
+    const karmaMembership = karmaMemberships.length > 0
+      && karmaMemberships.find(
+        (membership) => membership.status === KarmaMembershipStatusEnum.active,
+      );
+    return karmaMembership ? karmaMembership.paymentPlan : null;
+  } catch (err) {
+    console.error(err);
+    return null;
   }
 };

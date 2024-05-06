@@ -33,6 +33,7 @@ export enum EmailTemplateKeys {
   KarmaCardDeclined = 'karmaCardDeclined',
   ChangeEmailRequestVerification = 'changeEmailRequestVerification',
   ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
+  ResumeKarmaCardApplication = 'resumeKarmaCardApplication',
 }
 
 export enum EmailTemplateTypes {
@@ -193,6 +194,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   ChangeEmailRequestAffirmation: {
     name: EmailTemplateKeys.ChangeEmailRequestAffirmation,
     type: EmailTemplateTypes.ChangeEmailRequestAffirmation,
+  },
+  ResumeKarmaCardApplication: {
+    name: EmailTemplateKeys.ResumeKarmaCardApplication,
+    type: EmailTemplateTypes.Support,
   },
 };
 

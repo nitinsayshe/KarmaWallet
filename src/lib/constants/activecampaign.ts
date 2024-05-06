@@ -18,6 +18,7 @@ export enum ActiveCampaignSyncTypes {
   UNLINKED_AND_REMOVED_ACCOUNTS = 'unlinkedAndRemovedAccounts',
   WEEKLY = 'weekly',
   YEARLY = 'yearly',
+  BIWEEKLY = 'biweekly',
 }
 
 export enum ActiveCampaignCustomFields {
@@ -61,4 +62,15 @@ export enum ActiveCampaignCustomFields {
   userId = 'userId',
   monthlyReforestationDonations = 'monthlyReforestationDonations',
   monthlyHungerAlleviationDonations = 'monthlyHungerAlleviationDonations',
+  hasntTranactedInPastQuarter = 'hasntTranactedInPastQuarter',
+  hasntLoadedMoneyInTwoWeeks = 'hasntLoadedMoneyInTwoWeeks',
+  missedCashbackCompaniesLastMonth = 'missedCashbackCompaniesLastMonth',
+  collectiveReforestationDonations = 'collectiveReforestationDonations',
+  collectiveHungerAlleviationDonations = 'collectiveHungerAlleviationDonations',
+  collectiveCarbonOffset = 'collectiveCarbonOffset',
+  averageKarmaScore = 'averageKarmaScore',
+  collectivePositiveImpact = 'collectivePositiveImpact',
+  collectiveNegativeImpact = 'collectiveNegativeImpact',
+  collectiveNeutralImpact = 'collectiveNeutralImpact',
+  membershipType = 'membershipType',
 }

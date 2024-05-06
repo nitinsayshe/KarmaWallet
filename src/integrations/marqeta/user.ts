@@ -1,7 +1,9 @@
 import { GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { MarqetaChannelEnum, MarqetaReasonCodeEnumValues } from '../../clients/marqeta/types';
 import { User } from '../../clients/marqeta/user';
 import { IUserDocument } from '../../models/user';
+import { IVisitorDocument } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import {
   IMarqetaCreateUser,
@@ -53,6 +55,31 @@ export const userMarqetaTransition = async (req: IRequest<{ userToken: string },
   const params = { userToken, ...req.body };
   const userResponse = await user.userMarqetaTransition(params);
   return { data: userResponse };
+};
+
+export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode: MarqetaReasonCodeEnumValues) => {
+  try {
+    if (!entity?.integrations?.marqeta?.userToken) {
+      throw new Error('User does not have a Marqeta user token');
+    }
+    if (entity.integrations.marqeta.status === status) {
+      throw new Error('User is already in the requested status');
+    }
+
+    const mockRequest = {
+      params: { userToken: entity.integrations.marqeta.userToken },
+      body: {
+        status,
+        channel: MarqetaChannelEnum.API,
+        reasonCode,
+      },
+      requestor: {},
+      authKey: '',
+    } as IRequest<{ userToken: string }, {}, IMarqetaUserTransition>;
+    await userMarqetaTransition(mockRequest);
+  } catch (error) {
+    console.log('Error updating user status to suspended', error);
+  }
 };
 
 export const listMarqetaUserTransition = async (userToken: string) => {

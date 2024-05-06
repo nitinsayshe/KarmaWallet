@@ -28,6 +28,7 @@ import { IMerchantRateDocument } from '../../../models/merchantRate';
 import { ITransactionDocument } from '../../../models/transaction';
 import { IUserDocument } from '../../../models/user';
 import { UserEmailStatus } from '../../../models/user/types';
+import { IRequest } from '../../../types/request';
 
 describe('kard client interface can fetch session tokes, create, update, and delete users, and queue transactions for processing', () => {
   let testUserWithLinkedAccountNoKardIntegration: IUserDocument;
@@ -396,7 +397,12 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const stringified = JSON.stringify(exampleWebhookBody);
     const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
 
-    const error = await verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
+    const mockRequest = {
+      body: exampleWebhookBody,
+      headers: { 'kard-signature': signature },
+      rawBody: Buffer.from(stringified),
+    } as IRequest<{}, {}, EarnedRewardWebhookBody>;
+    const error = await verifyAggregatorEnvWebhookSignature(mockRequest, signature);
     console.log(error);
     expect(error).toBeNull();
   });
@@ -405,7 +411,12 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const stringified = JSON.stringify(exampleWebhookBody);
     const signature = createHmac('sha256', "I'mNotTheSecret").update(stringified).digest('base64');
 
-    const error = await verifyAggregatorEnvWebhookSignature(exampleWebhookBody, signature);
+    const mockRequest = {
+      body: exampleWebhookBody,
+      headers: { 'kard-signature': signature },
+      rawBody: Buffer.from(stringified),
+    } as IRequest<{}, {}, EarnedRewardWebhookBody>;
+    const error = await verifyAggregatorEnvWebhookSignature(mockRequest, signature);
     expect(error).not.toBeNull();
   });
 
@@ -415,7 +426,12 @@ describe('kard client interface can fetch session tokes, create, update, and del
     const signature = createHmac('sha256', process.env.KARD_WEBHOOK_KEY).update(stringified).digest('base64');
     delete modifiedExampleWebhookBody.issuer;
 
-    const error = await verifyAggregatorEnvWebhookSignature(modifiedExampleWebhookBody as EarnedRewardWebhookBody, signature);
+    const mockRequest = {
+      body: modifiedExampleWebhookBody,
+      headers: { 'kard-signature': signature },
+      rawBody: Buffer.from(stringified),
+    } as IRequest<{}, {}, EarnedRewardWebhookBody>;
+    const error = await verifyAggregatorEnvWebhookSignature(mockRequest, signature);
     expect(error).not.toBeNull();
   });
 });

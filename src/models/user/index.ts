@@ -3,8 +3,8 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { UserRoles } from '../../lib/constants';
 import { getUtcDate } from '../../lib/date';
 import { IModel } from '../../types/model';
-import { ComplyAdvantageIntegrationSchema } from '../types';
-import { IUser, KarmaMembershipPaymentPlanEnum, KarmaMembershipStatusEnum, KarmaMembershipTypeEnum, UserEmailStatus } from './types';
+import { PersonaIntegrationSchema } from '../schemas';
+import { IUser, UserEmailStatus, KarmaMembershipPaymentPlanEnum, KarmaMembershipStatusEnum, KarmaMembershipTypeEnum } from './types';
 
 export interface IUserDocument extends IUser, Document { }
 export type IUserModel = IModel<IUser>;
@@ -140,7 +140,7 @@ const userSchema = new Schema({
       },
     ],
     fcm: [{ token: String, deviceId: String }],
-    complyAdvantage: ComplyAdvantageIntegrationSchema,
+    persona: PersonaIntegrationSchema,
   },
   deviceInfo: [{
     manufacturer: { type: String },

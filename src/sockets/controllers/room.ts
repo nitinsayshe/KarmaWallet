@@ -29,6 +29,14 @@ export const joinRole = (socket: ISocket) => async ({ room }: ISocketRequestData
   }
 };
 
+export const joinCardApplication = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
+  const roomPrefix = 'card-application';
+  console.log('joinCardApplication', room);
+  const roomName = `${roomPrefix}/${room}`;
+  socket.join(roomName);
+  console.log(`${room} joined ${roomName}`);
+};
+
 // export const joinGroup = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
 //   const roomPrefix = 'group';
 //   const groups = socket?.request?.requestor?.groups || [];
@@ -56,6 +64,13 @@ export const leaveRole = (socket: ISocket) => async ({ room }: ISocketRequestDat
   socket.leave(roomName);
   const uid = socket?.request?.requestor?._id || 'guest';
   console.log(`${uid} left ${roomName}`);
+};
+
+export const leaveCardApplication = (socket: ISocket) => async ({ room }: ISocketRequestData) => {
+  const roomPrefix = 'card-application';
+  const roomName = `${roomPrefix}/${room}`;
+  socket.leave(roomName);
+  console.log(`${room} left ${roomName}`);
 };
 
 export const leaveGroup = (socket: ISocket) => async ({ room }: ISocketRequestData) => {

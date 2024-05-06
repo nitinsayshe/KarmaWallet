@@ -9,6 +9,10 @@ export interface IVerifyTokenBody {
   token: string;
 }
 
+export interface IGetPersonaData {
+  email: string;
+}
+
 export interface IEmail {
   email: string;
 }

@@ -120,8 +120,7 @@ jobs:
     - run: echo 'FIREBASE_CLIENT_EMAIL=${{secrets.PRODUCTION_FIREBASE_CLIENT_EMAIL}}' >> .env
     - run: echo 'FIREBASE_CLIENT_ID=${{secrets.PRODUCTION_FIREBASE_CLIENT_ID}}' >> .env
     - run: echo 'FIREBASE_CLIENT_X509_CERT_URL=${{secrets.PRODUCTION_FIREBASE_CLIENT_X509_CERT_URL}}' >> .env
-    - run: echo 'COMPLYADVANTAGE_KEY=${{secrets.COMPLYADVANTAGE_KEY}}' >> .env
     - run: echo 'PERSONA_API_KEY=${{secrets.PERSONA_PROD_API_KEY}}' >> .env
-    - run: echo 'PERSONA_WEBHOOK_KEY=${{secrets.PERSONA_PROD_WEBHOOK_KEY}}' >> .env
+    - run: echo 'PERSONA_WEBHOOK_KEY=${{secrets.PERSONA_PRODUCTION_WEBHOOK_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env

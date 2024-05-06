@@ -24,6 +24,13 @@ export type UserIterationResponse<T> = {
   fields?: T;
 };
 
+export const isUserDocument = (entity: any): entity is IUserDocument => (
+  (<IUserDocument>entity).emails !== undefined
+    && (<IUserDocument>entity).password !== undefined
+    && (<IUserDocument>entity).name !== undefined
+    && (<IUserDocument>entity).role !== undefined
+);
+
 export const getShareableUser = ({
   _id,
   email,

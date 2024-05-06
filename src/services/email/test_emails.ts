@@ -18,6 +18,7 @@ import {
   sendACHCancelledEmail,
   sendACHReturnedEmail,
   sendKarmaCardDeclinedEmail,
+  sendResumeKarmaCardApplicationEmail,
 } from '.';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -428,6 +429,26 @@ export const testKarmaCardDeclinedEmail = async (req: IRequest<{}, {}, {}>) => {
       solutionText: 'Please submit a photo of the following items to support@karmawallet.io',
       status: IMarqetaKycState.pending,
       recipientEmail: email,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testResumeKarmaCardApplicationEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendResumeKarmaCardApplicationEmail({
+      user: req.requestor,
+      recipientEmail: email,
+      link: 'https://karmawallet.io',
     });
 
     if (!!emailResponse) {

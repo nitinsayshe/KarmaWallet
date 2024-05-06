@@ -7,11 +7,59 @@ import * as KarmaCardService from '../services/karmaCard';
 import { getShareableMarqetaUser } from '../services/karmaCard/utils';
 import { ErrorTypes } from '../lib/constants';
 import { formatZodFieldErrors, getShareableFieldErrors, getZodEnumSchemaFromTypescriptEnum } from '../lib/validation';
-import { KarmaMembershipPaymentPlanEnum, KarmaMembershipPaymentPlanEnumValues, KarmaMembershipTypeEnum, KarmaMembershipTypeEnumValues } from '../models/user/types';
+import {
+  KarmaMembershipPaymentPlanEnum,
+  KarmaMembershipPaymentPlanEnumValues,
+  KarmaMembershipTypeEnum,
+  KarmaMembershipTypeEnumValues,
+} from '../models/user/types';
 
 export const applyForKarmaCard: IRequestHandler<{}, {}, KarmaCardService.IKarmaCardRequestBody> = async (req, res) => {
   try {
     const applyResponse = await KarmaCardService.applyForKarmaCard(req);
+    api(req, res, getShareableMarqetaUser(applyResponse));
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const getApplicationStatus: IRequestHandler<{}, {}, { email: string }> = async (req, res) => {
+  try {
+    const getApplicationStatusSchema = z.object({
+      email: z.string().email(),
+    });
+
+    const parsed = getApplicationStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<{ email: string }>)?.error as ZodError)?.formErrors?.fieldErrors;
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+    const applyResponse = await KarmaCardService.getApplicationStatus(parsed.data.email);
+    api(req, res, getShareableMarqetaUser(applyResponse));
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const continueKarmaCardApplication: IRequestHandler<{}, {}, KarmaCardService.IContinueKarmanCardApplicationRequestBody> = async (
+  req,
+  res,
+) => {
+  try {
+    const continueApplicationSchema = z.object({
+      email: z.string().email(),
+      personaInquiryId: z.string(),
+    });
+
+    const parsed = continueApplicationSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<KarmaCardService.IContinueKarmanCardApplicationRequestBody>)?.error as ZodError)
+        ?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const applyResponse = await KarmaCardService.continueKarmaCardApplication(parsed.data.email, parsed.data.personaInquiryId);
     api(req, res, getShareableMarqetaUser(applyResponse));
   } catch (err) {
     error(req, res, asCustomError(err));
@@ -51,7 +99,8 @@ export const addKarmaMembershipToUser: IRequestHandler<{}, {}, KarmaCardService.
 
     const parsed = addKarmaMembershipToUserSchema.safeParse(req.body);
     if (!parsed.success) {
-      const fieldErrors = ((parsed as SafeParseError<KarmaCardService.AddKarmaMembershipToUserRequest>)?.error as ZodError)?.formErrors?.fieldErrors;
+      const fieldErrors = ((parsed as SafeParseError<KarmaCardService.AddKarmaMembershipToUserRequest>)?.error as ZodError)?.formErrors
+        ?.fieldErrors;
       console.log(formatZodFieldErrors(fieldErrors));
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
@@ -63,7 +112,10 @@ export const addKarmaMembershipToUser: IRequestHandler<{}, {}, KarmaCardService.
   }
 };
 
-export const updateKarmaMembershipPaymentPlan: IRequestHandler<{paymentPlan: KarmaMembershipPaymentPlanEnumValues}, {}, {}> = async (req, res) => {
+export const updateKarmaMembershipPaymentPlan: IRequestHandler<{ paymentPlan: KarmaMembershipPaymentPlanEnumValues }, {}, {}> = async (
+  req,
+  res,
+) => {
   try {
     const user = req.requestor;
 
@@ -73,7 +125,8 @@ export const updateKarmaMembershipPaymentPlan: IRequestHandler<{paymentPlan: Kar
 
     const parsed = updateKarmaMembershipToUserSchema.safeParse(req.params);
     if (!parsed.success) {
-      const fieldErrors = ((parsed as SafeParseError<{paymentPlan: KarmaMembershipPaymentPlanEnumValues}>)?.error as ZodError)?.formErrors?.fieldErrors;
+      const fieldErrors = ((parsed as SafeParseError<{ paymentPlan: KarmaMembershipPaymentPlanEnumValues }>)?.error as ZodError)?.formErrors
+        ?.fieldErrors;
       console.log(formatZodFieldErrors(fieldErrors));
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
@@ -85,7 +138,7 @@ export const updateKarmaMembershipPaymentPlan: IRequestHandler<{paymentPlan: Kar
   }
 };
 
-export const cancelKarmaMembership: IRequestHandler<{type: KarmaMembershipTypeEnumValues}, {}, {}> = async (req, res) => {
+export const cancelKarmaMembership: IRequestHandler<{ type: KarmaMembershipTypeEnumValues }, {}, {}> = async (req, res) => {
   try {
     const user = req.requestor;
 
@@ -95,7 +148,8 @@ export const cancelKarmaMembership: IRequestHandler<{type: KarmaMembershipTypeEn
 
     const parsed = cancelKarmaMembershipToUserSchema.safeParse(req.params);
     if (!parsed.success) {
-      const fieldErrors = ((parsed as SafeParseError<{membershipType: KarmaMembershipTypeEnumValues}>)?.error as ZodError)?.formErrors?.fieldErrors;
+      const fieldErrors = ((parsed as SafeParseError<{ membershipType: KarmaMembershipTypeEnumValues }>)?.error as ZodError)?.formErrors
+        ?.fieldErrors;
       console.log(formatZodFieldErrors(fieldErrors));
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }

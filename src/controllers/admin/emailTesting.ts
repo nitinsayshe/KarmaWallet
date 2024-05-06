@@ -154,3 +154,12 @@ export const testKarmaCardDeclineEmail: IRequestHandler<{}, {}, {}> = async (req
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const testResumeKarmaCardApplicationEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testResumeKarmaCardApplicationEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

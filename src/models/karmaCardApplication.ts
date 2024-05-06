@@ -56,7 +56,7 @@ const karmaCardApplication = new Schema({
     status: { type: String },
     codes: { type: Array },
   },
-  status: { type: String },
+  status: { type: String, enum: Object.values(ApplicationStatus) },
   createdOn: { type: Date, default: () => getUtcDate() },
   lastModified: { type: Date, default: () => getUtcDate().toDate() },
 });

@@ -14,6 +14,7 @@ import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
+import { IMarqetaTransitionReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardModel, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import {
   createCardShippedUserNotification,
@@ -506,7 +507,7 @@ export const handleMarqetaCardWebhook = async (cardWebhookData: IMarqetaWebhookC
   if (cardWebhookData.state === cardDataInMarqeta.state) {
     if (!cardWebhookData.reason) {
       const { reason_code } = cardWebhookData;
-      cardWebhookData.reason = IMarqetaReasonCodesEnum[reason_code] ?? '';
+      cardWebhookData.reason = IMarqetaTransitionReasonCodesEnum[reason_code] ?? '';
     }
   }
 

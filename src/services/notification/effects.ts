@@ -2,7 +2,6 @@ import { sendPushNotification } from '../../integrations/firebaseCloudMessaging'
 import { ErrorTypes } from '../../lib/constants';
 import { NotificationChannelEnum, NotificationEffectsEnum, NotificationEffectsEnumValue } from '../../lib/constants/notification';
 import CustomError from '../../lib/customError';
-import { IUserDocument } from '../../models/user';
 import {
   IBankLinkedConfirmationEmailData,
   ICardShippedNotificationData,
@@ -16,15 +15,9 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { IVisitorDocument } from '../../models/visitor';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail, sendACHCancelledEmail, sendACHReturnedEmail, sendKarmaCardDeclinedEmail } from '../email';
+import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail, sendACHCancelledEmail, sendACHReturnedEmail, sendKarmaCardDeclinedEmail, sendResumeKarmaCardApplicationEmail } from '../email';
 import { IACHTransferEmailData, IDisputeEmailData, IKarmaCardDeclinedEmailData } from '../email/types';
-
-export interface IEffectFunctionParams {
-  user?: IUserDocument;
-  visitor?: IVisitorDocument;
-  data: any;
-}
+import { IEffectFunctionParams, IResumeKarmaCardEmailData } from './types';
 
 export const handlePushEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -358,6 +351,26 @@ export const handleKarmaCardDeclinedEmailEffect = async ({ user, visitor, data }
   }
 };
 
+export const handleResumeKarmaCardApplication = async ({ user, visitor, data } : IEffectFunctionParams): Promise<void> => {
+  if (!user && !visitor) throw new Error('Invalid karma card application resume data');
+
+  try {
+    const recipientEmail = !!user ? user?.emails?.find((email: any) => email?.primary)?.email : visitor?.email;
+    const sendEmailData: IResumeKarmaCardEmailData = {
+      link: data.link,
+      recipientEmail,
+    };
+
+    if (visitor) sendEmailData.visitor = visitor;
+    if (user) sendEmailData.user = user;
+
+    await sendResumeKarmaCardApplicationEmail(sendEmailData);
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending resume karma card application email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: ({ user, visitor, data }: IEffectFunctionParams) => Promise<void>;
 } = {
@@ -379,6 +392,7 @@ export const NotificationEffectsFunctions: {
   SendCardShippedEmail: handleCardShippedEffect,
   SendCaseLostProvisionalCreditNotAlreadyIssued: handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect,
   SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
+  SendResumeKarmaCardApplicationEmail: handleResumeKarmaCardApplication,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -400,6 +414,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCardShippedEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued,
     NotificationEffectsEnum.SendEmployerGiftEmail,
+    NotificationEffectsEnum.SendResumeKarmaCardApplicationEmail,
   ],
   [NotificationChannelEnum.Push]: [
     NotificationEffectsEnum.SendPushNotification,

@@ -45,6 +45,7 @@ import { executeUserNotificationEffects } from '../notification';
 import { IACHTransferEmailData, IDeclinedData } from '../email/types';
 import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
 import { VisitorModel } from '../../models/visitor';
+import { IResumeKarmaCardEmailData } from '../notification/types';
 
 dayjs.extend(utc);
 
@@ -1006,5 +1007,24 @@ export const createDeclinedKarmaWalletCardUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating Karma Wallet application declined email: ${e}`);
+  }
+};
+
+export const createResumeKarmaCardApplicationUserNotification = async (
+  data: IResumeKarmaCardEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ResumeKarmaCardApplication,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        data,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating resume karma card application user notification: ${err}`);
   }
 };

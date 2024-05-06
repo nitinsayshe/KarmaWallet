@@ -835,6 +835,7 @@ export const affirmEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.I
     if (!saveEmailChange) throw new CustomError('Error saving email change.', ErrorTypes.SERVER);
 
     await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { status: IChangeEmailProcessStatus.COMPLETE });
+    await updateMarqetaUser(user.integrations.marqeta.userToken, { email: changeEmailRequest.proposedEmail });
 
     return 'Email change completed.';
   } catch (err) {

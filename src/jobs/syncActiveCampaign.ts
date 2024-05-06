@@ -19,6 +19,8 @@ import {
   removeDuplicateContactAutomations,
   UserLists,
   UserSubscriptions,
+  prepareQuarterlyUpdatedFields,
+  prepareBiweeklyUpdatedFields,
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
@@ -175,11 +177,14 @@ const prepareSyncUsersRequest = async (
           case ActiveCampaignSyncTypes.WEEKLY:
             fields = await prepareWeeklyUpdatedFields(userDocument, customFields, fields);
             break;
+          case ActiveCampaignSyncTypes.BIWEEKLY:
+            fields = await prepareBiweeklyUpdatedFields(userDocument, customFields, fields);
+            break;
           case ActiveCampaignSyncTypes.MONTHLY:
             fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.QUARTERLY:
-            fields = await prepareMonthlyUpdatedFields(userDocument, customFields, fields);
+            fields = await prepareQuarterlyUpdatedFields(userDocument, customFields, fields);
             break;
           case ActiveCampaignSyncTypes.YEARLY:
             fields = await prepareYearlyUpdatedFields(userDocument, customFields, fields);
@@ -333,13 +338,14 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
 
   // set any that have a total below the threshold to 0 and round amount
   missedCashbackMetrics = missedCashbackMetrics?.map((metric) => {
-    const { id, email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount } = metric;
+    const { id, email, estimatedMonthlyMissedCommissionsAmount, estimatedMonthlyMissedCommissionsCount, estimatedMissedCashbackCompanies } = metric;
     if (estimatedMonthlyMissedCommissionsAmount <= request.fields.missingCashbackThresholdDollars) {
       return {
         id,
         email,
         estimatedMonthlyMissedCommissionsAmount: 0,
         estimatedMonthlyMissedCommissionsCount: 0,
+        estimatedMissedCashbackCompanies: [],
       };
     }
     return {
@@ -347,6 +353,7 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
       email,
       estimatedMonthlyMissedCommissionsAmount: roundToPercision(estimatedMonthlyMissedCommissionsAmount, 0),
       estimatedMonthlyMissedCommissionsCount,
+      estimatedMissedCashbackCompanies,
     };
   });
 
@@ -354,6 +361,9 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
   const missedDollarsFieldId = customFields.find((field) => field.name === ActiveCampaignCustomFields.missedCashbackDollarsLastMonth);
   const missedCashbackTransactionCountFieldId = customFields.find(
     (field) => field.name === ActiveCampaignCustomFields.missedCashbackTransactionNumberLastMonth,
+  );
+  const missedCashbackCompaniesFieldId = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.missedCashbackCompaniesLastMonth,
   );
 
   const contacts = missedCashbackMetrics.map((metric) => {
@@ -371,6 +381,13 @@ const prepareMonthlyCashbackSimulationImportRequest = async (
       contact.fields.push({
         id: missedCashbackTransactionCountFieldId.id,
         value: metric.estimatedMonthlyMissedCommissionsCount.toString(),
+      });
+    }
+
+    if (!!missedCashbackCompaniesFieldId) {
+      contact.fields.push({
+        id: missedCashbackCompaniesFieldId.id,
+        value: metric.estimatedMissedCashbackCompanies.join('||'),
       });
     }
 

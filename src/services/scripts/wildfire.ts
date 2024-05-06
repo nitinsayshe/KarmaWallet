@@ -533,7 +533,7 @@ export const searchResultsProcessing = async () => {
         wfUrl: topDomainMatchDomain,
         wfName: topDomainMatchMerchant,
         domainId: topDomainMatchMerchantId,
-        merchantId: searchResult.topMerchantMatches[0].item.Merchant.ID,
+        merchantId: !!searchResult?.topMerchantMatches?.length ? searchResult.topMerchantMatches[0].item.Merchant.ID : null,
         score: topDomainMatchScore,
       });
       console.log(`[+] top domain match: ${topDomainMatchDomain} - ${topDomainMatchMerchantId}`);

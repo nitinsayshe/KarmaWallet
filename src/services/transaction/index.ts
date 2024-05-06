@@ -542,6 +542,11 @@ export const getShareableTransaction = async ({
       currency_code: currencyCode,
     } = integrations.marqeta;
 
+    let mechantNameToUse = !!integrations.marqeta?.card_acceptor?.name ? integrations?.marqeta?.card_acceptor?.name : null;
+    if (!!integrations.marqeta?.direct_deposit) {
+      mechantNameToUse = integrations.marqeta?.direct_deposit?.company_name || null;
+    }
+
     const marqetaIntegration: any = {
       token,
       userToken,
@@ -553,7 +558,7 @@ export const getShareableTransaction = async ({
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: integrations?.marqeta?.card_acceptor?.name || null,
+      merchantName: mechantNameToUse,
       cardMask: integrations.marqeta?.card?.last_four || null,
     };
 

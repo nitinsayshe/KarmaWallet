@@ -318,7 +318,7 @@ export type MarqetaCardModel = {
   card_product_token?: string;
   created_time?: string;
   expedite?: boolean;
-  expiration_time?: string;
+  expiration_time?: Date;
   expiration?: string;
   fulfillment_status?: string;
   instrument_type?: string;
@@ -327,9 +327,11 @@ export type MarqetaCardModel = {
   metadata?: Record<string, any>;
   pan?: string;
   pin_is_set?: boolean;
-  state_reason?: string;
-  state?: string;
+  reason?: string;
+  reason_code?: string;
+  state?: MarqetaCardState;
   token: string;
+  card_token: string;
   user_token?: string;
 };
 

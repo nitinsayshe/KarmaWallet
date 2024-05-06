@@ -14,7 +14,7 @@ import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
-import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
+import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardModel, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import {
   createCardShippedUserNotification,
   createPushUserNotificationFromUserAndPushData,
@@ -110,14 +110,18 @@ const _removePlaidCard = async (requestor: IUserDocument, card: ICardDocument, r
   const client = new PlaidClient();
   if (!!card?.integrations?.plaid?.accessToken) {
     await client.removeItem({ access_token: card.integrations.plaid.accessToken });
+    const cards = await CardModel.find({ 'integrations.plaid.accessToken': card.integrations.plaid.accessToken });
 
-    await CardModel.updateMany(
-      { 'integrations.plaid.accessToken': card.integrations.plaid.accessToken },
-      {
-        'integrations.plaid.accessToken': null,
-        $push: { 'integrations.plaid.unlinkedAccessTokens': card.integrations.plaid.accessToken },
-      },
-    );
+    for (const currentCard of cards) {
+      currentCard.integrations.plaid.accessToken = null;
+      if (currentCard.integrations.plaid.unlinkedAccessTokens === null) {
+        currentCard.integrations.plaid.unlinkedAccessTokens = [card.integrations.plaid.accessToken];
+      } else {
+        currentCard.integrations.plaid.unlinkedAccessTokens.push(card.integrations.plaid.accessToken);
+      }
+
+      await currentCard.save();
+    }
   }
 
   if (removeData) {
@@ -324,7 +328,7 @@ export const getCardStatusFromMarqetaCardState = (cardState: MarqetaCardState): 
   }
 };
 
-export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration | IMarqetaWebhookCardsEvent) => {
+export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCardIntegration | IMarqetaWebhookCardsEvent | MarqetaCardModel) => {
   const {
     user_token,
     token,
@@ -355,6 +359,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
 
   if (!user_token) throw new CustomError('A user_token is required', ErrorTypes.INVALID_ARG);
   // extract the expiration year & month of the card
+  if (!expiration_time) throw new CustomError('A expiration_time is required', ErrorTypes.INVALID_ARG);
   const { year, month } = extractYearAndMonth(expiration_time);
 
   // prepare the cardItem Details
@@ -363,7 +368,6 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
     card_product_token,
     card_token: !!card_token ? card_token : token,
     created_time,
-    expiration_time,
     expr_month: month,
     expr_year: year,
     fulfillment_status,
@@ -383,6 +387,7 @@ export const mapMarqetaCardtoCard = async (_userId: string, cardData: IMarqetaCa
   card.status = getCardStatusFromMarqetaCardState(cardData.state);
   // Save the updated card document
   await card.save();
+  return card;
 };
 
 export const handleMarqetaCardNotificationFromWebhook = async (
@@ -462,11 +467,14 @@ export const updateCardFromMarqetaCardWebhook = async (cardFromWebhook: IMarqeta
   if (!existingCard) {
     // if virtual card ensure set to active when first created
     if (newData.card_product_token.includes('virt')) newData.state = MarqetaCardState.ACTIVE;
-    await mapMarqetaCardtoCard(cardFromWebhook.user_token, cardFromWebhook);
+    const internalUser = await UserModel.findOne({ 'integrations.marqeta.userToken': cardFromWebhook.user_token });
+    console.log('///// Creating a new card from Marqeta webhook /////');
+    await mapMarqetaCardtoCard(internalUser._id.toString(), cardFromWebhook);
   } else {
     existingCard.integrations.marqeta = newData;
     existingCard.lastModified = dayjs().utc().toDate();
     existingCard.status = getCardStatusFromMarqetaCardState(cardFromWebhook.state);
+    console.log('///// Updating existing card from Marqeta webhook /////');
     await existingCard.save();
   }
 };

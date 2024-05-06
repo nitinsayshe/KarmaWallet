@@ -42,7 +42,7 @@ import { V2TransactionMatchedCompanyNameModel } from '../../models/v2_transactio
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getShareableCard } from '../card';
-import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, ICompanyProtocol, _getPaginatedCompanies } from '../company';
+import { convertCompanyModelsToGetCompaniesResponse, getShareableCompany, _getPaginatedCompanies } from '../company';
 import { getCompanyRatingsThresholds } from '../misc';
 import { calculateCompanyScore } from '../scripts/calculate_company_scores';
 import { getShareableSector } from '../sectors';
@@ -79,6 +79,7 @@ import { IShareableUser } from '../../models/user/types';
 import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
 import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
+import { ICompanyProtocol } from '../company/types';
 
 export const _deleteTransactions = async (query: FilterQuery<ITransactionDocument>) => TransactionModel.deleteMany(query);
 
@@ -1018,27 +1019,23 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
 
     await createEmployerGiftEmailUserNotification(user, transaction);
   }
+};
 
-  if (transaction.subType === TransactionCreditSubtypeEnum.Cashback) {
-    await createPushUserNotificationFromUserAndPushData(user, {
-      pushNotificationType: PushNotificationTypes.REWARD_DEPOSIT,
-      body: `$${transaction?.amount.toFixed(2)} in Karma Cash has been deposited onto your Karma Wallet Card`,
-      title: 'Karma Cash Deposited!',
-    });
-  }
+const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
+  // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
+  if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
+  if (transaction.status === TransactionModelStateEnum.Pending) return true;
+  if (transaction.status === TransactionModelStateEnum.Completion && transaction.integrations.marqeta.relatedTransactions) return true;
+  return false;
 };
 
 export const handleDebitNotification = async (transaction: ITransactionDocument) => {
   const user = await UserModel.findById(transaction.user);
-  const { status } = transaction;
   const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
   const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
 
   // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
-  if (
-    status === TransactionModelStateEnum.Pending
-    || (status === TransactionModelStateEnum.Completion && !transaction.integrations.marqeta.relatedTransactions)
-  ) {
+  if (_sendTransactionNotifications(transaction)) {
     // any notification
     await createPushUserNotificationFromUserAndPushData(user, {
       pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,

@@ -12,10 +12,12 @@ const getWildfireDictionary = (arr: any) => arr.reduce((acc: any, merchant: any)
   return acc;
 }, {});
 
+// Existing merchant in our db that we need to add wildfire integration to
 const addWildfireIntegrationToMerchant = async (
   merchantId: Types.ObjectId,
   merchant: any,
   domain: any,
+  mobileCompliant: boolean,
 ): Promise<IMerchantDocument | null> => {
   try {
     const existingMerchant = await MerchantModel.findById(merchantId);
@@ -27,6 +29,8 @@ const addWildfireIntegrationToMerchant = async (
 
     // update merchant to have kard integration
     if (!existingMerchant?.integrations) existingMerchant.integrations = {};
+    // mark as mobile compliant if there is already a Kard integration OR if they are in the mobile environment for Wildfire
+    existingMerchant.mobileCompliant = mobileCompliant || !!existingMerchant?.integrations?.kard;
     existingMerchant.integrations.wildfire = {
       merchantId: merchant.ID,
       Name: merchant.Name,
@@ -45,9 +49,10 @@ const addWildfireIntegrationToMerchant = async (
 };
 
 // Creates a new merchant in the database
-export const createMerchant = async (merchant: any, domain: any) => {
+export const createMerchant = async (merchant: any, domain: any, mobileCompliant: boolean) => {
   const merchantInstance = new MerchantModel({
     name: merchant.Name,
+    mobileCompliant,
     integrations: {
       wildfire: {
         merchantId: merchant.ID,
@@ -100,6 +105,8 @@ export const associateWildfireMatches = async () => {
   const rates = JSON.parse(rawRates);
   const rawMerchants = fs.readFileSync(path.resolve(__dirname, './.tmp', 'wfmerchants.json'), 'utf8');
   const merchants = JSON.parse(rawMerchants);
+  const mobileMerchants = JSON.parse(fs.readFileSync(path.resolve(__dirname, './.tmp', 'wfmobilemerchants.json')).toString());
+  const mobileMerchantIds = mobileMerchants.data.map((m: any) => m.ID);
   const wildfireMerchantDictionary = getWildfireDictionary(merchants);
   const wildfireDomainDictionary = getWildfireDictionary(domains);
 
@@ -148,19 +155,21 @@ export const associateWildfireMatches = async () => {
       console.log(
         `[info] ${company.companyName} - ${merchant.ID} - ${domain.ID} - ${merchantRates.length} - ${domainMerchantMatch}`,
       );
+      const mobileCompliant = mobileMerchantIds.includes(merchant.ID);
       // TODO: check if the merchant exists. If so, add the wildfire integration instead of creating the merchant
       if (!!company.merchant) {
         const updatedMerchant = await addWildfireIntegrationToMerchant(
           company.merchant as unknown as Types.ObjectId,
           merchant,
           domain,
+          mobileCompliant,
         );
         if (!updatedMerchant) throw new Error(`Error updating Merchant: ${merchant._id}`);
         // update merchant rates
         const updatedRates = await createMerchantRates(updatedMerchant, merchantRates);
         if (!updatedRates) throw new Error(`Error updating Merchant Rates: ${merchant._id}`);
       }
-      await createMerchant(merchant, domain);
+      await createMerchant(merchant, domain, mobileCompliant);
       await createMerchantRates(merchant, merchantRates);
       const kwMerchant = await MerchantModel.findOne({ 'integrations.wildfire.merchantId': merchant.ID });
       if (!kwMerchant) throw new Error(`Merchant ${merchant.ID} not found in DB`);
@@ -238,22 +247,12 @@ export const removeMultipleWildfireMerchants = async () => {
   }
 };
 
-// Gets the current Wildfire data and saves locally, run before executing other functions
-export const getCurrentWildfireData = async () => {
-  const wildfireClient = new WildfireClient();
-  const merchants = await wildfireClient.getMerchants();
-  const domains = await wildfireClient.getActiveDomains();
-  const rates = await wildfireClient.getMerchantRates();
-
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmerchants.json'), JSON.stringify(merchants.data));
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfdomains.json'), JSON.stringify(domains.data));
-  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfrates.json'), JSON.stringify(rates.data));
-};
-
 // Updates existing merchants in database to ensure there are currently active domains
 export const updateWildfireMerchants = async () => {
   const wildfireClient = new WildfireClient();
   const res = await wildfireClient.getActiveDomains();
+  const mobileMerchants = await wildfireClient.getMobileMerchants();
+  const mobileMerchantIds = mobileMerchants.data.map((m: any) => m.ID);
   const newActiveDomains: any[] = res.data;
   const lastModifiedDate = new Date();
   const currentMerchants = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
@@ -283,6 +282,7 @@ export const updateWildfireMerchants = async () => {
       }
     // if there are active merchant domains on wildfire, update the merchant domain data and set maxRate to the new value
     } else {
+      merchant.mobileCompliant = mobileMerchantIds.includes(merchantId);
       merchant.integrations.wildfire.domains[0] = merchantDomain;
       merchant.lastModified = lastModifiedDate;
       const updatedMerchant = await merchant.save();
@@ -392,6 +392,20 @@ const options = {
   includeScore: true,
   // Search in `author` and in `tags` array
   keys: ['Domain', 'Merchant.Name'],
+};
+
+// Gets the current Wildfire data and saves locally, run before executing other functions
+export const getCurrentWildfireData = async () => {
+  const wildfireClient = new WildfireClient();
+  const merchants = await wildfireClient.getMerchants();
+  const domains = await wildfireClient.getActiveDomains();
+  const rates = await wildfireClient.getMerchantRates();
+  const mobileMerchants = await wildfireClient.getMobileMerchants();
+
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmerchants.json'), JSON.stringify(merchants.data));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfdomains.json'), JSON.stringify(domains.data));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfrates.json'), JSON.stringify(rates.data));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmobilemerchants.json'), JSON.stringify(mobileMerchants.data));
 };
 
 // FUSE.js is a JavaScript library for fuzzy searching
@@ -504,7 +518,6 @@ export const searchResultsProcessing = async () => {
 
     let merchantMatch = false;
     let domainMatch = false;
-    console.log('///// reviewing', companyName, url);
     if (topMerchantMatchScore < 0.05) {
       merchantMatch = true;
     }
@@ -599,4 +612,28 @@ export const identifyMerchantsNoLongerOnWildfire = async () => {
   }
 
   fs.writeFileSync(path.resolve(__dirname, './.tmp/no-longer-a-merchant-prod.json'), JSON.stringify(noActiveMerchant));
+};
+
+// Gets the current Wildfire data for our mobile environment and saves locally, run before executing other functions
+export const getCurrentMobileWildfireData = async () => {
+  const wildfireClient = new WildfireClient();
+  const merchants = await wildfireClient.getMobileMerchants();
+  const domains = await wildfireClient.getMobileActiveDomains();
+  const rates = await wildfireClient.getMerchantRates();
+
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmobilemerchants.json'), JSON.stringify(merchants.data));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmobiledomains.json'), JSON.stringify(domains.data));
+  fs.writeFileSync(path.resolve(__dirname, './.tmp', 'wfmobilerates.json'), JSON.stringify(rates.data));
+};
+
+export const addMobileEnabledToMerchants = async () => {
+  const mobileMerchants = JSON.parse(fs.readFileSync(path.resolve(__dirname, './.tmp', 'wfmobilemerchants.json')).toString());
+  const mobileMerchantsArray = mobileMerchants.map((merchant: any) => merchant.ID);
+  const existingMerchantsWithWildfireIntegration = await MerchantModel.find({ 'integrations.wildfire': { $exists: true } });
+
+  for (const merchant of existingMerchantsWithWildfireIntegration) {
+    const mobileCompliant = mobileMerchantsArray.includes(merchant.integrations.wildfire.merchantId);
+    merchant.mobileCompliant = mobileCompliant;
+    await merchant.save();
+  }
 };

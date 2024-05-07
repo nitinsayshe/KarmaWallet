@@ -14,8 +14,6 @@ import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
-import { IMarqetaTransitionReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
-import { IMarqetaReasonCodesEnum, IMarqetaWebhookCardsEvent, MarqetaCardModel, MarqetaCardState, MarqetaCardWebhookType } from '../../integrations/marqeta/types';
 import {
   createCardShippedUserNotification,
   createPushUserNotificationFromUserAndPushData,
@@ -26,6 +24,7 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Card } from '../../clients/marqeta/card';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IShareableUser } from '../../models/user/types';
+import { MarqetaCardState, IMarqetaWebhookCardsEvent, MarqetaCardModel, MarqetaCardWebhookType, IMarqetaTransitionReasonCodesEnum } from '../../integrations/marqeta/types';
 
 dayjs.extend(utc);
 

@@ -7,7 +7,9 @@ import { getRandomInt } from '../lib/number';
 import { IPersonaAccountsRequest, IPersonaCreateAccountBody, PersonaGetInquiryResponse, PersonaWebhookBody, RelationshipPathsEnumValues } from '../integrations/persona/types';
 import { IRequest } from '../types/request';
 
-const { PERSONA_API_KEY, PERSONA_WEBHOOK_KEY } = process.env;
+const { PERSONA_API_KEY, PERSONA_WEBHOOK_KEY, PERSONA_ENVIRONMENT_ID } = process.env;
+
+export const PersonaHostedFlowBaseUrl = 'https://inquiry.withpersona.com/verify';
 
 export class PersonaClient extends SdkClient {
   _client: AxiosInstance;
@@ -17,7 +19,7 @@ export class PersonaClient extends SdkClient {
   }
 
   protected _init() {
-    if (!PERSONA_API_KEY || !PERSONA_WEBHOOK_KEY) throw new Error('Persona credentials not found');
+    if (!PERSONA_API_KEY || !PERSONA_WEBHOOK_KEY || !PERSONA_ENVIRONMENT_ID) throw new Error('Persona credentials not found');
 
     this._client = axios.create({
       headers: {

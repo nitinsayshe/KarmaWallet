@@ -20,6 +20,7 @@ import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continu
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
 import { createResumeKarmaCardApplicationUserNotification } from '../../services/user_notification';
+import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
 
 const PhoneNumberLength = 10;
 
@@ -32,7 +33,7 @@ export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Prom
     address1: inquiryData?.addressStreet1?.trim(),
     address2: inquiryData?.addressStreet2?.trim(),
     birthDate: inquiryData?.birthdate,
-    phone: phone?.length <= PhoneNumberLength ? phone : phone.substr(phone.length - PhoneNumberLength),
+    phone: phone?.length <= PhoneNumberLength ? phone : phone?.substring(phone.length - PhoneNumberLength),
     city: inquiryData?.addressCity?.trim(),
     email: applicationData?.email,
     firstName: inquiryData?.nameFirst?.trim(),
@@ -175,8 +176,7 @@ export const createVisitorOrUpdatePersonaIntegration = async (email: string, dat
   }
 };
 
-const PersonaHostedFlowBaseUrl = 'https://inquiry.withpersona.com/verify';
-export const composePersonaContinueUrl = (email: string, templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[application-data][email]=${email}`;
+export const composePersonaContinueUrl = (email: string, templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[application-data][email]=${email}&fields[source]=embedded`;
 
 export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
@@ -215,10 +215,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     return;
   }
   const notification = UserNotificationModel.findOne({
-    $or: [
-      { user: user._id },
-      { visitor: visitor._id },
-    ],
+    $or: [{ user: user._id }, { visitor: visitor._id }],
     type: NotificationTypeEnum.ResumeKarmaCardApplication,
   });
   if (notification) {
@@ -246,6 +243,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
   const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
   const inquiryId = req?.data?.attributes?.payload?.data?.id;
   const email = req?.data?.attributes?.payload?.data?.attributes?.fields?.applicationData?.value?.email;
+
   switch (inquiryStatus) {
     case PersonaInquiryStatusEnum.Completed:
       console.log('Inquiry completed');

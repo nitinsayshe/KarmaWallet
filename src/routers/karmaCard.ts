@@ -5,6 +5,7 @@ import authenticate from '../middleware/authenticate';
 const router = Router();
 
 router.post('/application-status', KarmaCardController.getApplicationStatus);
+router.get('/application-status/:token', KarmaCardController.getApplicationStatusByEmailToken);
 router.post('/apply', KarmaCardController.applyForKarmaCard);
 router.post('/continue-application', KarmaCardController.continueKarmaCardApplication);
 router.get('/applications', KarmaCardController.getKarmaCardApplications);

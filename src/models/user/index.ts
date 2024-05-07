@@ -1,4 +1,5 @@
 import { Document, model, PaginateModel, Schema } from 'mongoose';
+import { nanoid } from 'nanoid';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { UserRoles } from '../../lib/constants';
 import { getUtcDate } from '../../lib/date';
@@ -21,6 +22,7 @@ const userSchema = new Schema({
         },
         bouncedDate: { type: Date },
         primary: { type: Boolean, default: false },
+        token: { type: String, dafault: nanoid(), required: true, unique: true },
       },
     },
   ],

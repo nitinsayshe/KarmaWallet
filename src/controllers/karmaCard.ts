@@ -6,7 +6,7 @@ import { IRequestHandler } from '../types/request';
 import * as KarmaCardService from '../services/karmaCard';
 import { getShareableMarqetaUser } from '../services/karmaCard/utils';
 import { ErrorTypes } from '../lib/constants';
-import { formatZodFieldErrors, getShareableFieldErrors, getZodEnumSchemaFromTypescriptEnum } from '../lib/validation';
+import { formatZodFieldErrors, getShareableFieldErrors, getZodEnumSchemaFromTypescriptEnum, nanoIdValidation } from '../lib/validation';
 import {
   KarmaMembershipPaymentPlanEnum,
   KarmaMembershipPaymentPlanEnumValues,
@@ -35,6 +35,29 @@ export const getApplicationStatus: IRequestHandler<{}, {}, { email: string }> = 
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const applyResponse = await KarmaCardService.getApplicationStatus(parsed.data.email);
+    api(req, res, getShareableMarqetaUser(applyResponse));
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+};
+
+export const getApplicationStatusByEmailToken: IRequestHandler<{ token: string }, {}, {}> = async (req, res) => {
+  try {
+    const getApplicationStatusByEmailTokenSchema = z.object({
+      token: nanoIdValidation,
+    });
+
+    const parsed = getApplicationStatusByEmailTokenSchema.safeParse(req.params);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<{ token: string }>)?.error as ZodError)?.formErrors?.fieldErrors;
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const email = await KarmaCardService.getEmailFromToken(parsed.data.token);
+    if (!email) {
+      throw new CustomError('Invalid token', ErrorTypes.INVALID_ARG);
+    }
+    const applyResponse = await KarmaCardService.getApplicationStatus(email);
     api(req, res, getShareableMarqetaUser(applyResponse));
   } catch (err) {
     error(req, res, asCustomError(err));
@@ -114,7 +137,8 @@ export const addKarmaMembershipToUser: IRequestHandler<{}, {}, KarmaCardService.
 
 export const updateKarmaMembershipPaymentPlan: IRequestHandler<{ paymentPlan: KarmaMembershipPaymentPlanEnumValues }, {}, {}> = async (
   req,
-  res,
+  res
+,
 ) => {
   try {
     const user = req.requestor;

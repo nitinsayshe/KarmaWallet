@@ -1,6 +1,7 @@
 import {
   Document, model, ObjectId, PaginateModel, Schema,
 } from 'mongoose';
+import { nanoid } from 'nanoid';
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
 import { getUtcDate } from '../lib/date';
@@ -75,6 +76,7 @@ export interface IShareableVisitor {
 export interface IVisitor extends IShareableVisitor {
   user?: IRef<ObjectId, (IShareableUser | IUser)>;
   actions?: IVisitorAction[];
+  emailToken?: string;
 }
 
 export interface IVisitorDocument extends IVisitor, Document { }
@@ -103,6 +105,7 @@ const visitorSchema = new Schema({
     type: String,
     required: true,
   },
+  emailToken: { type: String, dafault: nanoid(), required: true, unique: true },
   emailStatus: {
     type: String,
     enum: Object.values(UserEmailStatus),

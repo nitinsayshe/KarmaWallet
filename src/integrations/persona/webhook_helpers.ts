@@ -12,15 +12,18 @@ import { IRequest } from '../../types/request';
 import { PersonaWebhookBody, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum, EventNamesEnum } from './types';
 import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continueKarmaCardApplication } from '../../services/karmaCard';
 
+const PhoneNumberLength = 10;
+
 export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<ApplicationDecision> => {
   // start the application process
   const inquiryData = req?.data?.attributes?.payload?.data?.attributes;
   const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
+  const phone = inquiryData?.phoneNumber?.replace(/[^\d]/g, '');
   const applicationBody: IKarmaCardRequestBody = {
     address1: inquiryData?.addressStreet1?.trim(),
     address2: inquiryData?.addressStreet2?.trim(),
     birthDate: inquiryData?.birthdate,
-    phone: inquiryData?.phoneNumber?.trim(),
+    phone: phone?.length <= PhoneNumberLength ? phone : phone.substr(phone.length - PhoneNumberLength),
     city: inquiryData?.addressCity?.trim(),
     email: applicationData?.email,
     firstName: inquiryData?.nameFirst?.trim(),

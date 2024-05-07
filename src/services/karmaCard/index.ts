@@ -413,23 +413,6 @@ export const continueKarmaCardApplication = async (email: string, personaInquiry
   }
 };
 
-export const getEmailFromToken = async (token: string): Promise<string> => {
-  try {
-    const user = await UserModel.findOne({ 'emails.token': token });
-    if (!!user) return user?.emails?.find?.((email) => email.token === token)?.email;
-
-    const visitor = await VisitorModel.findOne({ emailToken: token });
-    if (!!visitor) return visitor.email;
-
-    throw new Error();
-  } catch (err) {
-    if ((err as CustomError)?.isCustomError) {
-      throw err;
-    }
-    throw new CustomError('Error getting email from token', ErrorTypes.SERVER);
-  }
-};
-
 export const getApplicationStatus = async (email: string): Promise<ApplicationDecision> => {
   try {
     const user = await UserModel.findOne({ 'emails.email': email }).lean();

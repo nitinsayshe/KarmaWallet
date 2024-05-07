@@ -42,7 +42,6 @@ export interface IEmail {
   status: UserEmailStatus;
   primary: boolean;
   bouncedDate?: Date;
-  token: string;
 }
 
 export interface IRareUserIntegration {

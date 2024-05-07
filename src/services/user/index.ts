@@ -1,5 +1,4 @@
 import argon2 from 'argon2';
-import { nanoid } from 'nanoid';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
@@ -147,14 +146,7 @@ export const register = async ({ password, name, token, promo, zipcode, visitorI
   const integrations: IUserIntegrations = {};
   const { urlParams, groupCode, marqeta, persona } = visitor.integrations;
   const { sscid, sscidCreatedOn, xTypeParam } = visitor.integrations.shareASale;
-  const emails = [
-    {
-      email,
-      status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified,
-      primary: true,
-      token: visitor?.emailToken || nanoid(),
-    },
-  ];
+  const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
 
   const newUserData: any = {
@@ -390,9 +382,8 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
       email: userEmail.email,
       status: userEmail.status,
       primary: false,
-      token: userEmail.token,
     }));
-    user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true, token: nanoid() });
+    user.emails.push({ email, status: UserEmailStatus.Unverified, primary: true });
     // TODO: remove when legacy user is removed
     if (legacyUser) legacyUser.emails = user.emails;
     // updating requestor for access to new email
@@ -402,7 +393,6 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
       email: userEmail.email,
       status: userEmail.status,
       primary: email === userEmail.email,
-      token: userEmail.token,
     }));
     if (legacyUser) legacyUser.emails = user.emails;
   }
@@ -720,11 +710,7 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
   }
 };
 
-const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
-  entity: IUserDocument | IVisitorDocument,
-  status: IMarqetaUserStatus,
-  reasonCode: MarqetaReasonCodeEnumValues,
-) => {
+const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode: MarqetaReasonCodeEnumValues) => {
   if (!hasEntityPassedInternalKyc(entity)) {
     await updateMarqetaUserStatus(entity, status, reasonCode);
     return true;
@@ -743,13 +729,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     return;
   }
 
-  if (
-    await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(
-      foundEntity,
-      IMarqetaUserStatus.SUSPENDED,
-      MarqetaReasonCodeEnum.AccountUnderReview,
-    )
-  ) { return; }
+  if (await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview)) return;
 
   // grab the user data from Marqeta directly since webhooks can come in out of order
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);

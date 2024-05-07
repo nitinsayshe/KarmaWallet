@@ -103,7 +103,7 @@ export const updateClosedMarqetaAccounts = async () => {
       req,
       async (_: VisitorIterationRequest<{}>, visitorBatch: PaginateResult<IVisitorDocument>): Promise<VisitorIterationResponse<{}>[]> => {
         for (const visitor of visitorBatch.docs) {
-          console.log(`updating user ${visitor._id}, ${visitor.email}`);
+          console.log(`updating visitor ${visitor._id}, ${visitor.email}`);
           await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, {
             ...visitor.integrations.marqeta,
             token: visitor.integrations.marqeta.userToken,

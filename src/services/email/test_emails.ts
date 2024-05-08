@@ -24,7 +24,6 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { UserModel } from '../../models/user';
 import { IRequest } from '../../types/request';
-import { IMarqetaKycState } from '../../integrations/marqeta/types';
 
 dayjs.extend(utc);
 
@@ -422,13 +421,8 @@ export const testKarmaCardDeclinedEmail = async (req: IRequest<{}, {}, {}>) => {
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
     const emailResponse = await sendKarmaCardDeclinedEmail({
       user: req.requestor._id,
-      acceptedDocuments: ['Driver\'s License', 'Passport', 'Some Other Really long text about some documentation that is needed'],
-      message: 'Your application is pending due to a missing, invalid or mismatched Social Security Number (SSN).',
-      name: 'Sara',
-      reason: 'Your application is pending due to a missing invalid or mismatched Social Security Number (SSN).',
-      solutionText: 'Please submit a photo of the following items to support@karmawallet.io',
-      status: IMarqetaKycState.pending,
       recipientEmail: email,
+      name: req.requestor.integrations.marqeta.first_name,
     });
 
     if (!!emailResponse) {

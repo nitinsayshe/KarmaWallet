@@ -25,6 +25,7 @@ import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Card } from '../../clients/marqeta/card';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IShareableUser } from '../../models/user/types';
+import { MarqetaCardState, IMarqetaWebhookCardsEvent, MarqetaCardModel, MarqetaCardWebhookType, IMarqetaTransitionReasonCodesEnum } from '../../integrations/marqeta/types';
 
 dayjs.extend(utc);
 

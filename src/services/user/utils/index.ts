@@ -11,6 +11,8 @@ import { IRequest } from '../../../types/request';
 import { IUser, IUserIntegrations, KarmaMembershipStatusEnum } from '../../../models/user/types';
 import { getMarqetaUser } from '../../../integrations/marqeta/user';
 import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
+import { VisitorModel } from '../../../models/visitor';
+import { IEntityData } from '../types';
 
 export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;
@@ -30,6 +32,25 @@ export const isUserDocument = (entity: any): entity is IUserDocument => (
     && (<IUserDocument>entity).name !== undefined
     && (<IUserDocument>entity).role !== undefined
 );
+
+export const returnUserOrVisitorFromEmail = async (email: string): Promise<IEntityData> => {
+  const user = await UserModel.findOne({ 'emails.email': email });
+  const visitor = await VisitorModel.findOne({ email });
+
+  if (!visitor && !user) {
+    throw new CustomError(`User or Visitor not found with email ${email}`, ErrorTypes.NOT_FOUND);
+  }
+  if (!!user) {
+    return {
+      type: 'user',
+      data: user,
+    };
+  }
+  return {
+    type: 'visitor',
+    data: visitor,
+  };
+};
 
 export const getShareableUser = ({
   _id,

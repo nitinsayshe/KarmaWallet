@@ -412,10 +412,12 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
         // sync with active campaign
-        await syncUserAddressFields(requestor.emails[0].email, {
-          zipcode: updates.zipcode,
-          state: getStateFromZipcode(updates.zipcode),
-        });
+        if (requestor?.emails[0]?.email) {
+          await syncUserAddressFields(requestor.emails[0].email, {
+            zipcode: updates.zipcode,
+            state: getStateFromZipcode(updates.zipcode),
+          });
+        }
         break;
       case 'integrations':
         // update the address data in marqeta and km Db

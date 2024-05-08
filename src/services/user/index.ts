@@ -62,7 +62,7 @@ import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../mo
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
 import { hasEntityPassedInternalKyc } from '../../integrations/persona';
-import { MarqetaReasonCodeEnum, MarqetaReasonCodeEnumValues } from '../../clients/marqeta/types';
+import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 
 dayjs.extend(utc);
 
@@ -710,9 +710,13 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
   }
 };
 
-const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode: MarqetaReasonCodeEnumValues) => {
+const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
+  entity: IUserDocument | IVisitorDocument,
+) => {
+  const status = IMarqetaUserStatus.SUSPENDED;
+  const reason = MarqetaReasonCodeEnum.AccountUnderReview;
   if (!hasEntityPassedInternalKyc(entity)) {
-    await updateMarqetaUserStatus(entity, status, reasonCode);
+    await updateMarqetaUserStatus(entity, status, reason);
     return true;
   }
   return false;
@@ -721,7 +725,6 @@ const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (entity: IUserD
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
-
   const foundEntity = !!existingUser ? existingUser : visitor;
 
   if (!foundEntity) {
@@ -729,7 +732,12 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     return;
   }
 
-  if (await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview)) return;
+  const passedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
+
+  if (!passedInternalKyc) {
+    console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
+    return;
+  }
 
   // grab the user data from Marqeta directly since webhooks can come in out of order
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);
@@ -738,13 +746,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     console.log('[+] Error getting most up to date user information from Marqeta');
   }
 
-  if (!existingUser?._id && !visitor?._id) {
-    // add in code to add the user to our database?
-    throw new CustomError('[+] User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
-  }
   // EXISTING USER with Marqeta integration already saved
   // Check if the status has changed for this user
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
+    console.log('////// Updating existing user from Marqeta User Transaction Webhook', existingUser._id.toString());
     updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 

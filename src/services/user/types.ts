@@ -3,6 +3,7 @@ import { DeleteRequestReason } from '../../models/deleteAccountRequest';
 import { ILegacyUserDocument } from '../../models/legacyUser';
 import { IUserDocument } from '../../models/user';
 import { IUserIntegrations } from '../../models/user/types';
+import { IVisitorDocument } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 
 export interface IVerifyTokenBody {
@@ -32,6 +33,11 @@ export interface ILoginData {
     model: string,
     buildNumber: string,
   };
+}
+
+export interface IEntityData {
+  type: 'user' | 'visitor';
+  data: IUserDocument | IVisitorDocument;
 }
 
 export interface IUpdatePasswordBody {

@@ -31,12 +31,7 @@ export interface IACHTransferEmailData {
 }
 
 export interface IDeclinedData {
-  acceptedDocuments: string[];
-  message: string;
   name?: string;
-  reason: string;
-  solutionText: string;
-  status: IMarqetaKycState
   user?: IUserDocument;
   visitor?: IVisitorDocument;
 }

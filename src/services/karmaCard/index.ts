@@ -345,7 +345,8 @@ export const storeApplicationAndHandleSuccesState = async (
 
 export const updateEntityKycResult = async (entity: IUserDocument | IVisitorDocument, kycResult: IMarqetaKycResult) => {
   entity.integrations.marqeta.kycResult = kycResult;
-  await entity.save();
+  const newEntity = await entity.save();
+  return newEntity;
 };
 
 export const continueKarmaCardApplication = async (email: string, personaInquiryId: string): Promise<ApplicationDecision> => {
@@ -358,6 +359,7 @@ export const continueKarmaCardApplication = async (email: string, personaInquiry
     // find the application for the user or visitor
     let application: IKarmaCardApplication;
     let kycResult;
+
     if (user) {
       application = await KarmaCardApplicationModel.findOne({ userId: user?._id });
       kycResult = user?.integrations?.marqeta?.kycResult;
@@ -388,15 +390,20 @@ export const continueKarmaCardApplication = async (email: string, personaInquiry
       return { ...(marqetaIntegration as unknown as SourceResponse), internalKycTemplateId: inquiryResult?.templateId };
     }
 
-    // check that the new persona inquiry is completed
+    // update kyc based on if
     if (!personaInquiryInSuccessState(inquiryResult)) {
       if (!kycResult?.codes?.includes(ReasonCode.FailedInternalKyc)) {
         if (!kycResult?.codes) kycResult.codes = [];
         kycResult.codes.push(ReasonCode.FailedInternalKyc);
       }
-      await updateEntityKycResult(user || visitor, kycResult);
-      const marqetaIntegration = !!user ? user.integrations.marqeta : visitor.integrations.marqeta;
-      return { ...(marqetaIntegration as unknown as SourceResponse), internalKycTemplateId: inquiryResult?.templateId };
+      // we aren't using the nuewly updated user/visitor, so marqeta integration would still be the whole status,
+      const updatedEntity = await updateEntityKycResult(user || visitor, kycResult);
+      const marqetaIntegration = updatedEntity.integrations.marqeta;
+      /// looks like we are returning the marqeta  integration here and not what we just updated since kycResult is defined in here?
+      return {
+        ...(marqetaIntegration as unknown as SourceResponse),
+        internalKycTemplateId: inquiryResult?.templateId,
+      };
     }
 
     return {

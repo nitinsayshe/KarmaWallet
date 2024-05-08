@@ -227,7 +227,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   } else {
     query.visitor = visitor._id;
   }
-  const notification = UserNotificationModel.findOne(query);
+  const notification = await UserNotificationModel.findOne(query);
   if (notification) {
     console.log(`Notification already queued for user or visitor with email ${email}`);
     return;

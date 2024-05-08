@@ -443,6 +443,7 @@ export const getApplicationStatus = async (email: string): Promise<ApplicationDe
 };
 
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>): Promise<ApplicationDecision> => {
+  console.log('////// init apply for card');
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
@@ -561,6 +562,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const kycStatus = status;
 
   if (!existingUser) {
+    console.log('///// should create a visitor', _visitor, marqeta);
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
       marqeta,

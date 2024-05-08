@@ -320,18 +320,13 @@ export const handleSendEmployerGiftEmailEffect = async ({ user, data } : IEffect
 };
 
 export const handleKarmaCardDeclinedEmailEffect = async ({ user, visitor, data } : IEffectFunctionParams): Promise<void> => {
-  const { reason, acceptedDocuments, name, message, solutionText, status } = data;
+  const { name } = data;
 
   if (!user && !visitor) throw new Error('Invalid karma card declined data');
 
   try {
     const sendEmailData: IKarmaCardDeclinedEmailData = {
-      reason,
-      acceptedDocuments,
       name,
-      message,
-      solutionText,
-      status,
     };
 
     if (!!user) {

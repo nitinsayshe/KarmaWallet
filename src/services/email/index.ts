@@ -879,35 +879,26 @@ export const sendEmployerGiftEmail = async ({
 };
 
 export const sendKarmaCardDeclinedEmail = async ({
-  acceptedDocuments,
   domain = process.env.FRONTEND_DOMAIN,
-  message,
   name,
-  reason,
   recipientEmail,
   replyToAddresses = [EmailAddresses.ReplyTo],
   sendEmail = true,
   senderEmail = EmailAddresses.NoReply,
-  solutionText,
-  status,
   user,
   visitor,
 }: IKarmaCardDeclinedEmailData) => {
   const emailTemplateConfig = EmailTemplateConfigs.KarmaCardDeclined;
-  const subject = 'Action Needed: Complete Your Identity Verification with Karma Wallet';
-  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'reason', 'acceptedDocuments'], {
+  const subject = 'Karma Wallet Card Application: Identity Documents Under Review';
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name'], {
     domain,
     recipientEmail,
     name,
-    reason,
-    acceptedDocuments,
-    status,
-    solutionText,
   });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({
     templateName: emailTemplateConfig.name,
-    data: { name, reason, acceptedDocuments, solutionText, message, kycStatus: status },
+    data: { name },
   });
   const jobData: IEmailJobData = {
     template,

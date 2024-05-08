@@ -1,4 +1,4 @@
-import { createOrUpdatePersonaIntegration } from '.';
+import { createOrUpdatePersonaIntegration, fetchInquiryAndCreateOrUpdateIntegration } from '.';
 import { MarqetaKYCStatus } from '../../clients/marqeta/types';
 import { states, SocketEvents } from '../../lib/constants';
 import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
@@ -19,8 +19,11 @@ import {
 import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continueKarmaCardApplication } from '../../services/karmaCard';
 import { UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
-import { createResumeKarmaCardApplicationUserNotification } from '../../services/user_notification';
+import { createDeclinedKarmaWalletCardUserNotification, createResumeKarmaCardApplicationUserNotification } from '../../services/user_notification';
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
+import { IDeclinedData } from '../../services/email/types';
+import { closeMarqetaAccount } from '../marqeta/user';
+import { returnUserOrVisitorFromEmail } from '../../services/user/utils';
 
 const PhoneNumberLength = 10;
 
@@ -239,6 +242,40 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   });
 };
 
+export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) => {
+  const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
+  const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
+  const user = await UserModel.findOne({ 'emails.email': email });
+  const visitor = await VisitorModel.findOne({ email });
+
+  const dataObj: IDeclinedData = {
+    name: '',
+  };
+
+  if (user) {
+    dataObj.name = user.name;
+    dataObj.user = user;
+  } else if (visitor) {
+    dataObj.name = visitor.integrations.marqeta.first_name;
+    dataObj.visitor = visitor;
+  } else {
+    throw new Error('No user or visitor found, not sending pending documents email.');
+  }
+
+  if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs) {
+    await createDeclinedKarmaWalletCardUserNotification(dataObj);
+  } else if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs && inquiryStatus === PersonaInquiryStatusEnum.Failed) {
+    await createDeclinedKarmaWalletCardUserNotification(dataObj);
+  }
+};
+
+export const handleDeclinedFinalDecision = async (email: string, req: PersonaWebhookBody) => {
+  const entityData = await returnUserOrVisitorFromEmail(email);
+  const inquiryId = req?.data?.attributes?.payload?.data?.id;
+  await closeMarqetaAccount(entityData);
+  await fetchInquiryAndCreateOrUpdateIntegration(inquiryId, entityData.data);
+};
+
 export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) => {
   const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
   const inquiryId = req?.data?.attributes?.payload?.data?.id;
@@ -249,6 +286,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       console.log('Inquiry completed');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
+      await sendPendingEmail(email, req);
       break;
     case PersonaInquiryStatusEnum.Pending:
       console.log('Inquiry pending');
@@ -262,6 +300,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
     case PersonaInquiryStatusEnum.Failed:
       console.log('Inquiry failed');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      await sendPendingEmail(email, req);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendContinueApplicationEmail(req);
       break;
@@ -276,7 +315,8 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
     case PersonaInquiryStatusEnum.Declined:
       console.log('Inquiry declined');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
-      await startOrContinueApplyProcessForTransitionedInquiry(req);
+      await handleDeclinedFinalDecision(email, req);
+      // await startOrContinueApplyProcessForTransitionedInquiry(req);
       break;
     default:
       console.log(`Inquiry status not handled: ${inquiryStatus}`);

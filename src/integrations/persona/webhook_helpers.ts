@@ -255,6 +255,7 @@ export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) =
   const user = await UserModel.findOne({ 'emails.email': email });
   const visitor = await VisitorModel.findOne({ email });
 
+  console.log('////// this is the template id', inquiryTemplateId, '//// status', inquiryStatus);
   const dataObj: IDeclinedData = {
     name: '',
   };
@@ -272,6 +273,7 @@ export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) =
   if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs) {
     await createDeclinedKarmaWalletCardUserNotification(dataObj);
   } else if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs && inquiryStatus === PersonaInquiryStatusEnum.Failed) {
+    console.log('////// should send the decline email');
     await createDeclinedKarmaWalletCardUserNotification(dataObj);
   }
 };

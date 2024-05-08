@@ -6,21 +6,34 @@ import { getUtcDate } from '../../lib/date';
 import { KarmaCardApplicationModel, ApplicationStatus } from '../../models/karmaCardApplication';
 import { UserModel, IUserDocument } from '../../models/user';
 import { VisitorModel, VisitorActionEnum } from '../../models/visitor';
-import { ApplicationDecision, getShareableMarqetaUser } from '../../services/karmaCard/utils';
+import { ApplicationDecision, getShareableMarqetaUser, ReasonCode } from '../../services/karmaCard/utils';
 import { SocketClient } from '../../clients/socket';
 import { IRequest } from '../../types/request';
-import { PersonaWebhookBody, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum, EventNamesEnum } from './types';
+import {
+  PersonaWebhookBody,
+  PersonaInquiryTemplateIdEnum,
+  PersonaInquiryStatusEnum,
+  EventNamesEnum,
+  PersonaInquiryTemplateIdEnumValues,
+} from './types';
 import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continueKarmaCardApplication } from '../../services/karmaCard';
+import { UserNotificationModel } from '../../models/user_notification';
+import { NotificationTypeEnum } from '../../lib/constants/notification';
+import { createResumeKarmaCardApplicationUserNotification } from '../../services/user_notification';
+import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
+
+const PhoneNumberLength = 10;
 
 export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<ApplicationDecision> => {
   // start the application process
   const inquiryData = req?.data?.attributes?.payload?.data?.attributes;
   const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
+  const phone = inquiryData?.phoneNumber?.replace(/[^\d]/g, '');
   const applicationBody: IKarmaCardRequestBody = {
     address1: inquiryData?.addressStreet1?.trim(),
     address2: inquiryData?.addressStreet2?.trim(),
     birthDate: inquiryData?.birthdate,
-    phone: inquiryData?.phoneNumber?.trim(),
+    phone: phone?.length <= PhoneNumberLength ? phone : phone?.substring(phone.length - PhoneNumberLength),
     city: inquiryData?.addressCity?.trim(),
     email: applicationData?.email,
     firstName: inquiryData?.nameFirst?.trim(),
@@ -90,7 +103,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
 
     let applicationStatus = await getUserApplicationStatus(email);
     const kycStatus = applicationStatus?.kycResult?.status;
-    if ((kycStatus === MarqetaKYCStatus.SUCCESS) || (!!application && application?.status === ApplicationStatus.SUCCESS)) {
+    if (kycStatus === MarqetaKYCStatus.SUCCESS || (!!application && application?.status === ApplicationStatus.SUCCESS)) {
       console.log(`User with email: ${email} has already been approved for a card`);
       emitDecisionToSocket(email, inquiryId, applicationStatus);
       return;
@@ -103,7 +116,11 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     }
 
     console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
-    if (!!application && !!applicationStatus?.kycResult?.status && inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs) {
+    if (
+      !!application
+      && !!applicationStatus?.kycResult?.status
+      && inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs
+    ) {
       // if this request is coming from this template, it could have failed db verification, but passed with new document data
       console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId);
       applicationStatus = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id);
@@ -159,10 +176,74 @@ export const createVisitorOrUpdatePersonaIntegration = async (email: string, dat
   }
 };
 
+export const composePersonaContinueUrl = (email: string, templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[application-data][email]=${email}&fields[source]=embedded`;
+
+export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
+  const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
+  const inquiryId = req?.data?.attributes?.payload?.data?.id;
+  const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
+  const email = applicationData?.email;
+  const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
+
+  if (!email) {
+    console.log('No email found in inquiry data');
+    return;
+  }
+
+  if (!inquiryId || !inquiryTemplateId) {
+    console.log(`No inquiryId or inquiryTemplateId found in webhook for email: ${email}`);
+    return;
+  }
+
+  console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
+  if (inquiryTemplateId !== PersonaInquiryTemplateIdEnum.DataCollection) {
+    console.log('No action taken for inquiry with id: ', inquiryId);
+  }
+  // pull the application
+  const decision = await getUserApplicationStatus(email);
+  // if they failed marqeta, proceed with gov id, selfie, and doc verification
+  const failedMarqeta = decision?.kycResult?.status === MarqetaKYCStatus.FAILURE
+    && decision?.kycResult?.codes.length > 0
+    && !decision?.kycResult?.codes?.includes(ReasonCode.Approved);
+
+  // check if they've already received this notification
+  const user = await UserModel.findOne({ 'emails.email': email });
+  const visitor = await VisitorModel.findOne({ email });
+
+  if (!user && !visitor) {
+    console.log(`No user or visitor found for email: ${email}`);
+    return;
+  }
+  const notification = UserNotificationModel.findOne({
+    $or: [{ user: user._id }, { visitor: visitor._id }],
+    type: NotificationTypeEnum.ResumeKarmaCardApplication,
+  });
+  if (notification) {
+    console.log(`Notification already queued for user or visitor with email ${email}`);
+    return;
+  }
+
+  let template: PersonaInquiryTemplateIdEnumValues;
+  if (failedMarqeta) {
+    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
+  } else {
+    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
+  }
+  const continueUrl = composePersonaContinueUrl(email, template, accountId);
+
+  await createResumeKarmaCardApplicationUserNotification({
+    link: continueUrl,
+    recipientEmail: email,
+    user,
+    visitor,
+  });
+};
+
 export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) => {
   const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
   const inquiryId = req?.data?.attributes?.payload?.data?.id;
   const email = req?.data?.attributes?.payload?.data?.attributes?.fields?.applicationData?.value?.email;
+
   switch (inquiryStatus) {
     case PersonaInquiryStatusEnum.Completed:
       console.log('Inquiry completed');
@@ -182,15 +263,20 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       console.log('Inquiry failed');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
+      await sendContinueApplicationEmail(req);
       break;
     case PersonaInquiryStatusEnum.NeedsReview:
       console.log('Inquiry needs review');
       break;
     case PersonaInquiryStatusEnum.Approved:
       console.log('Inquiry approved');
+      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      await startOrContinueApplyProcessForTransitionedInquiry(req);
       break;
     case PersonaInquiryStatusEnum.Declined:
       console.log('Inquiry declined');
+      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      await startOrContinueApplyProcessForTransitionedInquiry(req);
       break;
     default:
       console.log(`Inquiry status not handled: ${inquiryStatus}`);

@@ -4,7 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact, updateContactEmail, updateCustomFields } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail, updateCustomFields, syncUserAddressFields } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { getMarqetaUser, updateMarqetaUser } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
@@ -45,6 +45,7 @@ import { closeKarmaCard, openBrowserAndAddShareASaleCode, updateActiveCampaignDa
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { getStateFromZipcode } from '../utilities';
 
 dayjs.extend(utc);
 
@@ -410,6 +411,11 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
+        // sync with active campaign
+        await syncUserAddressFields(requestor.emails[0].email, {
+          zipcode: updates.zipcode,
+          state: getStateFromZipcode(updates.zipcode),
+        });
         break;
       case 'integrations':
         // update the address data in marqeta and km Db

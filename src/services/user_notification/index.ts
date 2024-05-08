@@ -994,6 +994,8 @@ export const createDeclinedKarmaWalletCardUserNotification = async (
         status: UserNotificationStatusEnum.Unread,
         channel: NotificationChannelEnum.Email,
         data: declinedData,
+        user: declinedData?.user?._id?.toString?.() || undefined,
+        visitor: declinedData?.visitor?._id?.toString?.() || undefined,
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
     if (!!declinedData.user) {
@@ -1019,6 +1021,8 @@ export const createResumeKarmaCardApplicationUserNotification = async (
         type: NotificationTypeEnum.ResumeKarmaCardApplication,
         status: UserNotificationStatusEnum.Unread,
         channel: NotificationChannelEnum.Email,
+        user: data?.user?._id?.toString?.() || undefined,
+        visitor: data?.visitor?._id?.toString?.() || undefined,
         data,
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;

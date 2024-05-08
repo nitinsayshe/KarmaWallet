@@ -1,3 +1,4 @@
+import { FilterQuery } from 'mongoose';
 import { createOrUpdatePersonaIntegration, fetchInquiryAndCreateOrUpdateIntegration } from '.';
 import { MarqetaKYCStatus } from '../../clients/marqeta/types';
 import { states, SocketEvents } from '../../lib/constants';
@@ -17,7 +18,7 @@ import {
   PersonaInquiryTemplateIdEnumValues,
 } from './types';
 import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continueKarmaCardApplication } from '../../services/karmaCard';
-import { UserNotificationModel } from '../../models/user_notification';
+import { IUserNotificationDocument, UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
 import { createDeclinedKarmaWalletCardUserNotification, createResumeKarmaCardApplicationUserNotification } from '../../services/user_notification';
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
@@ -217,10 +218,16 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     console.log(`No user or visitor found for email: ${email}`);
     return;
   }
-  const notification = UserNotificationModel.findOne({
-    $or: [{ user: user._id }, { visitor: visitor._id }],
+
+  const query:FilterQuery<IUserNotificationDocument> = {
     type: NotificationTypeEnum.ResumeKarmaCardApplication,
-  });
+  };
+  if (!!user) {
+    query.user = user._id;
+  } else {
+    query.visitor = visitor._id;
+  }
+  const notification = UserNotificationModel.findOne(query);
   if (notification) {
     console.log(`Notification already queued for user or visitor with email ${email}`);
     return;
@@ -237,8 +244,8 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   await createResumeKarmaCardApplicationUserNotification({
     link: continueUrl,
     recipientEmail: email,
-    user,
-    visitor,
+    user: !!user ? user : undefined,
+    visitor: !!visitor ? visitor : undefined,
   });
 };
 

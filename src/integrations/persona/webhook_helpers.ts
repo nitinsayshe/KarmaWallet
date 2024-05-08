@@ -309,9 +309,9 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
     case PersonaInquiryStatusEnum.Failed:
       console.log('Inquiry failed');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
-      await sendPendingEmail(email, req);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendContinueApplicationEmail(req);
+      await sendPendingEmail(email, req);
       break;
     case PersonaInquiryStatusEnum.NeedsReview:
       console.log('Inquiry needs review');

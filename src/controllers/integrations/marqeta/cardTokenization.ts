@@ -15,7 +15,7 @@ export const tokenizeCard: IRequestHandler<{ cardToken: string }, {}, {}> = asyn
   }
 };
 
-// tokenize the card using VGS proxy
+// detokenize the card using VGS
 export const deTokenizeCard: IRequestHandler<{}, {}, IVGSToken> = async (req, res) => {
   try {
     const { body } = req;

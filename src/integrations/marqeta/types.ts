@@ -76,7 +76,8 @@ export interface IMarqetaUserTransition extends IMarqetaUserToken {
 }
 
 export interface IVGSToken {
-  pan : string;
+  pan? : string;
+  cvv_number?: string;
 }
 export interface IMarqetaCreateCard extends IMarqetaUserToken {
   cardProductToken: string;

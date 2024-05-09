@@ -12,7 +12,7 @@ export class CardTokenization {
     this._marqetaClient = marqetaClient;
   }
 
-  // tokenize card through VGS
+  // card tokenization through VGS
   async tokenizeCard(cardToken: string) {
     try {
       const { data } = await this._marqetaClient._client.get(`/cards/${cardToken}/showpan?show_cvv_number=true`, {
@@ -30,6 +30,7 @@ export class CardTokenization {
     }
   }
 
+  // card detokenization through VGS
   async deTokenizeCard(params: IVGSToken) {
     try {
       const { data } = await this._vgsClient._reverseProxyClient.post('/post', params);

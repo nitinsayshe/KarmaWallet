@@ -202,6 +202,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
   if (inquiryTemplateId !== PersonaInquiryTemplateIdEnum.DataCollection) {
     console.log('No action taken for inquiry with id: ', inquiryId);
+    return;
   }
   // pull the application
   const decision = await getUserApplicationStatus(email);
@@ -264,7 +265,7 @@ export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) =
     dataObj.name = user.name;
     dataObj.user = user;
   } else if (visitor) {
-    dataObj.name = visitor.integrations.marqeta.first_name;
+    dataObj.name = visitor.integrations?.marqeta?.first_name;
     dataObj.visitor = visitor;
   } else {
     throw new Error('No user or visitor found, not sending pending documents email.');

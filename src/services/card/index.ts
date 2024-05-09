@@ -14,7 +14,6 @@ import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { getNetworkFromBin } from './utils';
 import { extractYearAndMonth } from '../../lib/date';
-import { IMarqetaWebhookCardsEvent, MarqetaCardModel, MarqetaCardState, MarqetaCardWebhookType, IMarqetaTransitionReasonCodesEnum } from '../../integrations/marqeta/types';
 import {
   createCardShippedUserNotification,
   createPushUserNotificationFromUserAndPushData,

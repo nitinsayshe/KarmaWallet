@@ -43,7 +43,6 @@ export const exec = async ({
   recipientEmail,
   replyToAddresses,
 }: ISendEmailParams) => {
-  debugger; // eslint-disable-line
   const { name, type } = emailTemplateConfig;
   if (!user && !visitor) throw new Error('Must provide either user or visitor');
   let _user;
@@ -77,7 +76,6 @@ export const exec = async ({
 
   let emailResponse;
   if (!DEV_TEST) {
-    debugger; // eslint-disable-line
     const awsClient = new AwsClient();
 
     emailResponse = await awsClient.sendMail({

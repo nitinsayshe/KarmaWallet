@@ -60,7 +60,7 @@ import { removeFromGroup } from '../groups';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { ChangeEmailRequestModel } from '../../models/changeEmailRequest/changeEmailRequest';
+import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
 import * as UserServiceTypes from './types';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
 import { hasEntityPassedInternalKyc } from '../../integrations/persona';

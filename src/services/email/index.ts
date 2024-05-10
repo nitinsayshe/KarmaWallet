@@ -13,7 +13,7 @@ import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperato
 import { verifyRequiredFields } from '../../lib/requestData';
 import { SentEmailModel } from '../../models/sentEmail';
 import { IRequest } from '../../types/request';
-import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
+import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -144,28 +144,6 @@ export const sendEmailVerification = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-export interface IChangeEmailConfirmationParams {
-  domain?: string;
-  user?: any;
-  name: string;
-  recipientEmail: string;
-  token: string;
-  sendEmail?: boolean;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-}
-
-export interface IChangeEmailAffirmationParams {
-  domain?: string;
-  user?: any;
-  name: string;
-  recipientEmail: string;
-  token: string;
-  sendEmail?: boolean;
-  replyToAddresses?: string[];
-  senderEmail?: string;
-}
-
 export const sendChangeEmailRequestAffirmationEmail = async ({
   user,
   recipientEmail,
@@ -190,7 +168,7 @@ export const sendChangeEmailRequestAffirmationEmail = async ({
 
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { affirmationLink, name } });
   console.log(template);
-  const subject = 'Complete your Email Address change request';
+  const subject = 'Complete your Email Address Change Request';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   console.log(jobData);
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
@@ -220,7 +198,7 @@ export const sendChangeEmailRequestConfirmationEmail = async ({
   const verificationLink = `${domain}?verifyEmailChange=${token}`;
 
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
-  const subject = 'Verify your Email Address change request';
+  const subject = 'Verify your Email Address Change Request';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -1045,6 +1023,7 @@ export const sendContactUsEmail = async ({
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
+
 export const sendResumeKarmaCardApplicationEmail = async ({
   visitor,
   user,

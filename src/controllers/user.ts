@@ -107,7 +107,7 @@ export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDel
   }
 };
 
-export const requestEmailChange: IRequestHandler<{}, {}, UserService.IRequestEmailChangeBody> = async (req, res) => {
+export const requestEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IRequestEmailChangeBody> = async (req, res) => {
   try {
     const response = await UserService.requestEmailChange(req);
     output.api(req, res, response);

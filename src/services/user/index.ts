@@ -60,11 +60,12 @@ import { removeFromGroup } from '../groups';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { ChangeEmailRequestModel, IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest';
+import { ChangeEmailRequestModel } from '../../models/changeEmailRequest/changeEmailRequest';
 import * as UserServiceTypes from './types';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
 import { hasEntityPassedInternalKyc } from '../../integrations/persona';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
+import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
 
 dayjs.extend(utc);
 
@@ -364,11 +365,8 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
   return updatedUser;
 };
-export interface IRequestEmailChangeBody {
-  password: string;
-}
 
-export const requestEmailChange = async (req: IRequest<{}, {}, IRequestEmailChangeBody>) => {
+export const requestEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IRequestEmailChangeBody>) => {
   const userPassword = req.body.password;
   const requestorPassword = req.requestor.password;
   const passwordMatch = await argon2.verify(requestorPassword, userPassword);
@@ -377,7 +375,7 @@ export const requestEmailChange = async (req: IRequest<{}, {}, IRequestEmailChan
 
   const user = req.requestor;
   const email = user.emails.find(e => e.primary)?.email;
-  const { name } = user;
+  const name = user.integrations.marqeta.first_name || user.name;
 
   const verificationToken = await TokenService.createToken({
     user: user._id,
@@ -870,6 +868,10 @@ export const affirmEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.I
 
     const currentPrimaryEmail = user.emails.find(email => email.primary === true);
     currentPrimaryEmail.email = changeEmailRequest.proposedEmail;
+
+    if (user.integrations.marqeta) {
+      user.integrations.marqeta.email = changeEmailRequest.proposedEmail;
+    }
 
     const saveEmailChange = await user.save();
     if (!saveEmailChange) throw new CustomError('Error saving email change.', ErrorTypes.SERVER);

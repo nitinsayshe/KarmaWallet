@@ -187,3 +187,25 @@ export interface IResumeKarmaCardApplicationEmail extends IBaseEmailParams {
   user?: IUserDocument;
   link: string;
 }
+
+export interface IChangeEmailConfirmationParams {
+  domain?: string;
+  user?: Types.ObjectId | string;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+}
+
+export interface IChangeEmailAffirmationParams {
+  domain?: string;
+  user?: Types.ObjectId | string;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+}

@@ -100,3 +100,7 @@ export type UserKeys = keyof IUserData;
 export interface IDeleteAccountRequest {
   reason: DeleteRequestReason;
 }
+
+export interface IRequestEmailChangeBody {
+  password: string;
+}

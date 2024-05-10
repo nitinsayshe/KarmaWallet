@@ -105,13 +105,30 @@ const getUserApplicationStatus = async (email: string) => {
   }
 };
 
+export const getEmailFromAccountId = async (accountId: string) => {
+  try {
+    const user = await UserModel.findOne({ 'integrations.persona.accountId': accountId });
+    if (!!user) {
+      return user.emails.find((email) => email.primary)?.email;
+    }
+    const visitor = await VisitorModel.findOne({ 'integrations.persona.accountId': accountId });
+    if (!!visitor) {
+      return visitor.email;
+    }
+  } catch (e) {
+    console.log(`Error finding email from persona account id: ${e}`);
+  }
+  return null;
+};
+
 export const startOrContinueApplyProcessForTransitionedInquiry = async (req: PersonaWebhookBody) => {
   // check if the user has an appliction in progress
   // if so, update the persona application status
   // run the user through the continue application flow
   try {
     const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
-    const email = applicationData?.email;
+    const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
+    const email = await getEmailFromAccountId(accountId) || applicationData?.email;
     if (!email) {
       throw new Error('No email found');
     }
@@ -154,7 +171,6 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
       throw new Error('No result found');
     }
 
-    console.log(`Emitting application status for email: ${email} => ${applicationStatus}`);
     emitDecisionToSocket(email, inquiryId, applicationStatus);
   } catch (e) {
     console.log(`Error in application process: ${e}`);
@@ -195,8 +211,8 @@ export const createVisitorOrUpdatePersonaIntegration = async (email: string, dat
   }
 };
 
-export const composePersonaContinueUrl = (email: string, templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => {
-  const link = `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[application-data][email]=${email}&fields[source]=hosted`;
+export const composePersonaContinueUrl = (templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => {
+  const link = `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[source]=hosted`;
   return encodeURI(link);
 };
 
@@ -258,8 +274,8 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   } else {
     template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
   }
-  const continueUrl = composePersonaContinueUrl(email, template, accountId);
 
+  const continueUrl = composePersonaContinueUrl(template, accountId);
   await createResumeKarmaCardApplicationUserNotification({
     link: continueUrl,
     recipientEmail: email,

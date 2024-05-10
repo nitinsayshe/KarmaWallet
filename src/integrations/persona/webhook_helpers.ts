@@ -27,23 +27,34 @@ import { closeMarqetaAccount } from '../marqeta/user';
 import { returnUserOrVisitorFromEmail } from '../../services/user/utils';
 
 const PhoneNumberLength = 10;
+const PostalCodeLength = 5;
 
 export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<ApplicationDecision> => {
   // start the application process
   const inquiryData = req?.data?.attributes?.payload?.data?.attributes;
   const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
-  const phone = inquiryData?.phoneNumber?.replace(/[^\d]/g, '');
+
+  let phone = inquiryData?.phoneNumber?.replace(/[^\d]/g, '');
+  if (phone?.length > PhoneNumberLength) {
+    phone = phone?.substring(phone.length - PhoneNumberLength);
+  }
+
+  let postalCode = inquiryData?.addressPostalCode?.trim();
+  if (postalCode?.length > PostalCodeLength) {
+    postalCode = postalCode?.substring(0, PostalCodeLength);
+  }
+
   const applicationBody: IKarmaCardRequestBody = {
     address1: inquiryData?.addressStreet1?.trim(),
     address2: inquiryData?.addressStreet2?.trim(),
     birthDate: inquiryData?.birthdate,
-    phone: phone?.length <= PhoneNumberLength ? phone : phone?.substring(phone.length - PhoneNumberLength),
+    phone,
     city: inquiryData?.addressCity?.trim(),
     email: applicationData?.email,
     firstName: inquiryData?.nameFirst?.trim(),
     lastName: inquiryData?.nameLast?.trim(),
     personaInquiryId: req?.data?.attributes?.payload?.data?.id,
-    postalCode: inquiryData?.addressPostalCode?.trim(),
+    postalCode,
     ssn: inquiryData?.socialSecurityNumber?.trim()?.replace(/-/g, ''),
     state:
       inquiryData?.addressSubdivisionAbbr?.toUpperCase()
@@ -180,7 +191,7 @@ export const createVisitorOrUpdatePersonaIntegration = async (email: string, dat
   }
 };
 
-export const composePersonaContinueUrl = (email: string, templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[application-data][email]=${email}&fields[source]=embedded`;
+export const composePersonaContinueUrl = (email: string, templateId: PersonaInquiryTemplateIdEnumValues, accountId: string) => `${PersonaHostedFlowBaseUrl}?template-id=${templateId}&environment-id=${process.env.PERSONA_ENVIRONMENT_ID}&account-id=${accountId}&fields[application-data][email]=${email}&fields[source]=hosted`;
 
 export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;

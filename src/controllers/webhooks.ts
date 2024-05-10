@@ -462,6 +462,9 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
       console.log(`Webhook with event id: ${eventId} was already processed within the past ${numDaysBackToLookForDuplicateEventId} days. Skipping.`);
       return output.api(req, res, { message: 'Persona webhook already processed.' });
     }
+
+    await handlePersonaWebhookByEventName(req.body);
+
     // save the webhook
     const webhookBodyToSave = { ...req.body };
     webhookBodyToSave.data = { ...webhookBodyToSave.data };
@@ -477,8 +480,6 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
     };
 
     await WebhookModel.create({ provider: WebhookProviders.Persona, body: webhookBodyToSave, data });
-
-    await handlePersonaWebhookByEventName(req.body);
 
     output.api(req, res, { message: 'Persona webhook processed successfully.' });
   } catch (err) {

@@ -308,37 +308,35 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 
   switch (inquiryStatus) {
     case PersonaInquiryStatusEnum.Completed:
-      console.log('Inquiry completed');
+      console.log('Inquiry completed transitioned inquiry status');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendPendingEmail(email, req);
       break;
     case PersonaInquiryStatusEnum.Pending:
-      console.log('Inquiry pending');
+      console.log('Inquiry pending transitioned inquiry status');
       // check if a visitor or user exists for this inquiry
       // update the integration if so, otherwise create a new visitor with a persona integration
       await createVisitorOrUpdatePersonaIntegration(email, req);
       break;
     case PersonaInquiryStatusEnum.Expired:
-      console.log('Inquiry expired');
+      console.log('Inquiry expired transitioned inquiry status');
       break;
     case PersonaInquiryStatusEnum.Failed:
-      console.log('Inquiry failed');
+      console.log('Inquiry failed transitioned inquiry status');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendContinueApplicationEmail(req);
       await sendPendingEmail(email, req);
       break;
     case PersonaInquiryStatusEnum.NeedsReview:
-      console.log('Inquiry needs review');
+      console.log('Inquiry needs review transitioned inquiry status');
       break;
     case PersonaInquiryStatusEnum.Approved:
-      console.log('Inquiry approved');
-      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
-      await startOrContinueApplyProcessForTransitionedInquiry(req);
+      console.log('Inquiry approved transitioned inquiry status');
       break;
     case PersonaInquiryStatusEnum.Declined:
-      console.log('Inquiry declined');
+      console.log('Inquiry declined transitioned inquiry status');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await handleDeclinedFinalDecision(email, req);
       // await startOrContinueApplyProcessForTransitionedInquiry(req);
@@ -350,39 +348,42 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 };
 
 export const handlePersonaWebhookByEventName = async (req: PersonaWebhookBody) => {
+  const inquiryId = req?.data?.attributes?.payload?.data?.id;
   switch (req?.data?.attributes?.name) {
     case EventNamesEnum.inquiryCreated:
-      console.log('inquiry-created');
+      console.log('inquiry-created event');
       break;
     case EventNamesEnum.inquiryFailed:
-      console.log('inquiry-failed');
+      console.log('inquiry-failed event');
       break;
     case EventNamesEnum.inquiryExpired:
-      console.log('inquiry-expired');
+      console.log('inquiry-expired event');
       break;
     case EventNamesEnum.inquiryStarted:
-      console.log('inquiry-started');
+      console.log('inquiry-started event');
       break;
     case EventNamesEnum.inquiryCompleted:
-      console.log('inquiry-completed');
+      console.log('inquiry-completed event');
       break;
     case EventNamesEnum.inquiryApproved:
-      console.log('inquiry-approved');
+      console.log('inquiry-approved event');
+      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      await startOrContinueApplyProcessForTransitionedInquiry(req);
       break;
     case EventNamesEnum.inquiryMarkedForReview:
-      console.log('inquiry-marked-for-review');
+      console.log('inquiry-marked-for-review event');
       break;
     case EventNamesEnum.inquiryDeclined:
-      console.log('inquiry-declined');
+      console.log('inquiry-declined event');
       break;
     case EventNamesEnum.inquirySessionExpired:
-      console.log('inquiry-session-expired');
+      console.log('inquiry-session-expired event');
       break;
     case EventNamesEnum.inquirySessionStarted:
-      console.log('inquiry-session-started');
+      console.log('inquiry-session-started event');
       break;
     case EventNamesEnum.inquiryTransitioned:
-      console.log('inquiry-transitioned');
+      console.log('inquiry-transitioned event');
       await handleInquiryTransitionedWebhook(req);
       break;
     default:

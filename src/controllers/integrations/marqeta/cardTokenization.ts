@@ -9,7 +9,7 @@ export const tokenizeCard: IRequestHandler<{ cardToken: string }, {}, {}> = asyn
   try {
     const { cardToken } = req.params;
     const { data } = await CardTokenizationService.tokenizeCard(cardToken);
-    output.api(req, res, data);
+    output.api(req, res, CardTokenizationService.getShareableCardTokenization(data));
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

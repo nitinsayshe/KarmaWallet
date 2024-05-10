@@ -20,7 +20,10 @@ import {
 import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continueKarmaCardApplication } from '../../services/karmaCard';
 import { IUserNotificationDocument, UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
-import { createDeclinedKarmaWalletCardUserNotification, createResumeKarmaCardApplicationUserNotification } from '../../services/user_notification';
+import {
+  createDeclinedKarmaWalletCardUserNotification,
+  createResumeKarmaCardApplicationUserNotification,
+} from '../../services/user_notification';
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
 import { IDeclinedData } from '../../services/email/types';
 import { closeMarqetaAccount } from '../marqeta/user';
@@ -115,6 +118,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     const application = await KarmaCardApplicationModel.findOne({ email });
     const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
     const inquiryId = req?.data?.attributes?.payload?.data?.id;
+    const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
 
     let applicationStatus = await getUserApplicationStatus(email);
     const kycStatus = applicationStatus?.kycResult?.status;
@@ -131,15 +135,15 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     }
 
     console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
-    if (
-      !!application
-      && !!applicationStatus?.kycResult?.status
-      && inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs
-    ) {
+    const hasSavedApplicationAndKycResult = !!application && !!applicationStatus?.kycResult?.status;
+    const isManualApproval = inquiryStatus === PersonaInquiryStatusEnum.Approved;
+    const receivedFromGovIdAndSelfieOrDocs = inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
+    const receivedFromDataCollection = inquiryTemplateId === PersonaInquiryTemplateIdEnum.DataCollection;
+    if (hasSavedApplicationAndKycResult && (isManualApproval || receivedFromGovIdAndSelfieOrDocs)) {
       // if this request is coming from this template, it could have failed db verification, but passed with new document data
       console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId);
       applicationStatus = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id);
-    } else if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.DataCollection) {
+    } else if (receivedFromDataCollection || isManualApproval) {
       console.log('going into startApplicationFromInquiry process for inquiry with id: ', inquiryId);
       applicationStatus = await startApplicationFromInquiry(req);
     } else {
@@ -231,7 +235,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     return;
   }
 
-  const query:FilterQuery<IUserNotificationDocument> = {
+  const query: FilterQuery<IUserNotificationDocument> = {
     type: NotificationTypeEnum.ResumeKarmaCardApplication,
   };
   if (!!user) {

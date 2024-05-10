@@ -160,6 +160,7 @@ export interface IEmailJobData {
   userEmail?: string;
   userId?: string;
   verificationLink?: string;
+  affirmationLink?: string;
   link?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
 }
@@ -185,4 +186,26 @@ export interface IResumeKarmaCardApplicationEmail extends IBaseEmailParams {
   visitor?: IVisitorDocument;
   user?: IUserDocument;
   link: string;
+}
+
+export interface IChangeEmailConfirmationParams {
+  domain?: string;
+  user?: Types.ObjectId | string;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+}
+
+export interface IChangeEmailAffirmationParams {
+  domain?: string;
+  user?: Types.ObjectId | string;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
 }

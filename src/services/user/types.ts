@@ -77,6 +77,16 @@ export interface IEmailVerificationData {
   tokenValue: string;
 }
 
+export interface IVerifyEmailChange {
+  email: string;
+  verifyToken: string;
+  password: string;
+}
+
+export interface IAffirmEmailChange {
+  affirmToken: string;
+}
+
 export interface IUpdateUserEmailParams {
   user: IUserDocument;
   email: string;
@@ -89,4 +99,8 @@ export type UserKeys = keyof IUserData;
 
 export interface IDeleteAccountRequest {
   reason: DeleteRequestReason;
+}
+
+export interface IRequestEmailChangeBody {
+  password: string;
 }

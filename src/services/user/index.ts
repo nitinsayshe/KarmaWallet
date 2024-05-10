@@ -28,7 +28,7 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
+import { sendChangeEmailRequestAffirmationEmail, sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
@@ -60,9 +60,12 @@ import { removeFromGroup } from '../groups';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
+import * as UserServiceTypes from './types';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
 import { hasEntityPassedInternalKyc } from '../../integrations/persona';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
+import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
 
 dayjs.extend(utc);
 
@@ -342,7 +345,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
 // provides endpoint for UI to check if an email already exists on a user
 export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
   const email = req.body.email?.toLowerCase();
-  const userExists = checkIfUserWithEmailExists(email);
+  const userExists = await checkIfUserWithEmailExists(email);
   if (!userExists) return 'User with this email does not exist';
   throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
 };
@@ -361,6 +364,37 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   // TODO: remove when legacy users are removed
   await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
   return updatedUser;
+};
+
+export const requestEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IRequestEmailChangeBody>) => {
+  const userPassword = req.body.password;
+  const requestorPassword = req.requestor.password;
+  const passwordMatch = await argon2.verify(requestorPassword, userPassword);
+
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
+
+  const user = req.requestor;
+  const email = user.emails.find(e => e.primary)?.email;
+  const name = user.integrations.marqeta.first_name || user.name;
+
+  const verificationToken = await TokenService.createToken({
+    user: user._id,
+    type: TokenTypes.VerifyEmailChange,
+    days: 1,
+  });
+
+  const changeEmailRequest = await ChangeEmailRequestModel.create({
+    user: user._id,
+    status: IChangeEmailProcessStatus.INCOMPLETE,
+    verified: IChangeEmailVerificationStatus.UNVERIFIED,
+    currentEmail: email,
+    verificationToken,
+  });
+
+  if (!changeEmailRequest) throw new CustomError('Error creating email change request', ErrorTypes.SERVER);
+
+  await sendChangeEmailRequestConfirmationEmail({ token: verificationToken.value, recipientEmail: email, name, user: user._id });
+  return `Email change request sent to ${email}`;
 };
 
 export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpdateUserEmailParams) => {
@@ -784,4 +818,69 @@ export const updateVisitorUrlParams = async (visitorObject: IVisitorDocument, ur
   visitorObject.integrations.urlParams = duplicatesRemoved;
   visitorObject.integrations.urlParams = duplicatesRemoved;
   await visitorObject.save();
+};
+
+export const verifyEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IVerifyEmailChange>) => {
+  const { verifyToken, email, password } = req.body;
+
+  const checkIfNewEmailAlreadyInUse = await verifyUserDoesNotAlreadyExist(req);
+  if (!checkIfNewEmailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+
+  const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: verifyToken, type: TokenTypes.VerifyEmailChange });
+  if (!checkIfTokenExists) throw new CustomError('Invalid or expired link, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
+  if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const user = await UserModel.findById(checkIfTokenExists.user);
+
+  const checkIfPasswordMatches = await argon2.verify(user.password, password);
+  if (!checkIfPasswordMatches) throw new CustomError('Invalid password.', ErrorTypes.INVALID_ARG);
+
+  await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { verified: IChangeEmailVerificationStatus.VERIFIED, proposedEmail: email });
+
+  const affirmationToken = await TokenService.createToken({
+    user,
+    type: TokenTypes.AffirmEmailChange,
+    days: 1,
+  });
+
+  await sendChangeEmailRequestAffirmationEmail({ token: affirmationToken.value, recipientEmail: email, name: user.name, user: user._id });
+
+  return 'Email change verified, check your new email for further instructions';
+};
+
+export const affirmEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IAffirmEmailChange>) => {
+  const { affirmToken } = req.body;
+
+  const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: affirmToken, type: TokenTypes.AffirmEmailChange });
+  if (!checkIfTokenExists) throw new CustomError('Invalid or expired link, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
+  if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  try {
+    const user = await UserModel.findById(checkIfTokenExists.user);
+    if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+
+    const changeEmailRequest = await ChangeEmailRequestModel.findOne({ user: user._id });
+    if (!changeEmailRequest) throw new CustomError('Email change request not found.', ErrorTypes.NOT_FOUND);
+
+    const currentPrimaryEmail = user.emails.find(email => email.primary === true);
+    currentPrimaryEmail.email = changeEmailRequest.proposedEmail;
+
+    if (user.integrations.marqeta) {
+      user.integrations.marqeta.email = changeEmailRequest.proposedEmail;
+    }
+
+    const saveEmailChange = await user.save();
+    if (!saveEmailChange) throw new CustomError('Error saving email change.', ErrorTypes.SERVER);
+
+    await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { status: IChangeEmailProcessStatus.COMPLETE });
+    await updateMarqetaUser(user.integrations.marqeta.userToken, { email: changeEmailRequest.proposedEmail });
+
+    return changeEmailRequest.proposedEmail;
+  } catch (err) {
+    return err;
+  }
 };

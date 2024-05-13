@@ -24,7 +24,7 @@ import {
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { ProviderProductIdToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
+import { ProviderProductIdToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../lib/constants/marketing_subscription';
 import { roundToPercision, sleep } from '../lib/misc';
 import { IUserDocument, UserModel } from '../models/user';
 import {

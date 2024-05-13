@@ -12,7 +12,7 @@ import {
 } from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
+import { MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/marketing_subscription';
 import {
   getAvailableCommissionPayouts,
   getMonthlyCommissionTotal,

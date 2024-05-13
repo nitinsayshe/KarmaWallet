@@ -3,7 +3,7 @@ import { FilterQuery } from 'mongoose';
 import { updateActiveCampaignContactData } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
 import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constants';
-import { InterestCategoryToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
+import { InterestCategoryToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/marketing_subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { IMarketingSubscription, MarketingSubscriptionModel } from '../../models/marketingSubscription';

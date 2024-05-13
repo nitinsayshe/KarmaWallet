@@ -72,6 +72,8 @@ export class _MainBullClient extends _BullClient {
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.MONTHLY }, { jobId: `${JobNames.SyncActiveCampaign}-monthly`, repeat: { cron: '0 12 2 * *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.QUARTERLY }, { jobId: `${JobNames.SyncActiveCampaign}-quarterly`, repeat: { cron: '0 7 1 */3 *' } });
       this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.YEARLY }, { jobId: `${JobNames.SyncActiveCampaign}-yearly`, repeat: { cron: '0 7 1 1 *' } });
+      // Every first and third Monday of the month at 7:00 a.m
+      this.createJob(JobNames.SyncActiveCampaign, { syncType: ActiveCampaignSyncTypes.BIWEEKLY }, { jobId: `${JobNames.SyncActiveCampaign}-biweekly`, repeat: { cron: '0 7 * * 1#1,1#3' } });
 
       this.createJob(JobNames.MarqetaDataSync, { syncTypes: [MarqetaDataSyncTypeEnum.Transactions, MarqetaDataSyncTypeEnum.Users, MarqetaDataSyncTypeEnum.Cards], startDate: dayjs().subtract(30, 'day').toDate(), endDate: dayjs().toDate() }, { jobId: `${JobNames.MarqetaDataSync}-daily`, repeat: { cron: '0 3 * * *' } });
       this.createJob(JobNames.KardCommissionReconciliation, { startDate: dayjs().subtract(30, 'day').toDate() }, { jobId: `${JobNames.KardCommissionReconciliation}-daily`, repeat: { cron: '0 2 * * *' } });

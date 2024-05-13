@@ -16,7 +16,7 @@ export class Kyc {
       const { data } = await this._marqetaClient._client.post('/kyc', camelToSnakeCase(params));
       return data;
     } catch (err) {
-      console.log(err);
+      console.log(`Error processing kyc for marqeta user with token: ${params.userToken}`);
       throw asCustomError(err);
     }
   }
@@ -27,7 +27,7 @@ export class Kyc {
       const { data } = await this._marqetaClient._client.get(`/kyc/user/${userToken}`);
       return data;
     } catch (err) {
-      console.log(err);
+      console.log(`Error getting kyc data for marqeta user with token: ${userToken}`);
       throw asCustomError(err);
     }
   }
@@ -38,7 +38,7 @@ export class Kyc {
       const { data } = await this._marqetaClient._client.get(`/kyc/${kycToken}`);
       return data;
     } catch (err) {
-      console.log(err);
+      console.log(`Error getting kyc result for kyc token: ${kycToken}`);
       throw asCustomError(err);
     }
   }

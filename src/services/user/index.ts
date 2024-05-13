@@ -6,7 +6,7 @@ import { FilterQuery, Types } from 'mongoose';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact, updateContactEmail, updateCustomFields } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
-import { getMarqetaUser, updateMarqetaUser } from '../../integrations/marqeta/user';
+import { getMarqetaUser, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -28,23 +28,44 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
-import { sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
+import { sendChangeEmailRequestAffirmationEmail, sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
 import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
 import * as TokenService from '../token';
-import { IRegisterUserData, ILoginData, IUpdateUserEmailParams, IUserData, IUpdatePasswordBody, IVerifyTokenBody, UserKeys, IDeleteAccountRequest, IUrlParam } from './types';
+import {
+  IRegisterUserData,
+  ILoginData,
+  IUpdateUserEmailParams,
+  IUserData,
+  IUpdatePasswordBody,
+  IVerifyTokenBody,
+  UserKeys,
+  IDeleteAccountRequest,
+  IUrlParam,
+} from './types';
 import { checkIfUserWithEmailExists, createShareasaleTrackingId } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
-import { IMarqetaReasonCodesEnum, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState, MarqetaUserModel } from '../../integrations/marqeta/types';
+import {
+  IMarqetaTransitionReasonCodesEnum,
+  IMarqetaUserStatus,
+  IMarqetaUserTransitionsEvent,
+  IMarqetaKycState,
+  MarqetaUserModel,
+} from '../../integrations/marqeta/types';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import { generateRandomPasswordString } from '../../lib/misc';
 import { removeFromGroup } from '../groups';
-import { closeKarmaCard, openBrowserAndAddShareASaleCode, updateActiveCampaignDataAndJoinGroupForApplicant } from '../karmaCard/utils';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
+import * as UserServiceTypes from './types';
+import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
+import { hasEntityPassedInternalKyc } from '../../integrations/persona';
+import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
+import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
 
 dayjs.extend(utc);
 
@@ -121,11 +142,12 @@ export const register = async ({ password, name, token, promo, zipcode, visitorI
   const email = visitor.email?.toLowerCase()?.trim();
   if (!email || !isemail.validate(email)) throw new CustomError('a valid email is required.', ErrorTypes.INVALID_ARG);
   const emailAlreadyInUse = await checkIfUserWithEmailExists(email);
+
   if (!!emailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
 
   // Start building the user information, grabs the integrations information from the visitor object
   const integrations: IUserIntegrations = {};
-  const { urlParams, groupCode, marqeta, complyAdvantage } = visitor.integrations;
+  const { urlParams, groupCode, marqeta, persona } = visitor.integrations;
   const { sscid, sscidCreatedOn, xTypeParam } = visitor.integrations.shareASale;
   const emails = [{ email, status: !!token ? UserEmailStatus.Verified : UserEmailStatus.Unverified, primary: true }];
   name = name.replace(/\s/g, ' ').trim();
@@ -169,8 +191,8 @@ export const register = async ({ password, name, token, promo, zipcode, visitorI
   // if marqeta is present in visitor
   integrations.marqeta = marqeta;
 
-  if (!!complyAdvantage) {
-    integrations.complyAdvantage = complyAdvantage;
+  if (!!persona) {
+    integrations.persona = persona;
   }
 
   newUserData.integrations = integrations;
@@ -214,9 +236,7 @@ export const addFCMAndDeviceInfo = async (user: IUserDocument, fcmToken: string,
     const { deviceId } = deviceInfo;
     if (fcmToken && deviceId) {
       // Check if the same FCM token is mapped with different user, if it is, make the token of that user NULL
-      const userWithSameToken = await UserModel.findOne(
-        { 'integrations.fcm.token': fcmToken },
-      );
+      const userWithSameToken = await UserModel.findOne({ 'integrations.fcm.token': fcmToken });
       if (userWithSameToken && userWithSameToken?._id.toString() !== user?._id.toString()) {
         userWithSameToken.integrations.fcm.forEach((item) => {
           if (item.token === fcmToken) {
@@ -255,7 +275,7 @@ export const login = async (req: IRequest, { email, password, biometricSignature
     const { identifierKey } = req;
     const { biometrics } = user.integrations;
     // get the publicKey to verify the signature
-    const { biometricKey } = biometrics.find(biometric => biometric._id.toString() === identifierKey);
+    const { biometricKey } = biometrics.find((biometric) => biometric._id.toString() === identifierKey);
     const isVerified = await verifyBiometric(email, biometricSignature, biometricKey);
     if (!isVerified) {
       throw new CustomError('invalid biometricKey', ErrorTypes.INVALID_ARG);
@@ -316,11 +336,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
     }
     const email = updates.email?.toLowerCase()?.trim();
     if (!!email && !isemail.validate(email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
-    return await UserModel.findByIdAndUpdate(
-      user._id,
-      { ...updates, lastModified: dayjs().utc().toDate() },
-      { new: true },
-    );
+    return await UserModel.findByIdAndUpdate(user._id, { ...updates, lastModified: dayjs().utc().toDate() }, { new: true });
   } catch (err) {
     throw asCustomError(err);
   }
@@ -329,7 +345,7 @@ export const updateUser = async (_: IRequest, user: IUserDocument, updates: Part
 // provides endpoint for UI to check if an email already exists on a user
 export const verifyUserDoesNotAlreadyExist = async (req: IRequest<{}, {}, IEmail>) => {
   const email = req.body.email?.toLowerCase();
-  const userExists = checkIfUserWithEmailExists(email);
+  const userExists = await checkIfUserWithEmailExists(email);
   if (!userExists) return 'User with this email does not exist';
   throw new CustomError('User with this email already exists', ErrorTypes.CONFLICT);
 };
@@ -342,12 +358,43 @@ const changePassword = async (req: IRequest, user: IUserDocument, newPassword: s
   }
   const hash = await argon2.hash(newPassword);
   const updatedUser = await updateUser(req, user, { password: hash });
-  updatedUser.emails.find(e => !!e.primary).status = UserEmailStatus.Verified;
+  updatedUser.emails.find((e) => !!e.primary).status = UserEmailStatus.Verified;
   await updatedUser.save();
   // TODO: email user to notify them that their password has been changed.
   // TODO: remove when legacy users are removed
   await LegacyUserModel.findOneAndUpdate({ _id: user.legacyId }, { password: hash });
   return updatedUser;
+};
+
+export const requestEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IRequestEmailChangeBody>) => {
+  const userPassword = req.body.password;
+  const requestorPassword = req.requestor.password;
+  const passwordMatch = await argon2.verify(requestorPassword, userPassword);
+
+  if (!passwordMatch) throw new CustomError('Invalid password', ErrorTypes.INVALID_ARG);
+
+  const user = req.requestor;
+  const email = user.emails.find(e => e.primary)?.email;
+  const name = user.integrations.marqeta.first_name || user.name;
+
+  const verificationToken = await TokenService.createToken({
+    user: user._id,
+    type: TokenTypes.VerifyEmailChange,
+    days: 1,
+  });
+
+  const changeEmailRequest = await ChangeEmailRequestModel.create({
+    user: user._id,
+    status: IChangeEmailProcessStatus.INCOMPLETE,
+    verified: IChangeEmailVerificationStatus.UNVERIFIED,
+    currentEmail: email,
+    verificationToken,
+  });
+
+  if (!changeEmailRequest) throw new CustomError('Error creating email change request', ErrorTypes.SERVER);
+
+  await sendChangeEmailRequestConfirmationEmail({ token: verificationToken.value, recipientEmail: email, name, user: user._id });
+  return `Email change request sent to ${email}`;
 };
 
 export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpdateUserEmailParams) => {
@@ -451,7 +498,9 @@ export const deleteLinkedCardData = async (userId: Types.ObjectId) => {
       try {
         await plaidClient.invalidateAccessToken({ access_token: card.integrations.plaid.accessToken });
       } catch (error) {
-        console.error(`Error unlinking plaid access token ${card.integrations.plaid.accessToken} from card: ${card._id} for user: ${userId}`);
+        console.error(
+          `Error unlinking plaid access token ${card.integrations.plaid.accessToken} from card: ${card._id} for user: ${userId}`,
+        );
         console.error(`${error}`);
       }
     }
@@ -532,7 +581,9 @@ export const deleteAccountRequest = async (req: IRequest<{}, {}, IDeleteAccountR
     });
 
     const deleteAccountRequestSuccess = await deleteAccountRequestDocument.save();
-    if (!deleteAccountRequestSuccess) throw new CustomError('Unable to create your delete account request. Please email support@karmawallet.io.', ErrorTypes.UNPROCESSABLE);
+    if (!deleteAccountRequestSuccess) {
+      throw new CustomError('Unable to create your delete account request. Please email support@karmawallet.io.', ErrorTypes.UNPROCESSABLE);
+    }
 
     sendDeleteAccountRequestEmail({
       user,
@@ -601,7 +652,10 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
 };
 
 // if the status is closed, add '+closed' to this email in marqeta
-export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (user: IVisitorDocument | IUserDocument, userTransition: Partial<IMarqetaUserTransitionsEvent>): Promise<void> => {
+export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (
+  user: IVisitorDocument | IUserDocument,
+  userTransition: Partial<IMarqetaUserTransitionsEvent>,
+): Promise<void> => {
   if (!user || !userTransition?.status || userTransition?.status !== IMarqetaUserStatus.CLOSED) {
     return;
   }
@@ -639,7 +693,7 @@ export const updateExistingUserFromMarqetaWebhook = async (
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
     const { reason, reason_code: reasonCode } = webhookData;
-    user.integrations.marqeta.reason = reason || IMarqetaReasonCodesEnum[reasonCode] || '';
+    user.integrations.marqeta.reason = reason || IMarqetaTransitionReasonCodesEnum[reasonCode] || '';
     user.integrations.marqeta.reason_code = reasonCode;
     await user.save();
   }
@@ -653,7 +707,9 @@ export const updateExistingUserFromMarqetaWebhook = async (
 
     await handleMarqetaUserActiveTransition(user, false);
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user.integrations.referrals?.params);
-    await updateCustomFields(user.emails.find(e => e.primary).email, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
+    await updateCustomFields(user.emails.find((e) => e.primary).email, [
+      { field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' },
+    ]);
   }
 };
 
@@ -688,9 +744,35 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
   }
 };
 
+const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
+  entity: IUserDocument | IVisitorDocument,
+) => {
+  const status = IMarqetaUserStatus.SUSPENDED;
+  const reason = MarqetaReasonCodeEnum.AccountUnderReview;
+  if (!hasEntityPassedInternalKyc(entity)) {
+    await updateMarqetaUserStatus(entity, status, reason);
+    return true;
+  }
+  return false;
+};
+
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
+  const foundEntity = !!existingUser ? existingUser : visitor;
+
+  if (!foundEntity) {
+    console.log('[+] User or Visitor with matching token not found');
+    return;
+  }
+
+  const passedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
+
+  if (!passedInternalKyc) {
+    console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
+    return;
+  }
+
   // grab the user data from Marqeta directly since webhooks can come in out of order
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);
 
@@ -698,13 +780,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     console.log('[+] Error getting most up to date user information from Marqeta');
   }
 
-  if (!existingUser?._id && !visitor?._id) {
-    // add in code to add the user to our database?
-    throw new CustomError('[+] User or Visitor with matching token not found', ErrorTypes.NOT_FOUND);
-  }
   // EXISTING USER with Marqeta integration already saved
   // Check if the status has changed for this user
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
+    console.log('////// Updating existing user from Marqeta User Transaction Webhook', existingUser._id.toString());
     updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 
@@ -717,10 +796,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   }
 };
 
-export const updateUserUrlParams = async (
-  userObject: IUserDocument,
-  urlParams: IUrlParam[],
-): Promise<void> => {
+export const updateUserUrlParams = async (userObject: IUserDocument, urlParams: IUrlParam[]): Promise<void> => {
   const existingParams = userObject.integrations?.referrals?.params;
   const newParams = filterToValidQueryParams(urlParams);
   const params = !!existingParams ? [...newParams, ...existingParams] : newParams;
@@ -733,10 +809,7 @@ export const updateUserUrlParams = async (
   await userObject.save();
 };
 
-export const updateVisitorUrlParams = async (
-  visitorObject: IVisitorDocument,
-  urlParams: IUrlParam[],
-): Promise<void> => {
+export const updateVisitorUrlParams = async (visitorObject: IVisitorDocument, urlParams: IUrlParam[]): Promise<void> => {
   const existingParams = visitorObject?.integrations?.urlParams;
   const newParams = filterToValidQueryParams(urlParams);
   const params = !!existingParams ? [...newParams, ...existingParams] : newParams;
@@ -745,4 +818,69 @@ export const updateVisitorUrlParams = async (
   visitorObject.integrations.urlParams = duplicatesRemoved;
   visitorObject.integrations.urlParams = duplicatesRemoved;
   await visitorObject.save();
+};
+
+export const verifyEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IVerifyEmailChange>) => {
+  const { verifyToken, email, password } = req.body;
+
+  const checkIfNewEmailAlreadyInUse = await verifyUserDoesNotAlreadyExist(req);
+  if (!checkIfNewEmailAlreadyInUse) throw new CustomError('Email already in use.', ErrorTypes.CONFLICT);
+
+  const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: verifyToken, type: TokenTypes.VerifyEmailChange });
+  if (!checkIfTokenExists) throw new CustomError('Invalid or expired link, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
+  if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const user = await UserModel.findById(checkIfTokenExists.user);
+
+  const checkIfPasswordMatches = await argon2.verify(user.password, password);
+  if (!checkIfPasswordMatches) throw new CustomError('Invalid password.', ErrorTypes.INVALID_ARG);
+
+  await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { verified: IChangeEmailVerificationStatus.VERIFIED, proposedEmail: email });
+
+  const affirmationToken = await TokenService.createToken({
+    user,
+    type: TokenTypes.AffirmEmailChange,
+    days: 1,
+  });
+
+  await sendChangeEmailRequestAffirmationEmail({ token: affirmationToken.value, recipientEmail: email, name: user.name, user: user._id });
+
+  return 'Email change verified, check your new email for further instructions';
+};
+
+export const affirmEmailChange = async (req: IRequest<{}, {}, UserServiceTypes.IAffirmEmailChange>) => {
+  const { affirmToken } = req.body;
+
+  const checkIfTokenExists = await TokenService.getTokenAndConsume({ value: affirmToken, type: TokenTypes.AffirmEmailChange });
+  if (!checkIfTokenExists) throw new CustomError('Invalid or expired link, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  const tokenIsExpired = checkIfTokenExists?.expires < getUtcDate().toDate();
+  if (!!tokenIsExpired) throw new CustomError('Link expired, please request a new email change.', ErrorTypes.INVALID_ARG);
+
+  try {
+    const user = await UserModel.findById(checkIfTokenExists.user);
+    if (!user) throw new CustomError('User not found.', ErrorTypes.NOT_FOUND);
+
+    const changeEmailRequest = await ChangeEmailRequestModel.findOne({ user: user._id });
+    if (!changeEmailRequest) throw new CustomError('Email change request not found.', ErrorTypes.NOT_FOUND);
+
+    const currentPrimaryEmail = user.emails.find(email => email.primary === true);
+    currentPrimaryEmail.email = changeEmailRequest.proposedEmail;
+
+    if (user.integrations.marqeta) {
+      user.integrations.marqeta.email = changeEmailRequest.proposedEmail;
+    }
+
+    const saveEmailChange = await user.save();
+    if (!saveEmailChange) throw new CustomError('Error saving email change.', ErrorTypes.SERVER);
+
+    await ChangeEmailRequestModel.findOneAndUpdate({ user: user._id }, { status: IChangeEmailProcessStatus.COMPLETE });
+    await updateMarqetaUser(user.integrations.marqeta.userToken, { email: changeEmailRequest.proposedEmail });
+
+    return changeEmailRequest.proposedEmail;
+  } catch (err) {
+    return err;
+  }
 };

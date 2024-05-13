@@ -30,6 +30,7 @@ import { IMerchantDocument, MerchantModel } from '../../models/merchant';
 import { ITransaction } from '../../models/transaction';
 import { IUserDocument, UserModel } from '../../models/user';
 import { getNetworkFromBin } from '../../services/card/utils';
+import { IRequest } from '../../types/request';
 
 const uuidSchema = z.string().uuid();
 const QueueTransactionBatchSize = 50;
@@ -317,10 +318,10 @@ export const queueSettledTransactions = async (
   }
 };
 
-export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+export const verifyIssuerEnvWebhookSignature = async (req: IRequest<{}, {}, EarnedRewardWebhookBody>, signature: string): Promise<Error | null> => {
   try {
     const client = new KardClient(KardEnvironmentEnum.Issuer);
-    return await client.verifyWebhookSignature(body, signature);
+    return await client.verifyWebhookSignature(req.rawBody.toString(), signature);
   } catch (err) {
     const errorText = 'Error verifying issuer environment webhook signature';
     console.error(`${errorText}: `, err);
@@ -328,10 +329,10 @@ export const verifyIssuerEnvWebhookSignature = async (body: EarnedRewardWebhookB
   }
 };
 
-export const verifyAggregatorEnvWebhookSignature = async (body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> => {
+export const verifyAggregatorEnvWebhookSignature = async (req: IRequest<{}, {}, EarnedRewardWebhookBody>, signature: string): Promise<Error | null> => {
   try {
     const client = new KardClient(KardEnvironmentEnum.Aggregator);
-    return await client.verifyWebhookSignature(body, signature);
+    return await client.verifyWebhookSignature(req.rawBody.toString(), signature);
   } catch (err) {
     const errorText = 'Error verifying aggregator environment webhook signature';
     console.error(`${errorText}: `, err);

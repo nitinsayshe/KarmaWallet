@@ -1,7 +1,10 @@
 import { GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
+import { MarqetaChannelEnum, MarqetaReasonCodeEnumValues } from '../../clients/marqeta/types';
 import { User } from '../../clients/marqeta/user';
 import { IUserDocument } from '../../models/user';
+import { IVisitorDocument } from '../../models/visitor';
+import { IEntityData } from '../../services/user/types';
 import { IRequest } from '../../types/request';
 import {
   IMarqetaCreateUser,
@@ -55,6 +58,36 @@ export const userMarqetaTransition = async (req: IRequest<{ userToken: string },
   return { data: userResponse };
 };
 
+export const transitionMarqetaUser = async (transitionData: IMarqetaUserTransition) => {
+  const userResponse = await user.userMarqetaTransition(transitionData);
+  return userResponse;
+};
+
+export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode: MarqetaReasonCodeEnumValues) => {
+  try {
+    if (!entity?.integrations?.marqeta?.userToken) {
+      throw new Error('User does not have a Marqeta user token');
+    }
+    if (entity.integrations.marqeta.status === status) {
+      throw new Error('User is already in the requested status');
+    }
+
+    const mockRequest = {
+      params: { userToken: entity.integrations.marqeta.userToken },
+      body: {
+        status,
+        channel: MarqetaChannelEnum.API,
+        reasonCode,
+      },
+      requestor: {},
+      authKey: '',
+    } as IRequest<{ userToken: string }, {}, IMarqetaUserTransition>;
+    await userMarqetaTransition(mockRequest);
+  } catch (error) {
+    console.log('Error updating user status to suspended', error);
+  }
+};
+
 export const listMarqetaUserTransition = async (userToken: string) => {
   const userResponse = await user.listMarqetaUserTransition(userToken);
   return { data: userResponse };
@@ -95,5 +128,34 @@ export const transitionMarqetaUserToClosed = async (userDocument: IUserDocument)
     return transitionUser;
   } catch (err) {
     throw new Error('Error transitioning Marqeta user to closed');
+  }
+};
+
+// Will occur when someone manually marks an inquiry/user as declined
+export const closeMarqetaAccount = async (entityData: IEntityData) => {
+  try {
+    const marqetaUserToken = entityData?.data?.integrations?.marqeta?.userToken;
+    if (marqetaUserToken) {
+      throw new Error('User does not have a Marqeta user token');
+    }
+
+    const userInMarqeta = await getMarqetaUser(marqetaUserToken);
+    if (userInMarqeta) {
+      console.log(`Found user in Marqeta with id: ${marqetaUserToken}`);
+      // update user status in marqeta
+      if (userInMarqeta.state !== IMarqetaUserStatus.CLOSED) {
+        await transitionMarqetaUser({
+          channel: 'API',
+          reason: 'Manual Review: Failed KYC',
+          reasonCode: '17',
+          status: IMarqetaUserStatus.CLOSED,
+          userToken: marqetaUserToken,
+        });
+      }
+    } else {
+      console.log(`No user found in Marqeta with id: ${marqetaUserToken}`);
+    }
+  } catch (err) {
+    console.log(`Error closing Marqeta account for user or visitor with id ${entityData.data._id.toString()}`, err);
   }
 };

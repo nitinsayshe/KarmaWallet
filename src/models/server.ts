@@ -8,7 +8,6 @@ import { getUtcDate } from '../lib/date';
 import { IModel } from '../types/model';
 
 export const ServerSourcesEnum = {
-  ComplyAdvantage: 'comply-advantage',
   Persona: 'persona',
 } as const;
 export type ServerSourcesEnumValue = typeof ServerSourcesEnum[keyof typeof ServerSourcesEnum];

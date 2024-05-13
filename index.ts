@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import process from 'process';
 import compression from 'compression';
 import { EventEmitter } from 'events';
+import { IncomingMessage } from 'http';
 import { MongoClient } from './src/clients/mongo';
 import { RedisClient } from './src/clients/redis';
 import cors from './src/middleware/cors';
@@ -31,11 +32,11 @@ const port = process.env.PORT || 8012;
   app.use(helmet() as any); // temp workaround for broken types with express typings
   app.use(cors());
   app.use(pino() as any); // temp workaround for broken types with express typings
-  app.use(checkToken);
+  app.use(checkToken as any);
   app.use(identify);
   app.use(express.urlencoded({ extended: true }) as any); // temp workaround for broken types with express typings
-  app.use(express.json({ limit: `${100 * 1024 * 1024}mb` }) as any); // temp workaround for broken types with express typings { limit: `${100 * 1024 * 1024}mb` }
-  app.use(await rateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.Main }));
+  app.use(express.json({ limit: `${100 * 1024 * 1024}mb`, verify: (req: IncomingMessage & {rawBody: Buffer}, res, buf) => { req.rawBody = buf; } }) as any); // temp workaround for broken types with express typings { limit: `${100 * 1024 * 1024}mb` }
+  app.use(await rateLimiter({ keyPrefix: KWRateLimiterKeyPrefixes.Main }) as any);
 
   const httpServer = app.listen(port, () => {
     console.log('\n --------------------------\n', `| Listening on port ${port} |`, '\n --------------------------');

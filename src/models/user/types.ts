@@ -1,9 +1,9 @@
 import { ObjectId } from 'mongoose';
-import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
 import { IRef } from '../../types/model';
 import { IPromo, IPromoDocument } from '../promo';
 import { IMarqetaUserIntegrations } from '../../integrations/marqeta/types';
 import { IWPArticle } from '../wpArticle';
+import { IPersonaIntgration } from '../../integrations/persona/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -102,7 +102,7 @@ export interface IUserIntegrations {
   biometrics?: IBiometrics[];
   marqeta?: IMarqetaUserIntegrations;
   fcm?: IFCMTokenIntegration[];
-  complyAdvantage?: IComplyAdvantageIntegration;
+  persona?: IPersonaIntgration;
 }
 
 export interface IShareableUser {

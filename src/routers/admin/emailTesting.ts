@@ -131,4 +131,11 @@ router.route('/karma-card-decline-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testKarmaCardDeclineEmail,
   );
+
+router.route('/resume-karma-card-application-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testResumeKarmaCardApplicationEmail,
+  );
 export default router;

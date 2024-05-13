@@ -9,4 +9,6 @@ router.route('/accounts')
 router.route('/createAccount')
   .post(PersonaController.createAccount);
 
+router.post('/account-id', PersonaController.getPersonaAccountId);
+
 export default router;

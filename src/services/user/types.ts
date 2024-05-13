@@ -3,10 +3,15 @@ import { DeleteRequestReason } from '../../models/deleteAccountRequest';
 import { ILegacyUserDocument } from '../../models/legacyUser';
 import { IUserDocument } from '../../models/user';
 import { IUserIntegrations } from '../../models/user/types';
+import { IVisitorDocument } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 
 export interface IVerifyTokenBody {
   token: string;
+}
+
+export interface IGetPersonaData {
+  email: string;
 }
 
 export interface IEmail {
@@ -28,6 +33,11 @@ export interface ILoginData {
     model: string,
     buildNumber: string,
   };
+}
+
+export interface IEntityData {
+  type: 'user' | 'visitor';
+  data: IUserDocument | IVisitorDocument;
 }
 
 export interface IUpdatePasswordBody {
@@ -67,6 +77,16 @@ export interface IEmailVerificationData {
   tokenValue: string;
 }
 
+export interface IVerifyEmailChange {
+  email: string;
+  verifyToken: string;
+  password: string;
+}
+
+export interface IAffirmEmailChange {
+  affirmToken: string;
+}
+
 export interface IUpdateUserEmailParams {
   user: IUserDocument;
   email: string;
@@ -79,4 +99,8 @@ export type UserKeys = keyof IUserData;
 
 export interface IDeleteAccountRequest {
   reason: DeleteRequestReason;
+}
+
+export interface IRequestEmailChangeBody {
+  password: string;
 }

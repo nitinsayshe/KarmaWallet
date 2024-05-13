@@ -107,6 +107,15 @@ export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDel
   }
 };
 
+export const requestEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IRequestEmailChangeBody> = async (req, res) => {
+  try {
+    const response = await UserService.requestEmailChange(req);
+    output.api(req, res, response);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const submitSupportTicket: IRequestHandler<{}, {}, SupportTicketService.ISubmitSupportTicketRequest> = async (req, res) => {
   try {
     const response = await SupportTicketService.submitSupportTicket(req);
@@ -279,6 +288,48 @@ export const getTestIdentities: IRequestHandler<{}, {}, {}> = async (req, res) =
       res,
       data.map((d) => UserUtils.getShareableUser(d)),
     );
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const verifyEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IVerifyEmailChange> = async (req, res) => {
+  try {
+    const verifyEmailChangeSchema = z.object({
+      email: z.string().email(),
+      password: z.string(),
+      verifyToken: nanoIdValidation,
+    });
+
+    const parsed = verifyEmailChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const data = await UserService.verifyEmailChange(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const affirmEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IAffirmEmailChange> = async (req, res) => {
+  try {
+    const verifyEmailChangeSchema = z.object({
+      affirmToken: nanoIdValidation,
+    });
+
+    const parsed = verifyEmailChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const data = await UserService.affirmEmailChange(req);
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

@@ -19,6 +19,8 @@ const registerRoutes = async (app: Express) => {
   router.put('/password/token', UserController.resetPasswordFromToken);
   router.post('/check-email', UserController.checkIfEmailAlreadyInUse);
   router.get('/test-identities', UserController.getTestIdentities);
+  router.post('/email/request-change/verify', UserController.verifyEmailChange);
+  router.post('/email/request-change/affirm', UserController.affirmEmailChange);
 
   // Authenticated
   router.post('/logout', authenticate, UserController.logout);
@@ -27,6 +29,7 @@ const registerRoutes = async (app: Express) => {
   router.get('/session', authenticate, UserController.getProfile);
   router.put('/password', authenticate, UserController.updatePassword);
   router.post('/support-ticket', authenticate, UserController.submitSupportTicket);
+  router.post('/email/request-change', authenticate, UserController.requestEmailChange);
   router.post('/email/token/create', authenticate, UserController.resendEmailVerification);
   router.post('/email/token/verify', authenticate, UserController.verifyEmail);
 };

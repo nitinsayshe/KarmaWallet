@@ -48,6 +48,7 @@ export enum JobNames {
   GenerateCommissionPayouts = 'generate-commission-payouts',
   GenerateAdminSummaryReport = 'generate-admin-summary-report',
   GenerateUserReport = 'generate-user-report',
+  PersonaWebhookProcessor = 'persona-webhook-processor',
   UpdateWildfireCommissions = 'update-wildfire-commissions',
   SyncActiveCampaign = 'sync-active-campaign',
   SendAccountCreationReminderEmail = 'send-account-creation-reminder-email',

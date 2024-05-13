@@ -10,7 +10,7 @@ import { IMarketingSubscription, MarketingSubscriptionModel } from '../../models
 import { IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorAction, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
-import { ActiveCampaignListId, MarketingSubscriptionStatus, MarketingSubscriptionCode } from '../../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionStatus, MarketingSubscriptionCode } from '../../types/marketing_subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
 import { IUrlParam, IVerifyTokenBody } from '../user/types';

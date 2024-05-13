@@ -51,7 +51,7 @@ import {
   getUsersWithCommissionsLastWeek,
   getWeeklyMissedCashBack,
 } from '../services/user/utils/metrics';
-import { ActiveCampaignListId, MarketingSubscriptionCode } from '../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionCode } from '../types/marketing_subscription';
 import { IUser } from '../models/user/types';
 import { DateKarmaMembershipStoppedbBeingFree } from '../lib/constants';
 

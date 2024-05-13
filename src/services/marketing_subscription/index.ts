@@ -23,7 +23,7 @@ import { IUserGroup, UserGroupModel } from '../../models/userGroup';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
-import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/marketing_subscription';
 import { IUser, IEmail } from '../../models/user/types';
 
 export interface UserSubscriptions {

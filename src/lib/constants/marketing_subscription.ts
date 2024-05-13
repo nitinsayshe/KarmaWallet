@@ -1,5 +1,5 @@
 import { InterestCategory } from '../../integrations/hubspot';
-import { MarketingSubscriptionCode, ActiveCampaignListId, HubspotFormId } from '../../types/subscription';
+import { MarketingSubscriptionCode, ActiveCampaignListId, HubspotFormId } from '../../types/marketing_subscription';
 
 export const MarketingSubscriptionCodeToProviderProductId = {
   [MarketingSubscriptionCode.accountUpdates]: ActiveCampaignListId.AccountUpdates,

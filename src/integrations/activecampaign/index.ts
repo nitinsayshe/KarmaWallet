@@ -44,7 +44,7 @@ import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
-import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/marketing_subscription';
 
 export type FieldIds = Array<{ name: string; id: number }>;
 export type FieldValues = Array<{ id: number; value: string }>;

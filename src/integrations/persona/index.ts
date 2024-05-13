@@ -23,8 +23,14 @@ export const verifyPersonaWebhookSignature = async (req: IRequest<{}, {}, Person
 export const verifyPersonaWebhookSource = async (req: IRequest<{}, {}, PersonaWebhookBody>) => {
   // get the ip this request was sent from in the request
   // uses the forwarded IP if in dev environmnet since we are using ngrok
-  let requesterIp: string = process.env.NODE_ENV === 'development' ? req.headers['x-forwarded-for'] : req.headers['x-real-ip'];
-  requesterIp = requesterIp?.trim();
+  let requesterIp: string;
+  if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'production') {
+    requesterIp = req.headers['x-forwarded-for'];
+  } else if (process.env.NODE_ENV === 'staging') {
+    requesterIp = req.headers['x-real-ip'];
+  }
+
+  const ips = requesterIp?.split(',').map((ip) => ip.trim());
 
   // pull whitelisted Comply Advantage IPs from the database
   let whitelistedServers;
@@ -34,8 +40,16 @@ export const verifyPersonaWebhookSource = async (req: IRequest<{}, {}, PersonaWe
     throw new CustomError('Error fetching whitelisted servers', ErrorTypes.SERVER);
   }
 
+  let foundServer = false;
+  for (const ip of ips) {
+    if (whitelistedServers.find((server) => server.ip === ip)) {
+      foundServer = true;
+      break;
+    }
+  }
+
   // check if the request was sent from a whitelisted IP
-  if (!whitelistedServers.find((server) => server.ip === requesterIp)) {
+  if (!foundServer) {
     throw new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED);
   }
 };

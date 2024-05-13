@@ -7,7 +7,7 @@ import { CardModel } from '../../../models/card';
 import { GroupModel } from '../../../models/group';
 import { IUserDocument } from '../../../models/user';
 import { joinGroup } from '../../groups/utils';
-import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
+import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../marketing_subscription';
 import { getDaysFromPreviousDate } from '../../../lib/date';
 import { IUrlParam } from '../../user/types';
 import { transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';

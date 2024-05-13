@@ -4,12 +4,12 @@ import {
   Model,
 } from 'mongoose';
 import { IModel } from '../../types/model';
-import { IInvoice, IInvoiceDocument } from './types';
+import { ISubscription, ISubscriptionDocument } from './types';
 import { getUtcDate } from '../../lib/date';
 
-export type IInvoiceModel = IModel<IInvoice>;
+export type ISubscriptionModel = IModel<ISubscription>;
 
-const InvoiceSchema = new Schema({
+const SubscriptionSchema = new Schema({
   amount: { type: Number, required: true },
   name: { type: String, required: true },
   createdOn: { type: Date, default: getUtcDate().toDate() },
@@ -22,4 +22,4 @@ const InvoiceSchema = new Schema({
   },
 });
 
-export const InvoiceModel = model<IInvoiceDocument, Model<IInvoice>>('invoice', InvoiceSchema);
+export const SubscriptionModel = model<ISubscriptionDocument, Model<ISubscription>>('subscription', SubscriptionSchema);

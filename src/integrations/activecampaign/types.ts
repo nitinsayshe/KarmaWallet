@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { SubscriptionCode } from '../../types/subscription';
+import { MarketingSubscriptionCode } from '../../types/subscription';
 
 export interface ICreateContactData {
   email: string;
@@ -281,8 +281,8 @@ export enum ActiveCampaignListId {
 
 export interface UserSubscriptions {
   userId: string;
-  subscribe: Array<SubscriptionCode>;
-  unsubscribe: Array<SubscriptionCode>;
+  subscribe: Array<MarketingSubscriptionCode>;
+  unsubscribe: Array<MarketingSubscriptionCode>;
 }
 
 export interface IContactsData {
@@ -311,8 +311,8 @@ export type UpdateActiveCampaignDataRequest = {
   firstName?: string;
   lastName?: string;
   subscriptions?: {
-    subscribe: SubscriptionCode[];
-    unsubscribe: SubscriptionCode[];
+    subscribe: MarketingSubscriptionCode[];
+    unsubscribe: MarketingSubscriptionCode[];
   };
   tags?: {
     add: string[];

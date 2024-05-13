@@ -3,14 +3,14 @@ import { FilterQuery } from 'mongoose';
 import { updateActiveCampaignContactData } from '../../integrations/activecampaign';
 import * as HubspotIntegration from '../../integrations/hubspot';
 import { emailVerificationDays, ErrorTypes, TokenTypes } from '../../lib/constants';
-import { InterestCategoryToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
+import { InterestCategoryToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
-import { ISubscription, SubscriptionModel } from '../../models/subscription';
+import { IMarketingSubscription, MarketingSubscriptionModel } from '../../models/marketingSubscription';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorAction, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
-import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionStatus, MarketingSubscriptionCode } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
 import { IUrlParam, IVerifyTokenBody } from '../user/types';
@@ -26,7 +26,7 @@ export interface IVisitorSignupData {
 }
 
 export interface INewsletterSignupData extends IVisitorSignupData {
-  subscriptionCodes: SubscriptionCode[];
+  MarketingSubscriptionCodes: MarketingSubscriptionCode[];
 }
 
 export interface ICreateAccountRequest extends IVisitorSignupData {
@@ -58,18 +58,18 @@ export const getVisitorByEmail = async (email: string): Promise<IVisitorDocument
   }
 };
 
-const getSubscriptionByQuery = async (query: FilterQuery<ISubscription>): Promise<ISubscription> => {
+const getSubscriptionByQuery = async (query: FilterQuery<IMarketingSubscription>): Promise<IMarketingSubscription> => {
   try {
-    return await SubscriptionModel.findOne(query);
+    return await MarketingSubscriptionModel.findOne(query);
   } catch (err) {
     console.error('Error searching for subscription:', err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
   }
 };
 
-const getSubscriptionsByQuery = async (query: FilterQuery<ISubscription>): Promise<ISubscription[]> => {
+const getSubscriptionsByQuery = async (query: FilterQuery<IMarketingSubscription>): Promise<IMarketingSubscription[]> => {
   try {
-    return await SubscriptionModel.find(query);
+    return await MarketingSubscriptionModel.find(query);
   } catch (err) {
     console.error('Error searching for subscription:', err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
@@ -175,26 +175,26 @@ const createVisitorWithEmail = async (email: string, params: IUrlParam[]): Promi
   }
 };
 
-const createSubscriptions = async (subscriptions: Partial<ISubscription>[]): Promise<ISubscription[]> => {
+const createSubscriptions = async (subscriptions: Partial<IMarketingSubscription>[]): Promise<IMarketingSubscription[]> => {
   try {
-    return await SubscriptionModel.insertMany(subscriptions);
+    return await MarketingSubscriptionModel.insertMany(subscriptions);
   } catch (err) {
     console.error('Error creating new subscription:', err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
   }
 };
 
-const createSubscription = async (subscription: Partial<ISubscription>): Promise<ISubscription> => {
+const createSubscription = async (subscription: Partial<IMarketingSubscription>): Promise<IMarketingSubscription> => {
   try {
-    return await SubscriptionModel.create(subscription);
+    return await MarketingSubscriptionModel.create(subscription);
   } catch (err) {
     console.error('Error creating new subscription:', err);
     throw new CustomError(shareableSignupError, ErrorTypes.SERVER);
   }
 };
 
-export const getQueryFromSubscriptionCodes = (visitorId: string, codes: SubscriptionCode[]): FilterQuery<ISubscription> => {
-  const query: FilterQuery<ISubscription> = { $or: [] };
+export const getQueryFromMarketingSubscriptionCodes = (visitorId: string, codes: MarketingSubscriptionCode[]): FilterQuery<IMarketingSubscription> => {
+  const query: FilterQuery<IMarketingSubscription> = { $or: [] };
   codes.forEach((code) => {
     query.$or.push({
       $and: [{ visitor: visitorId }, { code }],
@@ -239,7 +239,7 @@ export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest
   }
 };
 
-export const newsletterSignup = async (_: IRequest, email: string, subscriptionCodes: SubscriptionCode[], params?: IUrlParam[]) => {
+export const newsletterSignup = async (_: IRequest, email: string, MarketingSubscriptionCodes: MarketingSubscriptionCode[], params?: IUrlParam[]) => {
   try {
     if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
       throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
@@ -247,18 +247,18 @@ export const newsletterSignup = async (_: IRequest, email: string, subscriptionC
 
     email = email.toLowerCase();
 
-    if (!subscriptionCodes || !subscriptionCodes.length) {
+    if (!MarketingSubscriptionCodes || !MarketingSubscriptionCodes.length) {
       throw new CustomError(shareableSignupError, ErrorTypes.GEN);
     }
 
     // Check that the subscription code is valid and maps to a valid provider product id
-    const productIds = subscriptionCodes.map((code) => {
-      const c = SubscriptionCode[code];
+    const productIds = MarketingSubscriptionCodes.map((code) => {
+      const c = MarketingSubscriptionCode[code];
       if (!c) {
         throw new CustomError(shareableSignupError, ErrorTypes.GEN);
       }
 
-      const productId = SubscriptionCodeToProviderProductId[c] as ActiveCampaignListId;
+      const productId = MarketingSubscriptionCodeToProviderProductId[c] as ActiveCampaignListId;
       if (!productId) {
         throw new CustomError(shareableSignupError, ErrorTypes.GEN);
       }
@@ -273,9 +273,9 @@ export const newsletterSignup = async (_: IRequest, email: string, subscriptionC
     let visitor = await getVisitorByEmail(email);
     if (visitor) {
       // if visitor has already subscribed to these codes, throw error
-      const query = getQueryFromSubscriptionCodes(visitor._id, subscriptionCodes);
+      const query = getQueryFromMarketingSubscriptionCodes(visitor._id, MarketingSubscriptionCodes);
       const previousSubscriptions = await getSubscriptionsByQuery(query);
-      if (!!previousSubscriptions && previousSubscriptions.length === subscriptionCodes.length) {
+      if (!!previousSubscriptions && previousSubscriptions.length === MarketingSubscriptionCodes.length) {
         throw new CustomError(shareableSignupError, ErrorTypes.GEN);
       }
     } else {
@@ -291,11 +291,11 @@ export const newsletterSignup = async (_: IRequest, email: string, subscriptionC
 
     // log this subscription in the db
     const subscriptions = await createSubscriptions(
-      subscriptionCodes.map((c) => {
-        const sub: Partial<ISubscription> = {
+      MarketingSubscriptionCodes.map((c) => {
+        const sub: Partial<IMarketingSubscription> = {
           visitor: visitor._id,
           code: c,
-          status: SubscriptionStatus.Active,
+          status: MarketingSubscriptionStatus.Active,
           lastModified: getUtcDate().toDate(),
         };
         return sub;
@@ -341,7 +341,7 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
       throw new CustomError('Invalid interest category.', ErrorTypes.INVALID_ARG);
     }
 
-    const code = InterestCategoryToSubscriptionCode[data.interestCategory];
+    const code = InterestCategoryToMarketingSubscriptionCode[data.interestCategory];
     if (!code) {
       throw new CustomError('Error processing request', ErrorTypes.SERVER);
     }
@@ -374,7 +374,7 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
       code,
       user: user?._id,
       visitor: visitor?._id,
-      status: SubscriptionStatus.Active,
+      status: MarketingSubscriptionStatus.Active,
     });
     if (!subscription) {
       throw new CustomError(shareableSignupError, ErrorTypes.SERVER);

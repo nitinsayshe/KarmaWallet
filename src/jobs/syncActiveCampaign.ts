@@ -24,7 +24,7 @@ import {
 } from '../integrations/activecampaign';
 import { ActiveCampaignCustomFields, ActiveCampaignSyncTypes } from '../lib/constants/activecampaign';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { ProviderProductIdToSubscriptionCode, SubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
+import { ProviderProductIdToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../lib/constants/subscription';
 import { roundToPercision, sleep } from '../lib/misc';
 import { IUserDocument, UserModel } from '../models/user';
 import {
@@ -41,7 +41,7 @@ import {
   reconcileActiveCampaignListSubscriptions,
   updateNewKWCardUserSubscriptions,
   updateUserSubscriptions,
-} from '../services/subscription';
+} from '../services/marketing_subscription';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
@@ -51,7 +51,7 @@ import {
   getUsersWithCommissionsLastWeek,
   getWeeklyMissedCashBack,
 } from '../services/user/utils/metrics';
-import { ActiveCampaignListId, SubscriptionCode } from '../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionCode } from '../types/subscription';
 import { IUser } from '../models/user/types';
 import { DateKarmaMembershipStoppedbBeingFree } from '../lib/constants';
 
@@ -88,8 +88,8 @@ const getGroupSubscriptionListsToUpdate = async (user: IUserDocument): Promise<I
   try {
     const subs = await getUserGroupSubscriptionsToUpdate(user);
     return {
-      subscribe: subs?.subscribe?.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
-      unsubscribe: subs?.unsubscribe?.map((code) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+      subscribe: subs?.subscribe?.map((code) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+      unsubscribe: subs?.unsubscribe?.map((code) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
     };
   } catch (err) {
     console.error('Error getting group subscriptions to update', err);
@@ -211,8 +211,8 @@ const prepareSyncUsersRequest = async (
         contact.tags = tags;
         await updateUserSubscriptions(
           userDocument._id,
-          lists.subscribe.map((id: ActiveCampaignListId) => ProviderProductIdToSubscriptionCode[id]),
-          lists.unsubscribe.map((id: ActiveCampaignListId) => ProviderProductIdToSubscriptionCode[id]),
+          lists.subscribe.map((id: ActiveCampaignListId) => ProviderProductIdToMarketingSubscriptionCode[id]),
+          lists.unsubscribe.map((id: ActiveCampaignListId) => ProviderProductIdToMarketingSubscriptionCode[id]),
         );
         return contact;
       }),
@@ -268,11 +268,11 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
       email: (await UserModel.findById(list.userId))?.emails?.find((e) => e.primary)?.email,
       userId: list.userId,
       lists: {
-        subscribe: list.subscribe.map((sub: SubscriptionCode) => ({
-          listid: SubscriptionCodeToProviderProductId[sub] as ActiveCampaignListId,
+        subscribe: list.subscribe.map((sub: MarketingSubscriptionCode) => ({
+          listid: MarketingSubscriptionCodeToProviderProductId[sub] as ActiveCampaignListId,
         })),
         unsubscribe: list.unsubscribe.map((unsub) => ({
-          listid: SubscriptionCodeToProviderProductId[unsub] as ActiveCampaignListId,
+          listid: MarketingSubscriptionCodeToProviderProductId[unsub] as ActiveCampaignListId,
         })),
       },
     })),
@@ -309,8 +309,8 @@ const syncUserSubsrciptionsAndTags = async (userSubscriptions: UserSubscriptions
     await Promise.all(
       currBatch.map(async (user) => updateUserSubscriptions(
         user.userId,
-        user.lists.subscribe.map((id) => ProviderProductIdToSubscriptionCode[id.listid]),
-        user.lists.unsubscribe.map((id) => ProviderProductIdToSubscriptionCode[id.listid]),
+        user.lists.subscribe.map((id) => ProviderProductIdToMarketingSubscriptionCode[id.listid]),
+        user.lists.unsubscribe.map((id) => ProviderProductIdToMarketingSubscriptionCode[id.listid]),
       )),
     );
 

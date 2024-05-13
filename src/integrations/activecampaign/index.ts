@@ -12,7 +12,7 @@ import {
 } from '../../clients/activeCampaign';
 import { CardStatus } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { SubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
+import { MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/subscription';
 import {
   getAvailableCommissionPayouts,
   getMonthlyCommissionTotal,
@@ -44,7 +44,7 @@ import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
-import { ActiveCampaignListId, SubscriptionCode } from '../../types/subscription';
+import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/subscription';
 
 export type FieldIds = Array<{ name: string; id: number }>;
 export type FieldValues = Array<{ id: number; value: string }>;
@@ -62,8 +62,8 @@ export interface UserLists {
 
 export interface UserSubscriptions {
   userId: string;
-  subscribe: Array<SubscriptionCode>;
-  unsubscribe: Array<SubscriptionCode>;
+  subscribe: Array<MarketingSubscriptionCode>;
+  unsubscribe: Array<MarketingSubscriptionCode>;
 }
 
 export type CustomFieldSetter = (userId: string, customFields: FieldIds, fieldValues?: FieldValues) => Promise<FieldValues>;
@@ -586,13 +586,13 @@ export const updateActiveCampaignGroupListsAndTags = async (
   user: IUserDocument,
   subscriptions: {
     userId: string;
-    subscribe: SubscriptionCode[];
-    unsubscribe: SubscriptionCode[];
+    subscribe: MarketingSubscriptionCode[];
+    unsubscribe: MarketingSubscriptionCode[];
   },
   client?: AxiosInstance,
 ): Promise<{
   userId: string;
-  lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
+  lists: { subscribe: MarketingSubscriptionCode[]; unsubscribe: MarketingSubscriptionCode[] };
 }> => {
   try {
     const ac = new ActiveCampaignClient();
@@ -605,8 +605,8 @@ export const updateActiveCampaignGroupListsAndTags = async (
 
     const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = subscriptions;
     const { subscribe, unsubscribe } = await getSubscriptionLists(
-      subscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
-      unsubscribeCodes.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+      subscribeCodes.map((code: MarketingSubscriptionCode) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
+      unsubscribeCodes.map((code: MarketingSubscriptionCode) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
     );
 
     const contacts = [
@@ -630,8 +630,8 @@ export type UpdateActiveCampaignDataRequest = {
   firstName?: string;
   lastName?: string;
   subscriptions?: {
-    subscribe: SubscriptionCode[];
-    unsubscribe: SubscriptionCode[];
+    subscribe: MarketingSubscriptionCode[];
+    unsubscribe: MarketingSubscriptionCode[];
   };
   tags?: {
     add: string[];
@@ -645,7 +645,7 @@ export const updateActiveCampaignData = async (
   client?: AxiosInstance,
 ): Promise<{
   userId: string;
-  lists: { subscribe: SubscriptionCode[]; unsubscribe: SubscriptionCode[] };
+  lists: { subscribe: MarketingSubscriptionCode[]; unsubscribe: MarketingSubscriptionCode[] };
 }> => {
   try {
     const ac = new ActiveCampaignClient();
@@ -653,8 +653,8 @@ export const updateActiveCampaignData = async (
 
     const { subscribe: subscribeCodes, unsubscribe: unsubscribeCodes } = req.subscriptions;
     const { subscribe, unsubscribe } = await getSubscriptionLists(
-      subscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
-      unsubscribeCodes?.map((code: SubscriptionCode) => SubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
+      subscribeCodes?.map((code: MarketingSubscriptionCode) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
+      unsubscribeCodes?.map((code: MarketingSubscriptionCode) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId) || [],
     );
     const contacts = [
       {

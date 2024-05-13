@@ -41,31 +41,6 @@ export const getApplicationStatus: IRequestHandler<{}, {}, { email: string }> = 
   }
 };
 
-export const continueKarmaCardApplication: IRequestHandler<{}, {}, KarmaCardService.IContinueKarmanCardApplicationRequestBody> = async (
-  req,
-  res,
-) => {
-  try {
-    const continueApplicationSchema = z.object({
-      email: z.string().email(),
-      personaInquiryId: z.string(),
-    });
-
-    const parsed = continueApplicationSchema.safeParse(req.body);
-    if (!parsed.success) {
-      const fieldErrors = ((parsed as SafeParseError<KarmaCardService.IContinueKarmanCardApplicationRequestBody>)?.error as ZodError)
-        ?.formErrors?.fieldErrors;
-      console.log(formatZodFieldErrors(fieldErrors));
-      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
-    }
-
-    const applyResponse = await KarmaCardService.continueKarmaCardApplication(parsed.data.email, parsed.data.personaInquiryId);
-    api(req, res, getShareableMarqetaUser(applyResponse));
-  } catch (err) {
-    error(req, res, asCustomError(err));
-  }
-};
-
 export const getKarmaCardApplications: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const applications = await KarmaCardService.getKarmaCardApplications();

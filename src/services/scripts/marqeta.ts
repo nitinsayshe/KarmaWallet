@@ -1,14 +1,15 @@
+/* eslint-disable camelcase */
 import fs from 'fs';
 import path from 'path';
 import { parse } from 'json2csv';
 import { PaginateResult } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, ListUsersResponse, MarqetaUserModel } from '../../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, ListUsersResponse, MarqetaUserModel } from '../../integrations/marqeta/types';
 import { User } from '../../clients/marqeta/user';
 import { sleep } from '../../lib/misc';
 import { IUserDocument, UserModel } from '../../models/user';
-import { IVisitorDocument } from '../../models/visitor';
+import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { mapMarqetaCardtoCard } from '../card';
 import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
@@ -16,6 +17,9 @@ import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIt
 import { createDepositAccount, listDepositAccountsForUser, mapMarqetaDepositAccountToKarmaDB } from '../../integrations/marqeta/depositAccount';
 import { DepositAccountModel } from '../../models/depositAccount';
 import { CardModel } from '../../models/card';
+import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
+import { isUserKYCVerified } from '../karmaCard';
+import { ReasonCode } from '../karmaCard/utils';
 
 const backoffMs = 1000;
 
@@ -210,4 +214,82 @@ export const getUsersMissingPhoneNumber = async () => {
     })),
   );
   fs.writeFileSync(path.join(__dirname, '.tmp', 'marqeta_users_without_phone_number.csv'), _userCSV);
+};
+
+export const performKYCOnUser = async (userToken: string) => {
+  // get the kyc list of a user
+  const existingKYCChecks = await listUserKyc(userToken);
+  let kycResponse;
+
+  // perform the kyc through marqeta & create the card
+  if (!isUserKYCVerified(existingKYCChecks)) {
+    kycResponse = await processUserKyc(userToken);
+  } else {
+    kycResponse = existingKYCChecks.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
+  }
+
+  return kycResponse;
+};
+
+export const addMarqetaIntegrationToVisitor = async (marqetaId: string) => {
+  const marqetaClient = new MarqetaClient();
+  const userClient = new User(marqetaClient);
+  const marqetaUser = await userClient.getMarqetaUser(marqetaId);
+
+  if (!marqetaUser) {
+    console.error(`no user found with id: ${marqetaId}`);
+    return;
+  }
+
+  const visitor = await VisitorModel.findOne({ email: marqetaUser.email });
+  if (!visitor.integrations) {
+    visitor.integrations = {};
+  }
+
+  const { first_name, last_name, token, email, address1, city, state, postal_code, country, birth_date, phone, created_time, address2 } = marqetaUser;
+
+  // MARQETA KYC/CREATE USER
+  const kycResponse = await performKYCOnUser(token);
+
+  // get the kyc result code
+  let { status } = kycResponse.result;
+  const { codes } = kycResponse.result;
+  let kycErrorCodes = codes?.map((item: any) => item.code);
+  const passedPersonaInquiry = visitor.integrations.persona?.inquiries?.filter((inquiry) => inquiry.status === 'completed').length > 0;
+
+  if (!passedPersonaInquiry) {
+    status = IMarqetaKycState.failure;
+    kycErrorCodes = !!kycErrorCodes ? [...kycErrorCodes, ReasonCode.FailedInternalKyc] : [ReasonCode.FailedInternalKyc];
+  }
+
+  // MARQETA KYC: Prepare Data to create a User in Marqeta and submit for Marqeta KYC
+  const marqetaKYCInfo: IMarqetaVisitorData = {
+    userToken: token,
+    kycResult: { status, codes: kycErrorCodes },
+    first_name,
+    last_name,
+    address1,
+    birth_date,
+    phone,
+    postal_code,
+    status: marqetaUser.status,
+    country,
+    state,
+    city,
+    email,
+    created_time: created_time.toString(),
+    identifications: [
+      {
+        type: 'SSN',
+        value: '',
+      },
+    ],
+  };
+
+  if (address2) marqetaKYCInfo.address2 = address2;
+
+  visitor.integrations.marqeta = marqetaKYCInfo;
+  const updatedVisitor = await visitor.save();
+
+  console.log('///// data to add to visitor', updatedVisitor);
 };

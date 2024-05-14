@@ -751,9 +751,9 @@ const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
   const reason = MarqetaReasonCodeEnum.AccountUnderReview;
   if (!hasEntityPassedInternalKyc(entity)) {
     await updateMarqetaUserStatus(entity, status, reason);
-    return true;
+    return false;
   }
-  return false;
+  return true;
 };
 
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {

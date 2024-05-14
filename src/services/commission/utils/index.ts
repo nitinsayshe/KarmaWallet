@@ -133,7 +133,7 @@ export const getKarmaCommissionStatusFromWildfireStatus = (
     case WildfireCommissionStatus.Ready:
       return KarmaCommissionStatus.Pending;
     case WildfireCommissionStatus.Paid:
-      return KarmaCommissionStatus.ConfirmedAndAwaitingVendorPayment;
+      return KarmaCommissionStatus.ReceivedFromVendor;
     case WildfireCommissionStatus.Disqualified:
       return KarmaCommissionStatus.Canceled;
     default:

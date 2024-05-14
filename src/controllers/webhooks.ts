@@ -7,8 +7,12 @@ import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
 import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
-import { mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
-import { IMarqetaWebhookBody, IMarqetaWebhookHeader, MarqetaWebhookConstants } from '../integrations/marqeta/types';
+import { handleTransactionDisputeMacros, handleTransactionNotifications, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
+import {
+  IMarqetaWebhookBody,
+  IMarqetaWebhookHeader,
+  MarqetaWebhookConstants,
+} from '../integrations/marqeta/types';
 import { processPaypalWebhook } from '../integrations/paypal';
 import { mapTransactions } from '../integrations/rare';
 import { IRareTransaction } from '../integrations/rare/transaction';
@@ -30,7 +34,6 @@ import { Logger } from '../services/logger';
 import * as output from '../services/output';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
-import { handleTransactionDisputeMacros, handleTransactionNotifications } from '../services/transaction';
 import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';

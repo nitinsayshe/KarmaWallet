@@ -78,13 +78,12 @@ import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 import { ICompanyProtocol } from '../company/types';
 
 export const getMarqetaMerchantName = (marqetaData: IMarqetaTransactionIntegration) => {
-  const relatedTransactions = marqetaData?.relatedTransactions;
-  if (!!relatedTransactions.length) {
-    const completedTransaction = relatedTransactions.find((t) => t.state === TransactionModelStateEnum.Completion);
-    if (!!completedTransaction) {
-      return completedTransaction?.card_acceptor?.name || '';
-    }
-    return marqetaData?.card_acceptor?.name || '';
+  const isDirectDeposit = !!marqetaData?.direct_deposit;
+
+  if (!!marqetaData?.relatedTransactions?.length) {
+    const completedTransaction = marqetaData?.relatedTransactions.find((t: any) => t.state === TransactionModelStateEnum.Completion);
+    if (!!completedTransaction && isDirectDeposit) return completedTransaction?.direct_deposit?.company_name || '';
+    return completedTransaction?.card_acceptor?.name || '';
   }
 
   return marqetaData?.card_acceptor?.name || '';
@@ -551,6 +550,8 @@ export const getShareableTransaction = async ({
       currency_code: currencyCode,
     } = integrations.marqeta;
 
+    const merchantName = getMarqetaMerchantName(integrations.marqeta);
+
     const marqetaIntegration: any = {
       token,
       userToken,
@@ -562,7 +563,7 @@ export const getShareableTransaction = async ({
       amount: marqetaAmount,
       settlementDate,
       currencyCode,
-      merchantName: getMarqetaMerchantName(integrations.marqeta),
+      merchantName,
       cardMask: integrations.marqeta?.card?.last_four || null,
     };
 
@@ -573,7 +574,7 @@ export const getShareableTransaction = async ({
     if (!!integrations?.marqeta?.direct_deposit) {
       marqetaIntegration.direct_deposit = {
         type: integrations.marqeta?.direct_deposit?.type,
-        company_name: integrations.marqeta?.direct_deposit?.company_name,
+        company_name: merchantName,
       };
     }
 

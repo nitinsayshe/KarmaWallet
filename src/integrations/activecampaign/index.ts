@@ -25,6 +25,14 @@ import {
   getYearlyLoginCount,
   getMonthlyMealsDonationCount,
   getMonthlyReforestationDonationCount,
+  userHasFundedAccountButNotTransactedInLastQuarter,
+  getMoneyLoadedCountInTwoWeeks,
+  getCollectiveCarbonOffset,
+  getAverageKarmaScore,
+  getCollectiveCommunityImpact,
+  getCollectiveReforestationDonationCount,
+  getCollectiveMealsDonationCount,
+  getKarmaMembershipPlanType,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -211,6 +219,52 @@ export const prepareQuarterlyUpdatedFields = async (
   if (!fieldValues) {
     fieldValues = [];
   }
+
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasntTranactedInPastQuarter);
+  if (!!customField) {
+    const hasFundedAccountAndNotTransactedInPastQuarter = await userHasFundedAccountButNotTransactedInLastQuarter(user);
+    fieldValues.push({ id: customField.id, value: hasFundedAccountAndNotTransactedInPastQuarter.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveReforestationDonations);
+  if (!!customField) {
+    const mealsDonationCount = await getCollectiveReforestationDonationCount();
+    fieldValues.push({ id: customField.id, value: mealsDonationCount.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveHungerAlleviationDonations);
+  if (!!customField) {
+    const reforestationDonationCount = await getCollectiveMealsDonationCount();
+    fieldValues.push({ id: customField.id, value: reforestationDonationCount.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveCarbonOffset);
+  if (!!customField) {
+    const totalCarbonOffset = await getCollectiveCarbonOffset();
+    fieldValues.push({ id: customField.id, value: totalCarbonOffset.toString() });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.averageKarmaScore);
+  if (!!customField) {
+    const avgKarmaScore = await getAverageKarmaScore();
+    fieldValues.push({ id: customField.id, value: avgKarmaScore.toFixed(2) });
+  }
+
+  const communityImpact = await getCollectiveCommunityImpact();
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectivePositiveImpact);
+  if (!!customField) {
+    fieldValues.push({ id: customField.id, value: communityImpact.positiveImpact.toFixed(2) });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveNegativeImpact);
+  if (!!customField) {
+    fieldValues.push({ id: customField.id, value: communityImpact.negativeImpact.toFixed(2) });
+  }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.collectiveNeutralImpact);
+  if (!!customField) {
+    fieldValues.push({ id: customField.id, value: communityImpact.neutralImpact.toFixed(2) });
+  }
   return fieldValues;
 };
 
@@ -355,11 +409,40 @@ export const prepareDailyUpdatedFields = async (
   if (!fieldValues) {
     fieldValues = [];
   }
-  const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.loginCountTotal);
+  let customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.loginCountTotal);
   if (!!customField) {
     const totalLoginCount = await getTotalLoginCount(user);
     fieldValues.push({ id: customField.id, value: totalLoginCount.toString() });
   }
+
+  customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.membershipType);
+  if (!!customField) {
+    const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
+    fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
+  }
+
+  return fieldValues;
+};
+
+export const prepareBiweeklyUpdatedFields = async (
+  user: IUserDocument,
+  customFields: FieldIds,
+  fieldValues: FieldValues,
+): Promise<FieldValues> => {
+  if (!customFields) {
+    console.log('No custom fields provided');
+    return fieldValues;
+  }
+  if (!fieldValues) {
+    fieldValues = [];
+  }
+
+  const customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.hasntLoadedMoneyInTwoWeeks);
+  if (!!customField) {
+    const moneyLoadedCount = await getMoneyLoadedCountInTwoWeeks(user);
+    fieldValues.push({ id: customField.id, value: (moneyLoadedCount === 0).toString() });
+  }
+
   return fieldValues;
 };
 
@@ -648,6 +731,7 @@ export const prepareBackfillSyncFields = async (
   fieldValues = await prepareMonthlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareQuarterlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareYearlyUpdatedFields(user, customFields, fieldValues);
+  fieldValues = await prepareBiweeklyUpdatedFields(user, customFields, fieldValues);
 
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);

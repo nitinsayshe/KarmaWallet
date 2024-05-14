@@ -45,6 +45,7 @@ import { executeUserNotificationEffects } from '../notification';
 import { IACHTransferEmailData, IDeclinedData } from '../email/types';
 import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
 import { VisitorModel } from '../../models/visitor';
+import { IResumeKarmaCardEmailData } from '../notification/types';
 
 dayjs.extend(utc);
 
@@ -993,6 +994,8 @@ export const createDeclinedKarmaWalletCardUserNotification = async (
         status: UserNotificationStatusEnum.Unread,
         channel: NotificationChannelEnum.Email,
         data: declinedData,
+        user: declinedData?.user?._id?.toString?.() || undefined,
+        visitor: declinedData?.visitor?._id?.toString?.() || undefined,
       } as CreateNotificationRequest,
     } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
     if (!!declinedData.user) {
@@ -1006,5 +1009,26 @@ export const createDeclinedKarmaWalletCardUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating Karma Wallet application declined email: ${e}`);
+  }
+};
+
+export const createResumeKarmaCardApplicationUserNotification = async (
+  data: IResumeKarmaCardEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.ResumeKarmaCardApplication,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: data?.user?._id?.toString?.() || undefined,
+        visitor: data?.visitor?._id?.toString?.() || undefined,
+        data,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating resume karma card application user notification: ${err}`);
   }
 };

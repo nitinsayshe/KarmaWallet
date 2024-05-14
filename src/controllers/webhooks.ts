@@ -1,18 +1,11 @@
 /* eslint-disable camelcase */
 import crypto from 'crypto';
+import console from 'console';
+import dayjs from 'dayjs';
 import { MainBullClient } from '../clients/bull/main';
 import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard/types';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
-import { getExistingUserOrVisitorFromClientRef, getExistingUserOrVisitorFromSearchId, updateSearchForUser, verifyComplyAdvantageWebhookSource } from '../integrations/complyAdvantage';
-import {
-  ComplyAdvantageWebhookEventEnum,
-  IComplyAdvantageWebhookBody,
-  IMatchStatusUpdatedEventData,
-  IMonitoredSearchUpdatedData,
-  ISearchStatusUpdatedEventData,
-  UpdateSearchData,
-} from '../integrations/complyAdvantage/types';
 import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 import { handleTransactionDisputeMacros, handleTransactionNotifications, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import {
@@ -31,8 +24,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { CardModel } from '../models/card';
 import { WildfireCommissionStatus } from '../models/commissions';
 import { IStatementDocument } from '../models/statement';
-import { IUserDocument, UserModel } from '../models/user';
-import { IVisitorDocument } from '../models/visitor';
+import { UserModel } from '../models/user';
 import { handleMarqetaACHTransitionWebhook } from '../services/achTransfers';
 import { handleMarqetaCardWebhook, _getCard } from '../services/card';
 import { handleDisputeMacros, mapAndSaveMarqetaChargebackTransitionsToChargebacks } from '../services/chargeback';
@@ -49,6 +41,7 @@ import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrati
 import { PersonaWebhookBody } from '../integrations/persona/types';
 import { verifyPersonaWebhook } from '../integrations/persona';
 import { encrypt } from '../lib/encryption';
+import { handlePersonaWebhookByEventName } from '../integrations/persona/webhook_helpers';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -240,7 +233,7 @@ export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody
   try {
     const { body } = req;
     const wildfireSignature = req?.headers['x-wf-signature']?.replace('sha256=', '');
-    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(JSON.stringify(body)).digest('hex');
+    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(req.rawBody.toString()).digest('hex');
     try {
       if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) {
         throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
@@ -318,8 +311,8 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
     }
     let kardEnv: KardEnvironmentEnumValues = '';
 
-    const errorVerifyingAggregatorEnvSignature = await verifyAggregatorEnvWebhookSignature(req.body, headers['notify-signature']);
-    const errorVerifyingIssuerEnvSignature = await verifyIssuerEnvWebhookSignature(req.body, headers['notify-signature']);
+    const errorVerifyingAggregatorEnvSignature = await verifyAggregatorEnvWebhookSignature(req, headers['notify-signature']);
+    const errorVerifyingIssuerEnvSignature = await verifyIssuerEnvWebhookSignature(req, headers['notify-signature']);
 
     if (errorVerifyingIssuerEnvSignature && errorVerifyingAggregatorEnvSignature) {
       if (
@@ -337,7 +330,7 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
     kardEnv = !!errorVerifyingAggregatorEnvSignature ? KardEnvironmentEnum.Issuer : KardEnvironmentEnum.Aggregator;
 
     try {
-      const webhookBodyToSave = { ...req.body };
+      const webhookBodyToSave = { ...req.body, card: { ...req.body.card } };
       webhookBodyToSave.card.bin = encrypt(req.body?.card?.bin);
       webhookBodyToSave.card.last4 = encrypt(req.body?.card?.last4);
       await WebhookModel.create({ provider: WebhookProviders.Kard, body: webhookBodyToSave });
@@ -353,90 +346,6 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
     api(req, res, { message: 'Kard webhook processed successfully.' });
   } catch (e) {
     error(req, res, asCustomError(e));
-  }
-};
-
-const handleSearchStatusUpdated = async (data: ISearchStatusUpdatedEventData) => {
-  const { changes, client_ref, search_id } = data;
-
-  const existingUser = await getExistingUserOrVisitorFromClientRef(client_ref);
-  if (!existingUser) {
-    throw new CustomError(`No user or visitor found for client_ref: ${client_ref}`, ErrorTypes.NOT_FOUND);
-  }
-
-  if (existingUser.integrations.complyAdvantage.id !== search_id) {
-    // TODO: use the new search?
-    throw new CustomError(
-      `Search id mismatch. Existing user search id: ${existingUser.integrations.complyAdvantage.id} does not match search_id: ${search_id}`,
-      ErrorTypes.NOT_FOUND,
-    );
-  }
-
-  const { assigned_to, risk_level, match_status } = changes.before;
-
-  if (!!assigned_to) {
-    existingUser.integrations.complyAdvantage.assigned_to = changes.after.assigned_to;
-  }
-
-  if (!!risk_level) {
-    existingUser.integrations.complyAdvantage.risk_level = changes.after.risk_level;
-  }
-
-  if (!!match_status) {
-    existingUser.integrations.complyAdvantage.match_status = changes.after.match_status;
-  }
-
-  try {
-    return existingUser.save();
-  } catch (e) {
-    throw new CustomError(`Error updating user with client_ref: ${client_ref} and ObjectId: ${existingUser._id}`, ErrorTypes.SERVER);
-  }
-};
-
-const fetchUpdatedSearchData = async (data: UpdateSearchData): Promise<IUserDocument | IVisitorDocument> => {
-  const { search_id } = data;
-
-  // check if a user has an integration with the search_id
-  const existingUser = await getExistingUserOrVisitorFromSearchId(search_id);
-  if (!existingUser) {
-    throw new CustomError(`No user or visitor found for search_id: ${search_id}`, ErrorTypes.NOT_FOUND);
-  }
-
-  if (existingUser.integrations.complyAdvantage.id !== search_id) {
-    // TODO: use the new search?
-    throw new CustomError(
-      `Search id mismatch. Existing user search id: ${existingUser.integrations.complyAdvantage.id} does not match search_id: ${search_id}`,
-      ErrorTypes.NOT_FOUND,
-    );
-  }
-
-  return updateSearchForUser(existingUser);
-};
-
-export const handleComplyAdvantageWebhook: IRequestHandler<{}, {}, IComplyAdvantageWebhookBody> = async (req, res) => {
-  try {
-    console.log('////////// RECEIVED Comply Advantage WEBHOOK ////////// ');
-
-    await verifyComplyAdvantageWebhookSource(req);
-
-    const { event, data } = req.body;
-    switch (event) {
-      case ComplyAdvantageWebhookEventEnum.MatchStatusUpdated:
-        await fetchUpdatedSearchData(data as unknown as IMatchStatusUpdatedEventData);
-        break;
-      case ComplyAdvantageWebhookEventEnum.SearchStatusUpdated:
-        await handleSearchStatusUpdated(data as unknown as ISearchStatusUpdatedEventData);
-        break;
-      case ComplyAdvantageWebhookEventEnum.MonitoredSearchUpdated:
-        await fetchUpdatedSearchData(data as unknown as IMonitoredSearchUpdatedData);
-        break;
-      default:
-        break;
-    }
-
-    output.api(req, res, { message: 'Comply Advantage webhook processed successfully.' });
-  } catch (err) {
-    error(req, res, asCustomError(err));
   }
 };
 
@@ -543,7 +452,38 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
     console.log('Persona Webhook Received');
     await verifyPersonaWebhook(req);
     // webhook passed verification
-    // take action based on the event
+
+    // check if a webhook was already logged for this event id
+    const eventId = req.body.data.id;
+    const numDaysBackToLookForDuplicateEventId = 7;
+    const existingWebhook = await WebhookModel.findOne({
+      'body.data.id': eventId,
+      provider: WebhookProviders.Persona,
+      createdOn: { $gte: dayjs().utc().subtract(numDaysBackToLookForDuplicateEventId, 'day').toDate() },
+    });
+    if (existingWebhook) {
+      console.log(`Webhook with event id: ${eventId} was already processed within the past ${numDaysBackToLookForDuplicateEventId} days. Skipping.`);
+      return output.api(req, res, { message: 'Persona webhook already processed.' });
+    }
+
+    await handlePersonaWebhookByEventName(req.body);
+
+    // save the webhook
+    const webhookBodyToSave = { ...req.body };
+    webhookBodyToSave.data = { ...webhookBodyToSave.data };
+    webhookBodyToSave.data.attributes = { ...webhookBodyToSave.data.attributes };
+    webhookBodyToSave.data.attributes.payload = null;
+    const applicationData = req.body?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
+    const data = {
+      email: applicationData?.email,
+      accountId: req.body?.data?.attributes?.payload?.data?.relationships?.account?.data?.id,
+      inquiryId: req.body?.data?.attributes?.payload?.data?.id,
+      sessions: req.body?.data?.attributes?.payload?.data?.relationships?.sessions?.data,
+      templateId: req.body?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id,
+    };
+
+    await WebhookModel.create({ provider: WebhookProviders.Persona, body: webhookBodyToSave, data });
+
     output.api(req, res, { message: 'Persona webhook processed successfully.' });
   } catch (err) {
     error(req, res, asCustomError(err));

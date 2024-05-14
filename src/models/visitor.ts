@@ -6,8 +6,8 @@ import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/ty
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user/types';
-import { IComplyAdvantageIntegration } from '../integrations/complyAdvantage/types';
-import { ComplyAdvantageIntegrationSchema } from './types';
+import { PersonaIntegrationSchema } from './schemas';
+import { IPersonaIntgration } from '../integrations/persona/types';
 
 interface IMarqetaKycResult {
   status: IMarqetaKycState;
@@ -18,6 +18,13 @@ interface IMarqetaIdentification {
   type: string;
   value: string;
 }
+
+export const VisitorActionEnum = {
+  PendingApplication: 'pendingApplication',
+  AppliedForCard: 'appliedForCard',
+  ApplicationDeclined: 'applicationDeclined',
+} as const;
+export type VisitorActionEnumValues = typeof VisitorActionEnum[keyof typeof VisitorActionEnum];
 
 export interface IMarqetaVisitorData {
   userToken: string;
@@ -49,7 +56,12 @@ export interface IVisitorIntegrations {
     trackingId?: string;
   };
   marqeta?: IMarqetaVisitorData;
-  complyAdvantage?: IComplyAdvantageIntegration;
+  persona?: IPersonaIntgration;
+}
+
+export interface IVisitorAction {
+  type: VisitorActionEnumValues;
+  createdOn: Date;
 }
 
 export interface IShareableVisitor {
@@ -62,12 +74,27 @@ export interface IShareableVisitor {
 
 export interface IVisitor extends IShareableVisitor {
   user?: IRef<ObjectId, (IShareableUser | IUser)>;
+  actions?: IVisitorAction[];
 }
 
 export interface IVisitorDocument extends IVisitor, Document { }
 export type IVisitorModel = IModel<IVisitor>;
 
 const visitorSchema = new Schema({
+  actions: [
+    {
+      type: {
+        type: String,
+        enum: Object.values(VisitorActionEnum),
+        required: true,
+      },
+      createdOn: {
+        type: Date,
+        default: () => getUtcDate(),
+        required: true,
+      },
+    },
+  ],
   user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
@@ -96,7 +123,6 @@ const visitorSchema = new Schema({
       sscidCreatedOn: { type: String },
       trackingId: { type: String },
     },
-    complyAdvantage: ComplyAdvantageIntegrationSchema,
     marqeta: {
       type: {
         userToken: String,
@@ -126,6 +152,7 @@ const visitorSchema = new Schema({
         created_time: { type: String },
       },
     },
+    persona: PersonaIntegrationSchema,
   },
   createdOn: { type: Date, default: () => getUtcDate() },
 });

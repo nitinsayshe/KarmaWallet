@@ -378,7 +378,7 @@ export interface IMarqetaWebhookCardsEvent {
   validations: Object;
 }
 
-export const IMarqetaReasonCodesEnum: { [key: string]: string } = {
+export const IMarqetaTransitionReasonCodesEnum: { [key: string]: string } = {
   '00': 'Object activated for the first time.',
   '01': 'Requested by you.',
   '02': 'Inactivity over time.',

@@ -37,7 +37,6 @@ import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ISectorDocument, SectorModel } from '../../models/sector';
 import { ITransaction, ITransactionDocument, TransactionModel as MongooseTransactionModel } from '../../models/transaction';
 import { UserModel } from '../../models/user';
-import { matchTransactionCompanies } from '../../services/transaction';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { IMatchedTransaction } from '../plaid/types';
@@ -47,11 +46,15 @@ import {
   IMarqetaMakeTransactionAdvice,
   IMarqetaMakeTransactionClearing,
   ListTransactionsResponse,
+  MCCStandards,
   PaginatedMarqetaResponse,
 } from './types';
 import { IMarqetaGPACustomTags } from '../../services/transaction/types';
 import { GroupModel } from '../../models/group';
 import { ACHTransferModel } from '../../models/achTransfer';
+import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../../services/user_notification';
+import { PushNotificationTypes } from '../../lib/constants/notification';
+import { matchTransactionCompanies } from '../../services/transaction';
 
 export interface IMarqetaTokenTransactionDictionary {
   [key: string]: ITransactionDocument;
@@ -615,4 +618,116 @@ export const updateMarqetaTransactions = async (
   log(`transactions to save count: ${transactionsToSave.length}`);
   await Promise.all(transactionsToSave);
   console.timeEnd(timeString);
+};
+
+// This is a placeholder for adding logic that handles the dispute macros
+export const handleTransactionDisputeMacros = async (transactions: ITransactionDocument[]): Promise<void> => {
+  await Promise.all(
+    transactions.map(async (c) => {
+      try {
+        switch (c?.integrations?.marqeta?.type) {
+          case AdjustmentTransactionTypeEnum.AuthorizationClearingChargebackProvisionalCredit:
+            // call function
+            break;
+          case AdjustmentTransactionTypeEnum.PindebitChargebackProvisionalCredit:
+            // call function
+            break;
+          default:
+            console.log(`No notification created for transaction with type: ${c?.integrations?.marqeta?.type}`);
+        }
+      } catch (err) {
+        console.error(`Error creating notification from transaction transition: ${JSON.stringify(c)}`);
+        console.error(err);
+        return null;
+      }
+    }),
+  );
+};
+
+export const handleCreditNotification = async (transaction: ITransactionDocument) => {
+  if (transaction.status !== TransactionModelStateEnum.Completion) return;
+  const user = await UserModel.findById(transaction.user);
+  // This is a reversal do not send a notification
+  if (!!transaction?.integrations?.marqeta?.relatedTransactions && transaction.integrations.marqeta.relatedTransactions.length) return;
+  if (transaction.subType === TransactionCreditSubtypeEnum.Employer) {
+    // add notifiction here?
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.EMPLOYER_GIFT,
+      body: `An employer gift of $${transaction?.amount.toFixed(2)} has been deposited onto your Karma Wallet Card`,
+      title: 'Employer Gift Received!',
+    });
+
+    await createEmployerGiftEmailUserNotification(user, transaction);
+  }
+};
+
+const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
+  // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
+  if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
+  if (transaction.status === TransactionModelStateEnum.Pending) return true;
+  if (transaction.status === TransactionModelStateEnum.Completion && transaction.integrations.marqeta.relatedTransactions) return true;
+  return false;
+};
+
+export const handleDebitNotification = async (transaction: ITransactionDocument) => {
+  const user = await UserModel.findById(transaction.user);
+  const merchantName = transaction?.integrations?.marqeta?.card_acceptor?.name;
+  const mccCode = transaction?.integrations?.marqeta?.card_acceptor?.mcc;
+
+  // send notification when initial transaction is initiated (usually starts in pending state, sometimes starts in completion state)
+  if (_sendTransactionNotifications(transaction)) {
+    // any notification
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.TRANSACTION_COMPLETE,
+      title: 'Transaction Alert',
+      body: `New transaction from ${merchantName}`,
+    });
+
+    // Dining out notification
+    if (MCCStandards.DINING.includes(mccCode)) {
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.TRANSACTION_OF_DINING,
+        title: 'Donation Alert!',
+        body: 'You dined out. We donated to hunger alleviation!',
+      });
+    }
+
+    // Gas notification
+    if (MCCStandards.GAS.includes(mccCode)) {
+      await createPushUserNotificationFromUserAndPushData(user, {
+        pushNotificationType: PushNotificationTypes.TRANSACTION_OF_GAS,
+        title: 'Donation Alert!',
+        body: 'You bought gas. We donated to reforestation.',
+      });
+    }
+  }
+};
+
+export const handleTransactionNotifications = async (transactions: ITransactionDocument[]): Promise<void> => {
+  await Promise.all(
+    transactions.map(async (t) => {
+      try {
+        switch (t.type) {
+          case TransactionTypeEnum.Credit:
+            handleCreditNotification(t);
+            break;
+          case TransactionTypeEnum.Debit:
+            handleDebitNotification(t);
+            break;
+          case TransactionTypeEnum.Deposit:
+            // add code as needed
+            break;
+          case TransactionTypeEnum.Adjustment:
+            // add code as needed
+            break;
+          default:
+            console.log(`No notification created for transaction with type: ${t.type}`);
+        }
+      } catch (err) {
+        console.error(`Error creating notification from transaction transition: ${JSON.stringify(t)}`);
+        console.error(err);
+        return null;
+      }
+    }),
+  );
 };

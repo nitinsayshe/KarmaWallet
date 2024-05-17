@@ -29,7 +29,7 @@ const InvoiceSchema = new Schema({
   // not sure what all we will have here just yet
   integrations: {
     stripe: {
-      productId: { type: String, required: true },
+      productId: { type: String },
     },
   },
 });

@@ -48,7 +48,6 @@ import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 import {
-  IMarqetaTransitionReasonCodesEnum,
   IMarqetaUserStatus,
   IMarqetaUserTransitionsEvent,
   IMarqetaKycState,
@@ -693,8 +692,8 @@ export const updateExistingUserFromMarqetaWebhook = async (
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
     const { reason, reason_code: reasonCode } = webhookData;
-    user.integrations.marqeta.reason = reason || IMarqetaTransitionReasonCodesEnum[reasonCode] || '';
-    user.integrations.marqeta.reason_code = reasonCode;
+    user.integrations.marqeta.reason = !!reason ? reason : '';
+    user.integrations.marqeta.reason_code = !!reasonCode ? reasonCode : '';
     await user.save();
   }
 
@@ -751,9 +750,9 @@ const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
   const reason = MarqetaReasonCodeEnum.AccountUnderReview;
   if (!hasEntityPassedInternalKyc(entity)) {
     await updateMarqetaUserStatus(entity, status, reason);
-    return true;
+    return false;
   }
-  return false;
+  return true;
 };
 
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {

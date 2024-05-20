@@ -23,3 +23,7 @@ export class StripeClient extends SdkClient {
     return this._client.products.list();
   }
 }
+
+// export const verifyStripeWebhook = async (req: IRequest<{}, {}, IStripeWebhook>) => {
+//   const secret = req.headers
+// };

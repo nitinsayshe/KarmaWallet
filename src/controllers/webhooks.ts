@@ -493,4 +493,5 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
 
 export const handleStripeWebhook: IRequestHandler<{}, {}, IStripeWebhook> = async (req, res) => {
   console.log('///// this is the webhook', req, res);
+  console.log('////////// RECEIVED STRIPE WEBHOOK ////////// ');
 };

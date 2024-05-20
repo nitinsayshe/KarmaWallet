@@ -63,7 +63,7 @@ export const transitionMarqetaUser = async (transitionData: IMarqetaUserTransiti
   return userResponse;
 };
 
-export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode: MarqetaReasonCodeEnumValues) => {
+export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode?: MarqetaReasonCodeEnumValues) => {
   try {
     if (!entity?.integrations?.marqeta?.userToken) {
       throw new Error('User does not have a Marqeta user token');
@@ -77,7 +77,7 @@ export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDo
       body: {
         status,
         channel: MarqetaChannelEnum.API,
-        reasonCode,
+        reasonCode: reasonCode || '01',
       },
       requestor: {},
       authKey: '',

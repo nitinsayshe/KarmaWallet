@@ -6,8 +6,13 @@ export enum SocketNamespaces {
 export enum SocketEventTypes {
   Any = 'any',
   PlaidTransactionsReady = 'plaidTransactionsReady',
+  CardApplicationDecision = 'cardApplicationDecision',
 }
 
 export enum SocketEvents {
   Update = 'update',
+}
+
+export enum SocketRooms {
+  CardApplication = 'card-application',
 }

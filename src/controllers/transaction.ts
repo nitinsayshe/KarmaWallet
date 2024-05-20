@@ -19,6 +19,7 @@ export const getTransactions: IRequestHandler = async (req, res) => {
   try {
     const query = aqp(req.query, { skipKey: 'page' });
     const transactions = await TransactionService.getTransactions(req as IRequest<{}, TransactionTypes.ITransactionsRequestQuery>, query);
+
     const sharableTransactions = {
       ...transactions,
       docs: await Promise.all(transactions.docs.map(async (t: ITransactionDocument) => TransactionService.getShareableTransaction(t))),

@@ -22,6 +22,7 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
       token: nanoIdValidation,
       name: nameValidation,
       promo: optionalObjectReferenceValidation,
+      zipcode: optionalZipCodeValidation,
     });
 
     const parsed = registerUserSchema.safeParse(req.body);
@@ -31,8 +32,8 @@ export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = asy
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
-    const { password, name, token, promo } = body;
-    const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo });
+    const { password, name, token, promo, zipcode } = body;
+    const { user, authKey, groupCode } = await UserService.register({ password, name, token, promo, zipcode });
     output.api(req, res, { user: UserUtils.getShareableUser(user), groupCode }, authKey);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -100,6 +101,15 @@ export const deleteAccountRequest: IRequestHandler<{}, {}, UserServiceTypes.IDel
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const response = await UserService.deleteAccountRequest(req);
+    output.api(req, res, response);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const requestEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IRequestEmailChangeBody> = async (req, res) => {
+  try {
+    const response = await UserService.requestEmailChange(req);
     output.api(req, res, response);
   } catch (err) {
     output.error(req, res, asCustomError(err));
@@ -278,6 +288,48 @@ export const getTestIdentities: IRequestHandler<{}, {}, {}> = async (req, res) =
       res,
       data.map((d) => UserUtils.getShareableUser(d)),
     );
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const verifyEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IVerifyEmailChange> = async (req, res) => {
+  try {
+    const verifyEmailChangeSchema = z.object({
+      email: z.string().email(),
+      password: z.string(),
+      verifyToken: nanoIdValidation,
+    });
+
+    const parsed = verifyEmailChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const data = await UserService.verifyEmailChange(req);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const affirmEmailChange: IRequestHandler<{}, {}, UserServiceTypes.IAffirmEmailChange> = async (req, res) => {
+  try {
+    const verifyEmailChangeSchema = z.object({
+      affirmToken: nanoIdValidation,
+    });
+
+    const parsed = verifyEmailChangeSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<UserServiceTypes.IEmailVerificationData>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const data = await UserService.affirmEmailChange(req);
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

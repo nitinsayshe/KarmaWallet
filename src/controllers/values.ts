@@ -13,6 +13,15 @@ export const getCompanyValues: IRequestHandler<{}, ValuesService.IGetCompanyValu
   }
 };
 
+export const getCompaniesValues: IRequestHandler<{}, {}, ValuesService.IGetCompaniesValuesRequestBody> = async (req, res) => {
+  try {
+    const result = await ValuesService.getCompaniesValues(req);
+    output.api(req, res, result.map(mapping => ({ company: mapping.company, values: mapping.values.map(value => ValuesService.getShareableCompanyValue(value as IValueDocument)) })));
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const updateCompanyValues: IRequestHandler<ValuesService.IUpdateCompanyValuesRequestParams, {}, ValuesService.IUpdateCompanyValuesRequestBody> = async (req, res) => {
   try {
     const values = await ValuesService.updateCompanyValues(req);

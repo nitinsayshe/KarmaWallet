@@ -12,6 +12,51 @@ export enum MarqetaKYCCode {
   Approved = 'Approved',
 }
 
+export const MarqetaChannelEnum = {
+  API: 'API',
+  IVR: 'IVR',
+  FRAUD: 'FRAUD',
+  ADMIN: 'ADMIN',
+  SYSTEM: 'SYSTEM',
+};
+export type MarqetaChannelEnumValues = typeof MarqetaChannelEnum[keyof typeof MarqetaChannelEnum];
+
+export const MarqetaReasonCodeEnum = {
+  ObjectActivatedForTheFirstTime: '00',
+  RequestedByYou: '01',
+  InactivityOverTime: '02',
+  ThisAddressCannotAcceptMailOrTheAddresseeIsUnknown: '03',
+  NegativeAccountBalance: '04',
+  AccountUnderReview: '05',
+  SuspiciousActivityWasIdentified: '06',
+  ActivityOutsideTheProgramParametersWasIdentified: '07',
+  ConfirmedFraudWasIdentified: '08',
+  MatchedWithAnOfficeOfForeignAssetsControlList: '09',
+  CardWasReportedLost: '10',
+  CardInformationWasCloned: '11',
+  AccountOrCardInformationWasCompromised: '12',
+  TemporaryStatusChangeWhileOnHoldLeave: '13',
+  InitiatedByMarqeta: '14',
+  InitiatedByIssuer: '15',
+  CardExpired: '16',
+  FailedKYC: '17',
+  ChangedToACTIVEBecauseInformationWasProperlyValidated: '18',
+  ChangedToACTIVEBecauseAccountActivityWasProperlyValidated: '19',
+  ChangeOccurredPriorToTheNormalizationOfReasonCodes: '20',
+  InitiatedByAThirdPartyOftenADigitalWalletProvider: '21',
+  PINRetryLimitReached: '22',
+  CardWasReportedStolen: '23',
+  AddressIssue: '24',
+  NameIssue: '25',
+  SSNIssue: '26',
+  DOBIssue: '27',
+  EmailIssue: '28',
+  PhoneIssue: '29',
+  AccountFulfillmentMismatch: '30',
+  OtherReason: '31',
+};
+export type MarqetaReasonCodeEnumValues = typeof MarqetaReasonCodeEnum[keyof typeof MarqetaReasonCodeEnum];
+
 export enum MarqetaKYCStatus {
   FAILURE = 'FAILURE',
   SUCCESS = 'SUCCESS',

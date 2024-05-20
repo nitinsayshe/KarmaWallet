@@ -9,6 +9,7 @@ import { IShareableKarmaCardStatement } from '../../../models/karmaCardStatement
 import { ITransaction, TransactionModel } from '../../../models/transaction';
 import { UserModel } from '../../../models/user';
 import { TransactionSubtypeEnum, TransactionTypeEnum } from '../../../lib/constants/transaction';
+import { getMarqetaMerchantName } from '../../transaction';
 
 dayjs.extend(utc);
 
@@ -33,13 +34,14 @@ export const getTransactionData = (transaction: ITransaction) => {
     }
 
     if (subType === TransactionSubtypeEnum.Refund) {
-      const merchantForRefund = transaction.integrations.marqeta.card_acceptor.name;
+      const merchantForRefund = getMarqetaMerchantName(transaction.integrations.marqeta);
       transactionData.descriptionText = `Refund from ${merchantForRefund}`;
     }
   }
 
   // Debit Transaction
   if (type === TransactionTypeEnum.Debit) {
+    const merchantName = getMarqetaMerchantName(transaction.integrations.marqeta);
     transactionData.amountPrefix = '-';
     const marqetaType = transaction.integrations.marqeta.type;
 
@@ -48,24 +50,19 @@ export const getTransactionData = (transaction: ITransaction) => {
     }
 
     if (marqetaType.includes('pindebit.cashback')) {
-      // will there be a merchant here?
-      const merchant = transaction.integrations.marqeta.card_acceptor.name;
-      transactionData.descriptionText = `${merchant} POS Cashback`;
+      transactionData.descriptionText = `${merchantName} POS Cashback`;
     }
 
     if (marqetaType.includes('pindebit.quasi.cash')) {
-      // will there be a merchant here?
-      const merchant = transaction.integrations.marqeta.card_acceptor.name;
-      transactionData.descriptionText = `${merchant} POS Quasi Cash`;
+      transactionData.descriptionText = `${merchantName} POS Quasi Cash`;
     }
 
     if (marqetaType === 'pindebit') {
-      const merchant = transaction.integrations.marqeta.card_acceptor.name;
-      transactionData.descriptionText = `${merchant} POS Purchase`;
+      transactionData.descriptionText = `${merchantName} POS Purchase`;
     }
 
     if (marqetaType.includes('authorization')) {
-      transactionData.descriptionText = transaction.integrations.marqeta.card_acceptor.name;
+      transactionData.descriptionText = merchantName;
     }
   }
 

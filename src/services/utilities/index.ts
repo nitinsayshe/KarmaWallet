@@ -1,7 +1,8 @@
 import validator from 'html-validator';
 import { IRequest } from '../../types/request';
 import CustomError from '../../lib/customError';
-import { ErrorTypes, ZipCodeRangesForStates } from '../../lib/constants';
+import { ErrorTypes } from '../../lib/constants';
+import { ZipCodeRangesForStates } from '../../lib/constants/states';
 
 export interface IValidateHtmlBody {
   html: string;

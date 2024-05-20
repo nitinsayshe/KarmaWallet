@@ -444,6 +444,8 @@ export const updateKardMerchantRates = async (kardMerchants: Merchant[]): Promis
   const merchants: IMerchantDocument[] = await MerchantModel.find({});
   // caching date for cleanup purposes
   const lastModifiedDate = new Date().toISOString();
+  const updateTimeBuffer = 1000 * 60 * 30; // 30 minutes
+  const lastModifiedThreshold = new Date(new Date().getTime() - updateTimeBuffer).toISOString();
   const createdRates: IMerchantRateDocument[] = [];
 
   await Promise.all(
@@ -489,7 +491,7 @@ export const updateKardMerchantRates = async (kardMerchants: Merchant[]): Promis
       // after the newMerchantsRate loop, delete all the merchantRates last modified before the current date
       await MerchantRateModel.deleteMany({
         'integrations.kard.merchantId': id,
-        lastModified: { $lt: lastModifiedDate },
+        lastModified: { $lt: lastModifiedThreshold },
       });
     }),
   );

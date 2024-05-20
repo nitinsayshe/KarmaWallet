@@ -444,6 +444,8 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
+
+  const email = requestor?.emails?.find((e) => e?.primary)?.email;
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
@@ -458,8 +460,8 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
         // sync with active campaign
-        if (requestor?.emails[0]?.email) {
-          await syncUserAddressFields(requestor.emails[0].email, {
+        if (email) {
+          await syncUserAddressFields(email, {
             zipcode: updates.zipcode,
             state: getStateFromZipcode(updates.zipcode),
           });

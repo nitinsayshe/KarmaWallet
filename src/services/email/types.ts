@@ -10,7 +10,7 @@ interface IBaseEmailParams {
   replyToAddresses?: string[];
   senderEmail?: string;
   sendEmail?: boolean;
-  name: string;
+  name?: string;
 }
 
 export interface ICreateSentEmailParams {
@@ -31,12 +31,7 @@ export interface IACHTransferEmailData {
 }
 
 export interface IDeclinedData {
-  acceptedDocuments: string[];
-  message: string;
-  name: string;
-  reason: string;
-  solutionText: string;
-  status: IMarqetaKycState
+  name?: string;
   user?: IUserDocument;
   visitor?: IVisitorDocument;
 }
@@ -165,6 +160,8 @@ export interface IEmailJobData {
   userEmail?: string;
   userId?: string;
   verificationLink?: string;
+  affirmationLink?: string;
+  link?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
 }
 
@@ -183,4 +180,32 @@ export interface ISendTransactionsProcessedEmailParams extends IEmailTemplatePar
 export interface IBankLinkedConfirmationEmailTemplate extends IEmailTemplateParams {
   instituteName: string;
   lastDigitsOfBankAccountNumber: string
+}
+
+export interface IResumeKarmaCardApplicationEmail extends IBaseEmailParams {
+  visitor?: IVisitorDocument;
+  user?: IUserDocument;
+  link: string;
+}
+
+export interface IChangeEmailConfirmationParams {
+  domain?: string;
+  user?: Types.ObjectId | string;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
+}
+
+export interface IChangeEmailAffirmationParams {
+  domain?: string;
+  user?: Types.ObjectId | string;
+  name: string;
+  recipientEmail: string;
+  token: string;
+  sendEmail?: boolean;
+  replyToAddresses?: string[];
+  senderEmail?: string;
 }

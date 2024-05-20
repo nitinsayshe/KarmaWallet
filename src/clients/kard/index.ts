@@ -5,7 +5,6 @@ import { SdkClient } from '../sdkClient';
 import {
   KardEnvironmentEnum,
   GetSessionTokenResponse,
-  EarnedRewardWebhookBody,
   CreateUserRequest,
   KardAccessToken,
   AddCardToUserRequest,
@@ -148,13 +147,11 @@ export class KardClient extends SdkClient {
     }
   }
 
-  public async verifyWebhookSignature(body: EarnedRewardWebhookBody, signature: string): Promise<Error | null> {
+  public async verifyWebhookSignature(body: string, signature: string): Promise<Error | null> {
     try {
-      const stringified = JSON.stringify(body);
-
       const key = this._env === KardEnvironmentEnum.Aggregator ? KARD_WEBHOOK_KEY : KARD_ISSUER_WEBHOOK_KEY;
 
-      const hash = createHmac('sha256', key).update(stringified).digest('base64');
+      const hash = createHmac('sha256', key).update(body).digest('base64');
       if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
         return null;
       }

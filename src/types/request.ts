@@ -21,7 +21,8 @@ export interface IRequest<P = {}, Q = {}, B = {}> extends Request {
   authKey?: string;
   identifierKey?:string;
   headers: any;
-  get: any
+  get: any;
+  rawBody?: Buffer;
 }
 
 /**

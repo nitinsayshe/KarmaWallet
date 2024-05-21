@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import Stripe from 'stripe';
 import { SdkClient } from './sdkClient';
-import CustomError from '../lib/customError';
+import CustomError, { asCustomError } from '../lib/customError';
 import { IStripeWebhook } from '../controllers/integrations/stripe/types';
 
 dayjs.extend(utc);
@@ -20,8 +20,13 @@ export class StripeClient extends SdkClient {
     this._client = new Stripe(key);
   }
 
-  public async verifyWebhookSignature(webhook: IStripeWebhook) {
-    return this._client.webhooks.constructEvent(webhook.body, webhook.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
+  public async createEventAndVerifyWebhook(webhook: IStripeWebhook) {
+    try {
+      const event = this._client.webhooks.constructEvent(webhook.body, webhook.headers['stripe-signature'], process.env.STRIPE_WEBHOOK_SECRET);
+      return event;
+    } catch (e) {
+      throw asCustomError(e);
+    }
   }
 
   async getProducts() {

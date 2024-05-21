@@ -493,8 +493,12 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
 };
 
 export const handleStripeWebhook: IRequestHandler<{}, {}, IStripeWebhook> = async (req, res) => {
-  const { verifyWebhookSignature } = new StripeClient();
-  await verifyWebhookSignature(req.body);
-  console.log('///// this is the webhook', req, res);
-  console.log('////////// RECEIVED STRIPE WEBHOOK ////////// ');
+  try {
+    const { createEventAndVerifyWebhook } = new StripeClient();
+    const event = await createEventAndVerifyWebhook(req.body);
+    await WebhookModel.create({ provider: WebhookProviders.Stripe, body: req.body, event: event.data });
+  } catch (e) {
+    console.log('////// Unable to process Stripe webhook //////');
+    error(req, res, asCustomError(e));
+  }
 };

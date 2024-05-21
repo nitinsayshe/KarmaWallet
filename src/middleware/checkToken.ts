@@ -19,6 +19,7 @@ const checkToken: IRequestHandler = async (req, res, next) => {
   if (req?.url === '/webhook/marqeta') return next();
   if (req?.url === '/webhook/persona') return next();
   if (req?.url === '/webhook/comply-advantage') { return next(); }
+  if (req?.url === '/webhook/stripe') { return next(); }
 
   const token = req.headers.authorization;
   if (!!token && token.replace('Bearer ', '') === process.env.PUBLIC_TOKEN) {

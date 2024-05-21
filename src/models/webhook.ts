@@ -15,6 +15,7 @@ export enum WebhookProviders {
   Rare = 'rare',
   Kard = 'kard',
   Plaid = 'plaid',
+  Stripe = 'stripe',
 }
 
 export interface IWebhook {

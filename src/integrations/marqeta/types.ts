@@ -16,6 +16,8 @@ export enum IMarqetaUserStatus {
   CLOSED = 'CLOSED',
 }
 
+export type NonClosedMarqetaUserStatus = Omit<IMarqetaUserStatus, 'CLOSED'>;
+
 export interface IMarqetaUserToken {
   userToken: string;
 }

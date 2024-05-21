@@ -1,4 +1,5 @@
-import { Schema, model, Document, Model, ObjectId } from 'mongoose';
+import { Schema, model, Document, ObjectId, PaginateModel } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableVisitor } from './visitor';
@@ -7,7 +8,8 @@ import { IMarqetaKycResult } from '../integrations/marqeta/types';
 export enum ApplicationStatus {
   SUCCESS = 'success',
   FAILED = 'failed',
-  DECLINED = 'declined'
+  DECLINED = 'declined',
+  CLOSED_DECLINED = 'closed_declined'
 }
 
 export interface IShareableCardApplication {
@@ -27,6 +29,7 @@ export interface IShareableCardApplication {
   kycResult: IMarqetaKycResult;
   status: ApplicationStatus;
   lastModified: Date;
+  expirationDate?: Date;
 }
 
 export interface IKarmaCardApplication extends IShareableCardApplication {
@@ -58,7 +61,9 @@ const karmaCardApplication = new Schema({
   },
   status: { type: String, enum: Object.values(ApplicationStatus) },
   createdOn: { type: Date, default: () => getUtcDate() },
+  expirationDate: { type: Date },
   lastModified: { type: Date, default: () => getUtcDate().toDate() },
 });
 
-export const KarmaCardApplicationModel = model<IKarmaCardApplicationDocument, Model<IKarmaCardApplicationModel>>('karmaCardApplication', karmaCardApplication);
+karmaCardApplication.plugin(mongoosePaginate);
+export const KarmaCardApplicationModel = model<IKarmaCardApplicationDocument, PaginateModel<IKarmaCardApplicationModel>>('karmaCardApplication', karmaCardApplication);

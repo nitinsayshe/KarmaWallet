@@ -3,7 +3,7 @@ import { IRef } from '../../types/model';
 import { IPromo, IPromoDocument } from '../promo';
 import { IMarqetaUserIntegrations } from '../../integrations/marqeta/types';
 import { IWPArticle } from '../wpArticle';
-import { IPersonaIntgration } from '../../integrations/persona/types';
+import { IPersonaIntegration } from '../../integrations/persona/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -102,7 +102,7 @@ export interface IUserIntegrations {
   biometrics?: IBiometrics[];
   marqeta?: IMarqetaUserIntegrations;
   fcm?: IFCMTokenIntegration[];
-  persona?: IPersonaIntgration;
+  persona?: IPersonaIntegration;
 }
 
 export interface IShareableUser {

@@ -15,7 +15,7 @@ import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
 import { IUrlParam, IVerifyTokenBody } from '../user/types';
 import { updateVisitorUrlParams } from '../user';
-import { IPersonaIntgration } from '../../integrations/persona/types';
+import { IPersonaIntegration } from '../../integrations/persona/types';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -36,7 +36,7 @@ export interface ICreateAccountRequest extends IVisitorSignupData {
   xTypeParam?: string;
   trackingId?: string;
   marqeta?: IMarqetaVisitorData;
-  persona?: IPersonaIntgration;
+  persona?: IPersonaIntegration;
   actions?: IVisitorAction[];
 }
 

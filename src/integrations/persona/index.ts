@@ -7,7 +7,7 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { ICreateKarmaCardApplicantData } from '../../services/karmaCard/utils/types';
 import { IRequest } from '../../types/request';
-import { IPersonaCreateAccountBody, IPersonaInquiryData, PersonaAccountData, PersonaInquiryStatusEnum, PersonaWebhookBody } from './types';
+import { IPersonaCaseData, IPersonaCreateAccountBody, IPersonaInquiryData, PersonaAccountData, PersonaCaseStatusEnum, PersonaInquiryStatusEnum, PersonaWebhookBody } from './types';
 
 export const verifyPersonaWebhookSignature = async (req: IRequest<{}, {}, PersonaWebhookBody>) => {
   try {
@@ -91,6 +91,9 @@ export const buildPersonaCreateAccountBody = (params: ICreateKarmaCardApplicantD
   return personaData;
 };
 
+export const personaCaseInSuccessState = (caseData: IPersonaCaseData): boolean => caseData?.status === PersonaCaseStatusEnum.Approved
+  || caseData?.attributes?.status === PersonaInquiryStatusEnum.Approved;
+
 export const personaInquiryInSuccessState = (inquiryData: IPersonaInquiryData): boolean => inquiryData?.status === PersonaInquiryStatusEnum.Completed
   || inquiryData?.status === PersonaInquiryStatusEnum.Approved
   || inquiryData?.attributes?.status === PersonaInquiryStatusEnum.Completed
@@ -99,45 +102,98 @@ export const personaInquiryInSuccessState = (inquiryData: IPersonaInquiryData): 
 export const createOrUpdatePersonaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
   accountId: string,
-  inquiryData: IPersonaInquiryData,
-): Promise<IPersonaInquiryData> => {
-  if (!entity.integrations) entity.integrations = {};
+  inquiryData?: IPersonaInquiryData,
+  caseData?: IPersonaCaseData,
+): Promise<{inquiry?: IPersonaInquiryData, case?: IPersonaCaseData}> => {
+  const inputError = new Error(`Invalid input data: ${JSON.stringify({ inquiryData, caseData }, null, 2)}`);
 
-  if (!accountId || !inquiryData.id || !inquiryData.status || !inquiryData.createdAt) {
-    throw new Error(`Invalid inquiry data: ${JSON.stringify({ accountId, inquiryData }, null, 2)}`);
+  if (!inquiryData && !caseData) {
+    throw new Error(`Missing inquiry or case data: ${inputError}`);
   }
+
+  if (!accountId) {
+    throw new Error(`Invalid account id: ${accountId}`);
+  }
+
+  if (!!inquiryData && (!inquiryData.id || !inquiryData.status || !inquiryData.createdAt)) {
+    throw inputError;
+  }
+
+  if (!!caseData && (!caseData.id || !caseData.status || !caseData.createdAt)) {
+    throw inputError;
+  }
+
+  if (!entity.integrations) entity.integrations = {};
 
   const existingAccountId = entity?.integrations?.persona?.accountId;
   if (!!existingAccountId && existingAccountId !== accountId) {
     const email = entity?.email || (entity as IUserDocument)?.emails?.find((e) => e?.primary);
     console.warn(
-      `Persona account id mismatch. User or visitor with email: ${email} has account id ${existingAccountId} but inquiry has account id ${accountId}`,
+      `Persona account id mismatch. User or visitor with email: ${email} has account id ${existingAccountId} but inquiry or case has account id ${accountId}`,
     );
   }
 
-  const existingInquiries = entity?.integrations?.persona?.inquiries || [];
-  if (existingInquiries.length > 0) {
-    // check if there's one with the inquiry id already
-    // if so, update it
-    const existingInquiryIndex = existingInquiries.findIndex((i) => i.id === inquiryData.id);
-    if (existingInquiryIndex > -1) {
-      existingInquiries[existingInquiryIndex] = inquiryData;
-      entity.integrations.persona = {
-        accountId,
-        inquiries: existingInquiries,
-      };
+  const inquiries = entity?.integrations?.persona?.inquiries || [];
+  const cases = entity?.integrations?.persona?.cases || [];
+
+  if (!!inquiryData) {
+    if (inquiries.length > 0) {
+      // check if there's one with the inquiry id already
+      // if so, update it
+      const existingInquiryIndex = inquiries.findIndex((i) => i.id === inquiryData.id);
+      if (existingInquiryIndex > -1) {
+        inquiries[existingInquiryIndex] = inquiryData;
+      }
+    } else {
+      inquiries.push(inquiryData);
     }
-  } else {
-    entity.integrations.persona = {
-      accountId,
-      inquiries: [...existingInquiries, inquiryData],
-    };
   }
 
+  if (!!caseData) {
+    if (cases.length > 0) {
+      const existingCaseIndex = cases.findIndex((i) => i.id === caseData.id);
+      if (existingCaseIndex > -1) {
+        cases[existingCaseIndex] = caseData;
+      }
+    } else {
+      cases.push(caseData);
+    }
+  }
+
+  entity.integrations.persona = {
+    accountId,
+    inquiries,
+    cases,
+  };
+
   await entity.save();
-  return inquiryData;
+  return { inquiry: inquiryData, case: caseData };
 };
 
+export const fetchCaseAndCreateOrUpdateIntegration = async (
+  caseId: string,
+  entity: IUserDocument | IVisitorDocument,
+): Promise<IPersonaCaseData> => {
+  try {
+    if (!caseId) throw new CustomError('No case id provided.', ErrorTypes.INVALID_ARG);
+
+    const client = new PersonaClient();
+    const personaCase = await client.getCase(caseId);
+
+    // create integration with case data
+    const accountId = personaCase?.data?.relationships?.accounts?.data?.[0]?.id;
+    const caseData: IPersonaCaseData = {
+      id: personaCase?.data?.id,
+      status: personaCase?.data?.attributes?.status,
+      createdAt: personaCase?.data?.attributes?.createdAt,
+    };
+    return (await createOrUpdatePersonaIntegration(entity, accountId, null, caseData))?.case;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+// fetch persona inquiry and case data and update the integration
 export const fetchInquiryAndCreateOrUpdateIntegration = async (
   inquiryId: string,
   entity: IUserDocument | IVisitorDocument,
@@ -154,7 +210,7 @@ export const fetchInquiryAndCreateOrUpdateIntegration = async (
       templateId,
       createdAt: inquiry?.data?.attributes?.createdAt,
     };
-    return await createOrUpdatePersonaIntegration(entity, accountId, inquiryData);
+    return (await createOrUpdatePersonaIntegration(entity, accountId, inquiryData))?.inquiry;
   } catch (err) {
     console.log(err);
   }

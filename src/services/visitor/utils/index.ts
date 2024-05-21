@@ -1,26 +1,24 @@
-import { AxiosInstance } from 'axios';
 import { FilterQuery, Types, PaginateResult } from 'mongoose';
 import { sleep } from '../../../lib/misc';
 import { IVisitor, IVisitorDocument, VisitorModel } from '../../../models/visitor';
 
-export type VisitorIterationRequest<T> = {
-  httpClient?: AxiosInstance;
+export type VisitorIterationRequest<FieldsType> = {
   batchQuery: FilterQuery<IVisitor>;
   batchLimit: number;
-  fields?: T;
+  fields?: FieldsType;
 };
 
-export type VisitorIterationResponse<T> = {
+export type VisitorIterationResponse<FieldsType> = {
   visitorId: Types.ObjectId;
-  fields?: T;
+  fields?: FieldsType;
 };
 
-export const iterateOverVisitorsAndExecWithDelay = async <Req, Res>(
-  request: VisitorIterationRequest<Req>,
-  exec: (req: VisitorIterationRequest<Req>, userBatch: PaginateResult<IVisitorDocument>) => Promise<VisitorIterationResponse<Res>[]>,
+export const iterateOverVisitorsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
+  request: VisitorIterationRequest<ReqFieldsType>,
+  exec: (req: VisitorIterationRequest<ReqFieldsType>, visitorBatch: PaginateResult<IVisitorDocument>) => Promise<VisitorIterationResponse<ResFieldsType>[]>,
   msDelayBetweenBatches: number,
-): Promise<VisitorIterationResponse<Res>[]> => {
-  let report: VisitorIterationResponse<Res>[] = [];
+): Promise<VisitorIterationResponse<ResFieldsType>[]> => {
+  let report: VisitorIterationResponse<ResFieldsType>[] = [];
 
   let page = 1;
   let hasNextPage = true;

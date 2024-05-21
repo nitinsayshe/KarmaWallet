@@ -14,7 +14,7 @@ import { sleep } from '../../lib/misc';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IUserDocument, UserModel } from '../../models/user';
 import { getCardStatusFromMarqetaCardState, mapMarqetaCardtoCard } from '../card';
-import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
+import { setClosedMarqetaAccountState } from '../user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 
 dayjs.extend(utc);
@@ -275,7 +275,7 @@ export const updateUserVisitorModelWithMarqetaUserData = async (existingUser: IV
 };
 
 export const executeMarqetaUserUpdates = async (user: IUserDocument | IVisitorDocument, marqetaUser: MarqetaUserModel) => {
-  await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(user, marqetaUser);
+  await setClosedMarqetaAccountState(user, marqetaUser);
   await updateUserVisitorModelWithMarqetaUserData(user, marqetaUser);
 };
 

@@ -1,6 +1,7 @@
 export interface IStripeWebhook {
-  payload: string | Buffer;
-  header: string | Buffer | Array<string>;
+  body: string | Buffer;
+  // update this typing
+  headers: any;
   secret: string;
   tolerance?: number;
   cryptoProvider?: any;

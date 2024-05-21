@@ -43,6 +43,7 @@ import { verifyPersonaWebhook } from '../integrations/persona';
 import { encrypt } from '../lib/encryption';
 import { handlePersonaWebhookByEventName } from '../integrations/persona/webhook_helpers';
 import { IStripeWebhook } from './integrations/stripe/types';
+import { StripeClient } from '../clients/stripe';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -492,6 +493,8 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
 };
 
 export const handleStripeWebhook: IRequestHandler<{}, {}, IStripeWebhook> = async (req, res) => {
+  const { verifyWebhookSignature } = new StripeClient();
+  await verifyWebhookSignature(req.body);
   console.log('///// this is the webhook', req, res);
   console.log('////////// RECEIVED STRIPE WEBHOOK ////////// ');
 };

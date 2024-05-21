@@ -17,7 +17,9 @@ export class StripeClient extends SdkClient {
   protected _init() {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new CustomError('Stripe secret key not found');
-    this._client = new Stripe(key);
+    const stripeClient = new Stripe(key);
+    if (!stripeClient) throw new CustomError('Failed to initialize Stripe client');
+    this._client = stripeClient;
   }
 
   public async createEventAndVerifyWebhook(webhook: IStripeWebhook) {
@@ -29,7 +31,7 @@ export class StripeClient extends SdkClient {
     }
   }
 
-  async getProducts() {
+  public async getProducts() {
     return this._client.products.list();
   }
 }

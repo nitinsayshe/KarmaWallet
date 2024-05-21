@@ -124,6 +124,8 @@ jobs:
     - run: echo 'PERSONA_WEBHOOK_KEY=${{secrets.PERSONA_SANDBOX_WEBHOOK_KEY}}' >> .env
     - run: echo 'PERSONA_ENVIRONMENT_ID=env_mWWczse3GEbjjD2fZSL4SwiLy8MR' >> .env
     - run: echo 'STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY_TEST}}' >> .env
+    - run: echo 'STRIPE_WEBHOOK_ID=${{secrets.STAGING_STRIPE_WEBHOOK_ID}}' >> .env
+    - run: echo 'STRIPE_WEBHOOK_SECRET=${{secrets.STAGING_STRIPE_WEBHOOK_SECRET}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

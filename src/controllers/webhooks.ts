@@ -501,6 +501,7 @@ export const handleStripeWebhook: IRequestHandler<{}, {}, IStripeWebhook> = asyn
     const { createEventAndVerifyWebhook } = new StripeClient();
     const event = await createEventAndVerifyWebhook(req.body);
     await WebhookModel.create({ provider: WebhookProviders.Stripe, body: req.body, event: event.data });
+    console.log('////// Stripe webhook processed successfully //////');
   } catch (e) {
     console.log('////// Unable to process Stripe webhook //////');
     error(req, res, asCustomError(e));

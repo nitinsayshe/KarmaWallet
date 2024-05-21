@@ -628,3 +628,7 @@ export const DateKarmaMembershipStoppedbBeingFree = '2024-03-18';
 export const AutomatedFuelDispensersMccCode = '5542';
 export const RestaurantMccCode = '5812';
 export const FastFoodMccCode = '5814';
+
+export const PhoneNumberLength = 10;
+export const PostalCodeLength = 5;
+export const daysUntilKarmaCardApplicationExpiration = 10;

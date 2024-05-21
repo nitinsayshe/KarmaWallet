@@ -42,7 +42,7 @@ import {
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
-import { IACHTransferEmailData, IDeclinedData } from '../email/types';
+import { IACHTransferEmailData, IKarmaCardDeclinedData, IKarmaCardUpdateData } from '../email/types';
 import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
 import { VisitorModel } from '../../models/visitor';
 import { IResumeKarmaCardEmailData } from '../notification/types';
@@ -984,8 +984,36 @@ export const createACHTransferReturnedUserNotification = async (
   }
 };
 
+export const createPendingReviewKarmaWalletCardUserNotification = async (
+  pendingReviewData: IKarmaCardUpdateData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.KarmaCardPendingReview,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        data: pendingReviewData,
+        user: pendingReviewData?.user?._id?.toString?.() || undefined,
+        visitor: pendingReviewData?.visitor?._id?.toString?.() || undefined,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    if (!!pendingReviewData.user) {
+      mockRequest.body.user = pendingReviewData.user._id.toString();
+    }
+
+    if (!!pendingReviewData.visitor) {
+      mockRequest.body.visitor = pendingReviewData.visitor._id.toString();
+    }
+
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating Karma Wallet application declined email: ${e}`);
+  }
+};
+
 export const createDeclinedKarmaWalletCardUserNotification = async (
-  declinedData: IDeclinedData,
+  declinedData: IKarmaCardDeclinedData,
 ): Promise<IUserNotificationDocument | void> => {
   try {
     const mockRequest = {

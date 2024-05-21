@@ -17,9 +17,12 @@ import {
   sendEmployerGiftEmail,
   sendACHCancelledEmail,
   sendACHReturnedEmail,
-  sendKarmaCardDeclinedEmail,
+  sendKarmaCardPendingReviewEmail,
   sendResumeKarmaCardApplicationEmail,
+  sendKarmaCardDeclinedEmail,
 } from '.';
+import { PersonaInquiryTemplateIdEnum } from '../../integrations/persona/types';
+import { composePersonaContinueUrl } from '../../integrations/persona/webhook_helpers';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { UserModel } from '../../models/user';
@@ -417,12 +420,38 @@ export const testKarmaCardDeclinedEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const user = req.requestor;
     if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    if (!user?.integrations?.persona?.accountId) throw new CustomError('No persona account id found for user.', ErrorTypes.INVALID_ARG);
     const { email } = user.emails.find(e => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const resubmitDocumentsLink = composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs, user.integrations.persona.accountId);
+    // This date is just for testing. In prod, the user will be given 10 days to resubmit documents.
+    const applicationExpirationDate = dayjs().add(10, 'day').toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const emailResponse = await sendKarmaCardDeclinedEmail({
       user: req.requestor._id,
       recipientEmail: email,
-      name: req.requestor.integrations.marqeta.first_name,
+      name: req?.requestor?.integrations?.marqeta?.first_name,
+      resubmitDocumentsLink,
+      applicationExpirationDate,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testKarmaCardPendingReviewEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendKarmaCardPendingReviewEmail({
+      user: req.requestor._id,
+      recipientEmail: email,
+      name: req?.requestor?.integrations?.marqeta?.first_name,
     });
 
     if (!!emailResponse) {

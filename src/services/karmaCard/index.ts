@@ -13,7 +13,7 @@ import {
   IMarqetaUserStatus,
 } from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
-import { fetchInquiryAndCreateOrUpdateIntegration, personaInquiryInSuccessState } from '../../integrations/persona';
+import { fetchCaseAndCreateOrUpdateIntegration, fetchInquiryAndCreateOrUpdateIntegration, personaCaseInSuccessState, personaInquiryInSuccessState } from '../../integrations/persona';
 import { ErrorTypes } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
@@ -349,7 +349,9 @@ export const updateEntityKycResult = async (entity: IUserDocument | IVisitorDocu
   return newEntity;
 };
 
-export const continueKarmaCardApplication = async (email: string, personaInquiryId: string): Promise<ApplicationDecision> => {
+// expects case id or inquiry id
+export const continueKarmaCardApplication = async (email: string, inquiryId?: string, caseId?: string): Promise<ApplicationDecision> => {
+  if (!inquiryId && !caseId) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   try {
     // pull visitor or email from the db
     const user = await UserModel.findOne({ 'emails.email': email });
@@ -372,12 +374,21 @@ export const continueKarmaCardApplication = async (email: string, personaInquiry
     if (!kycResult) throw new CustomError('No kyc result found for the user or visitor', ErrorTypes.NOT_FOUND);
 
     // pull the persona inquiry
-    const inquiryResult = await fetchInquiryAndCreateOrUpdateIntegration(personaInquiryId, user || visitor);
+    let passedInternalKyc = false;
+    let templateId;
+    if (!!inquiryId) {
+      const internalKycResult = await fetchInquiryAndCreateOrUpdateIntegration(inquiryId, user || visitor);
+      passedInternalKyc = personaInquiryInSuccessState(internalKycResult);
+      templateId = internalKycResult?.templateId;
+    } else {
+      const internalKycResult = await fetchCaseAndCreateOrUpdateIntegration(caseId, user || visitor);
+      passedInternalKyc = personaCaseInSuccessState(internalKycResult);
+    }
 
     // check to see if they have already been approved, if so return early
     if (application.status === ApplicationStatus.SUCCESS) {
       const marqetaIntegration = !!user ? user.integrations.marqeta : visitor.integrations.marqeta;
-      return { ...(marqetaIntegration as SourceResponse), internalKycTemplateId: inquiryResult?.templateId };
+      return { ...(marqetaIntegration as SourceResponse), internalKycTemplateId: templateId };
     }
 
     // check that failed internal kyc was the only failure reason
@@ -387,11 +398,10 @@ export const continueKarmaCardApplication = async (email: string, personaInquiry
       && (!kycResult?.codes?.includes(ReasonCode.Approved) || !kycResult?.codes?.includes(ReasonCode.FailedInternalKyc))
     ) {
       const marqetaIntegration = !!user ? user.integrations.marqeta : visitor.integrations.marqeta;
-      return { ...(marqetaIntegration as unknown as SourceResponse), internalKycTemplateId: inquiryResult?.templateId };
+      return { ...(marqetaIntegration as unknown as SourceResponse), internalKycTemplateId: templateId };
     }
 
-    // update kyc based on if
-    if (!personaInquiryInSuccessState(inquiryResult)) {
+    if (!passedInternalKyc) {
       if (!kycResult?.codes?.includes(ReasonCode.FailedInternalKyc)) {
         if (!kycResult?.codes) kycResult.codes = [];
         kycResult.codes.push(ReasonCode.FailedInternalKyc);
@@ -402,13 +412,13 @@ export const continueKarmaCardApplication = async (email: string, personaInquiry
       /// looks like we are returning the marqeta  integration here and not what we just updated since kycResult is defined in here?
       return {
         ...(marqetaIntegration as unknown as SourceResponse),
-        internalKycTemplateId: inquiryResult?.templateId,
+        internalKycTemplateId: templateId,
       };
     }
 
     return {
       ...((await storeApplicationAndHandleSuccesState(application, user || visitor)) as unknown as SourceResponse),
-      internalKycTemplateId: inquiryResult?.templateId,
+      internalKycTemplateId: templateId,
     };
   } catch (err) {
     console.log(`Error in continueKarmaCardApplication: ${err}`);

@@ -25,7 +25,7 @@ export class StripeClient extends SdkClient {
 
   public async createEventAndVerifyWebhook(body: string | Buffer, stripeSignature: string) {
     try {
-      const event = this._client.webhooks.constructEvent(JSON.stringify(body), stripeSignature, process.env.STRIPE_WEBHOOK_SECRET);
+      const event = this._client.webhooks.constructEvent(body, stripeSignature, process.env.STRIPE_WEBHOOK_SECRET);
       return event;
     } catch (e) {
       throw asCustomError(e);

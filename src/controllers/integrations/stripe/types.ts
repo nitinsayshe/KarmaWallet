@@ -1,9 +1,11 @@
 import { IRequest } from '../../../types/request';
 
-export interface IStripeWebhook extends IRequest {
+export interface IStripeWebhookBody {
   body: string | Buffer;
-  // update this typing
-  headers: any;
+}
+
+export interface IStripeWebhookRequest extends IRequest {
+  body: string | Buffer;
   secret: string;
   tolerance?: number;
   cryptoProvider?: any;

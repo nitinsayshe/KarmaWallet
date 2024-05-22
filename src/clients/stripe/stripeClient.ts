@@ -1,8 +1,8 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import Stripe from 'stripe';
-import { SdkClient } from './sdkClient';
-import CustomError, { asCustomError } from '../lib/customError';
+import { SdkClient } from '../sdkClient';
+import CustomError, { asCustomError } from '../../lib/customError';
 
 dayjs.extend(utc);
 
@@ -32,7 +32,7 @@ export class StripeClient extends SdkClient {
     }
   }
 
-  public async getProducts() {
+  async getProducts() {
     return this._client.products.list();
   }
 }

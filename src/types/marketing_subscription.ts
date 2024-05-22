@@ -2,7 +2,7 @@ export enum SubscriptionProvider {
   ActiveCampaign = 'activeCampaign',
 }
 
-export enum SubscriptionStatus {
+export enum MarketingSubscriptionStatus {
   Active = 'active',
   Inactive = 'inactive',
   Cancelled = 'cancelled',
@@ -30,7 +30,7 @@ export enum ActiveCampaignListId {
   Q2Payout = '14',
 }
 
-export enum SubscriptionCode {
+export enum MarketingSubscriptionCode {
   accountUpdates = 'accountUpdates',
   betaTesterInvite = 'betaTesterInvite',
   betaTesters = 'betaTesters',

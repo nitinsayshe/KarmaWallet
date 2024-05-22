@@ -8,7 +8,7 @@ import { UserImpactTotalModel } from '../../models/userImpactTotals';
 import { UserLogModel } from '../../models/userLog';
 import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactReport';
 import { UserTransactionTotalModel } from '../../models/userTransactionTotals';
-import { cancelAllUserSubscriptions } from '../subscription';
+import { cancelAllUserSubscriptions } from '../marketing_subscription';
 
 export interface IDeleteUserParams {
   userId?: string;

@@ -39,7 +39,7 @@ import { UserNotificationModel } from '../../models/user_notification';
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
-import { handleMarqetaUserActiveTransition, updateUserUrlParams } from '../user';
+import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
@@ -52,6 +52,7 @@ import {
   SourceResponse,
   updateActiveCampaignDataAndJoinGroupForApplicant,
 } from './utils';
+import { setupProductSubscriptionForUser } from '../productSubscription';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -77,6 +78,7 @@ export interface IKarmaCardRequestBody {
   sscid?: string;
   sscidCreatedOn?: string;
   xType?: string;
+  productSubscriptionId?: string;
 }
 
 interface IApplySuccessData {
@@ -339,7 +341,8 @@ export const storeApplicationAndHandleSuccesState = async (
 
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
+  await setupProductSubscriptionForUser(userDocument);
+  // await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
   return userDocument?.toObject()?.integrations?.marqeta as SourceResponse;
 };
 
@@ -453,11 +456,11 @@ export const getApplicationStatus = async (email: string): Promise<ApplicationDe
 };
 
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>): Promise<ApplicationDecision> => {
-  console.log('////// init apply for card');
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
-  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId } = req.body;
+  // product subscription id can be defaulted to our standard for now, but if in the future we need another one we have that option
+  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId, productSubscriptionId } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
     throw new Error('Missing required fields');

@@ -460,7 +460,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
   // product subscription id can be defaulted to our standard for now, but if in the future we need another one we have that option
-  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId, productSubscriptionId } = req.body;
+  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
     throw new Error('Missing required fields');

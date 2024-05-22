@@ -41,7 +41,7 @@ import {
   reconcileActiveCampaignListSubscriptions,
   updateNewKWCardUserSubscriptions,
   updateUserSubscriptions,
-} from '../services/marketing_subscription';
+} from '../services/marketingSubscription';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,

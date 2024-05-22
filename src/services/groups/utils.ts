@@ -8,7 +8,7 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
-import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../marketing_subscription';
+import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../marketingSubscription';
 import { getUser } from '../user/utils';
 import { UserEmailStatus } from '../../models/user/types';
 

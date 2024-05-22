@@ -1,7 +1,7 @@
 import { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as output from '../services/output';
-import * as MarketingSubscriptionService from '../services/marketing_subscription';
+import * as MarketingSubscriptionService from '../services/marketingSubscription';
 
 export const newsletterUnsubscribe: IRequestHandler<{}, {}, MarketingSubscriptionService.INewsletterUnsubscribeData> = async (req, res) => {
   try {

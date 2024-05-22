@@ -29,7 +29,7 @@ import { getGroupOffsetDataKey } from '../cachedData/keyGetters';
 import { averageAmericanEmissions as averageAmericanEmissionsData } from '../impact';
 import { getEquivalencies, getOffsetTransactionsTotal, getRareOffsetAmount, IEquivalencyObject } from '../impact/utils/carbon';
 import { getStatements } from '../statements';
-import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../marketing_subscription';
+import { getUpdatedGroupChangeSubscriptions, getUserGroupSubscriptionsToUpdate, updateUsersSubscriptions, updateUserSubscriptions } from '../marketingSubscription';
 import { getUser } from '../user/utils';
 import { UserEmailStatus } from '../../models/user/types';
 

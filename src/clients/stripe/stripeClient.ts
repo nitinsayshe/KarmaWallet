@@ -16,9 +16,7 @@ export class StripeClient extends SdkClient {
   protected _init() {
     const key = process.env.STRIPE_SECRET_KEY;
     if (!key) throw new CustomError('Stripe secret key not found');
-    console.log('Stripe secret key:', key);
     const stripeClient = new Stripe(key);
-    console.log('Stripe client in init:', stripeClient);
     if (!stripeClient) throw new CustomError('Failed to initialize Stripe client');
     this._client = stripeClient;
   }

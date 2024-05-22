@@ -1,7 +1,7 @@
 import { ObjectId, Document } from 'mongoose';
 import { IRef } from '../../types/model';
 import { IShareableUser } from '../user/types';
-import { ISubscription } from '../subscription/types';
+import { IShareableProductSubscription } from '../productSubscription/types';
 
 export enum InvoiceType {
   KarmaCardSubscription = 'KarmaCardSubscription',
@@ -21,7 +21,7 @@ export interface IShareableInvoice {
   status: InvoiceStatus;
   paymentLink: string;
   user?: IRef<ObjectId, IShareableUser>;
-  subscription: IRef<ObjectId, ISubscription>;
+  subscription: IRef<ObjectId, IShareableProductSubscription>;
   createdOn: Date;
   lastModified: Date;
   integrations?: {

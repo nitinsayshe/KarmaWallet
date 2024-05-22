@@ -4,12 +4,12 @@ import {
   Model,
 } from 'mongoose';
 import { IModel } from '../../types/model';
-import { IUserSubscription, IUserSubscriptionDocument } from './types';
+import { IUserProductSubscription, IUserProductSubscriptionDocument } from './types';
 import { getUtcDate } from '../../lib/date';
 
-export type IUserSubscriptionModel = IModel<IUserSubscription>;
+export type IUserProductSubscriptionModel = IModel<IUserProductSubscription>;
 
-const UserSubscriptionSchema = new Schema({
+const UserProductSubscriptionSchema = new Schema({
   userId: {
     type: Schema.Types.ObjectId,
     ref: 'user',
@@ -33,4 +33,4 @@ const UserSubscriptionSchema = new Schema({
   },
 });
 
-export const UserSubscriptionModel = model<IUserSubscriptionDocument, Model<IUserSubscription>>('user_subscription', UserSubscriptionSchema);
+export const UserProductSubscriptionModel = model<IUserProductSubscriptionDocument, Model<IUserProductSubscription>>('user_product_subscription', UserProductSubscriptionSchema);

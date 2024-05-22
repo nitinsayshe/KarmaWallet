@@ -34,4 +34,12 @@ export class Product {
       throw asCustomError(e);
     }
   }
+
+  async getPrice(priceId: string) {
+    try {
+      return this._stripeClient._client.prices.retrieve(priceId);
+    } catch (e) {
+      throw asCustomError(e);
+    }
+  }
 }

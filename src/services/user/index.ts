@@ -30,7 +30,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangeEmailRequestAffirmationEmail, sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../marketing_subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../marketingSubscription';
 import * as TokenService from '../token';
 import {
   IRegisterUserData,

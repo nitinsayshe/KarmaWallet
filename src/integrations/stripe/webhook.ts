@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { updateOrCreateProductSubscriptionFromStripeProduct } from './product';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
   console.log('///// event', event);
@@ -33,11 +34,11 @@ export const handleProductEvent = async (event: Stripe.Event) => {
 
   switch (type) {
     case 'product.created':
-      // can pass through kw_internal_id in the metdata object
-    // if this exists, update existing subscription in our database
-    // if not, then create a new subscription in our database, and store the kw_internal_id on the product in stripe
+      // cannot figure out how to programatically link a payment_link to a product
+      updateOrCreateProductSubscriptionFromStripeProduct(event.data.object);
       break;
     case 'product.updated':
+      updateOrCreateProductSubscriptionFromStripeProduct(event.data.object);
       // update the subscription in our database
       break;
     case 'product.deleted':

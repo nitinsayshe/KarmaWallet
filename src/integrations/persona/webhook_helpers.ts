@@ -1,7 +1,7 @@
 import { FilterQuery } from 'mongoose';
 import { createOrUpdatePersonaIntegration, fetchInquiryAndCreateOrUpdateIntegration } from '.';
 import { MarqetaKYCStatus } from '../../clients/marqeta/types';
-import { states, SocketEvents } from '../../lib/constants';
+import { SocketEvents } from '../../lib/constants';
 import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
 import { getUtcDate } from '../../lib/date';
 import { KarmaCardApplicationModel, ApplicationStatus } from '../../models/karmaCardApplication';
@@ -28,6 +28,7 @@ import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
 import { IDeclinedData } from '../../services/email/types';
 import { closeMarqetaAccount } from '../marqeta/user';
 import { returnUserOrVisitorFromEmail } from '../../services/user/utils';
+import { states } from '../../lib/constants/states';
 
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;

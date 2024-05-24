@@ -1,8 +1,5 @@
 import { FilterQuery } from 'mongoose';
-import { createOrUpdatePersonaIntegration } from '.';
-import { MarqetaKYCStatus, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
-import { states, SocketEvents, PhoneNumberLength, PostalCodeLength, daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
-import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
+import { SocketRooms, SocketEventTypes, SocketEvents } from '../../lib/constants/sockets';
 import { getUtcDate } from '../../lib/date';
 import { KarmaCardApplicationModel, ApplicationStatus } from '../../models/karmaCardApplication';
 import { UserModel, IUserDocument } from '../../models/user';
@@ -30,10 +27,17 @@ import {
   createResumeKarmaCardApplicationUserNotification,
 } from '../../services/user_notification';
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
-import { IKarmaCardDeclinedEmailData, IKarmaCardUpdateData } from '../../services/email/types';
-import { updateMarqetaUserStatus } from '../marqeta/user';
+import { states } from '../../lib/constants/states';
+import { createOrUpdatePersonaIntegration } from '.';
+import { MarqetaKYCStatus, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
+import { daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
+import { IKarmaCardUpdateData, IKarmaCardDeclinedEmailData } from '../../services/email/types';
 import { isUserDocument } from '../../services/user/utils';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/types';
+import { updateMarqetaUserStatus } from '../marqeta/user';
+
+const PhoneNumberLength = 10;
+const PostalCodeLength = 5;
 
 export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<ApplicationDecision> => {
   // start the application process
@@ -64,7 +68,7 @@ export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Prom
     ssn: inquiryData?.socialSecurityNumber?.trim()?.replace(/-/g, ''),
     state:
       inquiryData?.addressSubdivisionAbbr?.toUpperCase()
-      || states.find((state) => state.name?.toLowerCase() === inquiryData?.addressSubdivision?.toLowerCase())?.abbreviation,
+      || states.find((state: any) => state.name?.toLowerCase() === inquiryData?.addressSubdivision?.toLowerCase())?.abbreviation,
     urlParams: applicationData?.urlParams,
     sscid: applicationData?.sscid,
     sscidCreatedOn: applicationData?.sscidCreatedOn,

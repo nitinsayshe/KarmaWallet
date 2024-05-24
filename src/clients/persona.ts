@@ -4,7 +4,7 @@ import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { getRandomInt } from '../lib/number';
-import { IPersonaAccountsRequest, IPersonaCreateAccountBody, PersonaGetInquiryResponse, PersonaWebhookBody, RelationshipPathsEnumValues } from '../integrations/persona/types';
+import { IPersonaAccountsRequest, IPersonaCreateAccountBody, PersonaGetCaseResponse, PersonaGetInquiryResponse, PersonaWebhookBody, RelationshipPathsEnumValues } from '../integrations/persona/types';
 import { IRequest } from '../types/request';
 
 const { PERSONA_API_KEY, PERSONA_WEBHOOK_KEY, PERSONA_ENVIRONMENT_ID } = process.env;
@@ -87,6 +87,16 @@ export class PersonaClient extends SdkClient {
     try {
       const account = await this._client.post('/accounts', accountData);
       if (!!account.data) return account.data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  public async getCase(caseId: string): Promise<PersonaGetCaseResponse> {
+    try {
+      const inquiry = await this._client.get(`/cases/${caseId}`);
+      if (!!inquiry.data) return inquiry.data;
     } catch (err) {
       console.log(err);
       throw asCustomError(err);

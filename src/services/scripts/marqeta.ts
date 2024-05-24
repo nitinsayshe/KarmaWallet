@@ -11,15 +11,15 @@ import { sleep } from '../../lib/misc';
 import { IUserDocument, UserModel } from '../../models/user';
 import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { mapMarqetaCardtoCard } from '../card';
-import { setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration } from '../user';
+import { setClosedMarqetaAccountState } from '../user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
-import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
 import { createDepositAccount, listDepositAccountsForUser, mapMarqetaDepositAccountToKarmaDB } from '../../integrations/marqeta/depositAccount';
 import { DepositAccountModel } from '../../models/depositAccount';
 import { CardModel } from '../../models/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
 import { isUserKYCVerified } from '../karmaCard';
 import { ReasonCode } from '../karmaCard/utils';
+import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
 
 const backoffMs = 1000;
 
@@ -87,7 +87,7 @@ export const updateClosedMarqetaAccounts = async () => {
       async (_: UserIterationRequest<{}>, userBatch: PaginateResult<IUserDocument>): Promise<UserIterationResponse<{}>[]> => {
         for (const user of userBatch.docs) {
           console.log(`updating user ${user._id}, ${user.emails.find((e) => e.primary)?.email}`);
-          await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(user, {
+          await setClosedMarqetaAccountState(user, {
             ...user.integrations.marqeta,
             token: user.integrations.marqeta.userToken,
             status: user.integrations.marqeta.status,
@@ -108,7 +108,7 @@ export const updateClosedMarqetaAccounts = async () => {
       async (_: VisitorIterationRequest<{}>, visitorBatch: PaginateResult<IVisitorDocument>): Promise<VisitorIterationResponse<{}>[]> => {
         for (const visitor of visitorBatch.docs) {
           console.log(`updating visitor ${visitor._id}, ${visitor.email}`);
-          await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, {
+          await setClosedMarqetaAccountState(visitor, {
             ...visitor.integrations.marqeta,
             token: visitor.integrations.marqeta.userToken,
             status: visitor.integrations.marqeta.status,

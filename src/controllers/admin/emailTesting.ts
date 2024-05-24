@@ -146,7 +146,16 @@ export const testEmployerGiftEmail: IRequestHandler<{}, {}, {}> = async (req, re
   }
 };
 
-export const testKarmaCardDeclineEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+export const testKarmaCardPendingReviewEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testKarmaCardPendingReviewEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const testKarmaCardDeclinedEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const email = await EmailTestingService.testKarmaCardDeclinedEmail(req);
     output.api(req, res, email);

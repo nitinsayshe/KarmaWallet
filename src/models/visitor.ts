@@ -7,7 +7,7 @@ import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user/types';
 import { PersonaIntegrationSchema } from './schemas';
-import { IPersonaIntgration } from '../integrations/persona/types';
+import { IPersonaIntegration } from '../integrations/persona/types';
 
 interface IMarqetaKycResult {
   status: IMarqetaKycState;
@@ -56,7 +56,7 @@ export interface IVisitorIntegrations {
     trackingId?: string;
   };
   marqeta?: IMarqetaVisitorData;
-  persona?: IPersonaIntgration;
+  persona?: IPersonaIntegration;
 }
 
 export interface IVisitorAction {

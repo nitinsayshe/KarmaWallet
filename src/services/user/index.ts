@@ -6,7 +6,7 @@ import { FilterQuery, Types } from 'mongoose';
 import { PlaidClient } from '../../clients/plaid';
 import { deleteContact, updateContactEmail, updateCustomFields, syncUserAddressFields } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
-import { getMarqetaUser, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
+import { closeMarqetaAccount, getMarqetaUser, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -43,7 +43,6 @@ import {
   IDeleteAccountRequest,
   IUrlParam,
 } from './types';
-import { checkIfUserWithEmailExists, createShareasaleTrackingId } from './utils';
 import { validatePassword } from './utils/validate';
 import { IEmail, resendEmailVerification, verifyBiometric } from './verification';
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
@@ -66,6 +65,7 @@ import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openB
 import { hasEntityPassedInternalKyc } from '../../integrations/persona';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
+import { checkIfUserWithEmailExists, createShareasaleTrackingId, isUserDocument } from './utils';
 
 dayjs.extend(utc);
 
@@ -660,26 +660,48 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
   return true;
 };
 
+export const formatMarqetaClosedEmail = (email: string) => {
+  if (!email) return '';
+  const emailParts = email.split('@');
+  return `${emailParts[0]}+closed@${emailParts[1]}`;
+};
+
+const updateMarqetaUserEmail = async (userToken: string, email: string) => {
+  try {
+    await updateMarqetaUser(userToken, { email });
+  } catch (error) {
+    console.log('Error updating Marqeta user email', error);
+  }
+};
+
+export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
+  entity: IUserDocument | IVisitorDocument,
+): Promise<IUserDocument | IVisitorDocument> => {
+  try {
+    const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
+    if (!closedEmail) throw new Error('No email found in marqeta integration');
+    await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
+    if (entity?.integrations?.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
+      closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
+    }
+    // remove the marqeta itegration from the user object
+    entity.integrations.marqeta = undefined;
+
+    return await entity.save();
+  } catch (error) {
+    console.log('Error updating Marqeta user email', error);
+  }
+};
+
 // if the status is closed, add '+closed' to this email in marqeta
-export const setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration = async (
+export const setClosedMarqetaAccountState = async (
   user: IVisitorDocument | IUserDocument,
   userTransition: Partial<IMarqetaUserTransitionsEvent>,
 ): Promise<void> => {
   if (!user || !userTransition?.status || userTransition?.status !== IMarqetaUserStatus.CLOSED) {
     return;
   }
-
-  try {
-    const emailParts = user.integrations.marqeta.email.split('@');
-    const closedEmail = `${emailParts[0]}+closed@${emailParts[1]}`;
-    await updateMarqetaUser(userTransition.token, { email: closedEmail });
-
-    // remove the marqeta itegration from the user object
-    user.integrations.marqeta = undefined;
-    await user.save();
-  } catch (error) {
-    console.log('Error updating Marqeta user email', error);
-  }
+  await setClosedEmailAndStatusAndRemoveMarqetaIntegration(user);
 };
 
 export const handleMarqetaUserActiveTransition = async (user: IUserDocument, newUser: boolean) => {
@@ -698,7 +720,7 @@ export const updateExistingUserFromMarqetaWebhook = async (
   webhookData: IMarqetaUserTransitionsEvent,
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
-  await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(user, currentMarqetaUserData);
+  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
     const { reason, reason_code: reasonCode } = webhookData;
@@ -756,11 +778,9 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
 const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
   entity: IUserDocument | IVisitorDocument,
 ) => {
-  const status = IMarqetaUserStatus.SUSPENDED;
-  const reason = MarqetaReasonCodeEnum.AccountUnderReview;
   if (!hasEntityPassedInternalKyc(entity)) {
-    await updateMarqetaUserStatus(entity, status, reason);
-    return false;
+    await updateMarqetaUserStatus(entity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
+    return true;
   }
   return true;
 };
@@ -800,7 +820,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   if (!!visitor?._id && !existingUser?._id) {
     visitor.integrations.marqeta.status = currentMarqetaUserData.status;
     await visitor.save();
-    await setClosedEmailIfClosedStatusAndRemoveMarqetaIntegration(visitor, currentMarqetaUserData);
+    await setClosedMarqetaAccountState(visitor, currentMarqetaUserData);
     await updatedVisitorFromMarqetaWebhook(visitor, currentMarqetaUserData);
   }
 };

@@ -99,9 +99,10 @@ export interface SourceResponse {
     status: string;
     codes: ReasonCode[];
   };
+  paymentLink: string;
 }
 
-export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string };
+export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string, paymentLink?: string };
 
 export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
   if (!res) return;

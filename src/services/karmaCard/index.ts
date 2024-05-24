@@ -39,7 +39,7 @@ import { UserNotificationModel } from '../../models/user_notification';
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
-import { updateUserUrlParams } from '../user';
+import { handleMarqetaUserActiveTransition, updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
@@ -52,7 +52,6 @@ import {
   SourceResponse,
   updateActiveCampaignDataAndJoinGroupForApplicant,
 } from './utils';
-import { setupProductSubscriptionForUser } from '../productSubscription';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -341,8 +340,7 @@ export const storeApplicationAndHandleSuccesState = async (
 
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  await setupProductSubscriptionForUser(userDocument);
-  // await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
+  await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
   return userDocument?.toObject()?.integrations?.marqeta as SourceResponse;
 };
 

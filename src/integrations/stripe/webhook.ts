@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { updateOrCreateProductSubscriptionFromStripeProduct } from './product';
+import { addStripeIntegrationToUser, updateStripeIntegrationForUser } from './customer';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
   console.log('///// event', event);
@@ -9,10 +10,12 @@ export const handleCustomerEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
   if (type === 'customer.created') {
+    await addStripeIntegrationToUser(event.data.object);
     // create a new user
   }
 
   if (type === 'customer.updated') {
+    await updateStripeIntegrationForUser(event.data.object);
     // update the user
   }
 
@@ -74,7 +77,7 @@ export const processStripeWebhookEvent = async (event: Stripe.Event) => {
 };
 
 // EVENTS SENT WHEN SUCCESSFULLY PAYING THE STRIPE PAYMENT LINK
-// customer.created - a customer is created based on the email that is inputted (add to the user integration?)
+// customer.created - as soon as person hits submit (add to the user integration?)
 // payment_intent.created - a payment intent is created for the customer
 // customer.updated - customer is updated, it looks like a subscription is added to the customer
 // invoice.created - an invoice is created for the customer

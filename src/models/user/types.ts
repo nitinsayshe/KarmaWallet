@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongoose';
+import Stripe from 'stripe';
 import { IRef } from '../../types/model';
 import { IPromo, IPromoDocument } from '../promo';
 import { IMarqetaUserIntegrations } from '../../integrations/marqeta/types';
@@ -103,6 +104,7 @@ export interface IUserIntegrations {
   marqeta?: IMarqetaUserIntegrations;
   fcm?: IFCMTokenIntegration[];
   persona?: IPersonaIntegration;
+  stripe?: Stripe.Customer;
 }
 
 export interface IShareableUser {

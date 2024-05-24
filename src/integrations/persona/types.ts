@@ -10,10 +10,25 @@ export const PersonaInquiryStatusEnum = {
 } as const;
 export type PersonaInquiryStatusEnumValues = (typeof PersonaInquiryStatusEnum)[keyof typeof PersonaInquiryStatusEnum];
 
+export const PersonaCaseStatusEnum = {
+  Open: 'Open',
+  Pending: 'Pending',
+  Approved: 'Approved',
+  Declined: 'Declined',
+} as const;
+export type PersonaCaseStatusEnumValues = (typeof PersonaCaseStatusEnum)[keyof typeof PersonaCaseStatusEnum];
+
 type TemplateData = {
   id: string;
   type: string;
 };
+
+export interface IPersonaCaseData {
+  id: string;
+  status: PersonaCaseStatusEnumValues;
+  createdAt: string;
+  attributes?: any;
+}
 
 export interface IPersonaInquiryData {
   id: string;
@@ -23,9 +38,10 @@ export interface IPersonaInquiryData {
   createdAt: string;
 }
 
-export interface IPersonaIntgration {
+export interface IPersonaIntegration {
   accountId: string;
   inquiries: IPersonaInquiryData[];
+  cases: IPersonaCaseData[];
 }
 
 export interface IPersonaCreateAccountBody {
@@ -74,6 +90,32 @@ export type PersonaGetInquiryResponse = {
   meta?: any;
 };
 
+export type PersonaGetCaseResponse = {
+  data: {
+    type: string;
+    id: string;
+    attributes: {
+      status: PersonaCaseStatusEnumValues;
+      referenceId: string | null;
+      createdAt: string;
+      completedAt: string | null;
+      expiredAt: string | null;
+    };
+    relationships: {
+      account: {
+        data: TemplateData;
+      };
+      accounts: {
+        data: TemplateData[];
+      };
+      inquiries: {
+        data: TemplateData[];
+      };
+    };
+  };
+  meta?: any;
+};
+
 export const PersonaInquiryTemplateIdEnum = {
   GovIdAndSelfieAndDocs: 'itmpl_eW827Fd6N9cvucWoDBpPB37rnWcm', // KW - 4 Gov ID and Selfie and Document
   GovIdAndSelfieOrDocs: 'itmpl_2Wequ3YSD2K2i31tPxHixDdbDkAj', // KW - 2 Gov ID and Selfie and Document -- only gov id and selfie if it passes, otherwise gov id and docs
@@ -93,6 +135,7 @@ export const EventNamesEnum = {
   caseAssigned: 'case.assigned', // Occurs when a case is assigned.
   caseResolved: 'case.resolved', // Occurs when a case is resolved.
   caseReopened: 'case.reopened', // Occurs when a case is reopened.
+  caseStatusUpdated: 'case.status-updated', // Occurs when a case's status is updated
   caseUpdated: 'case.updated', // Occurs when a case is updated.
   documentCreated: 'document.created', // Occurs whenever a document is created.
   documentSubmitted: 'document.submitted', // Occurs whenever a document is submitted.
@@ -163,16 +206,18 @@ type VerificationData = {
 };
 
 type InquiryRelationships = {
-  account: { data: TemplateData };
+  accounts?: { data: TemplateData[] };
+  account?: { data: TemplateData };
   reports: { data: any[] };
   template: { data: TemplateData };
+  inquiries: { data: TemplateData[] };
   sessions: { data: any[] };
   verifications: { data: VerificationData[] };
   inquiryTemplate?: { data: TemplateData };
 };
 
 type InquiryAttributes = {
-  status: PersonaInquiryStatusEnumValues;
+  status: PersonaInquiryStatusEnumValues | PersonaCaseStatusEnumValues;
   referenceId: string | null;
   createdAt: string;
   completedAt: string | null;

@@ -18,6 +18,7 @@ import {
   IMarqetaUpdateUser,
   PaginatedMarqetaResponse,
   IMarqetaUserStatus,
+  NonClosedMarqetaUserStatus,
 } from './types';
 
 // Instantiate the MarqetaClient
@@ -63,7 +64,10 @@ export const transitionMarqetaUser = async (transitionData: IMarqetaUserTransiti
   return userResponse;
 };
 
-export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDocument, status: IMarqetaUserStatus, reasonCode?: MarqetaReasonCodeEnumValues) => {
+// This function won't take the CLOSED status as a parameter because in that case we
+// should also update the user's email and remove the Marqeta integration
+// setClosedEmailAndStatusAndRemoveMarqetaIntegration() would handle that
+export const updateMarqetaUserStatus = async (entity: IUserDocument | IVisitorDocument, status: NonClosedMarqetaUserStatus, reasonCode: MarqetaReasonCodeEnumValues) => {
   try {
     if (!entity?.integrations?.marqeta?.userToken) {
       throw new Error('User does not have a Marqeta user token');

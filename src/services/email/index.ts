@@ -13,7 +13,7 @@ import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperato
 import { verifyRequiredFields } from '../../lib/requestData';
 import { SentEmailModel } from '../../models/sentEmail';
 import { IRequest } from '../../types/request';
-import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
+import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmaCardUpdateEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -938,7 +938,7 @@ export const sendEmployerGiftEmail = async ({
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 
-export const sendKarmaCardDeclinedEmail = async ({
+export const sendKarmaCardPendingReviewEmail = async ({
   domain = process.env.FRONTEND_DOMAIN,
   name,
   recipientEmail,
@@ -947,8 +947,8 @@ export const sendKarmaCardDeclinedEmail = async ({
   senderEmail = EmailAddresses.NoReply,
   user,
   visitor,
-}: IKarmaCardDeclinedEmailData) => {
-  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardDeclined;
+}: IKarmaCardUpdateEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardPendingReview;
   const subject = 'Karma Wallet Card Application: Identity Documents Under Review';
   const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name'], {
     domain,
@@ -959,6 +959,48 @@ export const sendKarmaCardDeclinedEmail = async ({
   const template = buildTemplate({
     templateName: emailTemplateConfig.name,
     data: { name },
+  });
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+  };
+
+  if (visitor) jobData.visitor = visitor._id;
+  if (user) jobData.user = user._id;
+
+  if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendKarmaCardDeclinedEmail = async ({
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  recipientEmail,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  sendEmail = true,
+  senderEmail = EmailAddresses.NoReply,
+  user,
+  visitor,
+  resubmitDocumentsLink,
+  applicationExpirationDate,
+}: IKarmaCardDeclinedEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardDeclined;
+  const subject = 'Karma Wallet Card Application';
+  const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'resubmitDocumentsLink', 'applicationExpirationDate'], {
+    domain,
+    recipientEmail,
+    name,
+    resubmitDocumentsLink,
+    applicationExpirationDate,
+  });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { name, resubmitDocumentsLink, applicationExpirationDate },
   });
   const jobData: IEmailJobData = {
     template,

@@ -473,13 +473,17 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
     webhookBodyToSave.data = { ...webhookBodyToSave.data };
     webhookBodyToSave.data.attributes = { ...webhookBodyToSave.data.attributes };
     webhookBodyToSave.data.attributes.payload = null;
-    const applicationData = req.body?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
+
+    const payloadData = req.body?.data?.attributes?.payload?.data;
+    const applicationData = payloadData?.attributes.fields?.applicationData?.value;
     const data = {
       email: applicationData?.email,
-      accountId: req.body?.data?.attributes?.payload?.data?.relationships?.account?.data?.id,
-      inquiryId: req.body?.data?.attributes?.payload?.data?.id,
-      sessions: req.body?.data?.attributes?.payload?.data?.relationships?.sessions?.data,
-      templateId: req.body?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id,
+      accountId: payloadData?.relationships?.account?.data?.id || payloadData?.relationships?.accounts?.data?.[0]?.id,
+      eventId: payloadData?.id,
+      eventName: req?.body?.data?.attributes?.name,
+      sessions: payloadData?.relationships?.sessions?.data,
+      status: payloadData?.attributes?.status,
+      templateId: payloadData?.relationships?.inquiryTemplate?.data?.id,
     };
 
     await WebhookModel.create({ provider: WebhookProviders.Persona, body: webhookBodyToSave, data });

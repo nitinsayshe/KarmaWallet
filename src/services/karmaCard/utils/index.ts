@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { FilterQuery, Types, PaginateResult } from 'mongoose';
 import { terminateMarqetaCards, listCards } from '../../../integrations/marqeta/card';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
 import { IGPABalanceResponse, IMarqetaKycState } from '../../../integrations/marqeta/types';
@@ -16,44 +17,47 @@ import { BankConnectionModel } from '../../../models/bankConnection';
 import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../../clients/marqeta/transactions';
 
-enum ResponseMessages {
-  APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
-  NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',
-  ADDRESS_ISSUE = 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
-  DATE_OF_BIRTH_ISSUE = 'Your application is pending due to an invalid or mismatched date of birth.',
-  SSN_ISSUE = 'Your application is pending due to a missing, invalid or mismatched Social Security Number (SSN).',
-  DECLINED = 'Your application has been declined.',
-}
+import { sleep } from '../../../lib/misc';
+import { IKarmaCardApplicationDocument, KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 
-export enum SolutionMessages {
-  NAME_OR_DOB_ISSUE = 'To proceed with your application, we kindly request that you submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io within 10 days',
-  SSN_ISSUE = 'To proceed with your application, we kindly request that you submit a photo of one of the following items to support@karmawallet.io within 10 days',
-  ADDRESS_ISSUE = 'To proceed with your application, we kindly request you submit photos of two of the following documents showing your full name and address to support@karmawallet.io within 10 days',
-  CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate steps. Contact support@karmawallet.io.',
-  ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
-  FAILED_INTERNAL_KYC = 'Your application is pending, please submit two forms of the following identification to support@karmawallet.io.',
-}
+export type KarmaCardApplicationIterationRequest<FieldsType> = {
+  batchQuery: FilterQuery<IKarmaCardApplicationDocument>;
+  batchLimit: number;
+  fields?: FieldsType;
+};
 
-export const AcceptedDocuments = {
-  NAME_OR_DOB_ISSUE: [
-    'Unexpired government issued photo ID that has name and date of birth',
-    'Driver’s License or State Issued ID',
-    'Passport or US passport card',
-  ],
-  ADDRESS_ISSUE: [
-    'Unexpired state-issued driver’s license or identification card',
-    'US Military Identification Card',
-    'Utility bill (within past 60 days)',
-    'Bank statement (within past 60 days)',
-    'Current rental or lease agreement',
-    'Mortgage statement (within 6 months)',
-  ],
-  DateOfBirthIssue: ['Driver’s license or state-issued identification card', 'Passport or US passport card'],
-  SSN_ISSUE: [
-    'Social Security Card',
-    'Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
-    'ITIN card or document showing ITIN approval',
-  ],
+export type KarmaCardApplicationIterationResponse<FieldsType> = {
+  applicationId: Types.ObjectId;
+  fields?: FieldsType;
+};
+
+export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
+  request: KarmaCardApplicationIterationRequest<ReqFieldsType>,
+  exec: (req: KarmaCardApplicationIterationRequest<ReqFieldsType>, visitorBatch: PaginateResult<IKarmaCardApplicationDocument>) => Promise<KarmaCardApplicationIterationResponse<ResFieldsType>[]>,
+  msDelayBetweenBatches: number,
+): Promise<KarmaCardApplicationIterationResponse<ResFieldsType>[]> => {
+  let report: KarmaCardApplicationIterationResponse<ResFieldsType>[] = [];
+
+  let page = 1;
+  let hasNextPage = true;
+  while (hasNextPage) {
+    const applicationBatch = await KarmaCardApplicationModel.paginate(request.batchQuery, {
+      page,
+      limit: request.batchLimit,
+    });
+
+    console.log('total applications matching query: ', applicationBatch.totalDocs);
+    const responses = await exec(request, applicationBatch);
+
+    console.log(`Prepared ${responses.length} visitor reports`);
+    report = report.concat(responses);
+
+    await sleep(msDelayBetweenBatches);
+
+    hasNextPage = applicationBatch?.hasNextPage || false;
+    page++;
+  }
+  return report;
 };
 
 export enum ReasonCode {
@@ -82,11 +86,8 @@ interface PuppateerShareASaleParams {
 }
 
 interface TransformedResponse {
-  message: string;
   status: IMarqetaKycState;
   reason?: ReasonCode;
-  acceptedDocuments?: string[];
-  solutionText?: string;
   internalKycTemplateId?: string;
   authkey?: string;
 }
@@ -104,49 +105,8 @@ export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplat
 
 export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
   if (!res) return;
+
   const { internalKycTemplateId, kycResult } = res;
-
-  const messages: Record<ReasonCode, string> = {
-    [ReasonCode.Approved]: ResponseMessages.APPROVED,
-    [ReasonCode.NameIssue]: ResponseMessages.NAME_ISSUE,
-    [ReasonCode.AddressIssue]: ResponseMessages.ADDRESS_ISSUE,
-    [ReasonCode.DateOfBirthIssue]: ResponseMessages.DATE_OF_BIRTH_ISSUE,
-    [ReasonCode.SSNIssue]: ResponseMessages.SSN_ISSUE,
-    [ReasonCode.RiskIssue]: ResponseMessages.DECLINED,
-    [ReasonCode.NoRecordFound]: ResponseMessages.DECLINED,
-    [ReasonCode.Denied_KYC]: ResponseMessages.DECLINED,
-    [ReasonCode.FailedInternalKyc]: ResponseMessages.DECLINED,
-    [ReasonCode.OFACFailure]: ResponseMessages.DECLINED,
-    [ReasonCode.Already_Registered]: ResponseMessages.DECLINED,
-  };
-
-  const solutionText: Record<ReasonCode, string> = {
-    [ReasonCode.Approved]: null,
-    [ReasonCode.NameIssue]: SolutionMessages.NAME_OR_DOB_ISSUE,
-    [ReasonCode.AddressIssue]: SolutionMessages.ADDRESS_ISSUE,
-    [ReasonCode.DateOfBirthIssue]: SolutionMessages.NAME_OR_DOB_ISSUE,
-    [ReasonCode.SSNIssue]: SolutionMessages.SSN_ISSUE,
-    [ReasonCode.RiskIssue]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.NoRecordFound]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.Denied_KYC]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.FailedInternalKyc]: SolutionMessages.FAILED_INTERNAL_KYC,
-    [ReasonCode.OFACFailure]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.Already_Registered]: SolutionMessages.ALREADY_REGISTERED,
-  };
-
-  const acceptedDocuments: Record<ReasonCode, string[]> = {
-    [ReasonCode.Approved]: null,
-    [ReasonCode.NameIssue]: AcceptedDocuments.NAME_OR_DOB_ISSUE,
-    [ReasonCode.AddressIssue]: AcceptedDocuments.ADDRESS_ISSUE,
-    [ReasonCode.DateOfBirthIssue]: AcceptedDocuments.NAME_OR_DOB_ISSUE,
-    [ReasonCode.SSNIssue]: AcceptedDocuments.SSN_ISSUE,
-    [ReasonCode.RiskIssue]: null,
-    [ReasonCode.NoRecordFound]: null,
-    [ReasonCode.Denied_KYC]: null,
-    [ReasonCode.FailedInternalKyc]: null,
-    [ReasonCode.OFACFailure]: null,
-    [ReasonCode.Already_Registered]: null,
-  };
 
   // send the marqeta failure code over the internal kyc failure code since that indicates a more severe issue
   let reasonCode: ReasonCode;
@@ -163,14 +123,8 @@ export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedRe
   const transformed: TransformedResponse = {
     status: (kycResult?.status as IMarqetaKycState) || IMarqetaKycState.failure,
     reason: reasonCode,
-    message: messages[reasonCode],
     internalKycTemplateId,
   };
-
-  if (solutionText[kycResult?.codes?.[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes?.[0] as ReasonCode];
-  if (acceptedDocuments[kycResult?.codes?.[0] as ReasonCode]) {
-    transformed.acceptedDocuments = acceptedDocuments[kycResult?.codes?.[0] as ReasonCode];
-  }
 
   return transformed;
 };

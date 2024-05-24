@@ -23,6 +23,7 @@ import * as SendEmail from '../../../jobs/sendEmail';
 import * as UpdateBatchCompanyDataSources from '../../../jobs/updateBatchCompanyDataSources';
 import * as UpdateBatchCompanyParentChildrenRelationships from '../../../jobs/updateBatchCompanyParentChildrenRelationships';
 import * as UploadCsvToGoogleDrive from '../../../jobs/uploadCsvToGoogleDrive';
+import * as UpdateExpiredApplications from '../../../jobs/updateExpiredApplications';
 import * as UpdateWildfireMerchantsAndData from '../../../jobs/updateWildfireMerchantsAndData';
 import * as UpdateKardMerchantsAndData from '../../../jobs/updateKardMerchantsAndData';
 import * as GenerateCommissionPayouts from '../../../jobs/generateCommissionPayouts';
@@ -149,6 +150,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.UpdateRareProjectAverage:
       result = await UpdateRareProjectAverage.exec();
+      break;
+    case JobNames.UpdateExpiredApplications:
+      result = await UpdateExpiredApplications.exec();
       break;
     case JobNames.UploadCsvToGoogleDrive:
       result = await UploadCsvToGoogleDrive.exec(data);

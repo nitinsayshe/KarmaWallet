@@ -30,13 +30,19 @@ export interface IACHTransferEmailData {
   reason?: string;
 }
 
-export interface IDeclinedData {
+export interface IKarmaCardUpdateData {
   name?: string;
   user?: IUserDocument;
   visitor?: IVisitorDocument;
 }
 
-export interface IKarmaCardDeclinedEmailData extends IDeclinedData, IBaseEmailParams { }
+export interface IKarmaCardDeclinedData extends IKarmaCardUpdateData, IBaseEmailParams {
+  resubmitDocumentsLink: string;
+  applicationExpirationDate: string;
+}
+
+export interface IKarmaCardUpdateEmailData extends IKarmaCardUpdateData, IBaseEmailParams { }
+export interface IKarmaCardDeclinedEmailData extends IKarmaCardDeclinedData, IBaseEmailParams { }
 
 interface IEmailTemplateParams extends IBaseEmailParams {
   user?: Types.ObjectId;
@@ -163,6 +169,8 @@ export interface IEmailJobData {
   affirmationLink?: string;
   link?: string;
   visitor?: IVisitorDocument | Types.ObjectId | string;
+  resubmitDocumentsLink?: string;
+  applicationExpirationDate?: string;
 }
 
 export interface IBuildTemplateParams {

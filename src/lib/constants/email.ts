@@ -31,6 +31,7 @@ export enum EmailTemplateKeys {
   CardShipped = 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued = 'caseLostProvisionalCreditNotAlreadyIssued',
   KarmaCardDeclined = 'karmaCardDeclined',
+  KarmaCardPendingReview = 'karmaCardPendingReview',
   ChangeEmailRequestVerification = 'changeEmailRequestVerification',
   ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
   ResumeKarmaCardApplication = 'resumeKarmaCardApplication',
@@ -52,6 +53,7 @@ export enum EmailTemplateTypes {
   Verification = 'verification',
   EmployerGift = 'employerGift',
   KarmaCardDeclined = 'karmaCardDeclined',
+  KarmaCardPendingReview = 'karmaCardPendingReview',
   ChangeEmailRequestVerification = 'changeEmailRequestVerification',
   ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
 }
@@ -182,6 +184,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   KarmaCardDeclined: {
     name: EmailTemplateKeys.KarmaCardDeclined,
     type: EmailTemplateTypes.KarmaCardDeclined,
+  },
+  KarmaCardPendingReview: {
+    name: EmailTemplateKeys.KarmaCardPendingReview,
+    type: EmailTemplateTypes.KarmaCardPendingReview,
   },
   ContactUs: {
     name: EmailTemplateKeys.ContactUs,

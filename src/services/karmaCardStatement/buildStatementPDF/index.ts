@@ -30,7 +30,11 @@ export const getTransactionData = (transaction: ITransaction) => {
     }
 
     if (subType === TransactionSubtypeEnum.ProgramCredit) {
-      transactionData.descriptionText = 'Courtesy Credit from Karma Wallet';
+      if (transaction.integrations.marqeta.gpa_order.memo) {
+        transactionData.descriptionText = transaction.integrations.marqeta.gpa_order.memo;
+      } else {
+        transactionData.descriptionText = 'Courtesy Credit from Karma Wallet';
+      }
     }
 
     if (subType === TransactionSubtypeEnum.Employer) {

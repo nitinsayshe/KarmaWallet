@@ -1077,7 +1077,7 @@ export const processProgramCreditDeposit = async (deposits: IInitiateGPADeposits
       userId: deposit.userId,
       amount: deposit.amount,
       tags: _tags.join(', '),
-      memo: !!memo ? memo : 'Courtesy credit from Karma Wallet. Enjoy!',
+      memo: !!memo ? memo : 'Courtesy credit from Karma Wallet',
     });
 
     if (!gpaFundResponse.data) {

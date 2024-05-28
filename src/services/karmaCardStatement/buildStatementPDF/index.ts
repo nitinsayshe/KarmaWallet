@@ -89,7 +89,6 @@ export const getTransactionData = (transaction: ITransaction) => {
       transactionData.descriptionText = `ACH Transfer from ${bank}`;
     } else if (transaction?.integrations?.marqeta?.direct_deposit) {
       const bank = transaction.integrations?.marqeta?.direct_deposit?.company_name.toUpperCase() || 'External Bank';
-      console.log('Direct deposit', transaction?.integrations?.marqeta?.direct_deposit);
       transactionData.descriptionText = `ACH Transfer from ${bank}`;
     } else {
       transactionData.descriptionText = 'ACH Deposit from External Bank';

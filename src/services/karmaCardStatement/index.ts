@@ -126,10 +126,7 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
         $lte: endDate,
       },
       'integrations.marqeta': { $exists: true },
-    })
-      .populate('company')
-      .populate('sector')
-      .populate({ path: 'achTransfer', options: { strictPopulate: false } });
+    });
 
     const filteredTransactions = transactions.filter((t => {
       if (t.status === TransactionModelStateEnum.Pending) {

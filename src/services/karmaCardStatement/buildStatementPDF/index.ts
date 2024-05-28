@@ -82,14 +82,27 @@ export const getTransactionData = (transaction: ITransaction) => {
 
   // Deposit Transaction
   if (type === TransactionTypeEnum.Deposit) {
+    if (!!transaction?.achTransfer) {
+      // update this to show the bank name
+      // transaction.achTransfer.bank.name
+      const bank = transaction.achTransfer?.bank?.institution.toUpperCase() || 'External Bank';
+      transactionData.descriptionText = `ACH Transfer from ${bank}`;
+    } else if (transaction?.integrations?.marqeta?.direct_deposit) {
+      const bank = transaction.integrations?.marqeta?.direct_deposit?.company_name.toUpperCase() || 'External Bank';
+      console.log('Direct deposit', transaction?.integrations?.marqeta?.direct_deposit);
+      transactionData.descriptionText = `ACH Transfer from ${bank}`;
+    } else {
+      transactionData.descriptionText = 'ACH Deposit from External Bank';
+    }
+
     transactionData.amountPrefix = '+';
-    transactionData.descriptionText = 'ACH Deposit';
   }
 
   // Withdrawal Transaction
   if (type === TransactionTypeEnum.Withdrawal) {
     transactionData.amountPrefix = '-';
-    transactionData.descriptionText = 'ACH Withdrawal';
+    const bank = transaction.integrations?.marqeta?.direct_deposit?.company_name.toUpperCase() || 'External Bank';
+    transactionData.descriptionText = `ACH Withdrawal from ${bank}`;
   }
 
   return transactionData;
@@ -215,7 +228,8 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     _id: {
       $in: transactions,
     },
-  });
+  })
+    .populate({ path: 'achTransfer', options: { strictPopulate: false } });
 
   const sortedOldestTransactionsFirst = statementTransactions.sort((a, b) => (dayjs(a.sortableDate).isBefore(dayjs(b.sortableDate)) ? -1 : 1));
 

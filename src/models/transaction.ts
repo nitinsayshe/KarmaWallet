@@ -22,7 +22,6 @@ import { ICompanyDocument, IShareableCompany } from './company';
 import { IGroupDocument, IShareableGroup } from './group';
 import { ISector, ISectorDocument } from './sector';
 import { IShareableUser } from './user/types';
-import { IShareableACHTransfer } from './achTransfer/types';
 import { IUserDocument } from './user';
 
 export enum MatchTypes {
@@ -144,7 +143,7 @@ export interface IShareableTransaction {
   user: IRef<ObjectId, IShareableUser>;
   company: IRef<ObjectId, IShareableCompany>;
   card: IRef<ObjectId, IShareableCard>;
-  achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
+  achTransfer?: any;
   sector: IRef<ObjectId, ISector>;
   amount: number;
   status: TransactionModelStateEnumValues;
@@ -171,7 +170,6 @@ export interface ITransaction extends IShareableTransaction {
   association?: IUserOrGroup;
   card: IRef<ObjectId, ICardDocument>;
   cardId: IRef<ObjectId, ICardDocument>;
-  achTransfer?: IRef<ObjectId, IShareableACHTransfer>;
   company: IRef<ObjectId, ICompanyDocument>;
   companyId: IRef<ObjectId, ICompanyDocument>;
   matched?: ITransactionMatch;

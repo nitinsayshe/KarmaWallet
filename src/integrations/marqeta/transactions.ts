@@ -271,6 +271,9 @@ export const getSubTypeFromMarqetaGPATag = (tag: string): TransactionCreditSubty
   if (tag === TransactionCreditSubtypeEnum.Cashback) {
     return TransactionCreditSubtypeEnum.Cashback;
   }
+  if (tag === TransactionCreditSubtypeEnum.ProgramCredit) {
+    return TransactionCreditSubtypeEnum.ProgramCredit;
+  }
   return undefined;
 };
 

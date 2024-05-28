@@ -112,6 +112,7 @@ export interface IGetMatchedCompaniesQuery {
 export interface IGPADeposit {
   amount: number;
   userId: string;
+  tags?: string[];
 }
 
 export interface IInitiateGPADepositsRequest {

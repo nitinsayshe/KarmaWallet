@@ -1045,6 +1045,29 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
   }
 };
 
+// make a custom one at some point
+export const processProgramCreditDeposit = async (deposits: IInitiateGPADepositsRequest) => {
+  const { type, gpaDeposits, memo } = deposits;
+
+  for (const deposit of gpaDeposits) {
+    let _tags = [`type=${type}`];
+
+    if (!!deposit.tags) _tags = [..._tags, ...deposit.tags];
+    const gpaFundResponse = await fundUserGPAFromProgramFundingSource({
+      userId: deposit.userId,
+      amount: deposit.amount,
+      tags: _tags.join(', '),
+      memo: !!memo ? memo : 'Courtesy credit from Karma Wallet. Enjoy!',
+    });
+
+    if (!gpaFundResponse.data) {
+      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
+    } else {
+      console.log(`Successfully funded user ${deposit.userId}`);
+    }
+  }
+};
+
 export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
   const { groupId, type, memo } = deposits;
 
@@ -1059,5 +1082,9 @@ export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) 
 
   if (type === TransactionCreditSubtypeEnum.Cashback) {
     await processCashbackGPADeposits(deposits);
+  }
+
+  if (type === TransactionCreditSubtypeEnum.ProgramCredit) {
+    await processProgramCreditDeposit(deposits);
   }
 };

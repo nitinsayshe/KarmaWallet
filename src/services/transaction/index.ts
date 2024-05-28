@@ -995,6 +995,9 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     throw new CustomError(`Group with groupId: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
   }
 
+  const errors = [];
+  const success = [];
+
   for (const deposit of gpaDeposits) {
     const tags = `groupId=${groupId},type=${type}`;
     const userInGroup = await checkIfUserInGroup(deposit.userId, groupId);
@@ -1018,16 +1021,23 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      throw new CustomError(`Failed to fund user GPA ${deposit.userId} from program funding source: ${JSON.stringify(gpaFundResponse)}`, ErrorTypes.SERVER);
+      errors.push(`${deposit.userId} : ${JSON.stringify(gpaFundResponse)}`);
     }
 
-    console.log(`Successfully funded user ${deposit.userId}`);
-    return gpaFundResponse;
+    success.push(`${deposit.userId}`);
   }
+
+  return {
+    success,
+    errors,
+  };
 };
 
 export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
   const { type, gpaDeposits, memo } = deposits;
+
+  const success = [];
+  const errors = [];
 
   for (const deposit of gpaDeposits) {
     const tags = `type=${type}`;
@@ -1039,21 +1049,30 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
-    } else {
-      console.log(`Successfully funded user ${deposit.userId}`);
+      errors.push(`${deposit.userId} : ${JSON.stringify(gpaFundResponse)}`);
     }
+
+    success.push(deposit.userId);
   }
+
+  return {
+    success,
+    errors,
+  };
 };
 
 // make a custom one at some point
 export const processProgramCreditDeposit = async (deposits: IInitiateGPADepositsRequest) => {
   const { type, gpaDeposits, memo } = deposits;
 
+  const success = [];
+  const errors = [];
+
   for (const deposit of gpaDeposits) {
     let _tags = [`type=${type}`];
 
     if (!!deposit.tags) _tags = [..._tags, ...deposit.tags];
+
     const gpaFundResponse = await fundUserGPAFromProgramFundingSource({
       userId: deposit.userId,
       amount: deposit.amount,
@@ -1062,11 +1081,16 @@ export const processProgramCreditDeposit = async (deposits: IInitiateGPADeposits
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
-    } else {
-      console.log(`Successfully funded user ${deposit.userId}`);
+      errors.push(`${deposit.userId} : ${JSON.stringify(gpaFundResponse)}`);
     }
+
+    success.push(deposit.userId);
   }
+
+  return {
+    success,
+    errors,
+  };
 };
 
 export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
@@ -1083,10 +1107,14 @@ export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) 
   }
 
   if (type === TransactionCreditSubtypeEnum.Cashback) {
-    await processCashbackGPADeposits(deposits);
+    const response = await processCashbackGPADeposits(deposits);
+    return response;
   }
 
   if (type === TransactionCreditSubtypeEnum.ProgramCredit) {
-    await processProgramCreditDeposit(deposits);
+    const response = await processProgramCreditDeposit(deposits);
+    return response;
   }
+
+  throw new CustomError('Invalid type', ErrorTypes.INVALID_ARG);
 };

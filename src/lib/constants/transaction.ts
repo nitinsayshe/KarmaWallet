@@ -14,7 +14,7 @@ export const TransactionSubtypeEnum = {
   Cashback: 'cashback',
   Employer: 'employer',
   Refund: 'refund',
-  ProgramCredit: 'program_credit',
+  ProgramCredit: 'programCredit',
 } as const;
 export type TransactionSubtypeEnumValues = (typeof TransactionSubtypeEnum)[keyof typeof TransactionSubtypeEnum];
 

@@ -190,6 +190,12 @@ export const buildTotalsTable = (statement: IShareableKarmaCardStatement) => {
       [
         'Adjustments/Disputes',
         `$${adjustments.toFixed(2)}`,
+        'Fees this Period',
+        '$0.00',
+      ],
+      [
+        'Fees YTD',
+        '$0.00',
       ],
     ],
   };
@@ -334,14 +340,9 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
   doc.moveDown();
   doc.moveDown();
   doc
-    .text('General Purpose Accounts provided by:')
-    .moveDown()
-    .text('Pathward N.A.')
-    .text('5501 South Broadband Lane')
-    .text('Sioux Falls, SD 57108');
-
-  doc.moveDown();
-  doc.moveDown();
+    .text('Karma Wallet')
+    .text('11845 Retail Drive, #1107')
+    .text('Wake Forest, NC 27587');
   doc.moveDown();
   doc.moveDown();
   doc
@@ -349,13 +350,24 @@ export const generateKarmaCardStatementPDF = async (statement: IShareableKarmaCa
     .text('What to Do if You Think You Found a Mistake on Your Statement')
     .moveDown()
     .font('Helvetica')
-    .text('In case of errors or questions about your electronic transfers, please email us at support@karmawallet.io as soon as you can, if you think your statement or receipt is wrong or if you need more information about a transfer on the statement or receipt. We must hear from you no later than 60 days after we sent you the FIRST statement on which the error or problem appeared.')
+    .text('In case of errors or questions about your electronic transfers, please email support@karmawallet.io or call 1-866-304-4030 as soon as you can, if you think your statement or receipt is wrong or if you need more information about a transfer on the statement or receipt. We must hear from you no later than 60 days after we sent you the FIRST statement on which the error or problem appeared.')
     .moveDown()
     .text('(1) Tell us your name, Karma Wallet account number, and/or 16 digit card number.')
     .text('(2) Describe the error or the transfer you are unsure about, and explain as clearly as you can why you believe it is an error or why you need more information.')
     .text('(3) Tell us the dollar amount of the suspected error.')
     .moveDown()
     .text('We will investigate your complaint and will correct any error promptly. If we take more than 10 business days to do this, we will credit your account for the amount you think is in error, so that you will have the use of the money during the time it takes us to complete our investigation.');
+  doc.moveDown();
+  doc.moveDown();
+  doc
+    .text('General Purpose Accounts provided by:')
+    .moveDown()
+    .text('Pathward N.A.')
+    .text('5501 South Broadband Lane')
+    .text('Sioux Falls, SD 57108');
+  doc.moveDown();
+  doc.moveDown();
+  doc.text('The Karma Wallet Visa® Prepaid Card is issued by Pathward®, N.A., Member FDIC, pursuant to a license from Visa U.S.A. Inc. The Karma Wallet Visa Prepaid Card is powered by Marqeta. This card can be used everywhere Visa debit cards are accepted.');
   doc.end();
   return doc;
 };

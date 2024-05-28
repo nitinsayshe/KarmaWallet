@@ -1018,10 +1018,11 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA ${deposit.userId} from program funding source: ${JSON.stringify(gpaFundResponse)}`);
-    } else {
-      console.log(`Successfully funded user ${deposit.userId}`);
+      throw new CustomError(`Failed to fund user GPA ${deposit.userId} from program funding source: ${JSON.stringify(gpaFundResponse)}`, ErrorTypes.SERVER);
     }
+
+    console.log(`Successfully funded user ${deposit.userId}`);
+    return gpaFundResponse;
   }
 };
 
@@ -1077,7 +1078,8 @@ export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) 
 
   if (type === TransactionCreditSubtypeEnum.Employer) {
     if (!groupId) throw new CustomError('Missing group id', ErrorTypes.INVALID_ARG);
-    await processEmployerGPADeposits(deposits);
+    const depositsResponse = await processEmployerGPADeposits(deposits);
+    return depositsResponse;
   }
 
   if (type === TransactionCreditSubtypeEnum.Cashback) {

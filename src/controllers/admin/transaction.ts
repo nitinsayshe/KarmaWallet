@@ -84,3 +84,12 @@ export const getMatchedCompanies: IRequestHandler<{}, TransactionTypes.IGetMatch
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const createGPADeposits: IRequestHandler<{}, {}, TransactionTypes.IInitiateGPADepositsRequest> = async (req, res) => {
+  try {
+    const data = await TransactionService.processGPADeposits(req.body);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

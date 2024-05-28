@@ -1,5 +1,6 @@
 import { FilterQuery } from 'mongoose';
-import { SocketRooms, SocketEventTypes, SocketEvents } from '../../lib/constants/sockets';
+import { createOrUpdatePersonaIntegration } from '.';
+import { MarqetaKYCStatus, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { getUtcDate } from '../../lib/date';
 import { KarmaCardApplicationModel, ApplicationStatus } from '../../models/karmaCardApplication';
 import { UserModel, IUserDocument } from '../../models/user';
@@ -27,10 +28,9 @@ import {
   createResumeKarmaCardApplicationUserNotification,
 } from '../../services/user_notification';
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
+import { SocketEvents, daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
+import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
 import { states } from '../../lib/constants/states';
-import { createOrUpdatePersonaIntegration } from '.';
-import { MarqetaKYCStatus, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
-import { daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
 import { IKarmaCardUpdateData, IKarmaCardDeclinedEmailData } from '../../services/email/types';
 import { isUserDocument } from '../../services/user/utils';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/types';

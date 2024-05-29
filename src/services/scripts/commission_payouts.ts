@@ -12,6 +12,7 @@ import { IAddKarmaCommissionToUserRequestParams, addCashbackToUser } from '../co
 import { PromoModel } from '../../models/promo';
 import { PaypalClient, ISendPayoutBatchItem, ISendPayoutBatchHeader } from '../../clients/paypal';
 import { getUtcDate } from '../../lib/date';
+import { MerchantModel } from '../../models/merchant';
 
 export const generatePayoutSummaryForPeriod = async (min: number, endDate?: Date, startDate?: Date) => {
   if (!endDate) endDate = new Date();
@@ -308,4 +309,67 @@ export const resendFailedPayoutsonCommissionOverview = async (commissionOverview
   } catch (err: any) {
     throw new Error(err);
   }
+};
+
+export const generateListOfUnpaidCommissions = async () => {
+  const dataForCSV = [];
+
+  const unpaidCommissions = await CommissionModel.find({
+    status: {
+      $nin: [KarmaCommissionStatus.PaidToUser, KarmaCommissionStatus.Canceled],
+    },
+    populate: ['user', 'merchant'],
+  });
+
+  for (const commission of unpaidCommissions) {
+    const user = await UserModel.findById(commission.user);
+    const merchant = await MerchantModel.findById(commission.merchant);
+    console.log('[+] Review Commission for user', user?.name);
+
+    dataForCSV.push({
+      lastStatusUpdate: commission?.lastStatusUpdate || 'N/A',
+      commissionId: commission?._id || 'N/A',
+      user: user?.name || 'N/A',
+      userId: user?._id || 'N/A',
+      amount: commission?.allocation?.user || 'N/A',
+      status: commission?.status || 'N/A',
+      merchant: merchant?.name || 'N/A',
+      wildfireStatus: commission?.integrations?.wildfire ? commission.integrations?.wildfire?.Status : 'N/A',
+      hasKarmaWalletCard: !!user?.integrations?.marqeta,
+      hasPaypal: !!user?.integrations?.paypal,
+    });
+  }
+
+  const _csv = parse(dataForCSV);
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'unpaidCommissions.csv'), _csv);
+};
+
+export const getAllNegativeCommissions = async () => {
+  const dataForCSV = [];
+
+  const negativeCommissions = await CommissionModel.find({
+    'allocation.user': { $lt: 0 },
+  });
+
+  for (const commission of negativeCommissions) {
+    const user = await UserModel.findById(commission.user);
+    if (!user) {
+      console.log('[+] User not found for commission', commission._id);
+      continue;
+    }
+    dataForCSV.push({
+      user: user?.name || 'N/A',
+      userId: user?._id || 'N/A',
+      email: user?.emails.filter(e => !!e.primary)[0]?.email || 'N/A',
+      amount: commission?.allocation?.user || 'N/A',
+      status: commission?.status || 'N/A',
+      date: commission?.createdOn || 'N/A',
+      merchant: commission?.merchant || 'N/A',
+      wildfireStatus: commission?.integrations?.wildfire ? commission.integrations?.wildfire?.Status : 'N/A',
+      hasKarmaWalletCard: !!user?.integrations?.marqeta,
+    });
+  }
+
+  const _csv = parse(dataForCSV);
+  fs.writeFileSync(path.join(__dirname, '.tmp', 'negativeCommissions.csv'), _csv);
 };

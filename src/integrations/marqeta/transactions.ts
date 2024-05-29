@@ -710,6 +710,7 @@ export const handleTransactionNotifications = async (transactions: ITransactionD
   await Promise.all(
     transactions.map(async (t) => {
       try {
+        console.log('///// received processed transaction', JSON.stringify(t));
         switch (t.type) {
           case TransactionTypeEnum.Credit:
             handleCreditNotification(t);

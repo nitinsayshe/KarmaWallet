@@ -4,13 +4,13 @@ import {
   Model,
 } from 'mongoose';
 import { IModel } from '../../types/model';
-import { IUserSubscription, IUserSubscriptionDocument } from './types';
+import { IUserProductSubscription, IUserProductSubscriptionDocument } from './types';
 import { getUtcDate } from '../../lib/date';
 
-export type IUserSubscriptionModel = IModel<IUserSubscription>;
+export type IUserProductSubscriptionModel = IModel<IUserProductSubscription>;
 
-const UserSubscriptionSchema = new Schema({
-  userId: {
+const UserProductSubscriptionSchema = new Schema({
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,
@@ -19,18 +19,19 @@ const UserSubscriptionSchema = new Schema({
   lastModified: { type: Date, default: getUtcDate().toDate() },
   expirationDate: { type: Date, required: true },
   lastBilledDate: { type: Date, required: true },
+  nextBillingDate: { type: Date, required: true },
   status: { type: String, required: true },
-  subscription: {
+  productSubscription: {
     type: Schema.Types.ObjectId,
-    ref: 'subscription',
+    ref: 'product_subscription',
     required: true,
   },
   // not sure what all we will have here just yet
   integrations: {
     stripe: {
-      productId: { type: String, required: true },
+      type: Schema.Types.Mixed,
     },
   },
 });
 
-export const UserSubscriptionModel = model<IUserSubscriptionDocument, Model<IUserSubscription>>('user_subscription', UserSubscriptionSchema);
+export const UserProductSubscriptionModel = model<IUserProductSubscriptionDocument, Model<IUserProductSubscription>>('user_product_subscription', UserProductSubscriptionSchema);

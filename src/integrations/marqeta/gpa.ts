@@ -21,7 +21,7 @@ export const fundUserGPAFromProgramFundingSource = async (params: IMarqetaLoadGp
   const programFundingResponse = await gpa.getProgramFundingBalance();
 
   if (process.env.MARQETA_APPLICATION_TOKEN === 'immxmgr_prod_api_consumer' && programFundingResponse?.available_balance < minimumBalance) {
-    throw new CustomError('Program funding source balance is not enough to make a cashBack !', ErrorTypes.UNPROCESSABLE);
+    throw new CustomError('Program funding source balance is not enough to make a deposit!', ErrorTypes.UNPROCESSABLE);
   }
   // find the user in DB
   const userData = await UserModel.findById(userId);

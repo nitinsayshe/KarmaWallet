@@ -1,4 +1,4 @@
-import { StateAbbreviationEnumValues } from '../../lib/constants';
+import { StateAbbreviationEnumValues } from "../../lib/constants/states";
 
 export enum RewardType {
   'CARDLINKED' = 'CARDLINKED',

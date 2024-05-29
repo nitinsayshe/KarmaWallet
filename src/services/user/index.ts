@@ -4,7 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact, updateContactEmail, updateCustomFields } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail, updateCustomFields, syncUserAddressFields } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { closeMarqetaAccount, getMarqetaUser, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
@@ -58,6 +58,7 @@ import { removeFromGroup } from '../groups';
 import { executeOrderKarmaWalletCardsJob } from '../card/utils';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { getStateFromZipcode } from '../utilities';
 import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
 import * as UserServiceTypes from './types';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
@@ -443,6 +444,8 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
     await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
+
+  const email = requestor?.emails?.find((e) => e?.primary)?.email;
   const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
@@ -456,6 +459,13 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
       case 'zipcode':
         requestor.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
+        // sync with active campaign
+        if (email) {
+          await syncUserAddressFields(email, {
+            zipcode: updates.zipcode,
+            state: getStateFromZipcode(updates.zipcode),
+          });
+        }
         break;
       case 'integrations':
         // update the address data in marqeta and km Db
@@ -652,6 +662,7 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
 
 export const formatMarqetaClosedEmail = (email: string) => {
   if (!email) return '';
+
   const emailParts = email.split('@');
   return `${emailParts[0]}+closed@${emailParts[1]}`;
 };
@@ -668,6 +679,11 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IUserDocument | IVisitorDocument> => {
   try {
+    if (entity?.integrations?.marqeta?.email.includes('+closed')) {
+      console.log('Marqeta email already closed, skipping');
+      return entity;
+    }
+
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);

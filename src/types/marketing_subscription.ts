@@ -28,6 +28,7 @@ export enum ActiveCampaignListId {
   InternalTestGroup = '13',
   MonthyNewsletters = '2', // "Monthly Newsletters" will be the non-users who sign up via the footer
   Q2Payout = '14',
+  DoneGood = '25',
 }
 
 export enum MarketingSubscriptionCode {
@@ -48,4 +49,5 @@ export enum MarketingSubscriptionCode {
   internalTestGroup = 'internalTestGroup',
   monthlyNewsletters = 'monthlyNewsletters',
   q2Payout = 'q2Payout',
+  doneGood = 'doneGood',
 }

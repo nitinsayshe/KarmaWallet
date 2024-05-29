@@ -19,6 +19,7 @@ export const MarketingSubscriptionCodeToProviderProductId = {
   [MarketingSubscriptionCode.internalTestGroup]: ActiveCampaignListId.InternalTestGroup,
   [MarketingSubscriptionCode.monthlyNewsletters]: ActiveCampaignListId.MonthyNewsletters,
   [MarketingSubscriptionCode.q2Payout]: ActiveCampaignListId.Q2Payout,
+  [MarketingSubscriptionCode.doneGood]: ActiveCampaignListId.DoneGood,
 };
 
 export const ProviderProductIdToMarketingSubscriptionCode = {
@@ -35,6 +36,7 @@ export const ProviderProductIdToMarketingSubscriptionCode = {
   [ActiveCampaignListId.InternalTestGroup]: MarketingSubscriptionCode.internalTestGroup,
   [ActiveCampaignListId.MonthyNewsletters]: MarketingSubscriptionCode.monthlyNewsletters,
   [ActiveCampaignListId.Q2Payout]: MarketingSubscriptionCode.q2Payout,
+  [ActiveCampaignListId.DoneGood]: MarketingSubscriptionCode.doneGood,
 };
 
 export const InterestCategoryToMarketingSubscriptionCode = {

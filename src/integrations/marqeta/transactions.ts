@@ -710,13 +710,11 @@ export const handleTransactionNotifications = async (transactions: ITransactionD
   await Promise.all(
     transactions.map(async (t) => {
       try {
-        console.log('///// received processed transaction', JSON.stringify(t));
         switch (t.type) {
           case TransactionTypeEnum.Credit:
             handleCreditNotification(t);
             break;
           case TransactionTypeEnum.Debit:
-            console.log('///// processing a Marqeta debit transaction');
             handleDebitNotification(t);
             break;
           case TransactionTypeEnum.Deposit:

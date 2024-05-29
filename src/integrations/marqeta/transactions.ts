@@ -715,6 +715,7 @@ export const handleTransactionNotifications = async (transactions: ITransactionD
             handleCreditNotification(t);
             break;
           case TransactionTypeEnum.Debit:
+            console.log('///// processing a Marqeta debit transaction');
             handleDebitNotification(t);
             break;
           case TransactionTypeEnum.Deposit:

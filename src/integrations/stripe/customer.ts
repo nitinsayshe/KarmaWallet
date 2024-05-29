@@ -3,13 +3,9 @@ import { StripeClient } from '../../clients/stripe/stripeClient';
 import { Customer } from '../../clients/stripe/customer';
 import { IUserDocument, UserModel } from '../../models/user';
 
-// Instantiate the MarqetaClient
-const stripeClient = new StripeClient();
-
-// Instantiate the User class
-const customerClient = new Customer(stripeClient);
-
 export const createStripeCustomer = async (email: string, name: string) => {
+  const stripeClient = new StripeClient();
+  const customerClient = new Customer(stripeClient);
   const response = await customerClient.createCustomer(email, name);
   return response;
 };

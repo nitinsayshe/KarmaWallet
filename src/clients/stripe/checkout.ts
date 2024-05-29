@@ -16,4 +16,12 @@ export class Checkout {
       throw asCustomError(e);
     }
   }
+
+  async retrieveCheckoutSession(checkoutSessionId: string) {
+    try {
+      return this._stripeClient._client.checkout.sessions.retrieve(checkoutSessionId);
+    } catch (e) {
+      throw asCustomError(e);
+    }
+  }
 }

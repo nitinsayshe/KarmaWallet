@@ -5,28 +5,30 @@ import { ProductSubscriptionStatus, ProductSubscriptionType } from '../../models
 import { createProductSubscription, updateProductSubscription } from '../../services/productSubscription';
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 
-// Instantiate the MarqetaClient
-const stripeClient = new StripeClient();
-
-// Instantiate the User class
-const productClient = new Product(stripeClient);
-
 export const createProduct = async (params: Stripe.ProductCreateParams) => {
+  const stripeClient = new StripeClient();
+  const productClient = new Product(stripeClient);
   const response = await productClient.createProduct(params);
   return response;
 };
 
 export const updateProduct = async (productId: string, params: Stripe.ProductUpdateParams) => {
+  const stripeClient = new StripeClient();
+  const productClient = new Product(stripeClient);
   const response = await productClient.updateProduct(productId, params);
   return response;
 };
 
 export const listProducts = async (numberToList?: number) => {
+  const stripeClient = new StripeClient();
+  const productClient = new Product(stripeClient);
   const response = await productClient.listProducts(numberToList || null);
   return response;
 };
 
 export const getPrice = async (priceId: string) => {
+  const stripeClient = new StripeClient();
+  const productClient = new Product(stripeClient);
   const response = await productClient.getPrice(priceId);
   return response;
 };

@@ -19,11 +19,6 @@ const InvoiceSchema = new Schema({
     ref: 'user',
     required: true,
   },
-  subscription: {
-    type: Schema.Types.ObjectId,
-    ref: 'subscription',
-    required: true,
-  },
   createdOn: { type: Date, default: getUtcDate().toDate() },
   lastModified: { type: Date, default: getUtcDate().toDate() },
   // not sure what all we will have here just yet

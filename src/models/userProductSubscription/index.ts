@@ -10,7 +10,7 @@ import { getUtcDate } from '../../lib/date';
 export type IUserProductSubscriptionModel = IModel<IUserProductSubscription>;
 
 const UserProductSubscriptionSchema = new Schema({
-  userId: {
+  user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
     required: true,
@@ -19,16 +19,17 @@ const UserProductSubscriptionSchema = new Schema({
   lastModified: { type: Date, default: getUtcDate().toDate() },
   expirationDate: { type: Date, required: true },
   lastBilledDate: { type: Date, required: true },
+  nextBillingDate: { type: Date, required: true },
   status: { type: String, required: true },
-  subscription: {
+  productSubscription: {
     type: Schema.Types.ObjectId,
-    ref: 'subscription',
+    ref: 'product_subscription',
     required: true,
   },
   // not sure what all we will have here just yet
   integrations: {
     stripe: {
-      productId: { type: String, required: true },
+      type: Schema.Types.Mixed,
     },
   },
 });

@@ -29,8 +29,4 @@ export class StripeClient extends SdkClient {
       throw asCustomError(e);
     }
   }
-
-  async getProducts() {
-    return this._client.products.list();
-  }
 }

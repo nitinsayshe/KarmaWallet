@@ -1,6 +1,8 @@
 import Stripe from 'stripe';
 import { updateOrCreateProductSubscriptionFromStripeProduct } from './product';
 import { addStripeIntegrationToUser, updateStripeIntegrationForUser } from './customer';
+import { createInvoiceFromStripeInvoice, updateInvoiceFromStripeInvoice } from './invoice';
+import { createUserProductSubscriptionFromStripeSubscription } from './subscription';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
   console.log('///// event', event);
@@ -9,23 +11,60 @@ export const handleCheckoutEvent = async (event: Stripe.Event) => {
 export const handleCustomerEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
-  if (type === 'customer.created') {
-    await addStripeIntegrationToUser(event.data.object);
-    // create a new user
-  }
-
-  if (type === 'customer.updated') {
-    await updateStripeIntegrationForUser(event.data.object);
-    // update the user
-  }
-
-  if (type === 'customer.subscription.created') {
-    // create a subscription for the user
+  switch (type) {
+    case 'customer.created':
+      await addStripeIntegrationToUser(event.data.object);
+      break;
+    case 'customer.updated':
+      await updateStripeIntegrationForUser(event.data.object);
+      break;
+    case 'customer.subscription.created':
+      // create a subscription for the user
+      break;
+    default:
+      break;
   }
 };
 
 export const handleInvoiceEvent = async (event: Stripe.Event) => {
-  console.log('///// event', event);
+  const { type } = event;
+
+  switch (type) {
+    case 'invoice.created':
+      createInvoiceFromStripeInvoice(event.data);
+      // create an invoice for the user
+      break;
+    case 'invoice.finalized':
+      updateInvoiceFromStripeInvoice(event.data);
+      // finalize the invoice
+      break;
+    case 'invoice.paid':
+      updateInvoiceFromStripeInvoice(event.data);
+      // update the invoice to paid
+      break;
+    case 'invoice.updated':
+      updateInvoiceFromStripeInvoice(event.data);
+      // update the invoice
+      break;
+    case 'invoice.payment_failed':
+      updateInvoiceFromStripeInvoice(event.data);
+      // update the invoice to failed
+      break;
+    case 'invoice.payment_succeeded':
+      updateInvoiceFromStripeInvoice(event.data);
+      // update the invoice to paid
+      break;
+    case 'invoice.marked_uncollectible':
+      updateInvoiceFromStripeInvoice(event.data);
+      // update the invoice to uncollectible
+      break;
+    case 'invoice.deleted':
+      updateInvoiceFromStripeInvoice(event.data);
+      // delete the invoice in our database
+      break;
+    default:
+      break;
+  }
 };
 
 export const handlePaymentIntentEvent = async (event: Stripe.Event) => {
@@ -52,12 +91,19 @@ export const handleProductEvent = async (event: Stripe.Event) => {
   }
 };
 
-export const handlePaymentLinkEvent = async (event: Stripe.Event) => {
+export const handleSubscriptionEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
   switch (type) {
-    case 'payment_link.created':
-      // does not seem to be linked to a product, not sure how we associate this to a subscription/product in our db
+    case 'customer.subscription.created':
+      await createUserProductSubscriptionFromStripeSubscription(event.data);
+      // create a subscription for the user
+      break;
+    case 'customer.subscription.updated':
+      // update the subscription for the user
+      break;
+    case 'customer.subscription.deleted':
+      // delete the subscription for the user
       break;
     default:
       break;
@@ -73,7 +119,7 @@ export const processStripeWebhookEvent = async (event: Stripe.Event) => {
   if (type.includes('invoice')) handleInvoiceEvent(event);
   if (type.includes('payment_intent')) handlePaymentIntentEvent(event);
   if (type.includes('product')) handleProductEvent(event);
-  if (type.includes('payment_link')) handlePaymentLinkEvent(event);
+  if (type.includes('customer.subscription')) handleSubscriptionEvent(event);
 };
 
 // EVENTS SENT WHEN SUCCESSFULLY PAYING THE STRIPE PAYMENT LINK

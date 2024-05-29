@@ -499,8 +499,6 @@ export const handleStripeWebhook: IRequestHandler<{}, {}, string | Buffer> = asy
   try {
     const stripeClient = new StripeClient();
     console.log('////// Processing Stripe webhook //////');
-    console.log('stripe client', stripeClient);
-    console.log('req.body', req.body);
     const event = await stripeClient.createEventAndVerifyWebhook(req.rawBody, req.headers['stripe-signature']);
     await WebhookModel.create({ provider: WebhookProviders.Stripe, body: req.body, event: event.data });
     console.log('////// Stripe webhook processed successfully //////');

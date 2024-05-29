@@ -29,6 +29,14 @@ export const getTransactionData = (transaction: ITransaction) => {
       transactionData.descriptionText = 'Cashback Deposit';
     }
 
+    if (subType === TransactionSubtypeEnum.ProgramCredit) {
+      if (transaction.integrations.marqeta.gpa_order.memo) {
+        transactionData.descriptionText = transaction.integrations.marqeta.gpa_order.memo;
+      } else {
+        transactionData.descriptionText = 'Courtesy Credit from Karma Wallet';
+      }
+    }
+
     if (subType === TransactionSubtypeEnum.Employer) {
       transactionData.descriptionText = 'Employer Gift';
     }
@@ -89,7 +97,7 @@ export const getTransactionData = (transaction: ITransaction) => {
 
 export const getTypeText = (transaction: ITransaction) => {
   if (transaction.type === TransactionTypeEnum.Credit) {
-    if (transaction.subType === TransactionSubtypeEnum.Cashback || transaction.subType === TransactionSubtypeEnum.Employer) {
+    if (transaction.subType === TransactionSubtypeEnum.Cashback || transaction.subType === TransactionSubtypeEnum.Employer || transaction.subType === TransactionSubtypeEnum.ProgramCredit) {
       return 'Credit';
     }
 

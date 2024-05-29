@@ -33,4 +33,7 @@ router.route('/manual-matches')
 router.route('/matched-companies')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin, UserRoles.Admin] }), TransactionController.getMatchedCompanies);
 
+router.route('/gpa-deposits')
+  .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin, UserRoles.Admin] }), TransactionController.createGPADeposits);
+
 export default router;

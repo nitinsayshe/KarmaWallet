@@ -68,6 +68,11 @@ export interface UserSubscriptions {
 
 export type CustomFieldSetter = (userId: string, customFields: FieldIds, fieldValues?: FieldValues) => Promise<FieldValues>;
 
+interface IAddressData {
+  zipcode: string;
+  state: string | boolean;
+}
+
 // duplicated code to avoid circular dependency
 const getShareableUserGroupFromUserGroupDocument = ({
   _id,
@@ -1010,5 +1015,47 @@ export const createContact = async (contact: ICreateContactData, client?: AxiosI
     return ac.createContact({ email: contact.email });
   } catch (err) {
     console.error('error creating contact', err);
+  }
+};
+
+export const syncUserAddressFields = async (
+  email: string,
+  address: IAddressData,
+  fieldValues?: FieldValues,
+  client?: AxiosInstance,
+) => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    const customFields = await ac.getCustomFieldIDs();
+    if (!fieldValues) {
+      fieldValues = [];
+    }
+
+    let customField = customFields.find(
+      (field) => field.name === ActiveCampaignCustomFields.userZipcode,
+    );
+    if (!!customField) {
+      fieldValues.push({ id: customField.id, value: address.zipcode });
+    }
+
+    customField = customFields.find(
+      (field) => field.name === ActiveCampaignCustomFields.userState,
+    );
+    if (!!customField) {
+      fieldValues.push({ id: customField.id, value: address.state.toString() });
+    }
+
+    const contacts = [
+      {
+        email,
+        fields: fieldValues,
+      },
+    ];
+
+    await ac.importContacts({ contacts });
+  } catch (err) {
+    console.log(err);
   }
 };

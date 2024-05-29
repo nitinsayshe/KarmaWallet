@@ -256,15 +256,15 @@ export const updateUserVisitorModelWithMarqetaUserData = async (existingUser: IV
         state: newUserDataFromMarqeta.state,
         country: newUserDataFromMarqeta.country,
         postal_code: newUserDataFromMarqeta.postal_code,
-        account_holder_group_token: existingUser.integrations.marqeta.account_holder_group_token,
-        identifications: existingUser.integrations.marqeta.identifications,
-        status: newUserDataFromMarqeta.status,
-        created_time: newUserDataFromMarqeta.created_time,
+        phone: newUserDataFromMarqeta?.phone || '',
+        account_holder_group_token: existingUser.integrations?.marqeta?.account_holder_group_token || newUserDataFromMarqeta?.account_holder_group_token,
+        identifications: existingUser?.integrations?.marqeta?.identifications || null,
+        status: newUserDataFromMarqeta?.status,
+        created_time: newUserDataFromMarqeta?.created_time,
       },
     };
 
     if (!!newUserDataFromMarqeta.address2) userDataToSet.address2 = newUserDataFromMarqeta.address2;
-    if (!!newUserDataFromMarqeta.phone) userDataToSet.phone_number = newUserDataFromMarqeta.phone;
 
     existingUser.set(userDataToSet);
     return existingUser.save();
@@ -300,8 +300,8 @@ export const marqetaUserSync = async () => {
   if (!marqetaUsers?.length) throw new Error('error retrieving marqeta users');
 
   for (const marqetaUser of marqetaUsers) {
-    const existingUser = usersWithMarqetaIntegration.find((u) => u.integrations.marqeta.userToken === marqetaUser.token);
-    const existingVisitor = visitorsWithMarqetaIntegration.find((v) => v.integrations.marqeta.userToken === marqetaUser.token);
+    const existingUser = usersWithMarqetaIntegration.find((u) => u.integrations?.marqeta?.userToken === marqetaUser.token);
+    const existingVisitor = visitorsWithMarqetaIntegration.find((v) => v?.integrations?.marqeta?.userToken === marqetaUser.token);
 
     if (!!existingUser) {
       userCount += 1;
@@ -309,7 +309,7 @@ export const marqetaUserSync = async () => {
       await executeMarqetaUserUpdates(existingUser, marqetaUser);
     } else if (!!existingVisitor) {
       visitorCount += 1;
-      console.log(`[+] Updating visitor ${existingUser._id} with data from Marqeta`);
+      console.log(`[+] Updating visitor ${existingVisitor._id} with data from Marqeta`);
       await executeMarqetaUserUpdates(existingVisitor, marqetaUser);
     }
   }

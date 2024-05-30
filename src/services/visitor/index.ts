@@ -8,14 +8,14 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { ISubscription, SubscriptionModel } from '../../models/subscription';
 import { IUserDocument, UserModel } from '../../models/user';
-import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { IMarqetaVisitorData, IVisitorAction, IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, SubscriptionCode, SubscriptionStatus } from '../../types/subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
 import * as TokenService from '../token';
 import { IUrlParam, IVerifyTokenBody } from '../user/types';
-import { IComplyAdvantageIntegration } from '../../integrations/complyAdvantage/types';
 import { updateVisitorUrlParams } from '../user';
+import { IPersonaIntegration } from '../../integrations/persona/types';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -36,7 +36,8 @@ export interface ICreateAccountRequest extends IVisitorSignupData {
   xTypeParam?: string;
   trackingId?: string;
   marqeta?: IMarqetaVisitorData;
-  complyAdvantage?: IComplyAdvantageIntegration;
+  persona?: IPersonaIntegration;
+  actions?: IVisitorAction[];
 }
 
 const getUserByEmail = async (email: string): Promise<IUserDocument> => {
@@ -114,8 +115,8 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
       if (!!info.params) {
         if (!visitorInfo.integrations) visitorInfo.integrations = {};
         visitorInfo.integrations.urlParams = info.params;
-        if (info.params.find(p => p.key === 'groupCode')) {
-          visitorInfo.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
+        if (info.params.find((p) => p.key === 'groupCode')) {
+          visitorInfo.integrations.groupCode = info.params.find((p) => p.key === 'groupCode')?.value;
         }
       }
       // shareasale
@@ -134,7 +135,10 @@ export const createCreateAccountVisitor = async (info: ICreateAccountRequest): P
   }
 };
 
-export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info: ICreateAccountRequest): Promise<IVisitorDocument> => {
+export const updateCreateAccountVisitor = async (
+  visitor: IVisitorDocument,
+  info: ICreateAccountRequest,
+): Promise<IVisitorDocument> => {
   try {
     if (!visitor.integrations) visitor.integrations = {};
     if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
@@ -142,12 +146,16 @@ export const updateCreateAccountVisitor = async (visitor: IVisitorDocument, info
     if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
     if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
     if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
-    if (!!info.complyAdvantage) visitor.integrations.complyAdvantage = info.complyAdvantage;
+    if (!!info.persona) visitor.integrations.persona = info.persona;
     if (!!info.params) {
       await updateVisitorUrlParams(visitor, info.params);
-      if (info.params.find(p => p.key === 'groupCode')) {
-        visitor.integrations.groupCode = info.params.find(p => p.key === 'groupCode')?.value;
+      if (info.params.find((p) => p.key === 'groupCode')) {
+        visitor.integrations.groupCode = info.params.find((p) => p.key === 'groupCode')?.value;
       }
+    }
+    if (!!info.actions && info.actions.length) {
+      const visitorActionsExistAndHasActions = !!visitor.actions && visitor.actions.length > 0;
+      visitor.actions = visitorActionsExistAndHasActions ? [...visitor.actions, ...info.actions] : info.actions;
     }
     await visitor.save();
     return visitor;
@@ -188,14 +196,9 @@ const createSubscription = async (subscription: Partial<ISubscription>): Promise
 export const getQueryFromSubscriptionCodes = (visitorId: string, codes: SubscriptionCode[]): FilterQuery<ISubscription> => {
   const query: FilterQuery<ISubscription> = { $or: [] };
   codes.forEach((code) => {
-    query.$or.push(
-      {
-        $and: [
-          { visitor: visitorId },
-          { code },
-        ],
-      },
-    );
+    query.$or.push({
+      $and: [{ visitor: visitorId }, { code }],
+    });
   });
   return query;
 };
@@ -224,9 +227,14 @@ export const createAccountForm = async (_: IRequest, data: ICreateAccountRequest
   if (!!visitor) {
     try {
       await sendAccountCreationEmail(visitor, email);
-      return { message: 'An email has been sent to your provided email address. Please follow the instructions to complete your account creation.' };
+      return {
+        message: 'An email has been sent to your provided email address. Please follow the instructions to complete your account creation.',
+      };
     } catch (err) {
-      throw new CustomError('Error sending email to validate account. Please try again or reach out to support@theimpactkarma.com', ErrorTypes.SERVER);
+      throw new CustomError(
+        'Error sending email to validate account. Please try again or reach out to support@theimpactkarma.com',
+        ErrorTypes.SERVER,
+      );
     }
   }
 };
@@ -284,7 +292,12 @@ export const newsletterSignup = async (_: IRequest, email: string, subscriptionC
     // log this subscription in the db
     const subscriptions = await createSubscriptions(
       subscriptionCodes.map((c) => {
-        const sub: Partial<ISubscription> = { visitor: visitor._id, code: c, status: SubscriptionStatus.Active, lastModified: getUtcDate().toDate() };
+        const sub: Partial<ISubscription> = {
+          visitor: visitor._id,
+          code: c,
+          status: SubscriptionStatus.Active,
+          lastModified: getUtcDate().toDate(),
+        };
         return sub;
       }),
     );
@@ -343,19 +356,14 @@ export const submitInterestForm = async (_: IRequest, data: HubspotIntegration.I
       throw new Error('Error creating visitor');
     }
 
-    const previousSubscription = await getSubscriptionByQuery(
-      {
-        $and: [
-          {
-            $or: [
-              { visitor: visitor?._id },
-              { user: user?._id },
-            ],
-          },
-          { code },
-        ],
-      },
-    );
+    const previousSubscription = await getSubscriptionByQuery({
+      $and: [
+        {
+          $or: [{ visitor: visitor?._id }, { user: user?._id }],
+        },
+        { code },
+      ],
+    });
     if (!!previousSubscription) {
       throw new CustomError(shareableInterestFormSubmitError, ErrorTypes.GEN);
     }

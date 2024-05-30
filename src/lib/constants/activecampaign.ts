@@ -73,4 +73,6 @@ export enum ActiveCampaignCustomFields {
   collectiveNegativeImpact = 'collectiveNegativeImpact',
   collectiveNeutralImpact = 'collectiveNeutralImpact',
   membershipType = 'membershipType',
+  userZipcode = 'userZipcode',
+  userState = 'userState',
 }

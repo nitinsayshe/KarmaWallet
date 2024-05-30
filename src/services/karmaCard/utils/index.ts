@@ -1,4 +1,5 @@
 import puppeteer from 'puppeteer';
+import { FilterQuery, Types, PaginateResult } from 'mongoose';
 import { terminateMarqetaCards, listCards } from '../../../integrations/marqeta/card';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
 import { IGPABalanceResponse, IMarqetaKycState } from '../../../integrations/marqeta/types';
@@ -16,52 +17,47 @@ import { BankConnectionModel } from '../../../models/bankConnection';
 import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../../clients/marqeta/transactions';
 
-enum ResponseMessages {
-  APPROVED = 'Your Karma Wallet Card will be mailed to your address within 5-7 business days.',
-  NAME_ISSUE = 'Your application is pending due to an invalid or mismatched name.',
-  ADDRESS_ISSUE = 'Your application is pending due to a missing, invalid, or mismatched address or a PO Box issue. (PO Boxes are not a valid address for validation purposes)',
-  DATE_OF_BIRTH_ISSUE = 'Your application is pending due to an invalid or mismatched date of birth.',
-  SSN_ISSUE = 'Your application is pending due to a missing, invalid or mismatched Social Security Number (SSN).',
-  DECLINED = 'Your application has been declined.',
-}
+import { sleep } from '../../../lib/misc';
+import { IKarmaCardApplicationDocument, KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 
-export enum SolutionMessages {
-  NAME_OR_DOB_ISSUE = 'To proceed with your application, we kindly request that you submit one of the following unexpired government-issued photo identification items that shows name and date of birth to support@karmawallet.io within 10 days',
-  SSN_ISSUE = 'To proceed with your application, we kindly request that you submit a photo of one of the following items to support@karmawallet.io within 10 days',
-  ADDRESS_ISSUE = 'To proceed with your application, we kindly request you submit photos of two of the following documents showing your full name and address to support@karmawallet.io within 10 days',
-  CONTACT_SUPPORT = 'This outcome requires a manual review by Karma Wallet to determine the next appropriate steps. Contact support@karmawallet.io.',
-  ALREADY_REGISTERED = 'You already have a Karma Wallet Card. We currently only allow one Karma Wallet Card per account.',
-  FAILED_INTERNAL_KYC = 'Your application is pending, please submit two forms of the following identification to support@karmawallet.io.',
-}
+export type KarmaCardApplicationIterationRequest<FieldsType> = {
+  batchQuery: FilterQuery<IKarmaCardApplicationDocument>;
+  batchLimit: number;
+  fields?: FieldsType;
+};
 
-export const AcceptedDocuments = {
-  NAME_OR_DOB_ISSUE: [
-    'Unexpired government issued photo ID that has name and date of birth',
-    'Driver’s License or State Issued ID',
-    'Passport or US passport card',
-  ],
-  ADDRESS_ISSUE: [
-    'Unexpired state-issued driver’s license or identification card',
-    'US Military Identification Card',
-    'Utility bill (within past 60 days)',
-    'Bank statement (within past 60 days)',
-    'Current rental or lease agreement',
-    'Mortgage statement (within 6 months)',
-  ],
-  DateOfBirthIssue: ['Driver’s license or state-issued identification card', 'Passport or US passport card'],
-  FAILED_INTERNAL_KYC: [
-    "Driver's License or State Issued ID",
-    'Passport',
-    'Bank or Credit Card Statement: within 60 days',
-    'Utility Bill: within 60 days',
-    'Mortgage Statement: within 6 months',
-    'Lease Statement with current address',
-  ],
-  SSN_ISSUE: [
-    'Social Security Card',
-    'Recent W-2 or 1099 showing nine-digit SSN, full name, and address.',
-    'ITIN card or document showing ITIN approval',
-  ],
+export type KarmaCardApplicationIterationResponse<FieldsType> = {
+  applicationId: Types.ObjectId;
+  fields?: FieldsType;
+};
+
+export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
+  request: KarmaCardApplicationIterationRequest<ReqFieldsType>,
+  exec: (req: KarmaCardApplicationIterationRequest<ReqFieldsType>, visitorBatch: PaginateResult<IKarmaCardApplicationDocument>) => Promise<KarmaCardApplicationIterationResponse<ResFieldsType>[]>,
+  msDelayBetweenBatches: number,
+): Promise<KarmaCardApplicationIterationResponse<ResFieldsType>[]> => {
+  let report: KarmaCardApplicationIterationResponse<ResFieldsType>[] = [];
+
+  let page = 1;
+  let hasNextPage = true;
+  while (hasNextPage) {
+    const applicationBatch = await KarmaCardApplicationModel.paginate(request.batchQuery, {
+      page,
+      limit: request.batchLimit,
+    });
+
+    console.log('total applications matching query: ', applicationBatch.totalDocs);
+    const responses = await exec(request, applicationBatch);
+
+    console.log(`Prepared ${responses.length} visitor reports`);
+    report = report.concat(responses);
+
+    await sleep(msDelayBetweenBatches);
+
+    hasNextPage = applicationBatch?.hasNextPage || false;
+    page++;
+  }
+  return report;
 };
 
 export enum ReasonCode {
@@ -83,98 +79,52 @@ export enum ShareASaleXType {
 }
 
 interface PuppateerShareASaleParams {
-  sscid: string,
-  trackingid: string,
-  xtype: string,
-  sscidCreatedOn: string,
-}
-
-export interface ICreateKarmaCardApplicantData {
-  firstName: string;
-  lastName: string;
-  email: string;
-  ssn: string;
-  birthDate: string;
-  phone: string;
-  address1: string;
-  address2?: string;
-  city: string;
-  state: string;
-  country: string;
-  postalCode: string;
+  sscid: string;
+  trackingid: string;
+  xtype: string;
+  sscidCreatedOn: string;
 }
 
 interface TransformedResponse {
-  message: string;
   status: IMarqetaKycState;
   reason?: ReasonCode;
-  acceptedDocuments?: string[];
-  solutionText?: string;
+  internalKycTemplateId?: string;
   authkey?: string;
 }
 
-interface SourceResponse {
+export interface SourceResponse {
   userToken: string;
   email: string;
   kycResult: {
     status: string;
-    codes: ReasonCode;
+    codes: ReasonCode[];
   };
 }
 
-export const getShareableMarqetaUser = (sourceResponse: SourceResponse): TransformedResponse => {
-  const { kycResult } = sourceResponse;
+export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string };
 
-  const messages: Record<ReasonCode, string> = {
-    [ReasonCode.Approved]: ResponseMessages.APPROVED,
-    [ReasonCode.NameIssue]: ResponseMessages.NAME_ISSUE,
-    [ReasonCode.AddressIssue]: ResponseMessages.ADDRESS_ISSUE,
-    [ReasonCode.DateOfBirthIssue]: ResponseMessages.DATE_OF_BIRTH_ISSUE,
-    [ReasonCode.SSNIssue]: ResponseMessages.SSN_ISSUE,
-    [ReasonCode.RiskIssue]: ResponseMessages.DECLINED,
-    [ReasonCode.NoRecordFound]: ResponseMessages.DECLINED,
-    [ReasonCode.Denied_KYC]: ResponseMessages.DECLINED,
-    [ReasonCode.FailedInternalKyc]: ResponseMessages.DECLINED,
-    [ReasonCode.OFACFailure]: ResponseMessages.DECLINED,
-    [ReasonCode.Already_Registered]: ResponseMessages.DECLINED,
-  };
+export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
+  if (!res) return;
 
-  const solutionText: Record<ReasonCode, string> = {
-    [ReasonCode.Approved]: null,
-    [ReasonCode.NameIssue]: SolutionMessages.NAME_OR_DOB_ISSUE,
-    [ReasonCode.AddressIssue]: SolutionMessages.ADDRESS_ISSUE,
-    [ReasonCode.DateOfBirthIssue]: SolutionMessages.NAME_OR_DOB_ISSUE,
-    [ReasonCode.SSNIssue]: SolutionMessages.SSN_ISSUE,
-    [ReasonCode.RiskIssue]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.NoRecordFound]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.Denied_KYC]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.FailedInternalKyc]: SolutionMessages.FAILED_INTERNAL_KYC,
-    [ReasonCode.OFACFailure]: SolutionMessages.CONTACT_SUPPORT,
-    [ReasonCode.Already_Registered]: SolutionMessages.ALREADY_REGISTERED,
-  };
+  const { internalKycTemplateId, kycResult } = res;
 
-  const acceptedDocuments: Record<ReasonCode, string[]> = {
-    [ReasonCode.Approved]: null,
-    [ReasonCode.NameIssue]: AcceptedDocuments.NAME_OR_DOB_ISSUE,
-    [ReasonCode.AddressIssue]: AcceptedDocuments.ADDRESS_ISSUE,
-    [ReasonCode.DateOfBirthIssue]: AcceptedDocuments.NAME_OR_DOB_ISSUE,
-    [ReasonCode.SSNIssue]: AcceptedDocuments.SSN_ISSUE,
-    [ReasonCode.RiskIssue]: null,
-    [ReasonCode.NoRecordFound]: null,
-    [ReasonCode.Denied_KYC]: null,
-    [ReasonCode.FailedInternalKyc]: AcceptedDocuments.FAILED_INTERNAL_KYC,
-    [ReasonCode.OFACFailure]: null,
-    [ReasonCode.Already_Registered]: null,
-  };
+  // send the marqeta failure code over the internal kyc failure code since that indicates a more severe issue
+  let reasonCode: ReasonCode;
+  if (kycResult?.codes?.length > 1) {
+    if (kycResult.codes.includes(ReasonCode.Approved)) {
+      reasonCode = kycResult.codes.find((code: ReasonCode) => code !== ReasonCode.Approved);
+    } else if (kycResult.codes.includes(ReasonCode.FailedInternalKyc)) {
+      reasonCode = kycResult.codes.find((code: ReasonCode) => code !== ReasonCode.FailedInternalKyc);
+    }
+  } else {
+    reasonCode = kycResult?.codes?.[0];
+  }
 
   const transformed: TransformedResponse = {
     status: (kycResult?.status as IMarqetaKycState) || IMarqetaKycState.failure,
-    reason: kycResult.codes[0] as ReasonCode,
-    message: messages[kycResult.codes[0] as ReasonCode],
+    reason: reasonCode,
+    internalKycTemplateId,
   };
-
-  if (solutionText[kycResult.codes[0] as ReasonCode]) transformed.solutionText = solutionText[kycResult.codes[0] as ReasonCode];
-  if (acceptedDocuments[kycResult.codes[0] as ReasonCode]) transformed.acceptedDocuments = acceptedDocuments[kycResult.codes[0] as ReasonCode];
 
   return transformed;
 };
@@ -339,19 +289,23 @@ export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerS
   await page.goto('https://www.karmawallet.io/');
   await page.setCookie({ name: 'sas_m_awin', value: `{"clickId": "${sscid}"}` });
 
-  await page.evaluate((trackingID = trackingid, xType = xtype) => {
-    const img = document.createElement('img');
-    img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=sale&xType=${xType}`;
-    img.width = 1;
-    img.height = 1;
-    document.body.appendChild(img);
+  await page.evaluate(
+    (trackingID = trackingid, xType = xtype) => {
+      const img = document.createElement('img');
+      img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=sale&xType=${xType}`;
+      img.width = 1;
+      img.height = 1;
+      document.body.appendChild(img);
 
-    const script = document.createElement('script');
-    script.src = 'https://www.dwin1.com/19038.js';
-    script.type = 'text/javascript';
-    script.defer = true;
-    document.body.appendChild(script);
-  }, trackingid, xtype);
+      const script = document.createElement('script');
+      script.src = 'https://www.dwin1.com/19038.js';
+      script.type = 'text/javascript';
+      script.defer = true;
+      document.body.appendChild(script);
+    },
+    trackingid,
+    xtype,
+  );
 
   // close the browser after 2 seconds with set timeout to allow the page to load. Look into using a better approach?
   setTimeout(async () => {

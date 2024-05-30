@@ -4,7 +4,7 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
 import * as KardService from '../../integrations/kard';
-import { ErrorTypes, StateAbbreviationEnum } from '../../lib/constants';
+import { ErrorTypes } from '../../lib/constants';
 import {
   formatZodFieldErrors,
   getShareableFieldErrors,
@@ -19,6 +19,7 @@ import {
   OfferSource,
   PaginationFields,
 } from '../../clients/kard/types';
+import { StateAbbreviationEnum } from '../../lib/constants/states';
 
 export const zodGetLocationsValidationSchema = z.object({
   page: z.number().int().gte(0).optional(),

@@ -2,7 +2,6 @@ import { sendPushNotification } from '../../integrations/firebaseCloudMessaging'
 import { ErrorTypes } from '../../lib/constants';
 import { NotificationChannelEnum, NotificationEffectsEnum, NotificationEffectsEnumValue } from '../../lib/constants/notification';
 import CustomError from '../../lib/customError';
-import { IUserDocument } from '../../models/user';
 import {
   IBankLinkedConfirmationEmailData,
   ICardShippedNotificationData,
@@ -16,15 +15,35 @@ import {
   IProvisialCreditIssuedData,
   IPushNotificationData,
 } from '../../models/user_notification';
-import { IVisitorDocument } from '../../models/visitor';
-import { sendEarnedCashbackRewardEmail, sendCashbackPayoutEmail, sendCaseWonProvisionalCreditAlreadyIssuedEmail, sendACHInitiationEmail, sendNoChargebackRightsEmail, sendCaseLostProvisionalCreditAlreadyIssuedEmail, sendKarmaCardWelcomeEmail, sendProvisionalCreditIssuedEmail, sendBankLinkedConfirmationEmail, sendCaseWonProvisionalCreditNotAlreadyIssuedEmail, sendCardShippedEmail, sendDisputeReceivedNoProvisionalCreditIssuedEmail, sendCaseLostProvisionalCreditNotAlreadyIssuedEmail, sendEmployerGiftEmail, sendACHCancelledEmail, sendACHReturnedEmail, sendKarmaCardDeclinedEmail } from '../email';
-import { IACHTransferEmailData, IDisputeEmailData, IKarmaCardDeclinedEmailData } from '../email/types';
-
-export interface IEffectFunctionParams {
-  user?: IUserDocument;
-  visitor?: IVisitorDocument;
-  data: any;
-}
+import {
+  sendEarnedCashbackRewardEmail,
+  sendCashbackPayoutEmail,
+  sendCaseWonProvisionalCreditAlreadyIssuedEmail,
+  sendACHInitiationEmail,
+  sendNoChargebackRightsEmail,
+  sendCaseLostProvisionalCreditAlreadyIssuedEmail,
+  sendKarmaCardWelcomeEmail,
+  sendProvisionalCreditIssuedEmail,
+  sendBankLinkedConfirmationEmail,
+  sendCaseWonProvisionalCreditNotAlreadyIssuedEmail,
+  sendCardShippedEmail,
+  sendDisputeReceivedNoProvisionalCreditIssuedEmail,
+  sendCaseLostProvisionalCreditNotAlreadyIssuedEmail,
+  sendEmployerGiftEmail,
+  sendACHCancelledEmail,
+  sendACHReturnedEmail,
+  sendKarmaCardPendingReviewEmail,
+  sendResumeKarmaCardApplicationEmail,
+  sendKarmaCardDeclinedEmail,
+} from '../email';
+import {
+  IACHTransferEmailData,
+  IDisputeEmailData,
+  IKarmaCardDeclinedEmailData,
+  IKarmaCardUpdateEmailData as IKarmaCardPendingReviewEmailData,
+} from '../email/types';
+import { isUserDocument } from '../user/utils';
+import { IEffectFunctionParams, IResumeKarmaCardEmailData } from './types';
 
 export const handlePushEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IPushNotificationData;
@@ -42,7 +61,7 @@ export const handlePushEffect = async ({ user, data }: IEffectFunctionParams): P
   }
 };
 
-export const handleSendEarnedCashBackEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendEarnedCashBackEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IEarnedCashbackNotificationData;
   if (!d) throw new Error('Invalid earned cashback notification data');
   try {
@@ -58,7 +77,7 @@ export const handleSendEarnedCashBackEmailEffect = async ({ user, data } : IEffe
   }
 };
 
-export const handleSendPayoutIssuedEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendPayoutIssuedEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IPayoutNotificationData;
   if (!d) throw new Error('Invalid payout notification data');
   try {
@@ -74,7 +93,7 @@ export const handleSendPayoutIssuedEmailEffect = async ({ user, data } : IEffect
   }
 };
 
-export const handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as ICaseWonProvisionalCreditAlreadyIssuedNotificationData;
   if (!d) throw new Error('Invalid case won provisional creadit already issued notification data');
   try {
@@ -92,7 +111,7 @@ export const handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect = async 
   }
 };
 
-export const handleSendACHInitiationEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendACHInitiationEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IACHTransferEmailData;
   const { date, amount, accountMask, accountType, name } = d;
   if (!d) throw new Error('Invalid ach initiation notification data');
@@ -111,7 +130,7 @@ export const handleSendACHInitiationEmailEffect = async ({ user, data } : IEffec
   }
 };
 
-export const handleSendACHCancelledEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendACHCancelledEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IACHTransferEmailData;
   const { date, amount, accountMask, accountType, name } = d;
   if (!d) throw new Error('Invalid ach initiation notification data');
@@ -130,7 +149,7 @@ export const handleSendACHCancelledEmailEffect = async ({ user, data } : IEffect
   }
 };
 
-export const handleSendACHReturnedEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendACHReturnedEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IACHTransferEmailData;
   const { date, amount, accountMask, accountType, name, reason } = d;
   if (!d) throw new Error('Invalid ach initiation notification data');
@@ -150,7 +169,7 @@ export const handleSendACHReturnedEmailEffect = async ({ user, data } : IEffectF
   }
 };
 
-export const handleSendNoChargebackRightsEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendNoChargebackRightsEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IDisputeEmailData;
   const { amount, companyName, name } = d;
   if (!d) throw new Error('Invalid no chargeback rights notification data');
@@ -167,7 +186,7 @@ export const handleSendNoChargebackRightsEmailEffect = async ({ user, data } : I
   }
 };
 
-export const handleSendKarmaCardWelcomeEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendKarmaCardWelcomeEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IKarmaCardWelcomeData;
   const { newUser, name } = d;
   if (!d) throw new Error('Invalid karma card welcome data');
@@ -184,7 +203,7 @@ export const handleSendKarmaCardWelcomeEmailEffect = async ({ user, data } : IEf
   }
 };
 
-export const handleSendProvisionalCreditIssuedEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendProvisionalCreditIssuedEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IProvisialCreditIssuedData;
   if (!d) throw new Error('Invalid payout notification data');
   try {
@@ -200,7 +219,7 @@ export const handleSendProvisionalCreditIssuedEmailEffect = async ({ user, data 
   }
 };
 
-export const handleSendCaseLostProvisionalCreditAlreadyIssuedEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendCaseLostProvisionalCreditAlreadyIssuedEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as ICaseLostProvisionalCreditIssuedData;
   const { amount, date, name, reversalDate, companyName, reason } = d;
   if (!d) throw new Error('Invalid case lost provisional credit issued data');
@@ -221,7 +240,10 @@ export const handleSendCaseLostProvisionalCreditAlreadyIssuedEmailEffect = async
   }
 };
 
-export const handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect = async ({
+  user,
+  data,
+}: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as ICaseLostProvisionalCreditIssuedData;
   const { amount, date, name, companyName, reason } = d;
   if (!d) throw new Error('Invalid case lost provisional credit not already issued issued data');
@@ -241,7 +263,7 @@ export const handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect = as
   }
 };
 
-export const handleSendBankLinkedConfirmationEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendBankLinkedConfirmationEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IBankLinkedConfirmationEmailData;
   const { lastDigitsOfBankAccountNumber, instituteName, name } = d;
   if (!d) throw new Error('Invalid bank linked user data');
@@ -259,7 +281,7 @@ export const handleSendBankLinkedConfirmationEmailEffect = async ({ user, data }
   }
 };
 
-export const handleCaseWonProvisionalCreditNotAlreadyIssuedEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleCaseWonProvisionalCreditNotAlreadyIssuedEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData;
   const { amount, companyName, name, date } = d;
   if (!d) throw new Error('Invalid case won provisional credit not already issued data');
@@ -278,7 +300,7 @@ export const handleCaseWonProvisionalCreditNotAlreadyIssuedEffect = async ({ use
   }
 };
 
-export const handleDisputeReceivedNoProvisionalCreditIssuedEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleDisputeReceivedNoProvisionalCreditIssuedEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as ICaseWonProvisionalCreditNotAlreadyIssuedNotificationData;
   const { name } = d;
   if (!d) throw new Error('Invalid case won provisional credit not already issued data');
@@ -293,7 +315,7 @@ export const handleDisputeReceivedNoProvisionalCreditIssuedEffect = async ({ use
     throw new CustomError('Error sending dispute received no provisional credit issued email', ErrorTypes.SERVER);
   }
 };
-export const handleCardShippedEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleCardShippedEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as ICardShippedNotificationData;
   const { name } = d;
   if (!d) throw new Error('Invalid card shipped data');
@@ -309,7 +331,7 @@ export const handleCardShippedEffect = async ({ user, data } : IEffectFunctionPa
   }
 };
 
-export const handleSendEmployerGiftEmailEffect = async ({ user, data } : IEffectFunctionParams): Promise<void> => {
+export const handleSendEmployerGiftEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   const d = data as unknown as IEmployerGiftData;
   const { name, amount } = d;
   if (!d) throw new Error('Invalid employer gift data');
@@ -326,19 +348,38 @@ export const handleSendEmployerGiftEmailEffect = async ({ user, data } : IEffect
   }
 };
 
-export const handleKarmaCardDeclinedEmailEffect = async ({ user, visitor, data } : IEffectFunctionParams): Promise<void> => {
-  const { reason, acceptedDocuments, name, message, solutionText, status } = data;
+export const handleKarmaCardDeclinedEmailEffect = async ({ user, visitor, data }: IEffectFunctionParams): Promise<void> => {
+  const { name, applicationExpirationDate, resubmitDocumentsLink } = data;
 
-  if (!user && !visitor) throw new Error('Invalid karma card declined data');
+  if (!user && !visitor) throw new Error('Invalid karma card pending review data');
 
   try {
+    const entity = !!user ? user : visitor;
+    const isUser = isUserDocument(entity);
+
     const sendEmailData: IKarmaCardDeclinedEmailData = {
-      reason,
-      acceptedDocuments,
+      user: isUser ? entity._id : undefined,
+      visitor: !isUser ? entity._id : undefined,
       name,
-      message,
-      solutionText,
-      status,
+      resubmitDocumentsLink,
+      applicationExpirationDate,
+      recipientEmail: isUser ? entity?.emails?.find((email) => email?.primary)?.email : entity?.email,
+    };
+    await sendKarmaCardDeclinedEmail(sendEmailData);
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending karma card declined email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleKarmaCardPendingReviewEmailEffect = async ({ user, visitor, data }: IEffectFunctionParams): Promise<void> => {
+  const { name } = data;
+
+  if (!user && !visitor) throw new Error('Invalid karma card pending review data');
+
+  try {
+    const sendEmailData: IKarmaCardPendingReviewEmailData = {
+      name,
     };
 
     if (!!user) {
@@ -351,10 +392,30 @@ export const handleKarmaCardDeclinedEmailEffect = async ({ user, visitor, data }
       sendEmailData.recipientEmail = visitor?.email;
     }
 
-    await sendKarmaCardDeclinedEmail(sendEmailData);
+    await sendKarmaCardPendingReviewEmail(sendEmailData);
   } catch (err) {
     console.log(err);
-    throw new CustomError('Error sending karma card declined email', ErrorTypes.SERVER);
+    throw new CustomError('Error sending karma card pending review email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleResumeKarmaCardApplication = async ({ user, visitor, data }: IEffectFunctionParams): Promise<void> => {
+  if (!user && !visitor) throw new Error('Invalid karma card application resume data');
+
+  try {
+    const recipientEmail = !!user ? user?.emails?.find((email: any) => email?.primary)?.email : visitor?.email;
+    const sendEmailData: IResumeKarmaCardEmailData = {
+      link: data.link,
+      recipientEmail,
+    };
+
+    if (visitor) sendEmailData.visitor = visitor;
+    if (user) sendEmailData.user = user;
+
+    await sendResumeKarmaCardApplicationEmail(sendEmailData);
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending resume karma card application email', ErrorTypes.SERVER);
   }
 };
 
@@ -370,6 +431,7 @@ export const NotificationEffectsFunctions: {
   SendACHReturnedEmail: handleSendACHReturnedEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
+  SendKarmaKardPendingReviewEmail: handleKarmaCardPendingReviewEmailEffect,
   SendKarmaCardDeclinedEmail: handleKarmaCardDeclinedEmailEffect,
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,
@@ -379,6 +441,7 @@ export const NotificationEffectsFunctions: {
   SendCardShippedEmail: handleCardShippedEffect,
   SendCaseLostProvisionalCreditNotAlreadyIssued: handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect,
   SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
+  SendResumeKarmaCardApplicationEmail: handleResumeKarmaCardApplication,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -391,6 +454,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendACHReturnedEmail,
     NotificationEffectsEnum.SendNoChargebackRightsEmail,
     NotificationEffectsEnum.SendKarmaCardDeclinedEmail,
+    NotificationEffectsEnum.SendKarmaCardPendingReviewEmail,
     NotificationEffectsEnum.SendKarmaCardWelcomeEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditAlreadyIssuedEmail,
     NotificationEffectsEnum.SendProvisionalCreditIssuedEmail,
@@ -400,10 +464,9 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCardShippedEmail,
     NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued,
     NotificationEffectsEnum.SendEmployerGiftEmail,
+    NotificationEffectsEnum.SendResumeKarmaCardApplicationEmail,
   ],
-  [NotificationChannelEnum.Push]: [
-    NotificationEffectsEnum.SendPushNotification,
-  ],
+  [NotificationChannelEnum.Push]: [NotificationEffectsEnum.SendPushNotification],
   [NotificationChannelEnum.InApp]: [],
   [NotificationChannelEnum.None]: [],
 } as const;

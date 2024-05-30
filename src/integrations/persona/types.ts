@@ -1,22 +1,127 @@
+export const PersonaInquiryStatusEnum = {
+  Created: 'created',
+  Pending: 'pending',
+  Completed: 'completed',
+  Expired: 'expired',
+  Failed: 'failed',
+  NeedsReview: 'needs_review',
+  Approved: 'approved',
+  Declined: 'declined',
+} as const;
+export type PersonaInquiryStatusEnumValues = (typeof PersonaInquiryStatusEnum)[keyof typeof PersonaInquiryStatusEnum];
+
+export const PersonaCaseStatusEnum = {
+  Open: 'Open',
+  Pending: 'Pending',
+  Approved: 'Approved',
+  Declined: 'Declined',
+} as const;
+export type PersonaCaseStatusEnumValues = (typeof PersonaCaseStatusEnum)[keyof typeof PersonaCaseStatusEnum];
+
+type TemplateData = {
+  id: string;
+  type: string;
+};
+
+export interface IPersonaCaseData {
+  id: string;
+  status: PersonaCaseStatusEnumValues;
+  createdAt: string;
+  attributes?: any;
+}
+
+export interface IPersonaInquiryData {
+  id: string;
+  status: PersonaInquiryStatusEnumValues;
+  attributes?: any;
+  templateId: string;
+  createdAt: string;
+}
+
+export interface IPersonaIntegration {
+  accountId: string;
+  inquiries: IPersonaInquiryData[];
+  cases: IPersonaCaseData[];
+}
+
 export interface IPersonaCreateAccountBody {
   data: {
     attributes: {
-      'ref-id'?: string; // 'ref-id': 'KW internal user id or visitor id
-      'country-code': string;
-      'social-security-number': string;
-      'name-first': string;
-      'name-last': string;
-      'phone-number': string;
+      refId?: string; // 'ref-id': 'KW internal user id or visitor id
+      countryCode: string;
+      socialSecurityNumber: string;
+      nameFirst: string;
+      nameLast: string;
+      phoneNumber: string;
       birthdate: string; // 'YYYY-MM-DD'
-      'email-address': string;
-      'address-street-1': string;
-      'address-street-2'?: string;
-      'address-city': string;
-      'address-subdivision': string;
-      'address-postal-code': string;
+      emailAddress: string;
+      addressStreet1: string;
+      addressStreet2?: string;
+      addressCity: string;
+      addressSubdivision: string;
+      addressPostalCode: string;
     };
   };
 }
+
+export type PersonaGetInquiryResponse = {
+  data: {
+    type: string;
+    id: string;
+    attributes: {
+      status: PersonaInquiryStatusEnumValues;
+      referenceId: string | null;
+      createdAt: string;
+      completedAt: string | null;
+      expiredAt: string | null;
+    };
+    relationships: {
+      account: {
+        data: TemplateData;
+      };
+      inquiryTemplate: {
+        data: TemplateData;
+      };
+      sessions: {
+        data: TemplateData[];
+      };
+    };
+  };
+  meta?: any;
+};
+
+export type PersonaGetCaseResponse = {
+  data: {
+    type: string;
+    id: string;
+    attributes: {
+      status: PersonaCaseStatusEnumValues;
+      referenceId: string | null;
+      createdAt: string;
+      completedAt: string | null;
+      expiredAt: string | null;
+    };
+    relationships: {
+      account: {
+        data: TemplateData;
+      };
+      accounts: {
+        data: TemplateData[];
+      };
+      inquiries: {
+        data: TemplateData[];
+      };
+    };
+  };
+  meta?: any;
+};
+
+export const PersonaInquiryTemplateIdEnum = {
+  GovIdAndSelfieAndDocs: 'itmpl_eW827Fd6N9cvucWoDBpPB37rnWcm', // KW - 4 Gov ID and Selfie and Document
+  GovIdAndSelfieOrDocs: 'itmpl_2Wequ3YSD2K2i31tPxHixDdbDkAj', // KW - 2 Gov ID and Selfie and Document -- only gov id and selfie if it passes, otherwise gov id and docs
+  DataCollection: 'itmpl_AFqvVNPPTmMy752PwyeopspV8mSe', // KW - 1 Data Collection
+} as const;
+export type PersonaInquiryTemplateIdEnumValues = (typeof PersonaInquiryTemplateIdEnum)[keyof typeof PersonaInquiryTemplateIdEnum];
 
 export const EventNamesEnum = {
   accountCreated: 'account.created', // Occurs whenever an account is created.
@@ -30,6 +135,7 @@ export const EventNamesEnum = {
   caseAssigned: 'case.assigned', // Occurs when a case is assigned.
   caseResolved: 'case.resolved', // Occurs when a case is resolved.
   caseReopened: 'case.reopened', // Occurs when a case is reopened.
+  caseStatusUpdated: 'case.status-updated', // Occurs when a case's status is updated
   caseUpdated: 'case.updated', // Occurs when a case is updated.
   documentCreated: 'document.created', // Occurs whenever a document is created.
   documentSubmitted: 'document.submitted', // Occurs whenever a document is submitted.
@@ -99,23 +205,39 @@ type VerificationData = {
   type: string;
 };
 
-type TemplateData = {
-  id: string;
-  type: string;
-};
-
 type InquiryRelationships = {
+  accounts?: { data: TemplateData[] };
+  account?: { data: TemplateData };
   reports: { data: any[] };
   template: { data: TemplateData };
+  inquiries: { data: TemplateData[] };
+  sessions: { data: any[] };
   verifications: { data: VerificationData[] };
+  inquiryTemplate?: { data: TemplateData };
 };
 
 type InquiryAttributes = {
-  status: string;
+  status: PersonaInquiryStatusEnumValues | PersonaCaseStatusEnumValues;
   referenceId: string | null;
   createdAt: string;
-  completedAt: string;
+  completedAt: string | null;
   expiredAt: string | null;
+  nameFirst?: string | null;
+  nameMiddle?: string | null;
+  nameLast?: string | null;
+  birthdate?: string | null;
+  addressStreet1?: string | null;
+  addressStreet2?: string | null;
+  addressCity?: string | null;
+  addressSubdivision?: string | null;
+  addressSubdivisionAbbr?: string | null;
+  addressPostalCode?: string | null;
+  addressPostalCodeAbbr?: string | null;
+  socialSecurityNumber?: string | null;
+  identificationNumber?: string | null;
+  emailAddress: string | null;
+  phoneNumber: string | null;
+  fields: any; // depends on the type
 };
 
 type InquiryData = {
@@ -129,6 +251,7 @@ type IncludedData = {
   type: string;
   id: string;
   attributes: any; // depends on the type
+  fields: any; // depends on the type
 };
 
 type PayloadData = {
@@ -151,3 +274,14 @@ type EventData = {
 export type PersonaWebhookBody = {
   data: EventData;
 };
+
+export type PersonaAccountData = {
+  accountId: string;
+};
+
+export const RelationshipPathsEnum = {
+  account: 'account',
+  sessions: 'sessions',
+  inquiryTemplate: 'inquiryTemplate',
+} as const;
+export type RelationshipPathsEnumValues = (typeof RelationshipPathsEnum)[keyof typeof RelationshipPathsEnum];

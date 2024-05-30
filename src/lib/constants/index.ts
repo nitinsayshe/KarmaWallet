@@ -56,6 +56,10 @@ export enum SocketNamespaces {
 export enum TokenTypes {
   Email = 'email',
   Password = 'password',
+  EmailChange = 'emailChange',
+  AffirmEmailChange = 'affirmEmailChange',
+  CancelEmailChange = 'cancelEmailChange',
+  VerifyEmailChange = 'verifyEmailChange',
 }
 
 export enum EmailAddresses {
@@ -271,69 +275,6 @@ export enum OpenGraphTypes {
   Article = 'article',
 }
 
-export const StateAbbreviationEnum = {
-  AL: 'AL',
-  AK: 'AK',
-  AS: 'AS',
-  AZ: 'AZ',
-  AR: 'AR',
-  CA: 'CA',
-  CO: 'CO',
-  CT: 'CT',
-  DE: 'DE',
-  DC: 'DC',
-  FM: 'FM',
-  FL: 'FL',
-  GA: 'GA',
-  GU: 'GU',
-  HI: 'HI',
-  ID: 'ID',
-  IL: 'IL',
-  IN: 'IN',
-  IA: 'IA',
-  KS: 'KS',
-  KY: 'KY',
-  LA: 'LA',
-  ME: 'ME',
-  MH: 'MH',
-  MD: 'MD',
-  MA: 'MA',
-  MI: 'MI',
-  MN: 'MN',
-  MS: 'MS',
-  MO: 'MO',
-  MT: 'MT',
-  NE: 'NE',
-  NV: 'NV',
-  NH: 'NH',
-  NJ: 'NJ',
-  NM: 'NM',
-  NY: 'NY',
-  NC: 'NC',
-  ND: 'ND',
-  MP: 'MP',
-  OH: 'OH',
-  OK: 'OK',
-  OR: 'OR',
-  PW: 'PW',
-  PA: 'PA',
-  PR: 'PR',
-  RI: 'RI',
-  SC: 'SC',
-  SD: 'SD',
-  TN: 'TN',
-  TX: 'TX',
-  UT: 'UT',
-  VT: 'VT',
-  VI: 'VI',
-  VA: 'VA',
-  WA: 'WA',
-  WV: 'WV',
-  WI: 'WI',
-  WY: 'WY',
-} as const;
-export type StateAbbreviationEnumValues = (typeof StateAbbreviationEnum)[keyof typeof StateAbbreviationEnum];
-
 export const CentsInUSD = 100;
 
 export const TransactionIntegrationTypesEnum = {
@@ -385,3 +326,7 @@ export const DateKarmaMembershipStoppedbBeingFree = '2024-03-18';
 export const AutomatedFuelDispensersMccCode = '5542';
 export const RestaurantMccCode = '5812';
 export const FastFoodMccCode = '5814';
+
+export const PhoneNumberLength = 10;
+export const PostalCodeLength = 5;
+export const daysUntilKarmaCardApplicationExpiration = 10;

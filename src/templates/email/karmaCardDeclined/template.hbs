@@ -1,19 +1,22 @@
 <div class='card'>
-  <p class='salutation-text'>Hi {{name}},</p>
-   {{#if acceptedDocuments}}
-    <p class='body-text'>Your application is currently on hold pending further identity verification.</p>
-    <p class='body-text'>{{solutionText}}</p>
-    <ul>
-      {{#each acceptedDocuments}}
-        <li>{{this}}</li>
-      {{/each}}
-    </ul>
-   {{else}}
-    <p class='body-text'>Your application has been declined due to insufficient identity verification. Please contact support@karmawallet.io so an associate may provide next steps for verification.</p>
-   {{/if}}
-  <p class='body-text'>Failure to reconcile identity verification within 10 days will result in application closure, requiring you to reapply. We appreciate your prompt attention to this matter and thank you for your cooperation.</p>
+  <p class='salutation-text'>Dear {{name}},</p>
+  <p class='body-text'>We hope this message finds you well. After careful review of the documents you submitted for the Know Your Customer
+    (KYC) process, we regret to inform you that your application did not meet our required standards for verification.</p>
+  <p class='body-text'>
+    This decision does not mark the end of your journey with us. We understand this may be disappointing, and we are here to support you
+    through the next steps:
+    <ol class='list'>
+      <li>Review Submission: Please ensure that all submitted documents are current, clearly legible, and comply with the required criteria.</li>
+      <li>Resubmit Documents: You can resubmit your documents for review. If you believe there has been a misunderstanding or if your
+        circumstances have changed, please upload the revised documents <a href={{resubmitDocumentsLink}}>here</a> by {{applicationExpirationDate}}.</li>
+      <li>Contact Support: If you have any questions, our support team is available to assist you. You can reach us at
+        <a href='mailto:support@karmawallet.io'>support@karmawallet.io</a>.</li>
+    </ol>
+  </p>
+  <p class='body-text'>We value your interest in Karma Wallet and look forward to assisting you further.</p>
+  <p class='body-text'>Thank you for your understanding and cooperation.</p>
   <div class='signature-container'>
-    <p>Thanks,</p>
+    <p>Best regards,</p>
     <p>Karma Wallet Support</p>
   </div>
   <p class='support-text'>

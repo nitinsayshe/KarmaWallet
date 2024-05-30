@@ -125,10 +125,24 @@ router.route('/employer-gift-email')
     AdminEmailTestingController.testEmployerGiftEmail,
   );
 
+router.route('/karma-card-pending-review-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testKarmaCardPendingReviewEmail,
+  );
+
 router.route('/karma-card-decline-email')
   .post(
     authenticate,
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
-    AdminEmailTestingController.testKarmaCardDeclineEmail,
+    AdminEmailTestingController.testKarmaCardDeclinedEmail,
+  );
+
+router.route('/resume-karma-card-application-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testResumeKarmaCardApplicationEmail,
   );
 export default router;

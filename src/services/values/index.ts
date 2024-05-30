@@ -2,8 +2,8 @@ import { isValidObjectId, Types } from 'mongoose';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { IUnsdgCategoryDocument, UnsdgCategoryModel } from '../../models/unsdgCategory';
-import { IValueDocument, ValueModel } from '../../models/value';
-import { IValueCompanyMappingDocument, ValueCompanyAssignmentType, ValueCompanyMappingModel, ValueCompanyWeightMultiplier } from '../../models/valueCompanyMapping';
+import { IValue, IValueDocument, ValueModel } from '../../models/value';
+import { IValueCompanyMapping, IValueCompanyMappingDocument, ValueCompanyAssignmentType, ValueCompanyMappingModel, ValueCompanyWeightMultiplier } from '../../models/valueCompanyMapping';
 import { IRequest } from '../../types/request';
 import { Logger } from '../logger';
 import { getShareableCategory } from '../unsdgs';
@@ -20,6 +20,42 @@ export interface IUpdateCompanyValuesRequestBody {
 export interface IUpdateCompanyValuesRequestParams {
   companyId: string;
 }
+
+export interface IGetCompaniesValuesRequestBody {
+  companies: string[];
+}
+
+export interface ICompanyWithMappings {
+  company: string;
+  values?: IValue[];
+}
+
+export interface IGetUniqueSortedValuesForCompanyParams {
+  companyId: string | Types.ObjectId;
+  mappings: IValueCompanyMapping[] | IValueCompanyMappingDocument[];
+}
+
+export const getUniqueSortedValuesForCompany = async ({ companyId, mappings }: IGetUniqueSortedValuesForCompanyParams): Promise<ICompanyWithMappings> => {
+  const values = mappings.filter(mapping => mapping.company.toString() === companyId.toString())
+    .map(mapping => {
+      (mapping.value as IValueDocument).weight *= mapping.weightMultiplier;
+      return mapping.value;
+    })
+    .sort((a, b) => (b as IValueDocument).weight - (a as IValue).weight);
+
+  // remove duplicate values
+  const uniqueValues: IValueDocument[] = [];
+  const uniqueValueIds = new Set();
+
+  for (const value of values) {
+    if (!uniqueValueIds.has((value as IValueDocument)._id.toString())) {
+      uniqueValueIds.add((value as IValueDocument)._id.toString());
+      uniqueValues.push(value as IValueDocument);
+    }
+  }
+
+  return { company: companyId.toString(), values: uniqueValues };
+};
 
 export const getCompanyValues = async (req: IRequest<{}, IGetCompanyValuesRequestQuery>) => {
   const { companyId } = req.query;
@@ -43,29 +79,46 @@ export const getCompanyValues = async (req: IRequest<{}, IGetCompanyValuesReques
         },
       ]);
 
-    // extract values from mappings and sort
-    const values = mappings
-      .map(mapping => {
-        (mapping.value as IValueDocument).weight *= mapping.weightMultiplier;
-        return mapping.value;
-      })
-      .sort((a, b) => (b as IValueDocument).weight - (a as IValueDocument).weight);
-
-    // remove duplicate values
-    const uniqueValues: IValueDocument[] = [];
-    const uniqueValueIds = new Set();
-
-    for (const value of values) {
-      if (!uniqueValueIds.has((value as IValueDocument)._id.toString())) {
-        uniqueValueIds.add((value as IValueDocument)._id.toString());
-        uniqueValues.push(value as IValueDocument);
-      }
-    }
-
-    return uniqueValues;
+    const companyWithValues = await getUniqueSortedValuesForCompany({ companyId, mappings });
+    return companyWithValues.values;
   } catch (err) {
     throw asCustomError(err);
   }
+};
+
+export const getCompaniesValues = async (req: IRequest<{}, {}, IGetCompaniesValuesRequestBody>) => {
+  const { companies } = req.body;
+
+  if (!companies.length) throw new CustomError('At least one companyId is required', ErrorTypes.INVALID_ARG);
+
+  companies.forEach(companyId => {
+    if (!isValidObjectId(companyId)) throw new CustomError(`Invalid companyId: ${companyId}`, ErrorTypes.INVALID_ARG);
+  });
+
+  const mappings = await ValueCompanyMappingModel.find({
+    company: { $in: companies },
+  }).populate([
+    {
+      path: 'value',
+      model: ValueModel,
+      populate: [
+        {
+          path: 'category',
+          model: UnsdgCategoryModel,
+        },
+      ],
+    },
+  ]);
+
+  const companiesWithValues: ICompanyWithMappings[] = [];
+
+  for (const companyId of companies) {
+    const _values = Array.from(mappings);
+    const companyWithValues = await getUniqueSortedValuesForCompany({ companyId, mappings: _values });
+    companiesWithValues.push(companyWithValues);
+  }
+
+  return companiesWithValues;
 };
 
 export const getShareableCompanyValue = ({
@@ -73,6 +126,7 @@ export const getShareableCompanyValue = ({
   name,
   weight,
   icon,
+  company,
 }: IValueDocument) => {
   const _category = (!!category && Object.values(category).length)
     ? getShareableCategory(category as IUnsdgCategoryDocument)
@@ -83,6 +137,7 @@ export const getShareableCompanyValue = ({
     name,
     weight,
     icon,
+    company,
   };
 };
 
@@ -150,11 +205,13 @@ export const updateCompanyValues = async (req: IRequest<IUpdateCompanyValuesRequ
   }
 
   // return the new values
-  return getCompanyValues({
+  const _companyValues = await getCompanyValues({
     ...req,
     params: {},
     query: { companyId },
   });
+
+  return _companyValues;
 };
 
 export const getValues = async () => {

@@ -4,10 +4,12 @@ import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
 import { sleep } from '../lib/misc';
 import { getRandomInt } from '../lib/number';
-import { IPersonaAccountsRequest, IPersonaCreateAccountBody, PersonaWebhookBody } from '../integrations/persona/types';
+import { IPersonaAccountsRequest, IPersonaCreateAccountBody, PersonaGetCaseResponse, PersonaGetInquiryResponse, PersonaWebhookBody, RelationshipPathsEnumValues } from '../integrations/persona/types';
 import { IRequest } from '../types/request';
 
-const { PERSONA_API_KEY, PERSONA_WEBHOOK_KEY } = process.env;
+const { PERSONA_API_KEY, PERSONA_WEBHOOK_KEY, PERSONA_ENVIRONMENT_ID } = process.env;
+
+export const PersonaHostedFlowBaseUrl = 'https://inquiry.withpersona.com/verify';
 
 export class PersonaClient extends SdkClient {
   _client: AxiosInstance;
@@ -17,7 +19,7 @@ export class PersonaClient extends SdkClient {
   }
 
   protected _init() {
-    if (!PERSONA_API_KEY || !PERSONA_WEBHOOK_KEY) throw new Error('Persona credentials not found');
+    if (!PERSONA_API_KEY || !PERSONA_WEBHOOK_KEY || !PERSONA_ENVIRONMENT_ID) throw new Error('Persona credentials not found');
 
     this._client = axios.create({
       headers: {
@@ -55,23 +57,15 @@ export class PersonaClient extends SdkClient {
 
   public async verifyWebhookSignature(req: IRequest<{}, {}, PersonaWebhookBody>) {
     const t = req.headers['persona-signature'].split(',')[0].split('=')[1];
-    const signatures: string[] = [];
-    req.headers['persona-signature'].split(' ')
-      .forEach((pair: string) => {
-        const [_, value] = pair.split('v1=');
-        signatures.push(value);
-      });
+    const signatures: string[] = req.headers['persona-signature']?.split(' ')
+      ?.map((pair: string) => pair.split('v1=')[1]);
 
     const hmac = crypto.createHmac('sha256', PERSONA_WEBHOOK_KEY)
-      .update(`${t}.${JSON.stringify(req.body)}`)
+      .update(`${t}.${req.rawBody.toString()}`)
       .digest('hex');
 
-    if (crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signatures[0]))
-      || crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signatures[1]))) {
-      // Handle verified webhook event
-      return;
-    }
-    throw new Error('Invalid signature');
+    const isVerified = signatures.some(signature => (crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(signature))));
+    if (!isVerified) throw new Error('Invalid signature');
   }
 
   public async listAllAccounts(queryParams: IPersonaAccountsRequest) {
@@ -93,6 +87,43 @@ export class PersonaClient extends SdkClient {
     try {
       const account = await this._client.post('/accounts', accountData);
       if (!!account.data) return account.data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  public async getCase(caseId: string): Promise<PersonaGetCaseResponse> {
+    try {
+      const inquiry = await this._client.get(`/cases/${caseId}`);
+      if (!!inquiry.data) return inquiry.data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  public async getInquiry(inquiryId: string): Promise<PersonaGetInquiryResponse> {
+    try {
+      const inquiry = await this._client.get(`/inquiries/${inquiryId}`);
+      if (!!inquiry.data) return inquiry.data;
+    } catch (err) {
+      console.log(err);
+      throw asCustomError(err);
+    }
+  }
+
+  public async resumeInquiry(inquiryId: string, include?: RelationshipPathsEnumValues[]): Promise<PersonaGetInquiryResponse> {
+    try {
+      const inquiry = await this._client.post(
+        `/inquiries/${inquiryId}/resume`,
+        {
+          params: {
+            include,
+          },
+        },
+      );
+      if (!!inquiry.data) return inquiry.data;
     } catch (err) {
       console.log(err);
       throw asCustomError(err);

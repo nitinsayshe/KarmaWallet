@@ -21,6 +21,7 @@ export const NotificationTypeEnum = {
   Group: 'group',
   KarmaCardWelcome: 'karmaCardWelcome',
   KarmaCardDeclined: 'karmaCardDeclined',
+  KarmaCardPendingReview: 'karmaCardPendingReview',
   Marketing: 'marketing',
   Payout: 'payout',
   ReloadSuccess: 'reloadSuccess',
@@ -33,6 +34,7 @@ export const NotificationTypeEnum = {
   DisputeReceivedNoProvisionalCreditIssued: 'disputeReceivedNoProvisionalCreditIssued',
   CardShipped: 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
+  ResumeKarmaCardApplication: 'resumeKarmaCardApplication',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
 
@@ -48,6 +50,7 @@ export const NotificationEffectsEnum = {
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
   SendKarmaCardDeclinedEmail: 'SendKarmaCardDeclinedEmail',
+  SendKarmaCardPendingReviewEmail: 'SendKarmaKardPendingReviewEmail',
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: 'SendCaseLostProvisionalCreditAlreadyIssuedEmail',
   SendProvisionalCreditIssuedEmail: 'SendProvisionalCreditIssuedEmail',
   SendBankLinkedConfirmationEmail: 'SendBankLinkedConfirmationEmail',
@@ -55,6 +58,7 @@ export const NotificationEffectsEnum = {
   SendDisputeReceivedNoProvisionalCreditIssuedEmail: 'SendDisputeReceivedNoProvisionalCreditIssuedEmail',
   SendCardShippedEmail: 'SendCardShippedEmail',
   SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
+  SendResumeKarmaCardApplicationEmail: 'SendResumeKarmaCardApplicationEmail',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 

@@ -3,7 +3,7 @@ import path from 'path';
 import { GroupModel } from '../../models/group';
 import { UserModel } from '../../models/user';
 import { joinGroup } from '../groups/utils';
-import { updateNewUserSubscriptions } from '../subscription';
+import { updateNewUserSubscriptions } from '../marketingSubscription';
 import { CardModel } from '../../models/card';
 import { UserGroupModel } from '../../models/userGroup';
 import { TransactionCreditSubtypeEnum } from '../../lib/constants/transaction';

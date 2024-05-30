@@ -8,7 +8,7 @@ import { CardModel } from '../../../models/card';
 import { GroupModel } from '../../../models/group';
 import { IUserDocument } from '../../../models/user';
 import { joinGroup } from '../../groups/utils';
-import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
+import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../marketingSubscription';
 import { getDaysFromPreviousDate } from '../../../lib/date';
 import { IUrlParam } from '../../user/types';
 import { transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
@@ -99,9 +99,10 @@ export interface SourceResponse {
     status: string;
     codes: ReasonCode[];
   };
+  paymentLink: string;
 }
 
-export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string };
+export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string, paymentLink?: string };
 
 export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
   if (!res) return;

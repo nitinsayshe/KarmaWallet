@@ -12,7 +12,7 @@ const { NODE_ENV } = process.env;
 export const newsletterSignup: IRequestHandler<{}, {}, VisitorService.INewsletterSignupData> = async (req, res) => {
   try {
     const { body } = req;
-    const requiredFields = ['email', 'subscriptionCodes'];
+    const requiredFields = ['email', 'MarketingSubscriptionCodes'];
     const { isValid, missingFields } = verifyRequiredFields(requiredFields, body);
 
     if (!isValid) {
@@ -23,9 +23,9 @@ export const newsletterSignup: IRequestHandler<{}, {}, VisitorService.INewslette
       );
       return;
     }
-    const { email, subscriptionCodes, params } = body;
+    const { email, MarketingSubscriptionCodes, params } = body;
     if (NODE_ENV === 'staging') return output.api(req, res, null);
-    await VisitorService.newsletterSignup(req, email, subscriptionCodes, params);
+    await VisitorService.newsletterSignup(req, email, MarketingSubscriptionCodes, params);
     output.api(req, res, null);
   } catch (err) {
     output.error(req, res, asCustomError(err));

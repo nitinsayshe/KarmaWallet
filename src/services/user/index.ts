@@ -62,10 +62,10 @@ import { getStateFromZipcode } from '../utilities';
 import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
 import * as UserServiceTypes from './types';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
-import { hasEntityPassedInternalKyc } from '../../integrations/persona';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
 import { checkIfUserWithEmailExists, createShareasaleTrackingId, isUserDocument } from './utils';
+import { passedInternalKyc } from '../../integrations/persona';
 
 dayjs.extend(utc);
 
@@ -784,7 +784,7 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
 const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
   entity: IUserDocument | IVisitorDocument,
 ) => {
-  if (!hasEntityPassedInternalKyc(entity)) {
+  if (!passedInternalKyc(entity.integrations.persona)) {
     await updateMarqetaUserStatus(entity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
     return true;
   }

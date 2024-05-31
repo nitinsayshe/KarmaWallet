@@ -49,6 +49,18 @@ export interface IACHBankTransfer {
   last_modified_time: Date;
 }
 
+export interface IExternalMappedShareableACHTransfer {
+  _id: ObjectId;
+  userId: ObjectId;
+  token: string;
+  status: IACHTransferStatuses;
+  amount: number;
+  createdOn: Date;
+  accountMask: string;
+  accountType: string;
+  bank?: IBank;
+}
+
 export interface IShareableACHTransfer {
   _id: ObjectId;
   userId: ObjectId;
@@ -61,7 +73,7 @@ export interface IShareableACHTransfer {
   type: IACHTransferTypes;
   currency_code: string;
   transfer_speed: string;
-  bank: IBank;
+  bank?: IBank;
   status: IACHTransferStatuses;
   transitions: IACHTransition;
   created_time: Date;

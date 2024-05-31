@@ -9,7 +9,7 @@ import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
 import { ACHFundingSourceModel } from '../../models/achFundingSource';
-import { IACHBankTransfer, IACHTransfer, IBank } from '../../models/achTransfer/types';
+import { IACHBankTransfer, IACHTransfer, IBank, IExternalMappedShareableACHTransfer } from '../../models/achTransfer/types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { IRequest } from '../../types/request';
 import { createACHInitiationUserNotification, createACHTransferCancelledUserNotification, createACHTransferReturnedUserNotification, createPushUserNotificationFromUserAndPushData } from '../user_notification';
@@ -38,14 +38,19 @@ export const getShareableACHTransfer = async (transfer: IACHTransfer) => {
     token: transfer.funding_source_token,
   });
 
-  return {
+  const data: IExternalMappedShareableACHTransfer = {
     _id: transfer._id,
+    userId: transfer.userId,
+    token: transfer.token,
     status: transfer.status,
     amount: transfer.amount,
     createdOn: transfer.created_time,
     accountMask: fundingSource.account_suffix,
     accountType: fundingSource.account_type,
+    bank: transfer.bank,
   };
+
+  return data;
 };
 
 export const getPendingACHTransfers = async (req: IRequest) => {

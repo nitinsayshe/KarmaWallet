@@ -70,7 +70,7 @@ import { CombinedPartialTransaction } from '../../types/transaction';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
 import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
-import { IShareableACHTransfer } from '../../models/achTransfer/types';
+import { IExternalMappedShareableACHTransfer, IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
 import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
@@ -464,7 +464,7 @@ export const getShareableTransaction = async ({
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
 
-  const _achtransfer: IRef<ObjectId, IShareableACHTransfer> = achTransfer;
+  const _achtransfer: IRef<ObjectId, IShareableACHTransfer | IExternalMappedShareableACHTransfer> = achTransfer;
 
   const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
     ? getShareableCompany(company as ICompanyDocument)

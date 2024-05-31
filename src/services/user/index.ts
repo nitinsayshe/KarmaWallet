@@ -662,6 +662,7 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
 
 export const formatMarqetaClosedEmail = (email: string) => {
   if (!email) return '';
+
   const emailParts = email.split('@');
   return `${emailParts[0]}+closed@${emailParts[1]}`;
 };
@@ -678,6 +679,11 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IUserDocument | IVisitorDocument> => {
   try {
+    if (entity?.integrations?.marqeta?.email.includes('+closed')) {
+      console.log('Marqeta email already closed, skipping');
+      return entity;
+    }
+
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);

@@ -2,7 +2,6 @@
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
 import { IMarqetaListKYCResponse, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
-import { updateCustomFields } from '../../integrations/activecampaign';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
 import {
@@ -15,7 +14,6 @@ import {
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
 import { fetchCaseAndCreateOrUpdateIntegration, fetchInquiryAndCreateOrUpdateIntegration, personaCaseInSuccessState, personaInquiryInSuccessState } from '../../integrations/persona';
 import { ErrorTypes } from '../../lib/constants';
-import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -39,7 +37,7 @@ import { UserNotificationModel } from '../../models/user_notification';
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
-import { handleMarqetaUserActiveTransition, updateUserUrlParams } from '../user';
+import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
@@ -47,11 +45,17 @@ import * as VisitorService from '../visitor';
 import {
   ApplicationDecision,
   hasKarmaWalletCards,
+  ISuccessRepsonse,
   openBrowserAndAddShareASaleCode,
   ReasonCode,
   SourceResponse,
   updateActiveCampaignDataAndJoinGroupForApplicant,
 } from './utils';
+import { createKarmaCardMembershipCustomerSession } from '../../integrations/stripe/checkout';
+import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
+import { createUserProductSubscription } from '../userProductSubscription';
+import { UserProductSubscriptionStatus } from '../../models/userProductSubscription/types';
+import { ProductSubscriptionModel } from '../../models/productSubscription';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -244,17 +248,35 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
-export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
-  const userEmail = userObject.emails.find((email) => !!email.primary).email;
+export const handleExistingUserSuccess = async (userObject: IUserDocument) => {
+  const urlParams = userObject.integrations?.referrals?.params;
   if (!!urlParams) {
-    await updateUserUrlParams(userObject, urlParams);
     await updateActiveCampaignDataAndJoinGroupForApplicant(userObject, urlParams);
   } else {
     await updateActiveCampaignDataAndJoinGroupForApplicant(userObject);
   }
-  // add existingUser flag to active campaign
-  await updateCustomFields(userEmail, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
+  //  might need to update this email!
   await createKarmaCardWelcomeUserNotification(userObject, false);
+};
+
+export const createUserProductSubscriptionAndPaymentLink = async (userObject: IUserDocument) => {
+  try {
+  // create a customer in stripe
+    const customer = await createStripeCustomerAndAddToUser(userObject);
+    if (!customer) throw new Error('Error creating Stripe customer');
+    // create a customer checkout session
+    const session = await createKarmaCardMembershipCustomerSession(userObject);
+    const productSubscription = await ProductSubscriptionModel.findOne({ name: 'Standard Karma Wallet Membership' });
+    await createUserProductSubscription({
+      user: userObject._id,
+      productSubscription,
+      status: UserProductSubscriptionStatus.UNPAID,
+    });
+
+    return session.url;
+  } catch (err) {
+    throw new Error(`Error creating Stripe Payment Link: ${err}`);
+  }
 };
 
 export const handleKarmaCardApplySuccess = async ({
@@ -264,12 +286,12 @@ export const handleKarmaCardApplySuccess = async ({
   urlParams,
   visitorId,
   postalCode,
-}: IApplySuccessData): Promise<IUserDocument> => {
+}: IApplySuccessData): Promise<{ userDocument: IUserDocument, paymentLink: string }> => {
   // find the user again since there is a potential race condition
   let userObject = await UserModel.findOne({ 'emails.email': email });
   // EXISTING USER
   if (!!userObject) {
-    await handleExistingUserApplySuccess(userObject, urlParams);
+    await updateUserUrlParams(userObject, urlParams);
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
   }
@@ -288,16 +310,20 @@ export const handleKarmaCardApplySuccess = async ({
     userObject = user;
   }
 
-  await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.ACTIVE, MarqetaReasonCodeEnum.RequestedByYou);
+  const paymentLink = await createUserProductSubscriptionAndPaymentLink(userObject);
+  await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou);
   // store the karma card application log
   await userObject.save();
-  return userObject;
+  return {
+    userDocument: userObject,
+    paymentLink,
+  };
 };
 
 export const storeApplicationAndHandleSuccesState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
-): Promise<SourceResponse> => {
+): Promise<ISuccessRepsonse> => {
   if (!entity) return;
 
   const entityIsUser = isUserDocument(entity);
@@ -312,7 +338,9 @@ export const storeApplicationAndHandleSuccesState = async (
 
   successData.urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity.integrations?.urlParams;
 
-  let userDocument = await handleKarmaCardApplySuccess(successData);
+  const response = await handleKarmaCardApplySuccess(successData);
+  const { paymentLink } = response;
+  let { userDocument } = response;
 
   karmaCardApplication.status = ApplicationStatus.SUCCESS;
   karmaCardApplication.kycResult = {
@@ -340,8 +368,12 @@ export const storeApplicationAndHandleSuccesState = async (
 
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
-  return userDocument?.toObject()?.integrations?.marqeta as SourceResponse;
+  // commenting this out because we will not handle success until they have paid
+  // await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
+  return {
+    user: userDocument?.toObject()?.integrations?.marqeta as SourceResponse,
+    paymentLink,
+  };
 };
 
 export const updateEntityKycResult = async (entity: IUserDocument | IVisitorDocument, kycResult: IMarqetaKycResult) => {
@@ -389,7 +421,10 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     // check to see if they have already been approved, if so return early
     if (application.status === ApplicationStatus.SUCCESS) {
       const marqetaIntegration = !!user ? user.integrations.marqeta : visitor.integrations.marqeta;
-      return { ...(marqetaIntegration as SourceResponse), internalKycTemplateId: templateId };
+      return {
+        ...(marqetaIntegration as SourceResponse),
+        internalKycTemplateId: templateId,
+      };
     }
 
     // check that failed internal kyc was the only failure reason
@@ -418,7 +453,7 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     }
 
     return {
-      ...((await storeApplicationAndHandleSuccesState(application, user || visitor)) as unknown as SourceResponse),
+      ...((await storeApplicationAndHandleSuccesState(application, user || visitor))),
       internalKycTemplateId: templateId,
     };
   } catch (err) {

@@ -99,7 +99,11 @@ export interface SourceResponse {
     status: string;
     codes: ReasonCode[];
   };
-  paymentLink: string;
+}
+
+export interface ISuccessRepsonse {
+  user: SourceResponse;
+  paymentLink?: string;
 }
 
 export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string, paymentLink?: string };

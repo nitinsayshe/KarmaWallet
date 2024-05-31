@@ -3,6 +3,8 @@ import { InvoiceModel } from '../../models/invoice';
 import { UserModel } from '../../models/user';
 import { UserProductSubscriptionModel } from '../../models/userProductSubscription';
 import { InvoiceStatus } from '../../models/invoice/types';
+import { Invoice } from '../../clients/stripe/invoice';
+import { StripeClient } from '../../clients/stripe/stripeClient';
 
 export const getInvoiceStatusFromStripeStatus = (status: Stripe.Invoice.Status) => {
   switch (status) {
@@ -21,20 +23,19 @@ export const getInvoiceStatusFromStripeStatus = (status: Stripe.Invoice.Status) 
   }
 };
 
-export const createInvoiceFromStripeInvoice = async (data: Stripe.InvoiceCreatedEvent.Data) => {
-  const { object } = data;
-  const user = await UserModel.findOne({ 'integrations.stripe.id': object.customer });
-  const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': object.subscription });
+export const createInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
+  const user = await UserModel.findOne({ 'integrations.stripe.id': data.customer });
+  const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.subscription });
 
   const newInvoice = await InvoiceModel.create({
-    amount: object.amount_due,
-    status: object.status,
-    paymentLink: object.hosted_invoice_url,
+    amount: data.amount_due,
+    status: data.status,
+    paymentLink: data.hosted_invoice_url,
     user: user?._id,
     userProductSubscription: userProductSubscription?._id || null,
     integrations: {
       stripe: {
-        ...object,
+        ...data,
       },
     },
   });
@@ -52,5 +53,13 @@ export const updateInvoiceFromStripeInvoice = async (data: Stripe.InvoiceUpdated
   invoice.paymentLink = object.hosted_invoice_url;
   invoice.lastModified = new Date();
   await invoice.save();
+  return invoice;
+};
+
+export const getInvoiceFromStripe = async (invoiceId: string) => {
+  const stripeClient = new StripeClient();
+  const invoiceClient = new Invoice(stripeClient);
+
+  const invoice = await invoiceClient.retrieveInvoice(invoiceId);
   return invoice;
 };

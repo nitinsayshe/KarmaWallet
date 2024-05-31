@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { Checkout } from '../../clients/stripe/checkout';
 import { StripeClient } from '../../clients/stripe/stripeClient';
-import { UserModel } from '../../models/user';
+import { IUserDocument } from '../../models/user';
 
 export const createCheckoutSession = async (params: Stripe.Checkout.SessionCreateParams) => {
   const stripeClient = new StripeClient();
@@ -17,8 +17,7 @@ export const retrieveCheckoutSession = async (checkoutSessionId: string) => {
   return response;
 };
 
-export const createKarmaCardMembershipCustomerSession = async (userId: string, productPrice?: string, uiMode?: Stripe.Checkout.SessionCreateParams.UiMode) => {
-  const user = await UserModel.findById(userId);
+export const createKarmaCardMembershipCustomerSession = async (user: IUserDocument, productPrice?: string, uiMode?: Stripe.Checkout.SessionCreateParams.UiMode) => {
   if (!user) throw new Error('User not found');
   const stripeCustomerID = user.integrations.stripe.id;
   if (!stripeCustomerID) throw new Error('Stripe customer ID not found');
@@ -33,7 +32,7 @@ export const createKarmaCardMembershipCustomerSession = async (userId: string, p
       },
     ],
     customer: stripeCustomerID,
-    client_reference_id: userId,
+    client_reference_id: user._id.toString(),
     mode: 'subscription',
     success_url: 'https://karmawallet.io',
     allow_promotion_codes: true,

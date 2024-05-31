@@ -1,10 +1,21 @@
 import Stripe from 'stripe';
-import { updateOrCreateProductSubscriptionFromStripeProduct } from './product';
+import { deleteProductSubscriptionFromStripeProduct, updateOrCreateProductSubscriptionFromStripeProduct } from './product';
 import { addStripeIntegrationToUser, updateStripeIntegrationForUser } from './customer';
 import { createInvoiceFromStripeInvoice, updateInvoiceFromStripeInvoice } from './invoice';
 import { createUserProductSubscriptionFromStripeSubscription } from './subscription';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
+  const { type } = event;
+
+  switch (type) {
+    case 'checkout.session.completed':
+      // create a checkout session for the user
+      break;
+    case 'checkout.session.expired':
+      break;
+    default:
+      break;
+  }
   console.log('///// event', event);
 };
 
@@ -31,7 +42,7 @@ export const handleInvoiceEvent = async (event: Stripe.Event) => {
 
   switch (type) {
     case 'invoice.created':
-      createInvoiceFromStripeInvoice(event.data);
+      createInvoiceFromStripeInvoice(event.data.object);
       // create an invoice for the user
       break;
     case 'invoice.finalized':
@@ -84,6 +95,7 @@ export const handleProductEvent = async (event: Stripe.Event) => {
       // update the subscription in our database
       break;
     case 'product.deleted':
+      deleteProductSubscriptionFromStripeProduct(event.data.object);
       // delete the subscription in our database?
       break;
     default:

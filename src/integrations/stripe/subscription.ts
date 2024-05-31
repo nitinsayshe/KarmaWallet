@@ -55,6 +55,24 @@ export const createUserProductSubscriptionFromStripeSubscription = async (data: 
   return userProductSubscription;
 };
 
+// export const createSubscription = async (user: IUserDocument, product: IProductSubscription) => {
+//   // const customerId = user.integrations.stripe.id;
+//   // const productId = product.integrations.stripe.id;
+
+//   // const stripeClient = new StripeClient();
+//   // const subscriptionClient = new Subscription(stripeClient);
+//   // await subscriptionClient.createSubscription({
+//   //   customer: customerId,
+//   //   current_period_start: dayjs().utc().unix(),
+//   //   current_period_end: dayjs().add(1, 'year').utc().unix(),
+//   //   items: [
+//   //     {
+//   //       price: productId,
+//   //     },
+//   //   ],
+//   // });
+// };
+
 export const updateUserProductSubscriptionFromStripeSubscription = async (data: Stripe.CustomerSubscriptionUpdatedEvent.Data) => {
   // update the user product subscription
   const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integration.stripe.id': data.object.id });

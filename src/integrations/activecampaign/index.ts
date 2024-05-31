@@ -979,6 +979,35 @@ export const subscribeContactToList = async (email: string, listId: ActiveCampai
   }
 };
 
+export const subscribeContactToLists = async (email: string, listIds: ActiveCampaignListId[], client?: AxiosInstance): Promise<void> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      throw new Error('No contact found');
+    }
+
+    const subscribedLists = await getSubscribedLists(email, client);
+    const { id } = contactData.contacts[0];
+
+    for (const listId of listIds) {
+      if (subscribedLists.includes(listId)) {
+        console.log('Contact already subscribed to list', listId);
+        continue;
+      }
+
+      console.log(`subscribing contact with email: ${email} to list id: ${listId}`);
+      await ac.updateContactListStatus({
+        contactList: { contact: parseInt(id), list: parseInt(listId), status: UpdateContactListStatusEnum.subscribe },
+      });
+    }
+  } catch (err) {
+    console.error('Error subscribing contact to lists', err);
+  }
+};
+
 export const updateCustomFields = async (
   userEmail: string,
   fieldUpdates: { field: ActiveCampaignCustomFields; update: string }[],

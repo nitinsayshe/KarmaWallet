@@ -18,13 +18,6 @@ export enum StatementReportType {
   MonthlyIdempotent = 'monthlyIdempotent',
 }
 
-export enum KardSyncType {
-  MatchMerchants = 'match-merchants',
-  UpdateMerchants = 'update-merchants',
-  UpdateMerchantRates = 'update-merchant-rates',
-  UpdateMerchantsAndMerchantRates = 'update-merchants-and-merchant-rates',
-}
-
 export enum JobNames {
   AssociationNegativeToPositiveTransactions = 'associate-negative-to-positive-transactions',
   CacheGroupOffsetData = 'cache-group-offset-data',
@@ -51,7 +44,7 @@ export enum JobNames {
   UploadCsvToGoogleDrive = 'upload-csv-to-google-drive',
   DeleteUserAndAssociatedData = 'delete-user-and-associated-data',
   UpdateWildfireMerchantsAndData = 'update-wildfire-merchants-and-data',
-  UpdateKardData = 'update-kard-merchants-and-data',
+  UpdateKardMerchantsAndData = 'update-kard-merchants-and-data',
   UpdateExpiredApplications = 'update-expired-applications',
   GenerateCommissionPayouts = 'generate-commission-payouts',
   GenerateAdminSummaryReport = 'generate-admin-summary-report',

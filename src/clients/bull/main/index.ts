@@ -1,7 +1,7 @@
 import path from 'path';
 import { Worker } from 'bullmq';
 import dayjs from 'dayjs';
-import { JobNames, QueueNames, CsvReportTypes, UserReportType, StatementReportType, MarqetaDataSyncTypeEnum, KardSyncType } from '../../../lib/constants/jobScheduler';
+import { JobNames, QueueNames, CsvReportTypes, UserReportType, StatementReportType, MarqetaDataSyncTypeEnum } from '../../../lib/constants/jobScheduler';
 import { _BullClient } from '../base';
 import { RedisClient } from '../../redis';
 import { ActiveCampaignSyncTypes } from '../../../lib/constants/activecampaign';
@@ -52,8 +52,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.UpdateRareProjectAverage, null, { jobId: `${JobNames.UpdateRareProjectAverage}-daily`, repeat: { cron: '0 17 * * *' } });
     this.createJob(JobNames.UserMonthlyImpactReport, { generateFullHistory: false }, { jobId: `${JobNames.UserMonthlyImpactReport}-monthly`, repeat: { cron: '0 4 1 * *' } });
     this.createJob(JobNames.UpdateWildfireMerchantsAndData, null, { jobId: `${JobNames.UpdateWildfireMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
-    this.createJob(JobNames.UpdateKardData, { syncType: KardSyncType.MatchMerchants }, { jobId: `${JobNames.UpdateKardData}-every-two-hours`, repeat: { cron: '0 */2 * * *' } });
-    this.createJob(JobNames.UpdateKardData, { syncType: KardSyncType.UpdateMerchantsAndMerchantRates }, { jobId: `${JobNames.UpdateKardData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
+    this.createJob(JobNames.UpdateKardMerchantsAndData, null, { jobId: `${JobNames.UpdateKardMerchantsAndData}-every-six-hours`, repeat: { cron: '0 */6 * * *' } });
     this.createJob(JobNames.GenerateUserImpactTotals, null, { jobId: `${JobNames.GenerateUserImpactTotals}-bihourly`, repeat: { cron: '0 */2 * * *' } });
     // TODO: verify dates of Wildfire payment to Karma, adjust corn job accordingly
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
@@ -82,26 +81,20 @@ export class _MainBullClient extends _BullClient {
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Affiliates },
-        {
-          jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Affiliates}-monthly`,
-          repeat: { cron: '0 5 2 * *' },
-        },
+        { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Affiliates}-monthly`,
+          repeat: { cron: '0 5 2 * *' } },
       );
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Transactions },
-        {
-          jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Transactions}-daily`,
-          repeat: { cron: '0 7 * * *' },
-        },
+        { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Transactions}-daily`,
+          repeat: { cron: '0 7 * * *' } },
       );
       this.createJob(
         JobNames.UploadCsvToGoogleDrive,
         { reportType: CsvReportTypes.Users },
-        {
-          jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Users}-daily`,
-          repeat: { cron: '0 7 * * *' },
-        },
+        { jobId: `${JobNames.UploadCsvToGoogleDrive}-${CsvReportTypes.Users}-daily`,
+          repeat: { cron: '0 7 * * *' } },
       );
     }
   };

@@ -166,8 +166,8 @@ export default async (job: SandboxedJob) => {
     case JobNames.UpdateWildfireMerchantsAndData:
       result = await UpdateWildfireMerchantsAndData.exec();
       break;
-    case JobNames.UpdateKardData:
-      result = await UpdateKardMerchantsAndData.exec(data);
+    case JobNames.UpdateKardMerchantsAndData:
+      result = await UpdateKardMerchantsAndData.exec();
       break;
     case JobNames.MarqetaDataSync:
       result = await MarqetaTransactionSync.exec(data);

@@ -21,7 +21,9 @@ export const createKarmaCardMembershipCustomerSession = async (user: IUserDocume
   if (!user) throw new Error('User not found');
   const stripeCustomerID = user.integrations.stripe.id;
   if (!stripeCustomerID) throw new Error('Stripe customer ID not found');
-
+  // check the uyser for promo codes and find the id fopr the promo code in our promo collection
+  // add it to the checkout session if there is a matching one
+  //
   const stripeData: Stripe.Checkout.SessionCreateParams = {
     ui_mode: uiMode || 'hosted',
     line_items: [
@@ -35,7 +37,11 @@ export const createKarmaCardMembershipCustomerSession = async (user: IUserDocume
     client_reference_id: user._id.toString(),
     mode: 'subscription',
     success_url: 'https://karmawallet.io',
-    allow_promotion_codes: true,
+    discounts: [
+      {
+        promotion_code: 'promo_1PLpb3FvwRyik3wARLxZ1x0g',
+      },
+    ],
     // do we want to add a cancel_url?
   };
 

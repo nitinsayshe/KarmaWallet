@@ -7,7 +7,9 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { ICreateKarmaCardApplicantData } from '../../services/karmaCard/utils/types';
 import { IRequest } from '../../types/request';
-import { IPersonaCaseData, IPersonaCreateAccountBody, IPersonaInquiryData, PersonaAccountData, PersonaCaseStatusEnum, PersonaInquiryStatusEnum, PersonaWebhookBody } from './types';
+import { IPersonaCaseData, IPersonaCreateAccountBody, IPersonaInquiryData, IPersonaIntegration, PersonaAccountData, PersonaCaseStatusEnum, PersonaInquiryStatusEnum, PersonaWebhookBody } from './types';
+
+export const hasInquiriesOrCases = (data: IPersonaIntegration): boolean => !!data?.inquiries?.length || !!data?.cases?.length;
 
 export const verifyPersonaWebhookSignature = async (req: IRequest<{}, {}, PersonaWebhookBody>) => {
   try {
@@ -62,10 +64,6 @@ export const verifyPersonaWebhook = async (req: IRequest<{}, {}, PersonaWebhookB
   console.log('Persona webhook signature verified!');
 };
 
-export const hasEntityPassedInternalKyc = async (entity: IUserDocument | IVisitorDocument) => entity?.integrations?.persona?.inquiries?.some(
-  (inquiry) => inquiry.status === PersonaInquiryStatusEnum.Approved || inquiry.status === PersonaInquiryStatusEnum.Completed,
-);
-
 // refId can be KW internal user id or visitor id
 export const buildPersonaCreateAccountBody = (params: ICreateKarmaCardApplicantData, refId?: string) => {
   const personaData: IPersonaCreateAccountBody = {
@@ -92,19 +90,27 @@ export const buildPersonaCreateAccountBody = (params: ICreateKarmaCardApplicantD
 };
 
 export const personaCaseInSuccessState = (caseData: IPersonaCaseData): boolean => caseData?.status === PersonaCaseStatusEnum.Approved
-  || caseData?.attributes?.status === PersonaInquiryStatusEnum.Approved;
+  || caseData?.attributes?.status === PersonaCaseStatusEnum.Approved;
 
 export const personaInquiryInSuccessState = (inquiryData: IPersonaInquiryData): boolean => inquiryData?.status === PersonaInquiryStatusEnum.Completed
   || inquiryData?.status === PersonaInquiryStatusEnum.Approved
   || inquiryData?.attributes?.status === PersonaInquiryStatusEnum.Completed
   || inquiryData?.attributes?.status === PersonaInquiryStatusEnum.Approved;
 
+export const passedInternalKyc = (data: IPersonaIntegration): boolean => {
+  const inquiries = data?.inquiries || [];
+  const cases = data?.cases || [];
+
+  if (inquiries.length === 0 && cases.length === 0) return false;
+  return inquiries?.some(personaInquiryInSuccessState) || cases?.some(personaCaseInSuccessState);
+};
+
 export const createOrUpdatePersonaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
   accountId: string,
   inquiryData?: IPersonaInquiryData,
   caseData?: IPersonaCaseData,
-): Promise<{inquiry?: IPersonaInquiryData, case?: IPersonaCaseData}> => {
+): Promise<{ inquiry?: IPersonaInquiryData, case?: IPersonaCaseData, integration: IPersonaIntegration }> => {
   const inputError = new Error(`Invalid input data: ${JSON.stringify({ inquiryData, caseData }, null, 2)}`);
 
   if (!inquiryData && !caseData) {
@@ -167,13 +173,13 @@ export const createOrUpdatePersonaIntegration = async (
   };
 
   await entity.save();
-  return { inquiry: inquiryData, case: caseData };
+  return { inquiry: inquiryData, case: caseData, integration: entity.integrations.persona };
 };
 
 export const fetchCaseAndCreateOrUpdateIntegration = async (
   caseId: string,
   entity: IUserDocument | IVisitorDocument,
-): Promise<IPersonaCaseData> => {
+): Promise<{ newCase: IPersonaCaseData, integration: IPersonaIntegration }> => {
   try {
     if (!caseId) throw new CustomError('No case id provided.', ErrorTypes.INVALID_ARG);
 
@@ -187,7 +193,8 @@ export const fetchCaseAndCreateOrUpdateIntegration = async (
       status: personaCase?.data?.attributes?.status,
       createdAt: personaCase?.data?.attributes?.createdAt,
     };
-    return (await createOrUpdatePersonaIntegration(entity, accountId, null, caseData))?.case;
+    const { integration, case: newCase } = (await createOrUpdatePersonaIntegration(entity, accountId, null, caseData));
+    return { newCase, integration };
   } catch (err) {
     console.log(err);
   }
@@ -197,7 +204,7 @@ export const fetchCaseAndCreateOrUpdateIntegration = async (
 export const fetchInquiryAndCreateOrUpdateIntegration = async (
   inquiryId: string,
   entity: IUserDocument | IVisitorDocument,
-): Promise<IPersonaInquiryData> => {
+): Promise<{ newInquiry: IPersonaInquiryData, integration: IPersonaIntegration }> => {
   try {
     const client = new PersonaClient();
     const inquiry = await client.getInquiry(inquiryId);
@@ -210,7 +217,8 @@ export const fetchInquiryAndCreateOrUpdateIntegration = async (
       templateId,
       createdAt: inquiry?.data?.attributes?.createdAt,
     };
-    return (await createOrUpdatePersonaIntegration(entity, accountId, inquiryData))?.inquiry;
+    const { integration, inquiry: newInquiry } = (await createOrUpdatePersonaIntegration(entity, accountId, inquiryData));
+    return { newInquiry, integration };
   } catch (err) {
     console.log(err);
   }

@@ -34,7 +34,7 @@ export const getApplicationStatus: IRequestHandler<{}, {}, { email: string }> = 
       const fieldErrors = ((parsed as SafeParseError<{ email: string }>)?.error as ZodError)?.formErrors?.fieldErrors;
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
-    const applyResponse = await KarmaCardService.getApplicationStatus(parsed.data.email);
+    const applyResponse = await KarmaCardService.getApplicationData(parsed.data.email);
     api(req, res, getShareableMarqetaUser(applyResponse));
   } catch (err) {
     error(req, res, asCustomError(err));

@@ -7334,7 +7334,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"email\": \"andy@theimpactkarma.com\",\n    \"subscriptionCode\": \"monthlyNewsletters\"\n}\n",
+									"raw": "{\n    \"email\": \"andy@theimpactkarma.com\",\n    \"MarketingSubscriptionCode\": \"monthlyNewsletters\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -7361,7 +7361,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"email\": \"andy@theimpactkarma.com\",\n    \"subscriptionCode\": \"monthlyNewsletters\"\n}\n",
+									"raw": "{\n    \"email\": \"andy@theimpactkarma.com\",\n    \"MarketingSubscriptionCode\": \"monthlyNewsletters\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"
@@ -7388,7 +7388,7 @@
 								"header": [],
 								"body": {
 									"mode": "raw",
-									"raw": "{\n    \"email\": \"andy@theimpactkarma.com\",\n    \"subscriptionCode\": \"monthlyNewsletters\"\n}\n",
+									"raw": "{\n    \"email\": \"andy@theimpactkarma.com\",\n    \"MarketingSubscriptionCode\": \"monthlyNewsletters\"\n}\n",
 									"options": {
 										"raw": {
 											"language": "json"

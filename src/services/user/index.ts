@@ -801,9 +801,9 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     return;
   }
 
-  const passedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
+  const userPassedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
 
-  if (!passedInternalKyc) {
+  if (!userPassedInternalKyc) {
     console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
     return;
   }

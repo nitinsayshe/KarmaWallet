@@ -8,5 +8,5 @@ router.get('/location/:locationId', KardController.getLocation);
 router.get('/locations', KardController.getLocations);
 router.get('/locations/merchant/:merchantId', KardController.getMerchantLocations);
 router.get('/locations/eligible', authenticate, KardController.getEligibleLocations);
-
+router.get('/reward/merchant/:merchantId', KardController.getRewardsMerchantById);
 export default router;

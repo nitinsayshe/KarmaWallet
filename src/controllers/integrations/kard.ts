@@ -115,3 +115,26 @@ export const getMerchantLocations: IRequestHandler<{ merchantId: string }, Pagin
     output.error(req, res, asCustomError(err));
   }
 };
+
+export const getRewardsMerchantById: IRequestHandler<{ merchantId: string }, PaginationFields, {}> = async (req, res) => {
+  try {
+    const validationSchema = z.object({
+      id: objectReferenceValidation,
+      page: z.number().int().gte(0).optional(),
+      limit: z.number().int().gte(1).optional(),
+    });
+
+    const kardRequest: GetLocationsByMerchantIdRequest = { id: req.params.merchantId, ...req.query };
+    const parsed = validationSchema.safeParse(kardRequest);
+    if (!parsed.success) {
+      const fieldErrors = ((parsed as SafeParseError<GetLocationsByMerchantIdRequest>)?.error as ZodError)?.formErrors?.fieldErrors;
+      console.log(formatZodFieldErrors(fieldErrors));
+      throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
+    }
+
+    const data = await KardService.getRewardsMerchantById(kardRequest);
+    output.api(req, res, data);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};

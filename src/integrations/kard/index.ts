@@ -372,11 +372,11 @@ export const getRewardsMerchantById = async (req: GetLocationsByMerchantIdReques
     const _merchantId = req.id;
     const res = await client.getRewardsMerchantById(_merchantId);
     if (!res) {
-      throw new Error('Error getting locations');
+      throw new Error('Error getting Rewards Merchant By Id');
     }
     return res;
   } catch (err) {
-    throw new Error(`Error getting locations for merchant with id: ${req.id}`);
+    throw new Error(`Error getting Rewards for merchant with id: ${req.id}`);
   }
 };
 

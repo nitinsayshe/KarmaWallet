@@ -14,6 +14,9 @@ import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { IKardMerchantIntegration, IMerchantDocument, MerchantModel } from '../../models/merchant';
 import { IMerchantRateDocument, MerchantRateModel } from '../../models/merchantRate';
 
+export const DefaultMatchScoreThreshold = 0.0000001;
+export const RestrictiveMatchScoreThreshold = 0.000000001;
+
 export type Domain = {
   ID: string;
   Domain: string;
@@ -48,10 +51,30 @@ export type KWMatch = {
   _id: Types.ObjectId;
   name: string;
   url: string;
+  merchantId: string;
   candidateUrl: string;
   candidateName: string;
   searchItemId: string;
   score: number;
+};
+
+type MatchError = {
+  company: ICompanyDocument;
+  message: any;
+};
+
+type InitialMatch = Partial<SearchMatch<Domain, string, Types.ObjectId>>;
+
+export type IntialMatchResults = {
+  matches: InitialMatch[];
+  errors: MatchError[];
+};
+
+export type NarrowDownMatchesConfig = {
+  inputMatches?: IntialMatchResults['matches'];
+  minMatchScore?: number;
+  inputFilePath?: string;
+  outputFilePath?: string;
 };
 
 const getMerchantDictionary = (merchants: Merchant[]) => merchants.reduce((acc: { [key: string]: Merchant }, merchant: Merchant) => {
@@ -126,18 +149,18 @@ const createKardMerchantRates = async (kwMerchant: IMerchantDocument, offers: Of
   }
 };
 
-const getKardOfferData = async (): Promise<{
+const getKardOfferData = async (merchants?: Merchant[]): Promise<{
   merchants: Merchant[];
   offers: Offer[];
   domains: Domain[];
 } | null> => {
   try {
     const kc = new KardClient(KardEnvironmentEnum.Issuer);
-    const merchants = await kc.getRewardsMerchants();
+    const kardMerchants = merchants || await kc.getRewardsMerchants();
 
-    if (!merchants) return null;
+    if (!kardMerchants) return null;
 
-    const domains: Domain[] = merchants.map((merchant) => {
+    const domains: Domain[] = kardMerchants.map((merchant) => {
       const maxRate = merchant.offers
         .filter((offer) => offer.offerType === OfferType.ONLINE && offer.commissionType === CommissionType.PERCENT)
         .reduce((acc, offer) => {
@@ -159,9 +182,9 @@ const getKardOfferData = async (): Promise<{
       };
     });
 
-    const offers = merchants.map((merchant) => merchant.offers).flat();
+    const offers = kardMerchants.map((merchant) => merchant.offers).flat();
 
-    return { merchants, offers, domains };
+    return { merchants: kardMerchants, offers, domains };
   } catch (err) {
     console.error(err);
     return null;
@@ -245,13 +268,23 @@ const addKardIntegrationToMerchant = async (merchantId: Types.ObjectId, kardMerc
     return null;
   }
 };
+
+export type AssociatedMatchResult = {
+  matches: {
+    _id: Types.ObjectId;
+    name: string;
+    merchantId: string;
+  }[],
+  errors: string[]
+};
+
 // Add merchants to our database based on a csv of matches
-export const associateKardMatches = async () => {
+export const associateKardMatches = async (merchantData?: KWMatch[], merchantsToMatch?: Merchant[]): Promise<AssociatedMatchResult> => {
   // update to name of file that you are using, should have _id, and merchantId where _id is the Company id and merchantId is the kard merchant id
   const matchesRaw = fs.readFileSync(path.resolve(__dirname, './.tmp', 'kard_matches_confirmed.json'), 'utf8');
-  const matches: { _id: Types.ObjectId; merchantId: string }[] = JSON.parse(matchesRaw);
+  const matches: { _id: Types.ObjectId; merchantId: string, name: string }[] = merchantData?.length > 0 ? merchantData : JSON.parse(matchesRaw);
 
-  const { merchants, offers, domains } = await getKardOfferData();
+  const { merchants, offers, domains } = await getKardOfferData(merchantsToMatch);
   if (!merchants || !offers || !domains) {
     console.error('Error fetching data from Kard API');
     return;
@@ -325,13 +358,13 @@ export const associateKardMatches = async () => {
       }),
     )
   ).filter((error) => !!error);
-
   if (errors?.length > 0) {
     fs.writeFileSync(path.resolve(__dirname, './.tmp', 'kardAssociationErrors.json'), JSON.stringify(errors));
   }
   if (matches?.length > 0) {
     fs.writeFileSync(path.resolve(__dirname, './.tmp/kard_associated_matches.json'), JSON.stringify(matches));
   }
+  return { matches, errors };
 };
 
 // Removes any duplicate merchants from the database
@@ -405,7 +438,7 @@ export const updateKardMerchants = async (merchants: Merchant[]): Promise<IMerch
           'integrations.kard.id': domain.Merchant.ID,
         });
 
-        if (!!existingMerchant) {
+        if (!!existingMerchant && !!existingMerchant.integrations.kard) {
           existingMerchant.integrations.kard.websiteURL = domain.Domain;
           existingMerchant.integrations.kard.maxOffer = domain.Merchant.MaxRate.ref;
           existingMerchant.lastModified = lastModifiedDate;
@@ -501,9 +534,9 @@ export const updateKardMerchantRates = async (kardMerchants: Merchant[]): Promis
 };
 
 // Match kard companies to companies in the Karma Wallet database, creates a json with the matches, be sure to run pullRecentFromDatabaseAndSave first so we have the most up to date domain info
-export const matchKardCompanies = async () => {
+export const matchKardCompanies = async (merchants?: Merchant[]): Promise<IntialMatchResults> => {
   // get domains from kard
-  const { domains } = await getKardOfferData();
+  const { domains } = await getKardOfferData(merchants);
   if (!domains) {
     console.error('Error fetching data from Kard API');
     return;
@@ -568,10 +601,13 @@ export const matchKardCompanies = async () => {
   if (matches?.length) {
     fs.writeFileSync(path.resolve(__dirname, './.tmp/kard_fuzzy_matches.json'), JSON.stringify(matches));
   }
+
+  return { matches, errors };
 };
 
 // Once the above function has been run, we can manually review the matches and confirm them, this function will create a json with the confirmed matches
-export const narrowDownMatchesByScore = async (inputFilePath?: string, outputFilePath?: string) => {
+export const narrowDownMatchesByScore = async (config?: NarrowDownMatchesConfig): Promise<KWMatch[]> => {
+  const { inputMatches, inputFilePath, outputFilePath, minMatchScore } = config;
   let searchResultsRaw = '';
   if (!inputFilePath) {
     searchResultsRaw = fs.readFileSync(path.resolve(__dirname, './.tmp/kard_fuzzy_matches.json'), 'utf8');
@@ -579,7 +615,8 @@ export const narrowDownMatchesByScore = async (inputFilePath?: string, outputFil
     searchResultsRaw = fs.readFileSync(path.resolve(__dirname, inputFilePath), 'utf8');
   }
 
-  const searchResults: SearchMatch<Domain, string, Types.ObjectId>[] = JSON.parse(searchResultsRaw);
+  const searchResults: SearchMatch<Domain, string, Types.ObjectId>[] = inputMatches?.length > 0 ? inputMatches : JSON.parse(searchResultsRaw);
+
   const matches: KWMatch[] = searchResults
     ?.map((searchResult: SearchMatch<Domain, string, Types.ObjectId>) => {
       const {
@@ -608,14 +645,15 @@ export const narrowDownMatchesByScore = async (inputFilePath?: string, outputFil
       };
 
       let minScore = topMerchantMatchScore;
-      if (!!topMerchantMatchScore && topMerchantMatchScore < 0.0000001) {
+      const minimumScoreForMatching = minMatchScore || DefaultMatchScoreThreshold;
+      if (!!topMerchantMatchScore && topMerchantMatchScore < minimumScoreForMatching) {
         merchantMatch = true;
         candidate.name = topMerchantMatchMerchantName;
         candidate.url = topMerchantMatchDomain;
         candidate.companyId = topMerchantMatches?.[0]?.item?.Merchant?.ID;
         candidate.merchantId = topMerchantMatchMerchantId;
       }
-      if (!!topDomainMatchScore && topDomainMatchScore < 0.0000001) {
+      if (!!topDomainMatchScore && topDomainMatchScore < minimumScoreForMatching) {
         domainMatch = true;
         minScore = topDomainMatchScore;
         candidate.name = topDomainMatchMerchantName;
@@ -643,7 +681,7 @@ export const narrowDownMatchesByScore = async (inputFilePath?: string, outputFil
       }
 
       if (merchantMatch || domainMatch) {
-        const newMatch = {
+        const newMatch: KWMatch = {
           _id,
           merchantId: candidate.merchantId,
           name: companyName,
@@ -665,6 +703,6 @@ export const narrowDownMatchesByScore = async (inputFilePath?: string, outputFil
   } else {
     fs.writeFileSync(path.resolve(__dirname, outputFilePath), JSON.stringify(matches));
   }
-
   console.log(`[#] ${matches?.length} matches`);
+  return matches;
 };

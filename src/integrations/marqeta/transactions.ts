@@ -271,6 +271,9 @@ export const getSubTypeFromMarqetaGPATag = (tag: string): TransactionCreditSubty
   if (tag === TransactionCreditSubtypeEnum.Cashback) {
     return TransactionCreditSubtypeEnum.Cashback;
   }
+  if (tag === TransactionCreditSubtypeEnum.ProgramCredit) {
+    return TransactionCreditSubtypeEnum.ProgramCredit;
+  }
   return undefined;
 };
 
@@ -665,7 +668,7 @@ const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
   // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
   if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
   if (transaction.status === TransactionModelStateEnum.Pending) return true;
-  if (transaction.status === TransactionModelStateEnum.Completion && transaction.integrations.marqeta.relatedTransactions) return true;
+  if (transaction.status === TransactionModelStateEnum.Completion && !transaction?.integrations?.marqeta?.relatedTransactions) return true;
   return false;
 };
 

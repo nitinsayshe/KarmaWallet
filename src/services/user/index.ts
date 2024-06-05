@@ -62,10 +62,10 @@ import { getStateFromZipcode } from '../utilities';
 import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
 import * as UserServiceTypes from './types';
 import { updateActiveCampaignDataAndJoinGroupForApplicant, closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
-import { hasEntityPassedInternalKyc } from '../../integrations/persona';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
 import { checkIfUserWithEmailExists, createShareasaleTrackingId, isUserDocument } from './utils';
+import { passedInternalKyc } from '../../integrations/persona';
 
 dayjs.extend(utc);
 
@@ -662,6 +662,7 @@ export const checkIfEmailAlreadyInUse = async (email: string) => {
 
 export const formatMarqetaClosedEmail = (email: string) => {
   if (!email) return '';
+
   const emailParts = email.split('@');
   return `${emailParts[0]}+closed@${emailParts[1]}`;
 };
@@ -678,6 +679,11 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IUserDocument | IVisitorDocument> => {
   try {
+    if (entity?.integrations?.marqeta?.email.includes('+closed')) {
+      console.log('Marqeta email already closed, skipping');
+      return entity;
+    }
+
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
@@ -778,7 +784,7 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
 const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (
   entity: IUserDocument | IVisitorDocument,
 ) => {
-  if (!hasEntityPassedInternalKyc(entity)) {
+  if (!passedInternalKyc(entity.integrations.persona)) {
     await updateMarqetaUserStatus(entity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
     return true;
   }

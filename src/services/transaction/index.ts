@@ -70,7 +70,7 @@ import { CombinedPartialTransaction } from '../../types/transaction';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
 import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
-import { IShareableACHTransfer } from '../../models/achTransfer/types';
+import { IExternalMappedShareableACHTransfer, IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
 import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
@@ -464,7 +464,7 @@ export const getShareableTransaction = async ({
 
   const _card: IRef<ObjectId, IShareableCard> = !!(card as ICardDocument)?.mask ? getShareableCard(card as ICardDocument) : card;
 
-  const _achtransfer: IRef<ObjectId, IShareableACHTransfer> = achTransfer;
+  const _achtransfer: IRef<ObjectId, IShareableACHTransfer | IExternalMappedShareableACHTransfer> = achTransfer;
 
   const _company: IRef<ObjectId, IShareableCompany> = !!(company as ICompanyDocument)?.companyName
     ? getShareableCompany(company as ICompanyDocument)
@@ -995,6 +995,9 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     throw new CustomError(`Group with groupId: ${groupId} not found.`, ErrorTypes.NOT_FOUND);
   }
 
+  const errors = [];
+  const success = [];
+
   for (const deposit of gpaDeposits) {
     const tags = `groupId=${groupId},type=${type}`;
     const userInGroup = await checkIfUserInGroup(deposit.userId, groupId);
@@ -1018,15 +1021,23 @@ export const processEmployerGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA ${deposit.userId} from program funding source: ${JSON.stringify(gpaFundResponse)}`);
-    } else {
-      console.log(`Successfully funded user ${deposit.userId}`);
+      errors.push(`${deposit.userId} : ${JSON.stringify(gpaFundResponse)}`);
     }
+
+    success.push(`${deposit.userId}`);
   }
+
+  return {
+    success,
+    errors,
+  };
 };
 
 export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
   const { type, gpaDeposits, memo } = deposits;
+
+  const success = [];
+  const errors = [];
 
   for (const deposit of gpaDeposits) {
     const tags = `type=${type}`;
@@ -1038,11 +1049,48 @@ export const processCashbackGPADeposits = async (deposits: IInitiateGPADepositsR
     });
 
     if (!gpaFundResponse.data) {
-      console.error(`Failed to fund user GPA from program funding source: ${JSON.stringify(gpaFundResponse)}`);
-    } else {
-      console.log(`Successfully funded user ${deposit.userId}`);
+      errors.push(`${deposit.userId} : ${JSON.stringify(gpaFundResponse)}`);
     }
+
+    success.push(deposit.userId);
   }
+
+  return {
+    success,
+    errors,
+  };
+};
+
+// make a custom one at some point
+export const processProgramCreditDeposit = async (deposits: IInitiateGPADepositsRequest) => {
+  const { type, gpaDeposits, memo } = deposits;
+
+  const success = [];
+  const errors = [];
+
+  for (const deposit of gpaDeposits) {
+    let _tags = [`type=${type}`];
+
+    if (!!deposit.tags) _tags = [..._tags, ...deposit.tags];
+
+    const gpaFundResponse = await fundUserGPAFromProgramFundingSource({
+      userId: deposit.userId,
+      amount: deposit.amount,
+      tags: _tags.join(', '),
+      memo: !!memo ? memo : 'Courtesy credit from Karma Wallet',
+    });
+
+    if (!gpaFundResponse.data) {
+      errors.push(`${deposit.userId} : ${JSON.stringify(gpaFundResponse)}`);
+    }
+
+    success.push(deposit.userId);
+  }
+
+  return {
+    success,
+    errors,
+  };
 };
 
 export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) => {
@@ -1054,10 +1102,19 @@ export const processGPADeposits = async (deposits: IInitiateGPADepositsRequest) 
 
   if (type === TransactionCreditSubtypeEnum.Employer) {
     if (!groupId) throw new CustomError('Missing group id', ErrorTypes.INVALID_ARG);
-    await processEmployerGPADeposits(deposits);
+    const depositsResponse = await processEmployerGPADeposits(deposits);
+    return depositsResponse;
   }
 
   if (type === TransactionCreditSubtypeEnum.Cashback) {
-    await processCashbackGPADeposits(deposits);
+    const response = await processCashbackGPADeposits(deposits);
+    return response;
   }
+
+  if (type === TransactionCreditSubtypeEnum.ProgramCredit) {
+    const response = await processProgramCreditDeposit(deposits);
+    return response;
+  }
+
+  throw new CustomError('Invalid type', ErrorTypes.INVALID_ARG);
 };

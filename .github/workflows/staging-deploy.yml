@@ -109,6 +109,7 @@ jobs:
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.SANDBOX_MARQETA_APPLICATION_TOKEN}}' >> .env
     - run: echo 'MARQETA_ACCESS_TOKEN=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN}}' >> .env
     - run: echo 'MARQETA_WEBHOOK_ID=${{secrets.MARQETA_WEBHOOK_ID}}' >> .env
+    - run: echo 'MARQETA_ACCESS_TOKEN_PRIVATE=${{secrets.SANDBOX_MARQETA_ACCESS_TOKEN_PRIVATE}}' >> .env
     - run: echo 'MARQETA_WEBHOOK_PASSWORD=${{secrets.MARQETA_WEBHOOK_PASSWORD}}' >> .env
     - run: echo 'MARQETA_BASE_URL=${{secrets.SANDBOX_MARQETA_BASE_URL}}' >> .env
     - run: echo 'MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN=${{secrets.MARQETA_PROGRAM_FUNDING_SOURCE_TOKEN}}' >> .env
@@ -126,6 +127,11 @@ jobs:
     - run: echo 'STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY_TEST}}' >> .env
     - run: echo 'STRIPE_WEBHOOK_ID=${{secrets.STAGING_STRIPE_WEBHOOK_ID}}' >> .env
     - run: echo 'STRIPE_WEBHOOK_SECRET=${{secrets.STAGING_STRIPE_WEBHOOK_SECRET}}' >> .env
+    - run: echo 'VGS_API_USERNAME=${{secrets.SANDBOX_VGS_API_USERNAME}}' >> .env
+    - run: echo 'VGS_API_PASSWORD=${{secrets.SANDBOX_VGS_API_PASSWORD}}' >> .env
+    - run: echo 'VGS_API_OUTBOUND_URL=${{secrets.SANDBOX_VGS_API_OUTBOUND_URL}}' >> .env
+    - run: echo 'VGS_API_INBOUND_URL=${{secrets.SANDBOX_VGS_API_INBOUND_URL}}' >> .env
+    - run: echo 'VGS_PEM=${{secrets.SANDBOX_VGS_PEM}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

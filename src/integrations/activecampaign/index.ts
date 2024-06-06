@@ -791,6 +791,7 @@ export const updateActiveCampaignContactData = async (
   }
 
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
+  console.log('///// these are the subscription lists', subscriptionLists);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
   const contacts: Array<IContactsData> = [

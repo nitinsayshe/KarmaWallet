@@ -16,7 +16,6 @@ import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser, updateMarq
 import { fetchCaseAndCreateOrUpdateIntegration, fetchInquiryAndCreateOrUpdateIntegration, personaCaseInSuccessState, personaInquiryInSuccessState } from '../../integrations/persona';
 import { ErrorTypes } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { formatName, generateRandomPasswordString } from '../../lib/misc';
@@ -35,7 +34,6 @@ import {
   KarmaMembershipStatusEnum,
   KarmaMembershipTypeEnumValues,
 } from '../../models/user/types';
-import { UserNotificationModel } from '../../models/user_notification';
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
@@ -179,28 +177,6 @@ export const performKycForUserOrVisitor = async (
   }
 };
 
-export const performKycAndSendWelcomeEmailForUser = async (user: IUserDocument) => {
-  const { virtualCardResponse, physicalCardResponse } = await performKycForUserOrVisitor(user);
-  if (!virtualCardResponse || !physicalCardResponse) {
-    console.error(`Failed kyc or card creation for user: ${user._id}`);
-    return;
-  }
-
-  try {
-    // check if they've received the welcome email
-    const welcomeNotification = await UserNotificationModel.findOne({
-      user: user._id,
-      type: NotificationTypeEnum.KarmaCardWelcome,
-      channel: NotificationChannelEnum.Email,
-    });
-
-    if (!welcomeNotification) await createKarmaCardWelcomeUserNotification(user, false);
-  } catch (err) {
-    console.error(`Error sending welcome email for user: ${user._id}`);
-  }
-  return { virtualCardResponse, physicalCardResponse };
-};
-
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   // find the email is already register with marqeta or not
   const { data } = await getMarqetaUserByEmail({ email: userData.email });
@@ -339,6 +315,7 @@ export const storeApplicationAndHandleSuccesState = async (
 
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
+  console.log('//// [4] Karma Apply handle active transition');
   await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
   return userDocument?.toObject()?.integrations?.marqeta;
 };

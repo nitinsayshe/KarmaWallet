@@ -742,6 +742,7 @@ export const updateExistingUserFromMarqetaWebhook = async (
       await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });
     }
 
+    console.log('//// [3] Handling updated user from Marqeta Webhook');
     await handleMarqetaUserActiveTransition(user, false);
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user.integrations.referrals?.params);
     await updateCustomFields(user.emails.find((e) => e.primary).email, [
@@ -769,12 +770,14 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
     if (!visitor.user) {
       // Visitor only created
       const user = await createNewUserFromMarqetaWebhook(visitor);
+      console.log('//// [1] Handling updated visitor from Marqeta Webhook');
       await handleMarqetaUserActiveTransition(user, true);
     } else {
       // Visitor created a KW account after being declined for a KW card
       // Marqeta integration only saved on visitor not on user yet
       // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
       const user = await UserModel.findById(visitor.user);
+      console.log('//// [2] Handling updated visitor from Marqeta Webhook');
       if (!user) throw new CustomError('[+] User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
       await handleMarqetaUserActiveTransition(user, false);
     }

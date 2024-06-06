@@ -244,15 +244,20 @@ export const getKarmaCardApplications = async () => _getKarmaCardApplications({}
 
 export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
   const userEmail = userObject.emails.find((email) => !!email.primary).email;
-  if (!!urlParams) {
-    await updateUserUrlParams(userObject, urlParams);
-    await updateActiveCampaignDataAndJoinGroupForApplicant(userObject, urlParams);
-  } else {
-    await updateActiveCampaignDataAndJoinGroupForApplicant(userObject);
+  try {
+    if (!!urlParams) {
+      await updateUserUrlParams(userObject, urlParams);
+      await updateActiveCampaignDataAndJoinGroupForApplicant(userObject, urlParams);
+    } else {
+      await updateActiveCampaignDataAndJoinGroupForApplicant(userObject);
+    }
+
+    // add existingUser flag to active campaign
+    await updateCustomFields(userEmail, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
+    await createKarmaCardWelcomeUserNotification(userObject, false);
+  } catch (err) {
+    console.error(`Error updating user ${userObject._id} with urlParams: ${urlParams} to success state: ${err}`);
   }
-  // add existingUser flag to active campaign
-  await updateCustomFields(userEmail, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
-  await createKarmaCardWelcomeUserNotification(userObject, false);
 };
 
 export const handleKarmaCardApplySuccess = async ({

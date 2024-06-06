@@ -151,6 +151,8 @@ export const createOrUpdatePersonaIntegration = async (
       const existingInquiryIndex = inquiries.findIndex((i) => i.id === inquiryData.id);
       if (existingInquiryIndex > -1) {
         inquiries[existingInquiryIndex] = inquiryData;
+      } else {
+        inquiries.push(inquiryData);
       }
     } else {
       inquiries.push(inquiryData);
@@ -162,6 +164,8 @@ export const createOrUpdatePersonaIntegration = async (
       const existingCaseIndex = cases.findIndex((i) => i.id === caseData.id);
       if (existingCaseIndex > -1) {
         cases[existingCaseIndex] = caseData;
+      } else {
+        cases.push(caseData);
       }
     } else {
       cases.push(caseData);

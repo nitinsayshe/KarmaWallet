@@ -144,6 +144,7 @@ export const createOrUpdatePersonaIntegration = async (
   const cases = entity?.integrations?.persona?.cases || [];
 
   if (!!inquiryData) {
+    console.log('///// inquiry data', inquiryData);
     if (inquiries.length > 0) {
       // check if there's one with the inquiry id already
       // if so, update it
@@ -167,6 +168,7 @@ export const createOrUpdatePersonaIntegration = async (
     }
   }
 
+  console.log('///// new inquiries data', inquiries);
   entity.integrations.persona = {
     accountId,
     inquiries,

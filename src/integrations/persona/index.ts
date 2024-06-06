@@ -144,7 +144,6 @@ export const createOrUpdatePersonaIntegration = async (
   const cases = entity?.integrations?.persona?.cases || [];
 
   if (!!inquiryData) {
-    console.log('///// inquiry data', inquiryData);
     if (inquiries.length > 0) {
       // check if there's one with the inquiry id already
       // if so, update it
@@ -172,14 +171,11 @@ export const createOrUpdatePersonaIntegration = async (
     }
   }
 
-  console.log('///// new inquiries data', inquiries);
   entity.integrations.persona = {
     accountId,
     inquiries,
     cases,
   };
-
-  console.log('////// entity.integrations.persona', entity.integrations.persona);
 
   await entity.save();
   return { inquiry: inquiryData, case: caseData, integration: entity.integrations.persona };
@@ -217,7 +213,6 @@ export const fetchInquiryAndCreateOrUpdateIntegration = async (
   try {
     const client = new PersonaClient();
     const inquiry = await client.getInquiry(inquiryId);
-    console.log('////// response from persona inquiry', inquiry);
     // create integration with inquiry data
     const templateId = inquiry?.data?.relationships?.inquiryTemplate?.data?.id;
     const accountId = inquiry?.data?.relationships?.account?.data?.id;

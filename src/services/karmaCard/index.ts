@@ -381,10 +381,14 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     let userPassedInternalKyc = false;
     let templateId;
     if (!!inquiryId) {
+      console.log('///// Inquiry id exists');
       const { newInquiry: internalKycResult, integration: _ } = await fetchInquiryAndCreateOrUpdateIntegration(inquiryId, user || visitor);
+      console.log('///// return data from inquiry in Persona', internalKycResult, _);
       userPassedInternalKyc = personaInquiryInSuccessState(internalKycResult);
+      console.log('///// user is in passed internal kyc state??', userPassedInternalKyc);
       templateId = internalKycResult?.templateId;
     } else {
+      console.log('///// Inquiry id does not exist');
       const { newCase: internalKycResult, integration: _ } = await fetchCaseAndCreateOrUpdateIntegration(caseId, user || visitor);
       userPassedInternalKyc = personaCaseInSuccessState(internalKycResult);
     }
@@ -392,6 +396,7 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     const entity = user || visitor;
     const marqetaIntegration = entity.integrations.marqeta;
     const personaIntegration = entity.integrations.persona;
+    console.log('//// this is the persona integration', personaIntegration);
 
     // check to see if they have already been approved, if so return early
     if (application.status === ApplicationStatus.SUCCESS) {
@@ -408,6 +413,7 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     }
 
     if (!userPassedInternalKyc) {
+      console.log('///// th user did not pass internal kyc');
       if (!kycResult?.codes?.includes(ReasonCode.FailedInternalKyc)) {
         if (!kycResult?.codes) kycResult.codes = [];
         kycResult.codes.push(ReasonCode.FailedInternalKyc);
@@ -424,6 +430,7 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
       };
     }
 
+    console.log('///// final return in continue application should store application and handle success state');
     return {
       marqeta: await storeApplicationAndHandleSuccesState(application, user || visitor),
       persona: personaIntegration,

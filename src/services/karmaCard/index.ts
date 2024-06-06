@@ -380,6 +380,7 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     // pull the persona inquiry
     let userPassedInternalKyc = false;
     let templateId;
+
     if (!!inquiryId) {
       console.log('///// Inquiry id exists');
       const { newInquiry: internalKycResult, integration: _ } = await fetchInquiryAndCreateOrUpdateIntegration(inquiryId, user || visitor);

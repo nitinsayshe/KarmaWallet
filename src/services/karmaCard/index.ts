@@ -37,7 +37,7 @@ import {
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
-import { handleMarqetaUserActiveTransition, updateUserUrlParams } from '../user';
+import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
@@ -315,8 +315,6 @@ export const storeApplicationAndHandleSuccesState = async (
 
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  console.log('//// [4] Karma Apply handle active transition');
-  await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
   return userDocument?.toObject()?.integrations?.marqeta;
 };
 

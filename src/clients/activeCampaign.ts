@@ -387,6 +387,7 @@ export class ActiveCampaignClient extends SdkClient {
   public async importContacts(contactImportData: IContactsImportData) {
     try {
       const { data } = await this.sendHttpRequestWithRetry(() => this._client.post('/import/bulk_import', contactImportData));
+      console.log('///// this is the data from import contancts', data);
       return data;
     } catch (err) {
       if (axios.isAxiosError(err)) {

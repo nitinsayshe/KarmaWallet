@@ -13,6 +13,7 @@ import {
   optionalZipCodeValidation,
 } from '../../lib/validation';
 import {
+  GetEligibleLocationsRequest,
   GetLocationsByMerchantIdRequest,
   GetLocationsRequest,
   KardMerchantCategoryEnum,
@@ -39,6 +40,10 @@ export const zodGetLocationsValidationSchema = z.object({
   radius: z.number().gte(1).lte(50).optional(),
   category: getZodEnumSchemaFromTypescriptEnum(KardMerchantCategoryEnum).optional(),
   source: getZodEnumSchemaFromTypescriptEnum(OfferSource).optional(),
+});
+
+const zodGetEligibleLocationsValidationSchema = zodGetLocationsValidationSchema.extend({
+  referringPartnerUserId: z.string(),
 });
 
 export const getLocation: IRequestHandler<{ locationId: string }, {}, {}> = async (req, res) => {
@@ -75,18 +80,18 @@ export const getLocations: IRequestHandler<{}, GetLocationsRequest, {}> = async 
   }
 };
 
-export const getEligibleLocations: IRequestHandler<{}, GetLocationsRequest, {}> = async (req, res) => {
+export const getEligibleLocations: IRequestHandler<{}, GetEligibleLocationsRequest, {}> = async (req, res) => {
   try {
     const { requestor } = req;
-    const validationSchema = zodGetLocationsValidationSchema;
+    const validationSchema = zodGetEligibleLocationsValidationSchema;
     const parsed = validationSchema.safeParse(req.query);
     if (!parsed.success) {
-      const fieldErrors = ((parsed as SafeParseError<GetLocationsRequest>)?.error as ZodError)?.formErrors?.fieldErrors;
+      const fieldErrors = ((parsed as SafeParseError<GetEligibleLocationsRequest>)?.error as ZodError)?.formErrors?.fieldErrors;
       console.log(formatZodFieldErrors(fieldErrors));
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
-    const data = await KardService.getEligibleLocations(requestor, parsed.data);
+    const data = await KardService.getEligibleLocations(requestor, parsed.data as GetEligibleLocationsRequest);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -1,10 +1,11 @@
 import { FilterQuery } from 'mongoose';
-import { SocketRooms, SocketEventTypes, SocketEvents } from '../../lib/constants/sockets';
+import { createOrUpdatePersonaIntegration, hasInquiriesOrCases, passedInternalKyc } from '.';
+import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { getUtcDate } from '../../lib/date';
-import { KarmaCardApplicationModel, ApplicationStatus } from '../../models/karmaCardApplication';
+import { KarmaCardApplicationModel, ApplicationStatus, IKarmaCardApplicationDocument } from '../../models/karmaCardApplication';
 import { UserModel, IUserDocument } from '../../models/user';
 import { VisitorModel, VisitorActionEnum, IVisitorDocument } from '../../models/visitor';
-import { ApplicationDecision, getShareableMarqetaUser, ReasonCode } from '../../services/karmaCard/utils';
+import { getShareableMarqetaUser, ReasonCode, ApplicationDecision } from '../../services/karmaCard/utils';
 import { SocketClient } from '../../clients/socket';
 import { IRequest } from '../../types/request';
 import {
@@ -18,7 +19,7 @@ import {
   IPersonaCaseData,
   PersonaCaseStatusEnumValues,
 } from './types';
-import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationStatus, continueKarmaCardApplication } from '../../services/karmaCard';
+import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationData, continueKarmaCardApplication } from '../../services/karmaCard';
 import { IUserNotificationDocument, UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
 import {
@@ -28,16 +29,20 @@ import {
 } from '../../services/user_notification';
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
 import { states } from '../../lib/constants/states';
-import { createOrUpdatePersonaIntegration } from '.';
-import { MarqetaKYCStatus, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
-import { daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
 import { IKarmaCardUpdateData, IKarmaCardDeclinedEmailData } from '../../services/email/types';
 import { isUserDocument } from '../../services/user/utils';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/types';
 import { updateMarqetaUserStatus } from '../marqeta/user';
+import { SocketEvents, daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
+import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
 
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;
+
+export const hasSavedApplicationAndKycResult = (application: IKarmaCardApplicationDocument, existingApplicationData: ApplicationDecision): boolean => {
+  const hasPersonaCaseOrInquiryData = hasInquiriesOrCases(existingApplicationData?.persona);
+  return !!application && !!existingApplicationData?.marqeta?.kycResult?.status && hasPersonaCaseOrInquiryData;
+};
 
 export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<ApplicationDecision> => {
   // start the application process
@@ -100,12 +105,12 @@ const emitDecisionToSocket = (email: string, inquiryId: string, result: Applicat
   });
 };
 
-const getUserApplicationStatus = async (email: string) => {
+const getUserApplicationStatus = async (email: string): Promise<ApplicationDecision> => {
   try {
     if (!email) {
       throw new Error('No email found');
     }
-    const application = await getApplicationStatus(email);
+    const application = await getApplicationData(email);
     return application;
   } catch (e) {
     return null;
@@ -158,8 +163,9 @@ export const continueApplyProcessForApprovedCase = async (req: PersonaWebhookBod
       return;
     }
 
-    const kycStatus = applicationStatus?.kycResult?.status;
-    if (kycStatus === MarqetaKYCStatus.SUCCESS || (!!application && application?.status === ApplicationStatus.SUCCESS)) {
+    const kycStatus = applicationStatus?.marqeta?.kycResult?.status;
+    const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
+    if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
       console.log(`User with email: ${email} has already been approved for a card`);
       return;
     }
@@ -169,9 +175,8 @@ export const continueApplyProcessForApprovedCase = async (req: PersonaWebhookBod
       return;
     }
 
-    const hasSavedApplicationAndKycResult = !!application && !!applicationStatus?.kycResult?.status;
     // here kycStatus can be failed and will be updated in the continue process
-    if (hasSavedApplicationAndKycResult) {
+    if (hasSavedApplicationAndKycResult(application, applicationStatus)) {
       applicationStatus = await continueKarmaCardApplication(email, null, caseId);
     } else {
       console.log(`No action taken for case with id ${caseId} with status: ${caseStatus}`);
@@ -203,41 +208,42 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     const inquiryId = req?.data?.attributes?.payload?.data?.id;
     const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
 
-    let applicationStatus = await getUserApplicationStatus(email);
-    const kycStatus = applicationStatus?.kycResult?.status;
-    if (kycStatus === MarqetaKYCStatus.SUCCESS || (!!application && application?.status === ApplicationStatus.SUCCESS)) {
+    let existingApplicationData = await getUserApplicationStatus(email);
+    const kycStatus = existingApplicationData?.marqeta?.kycResult?.status;
+    const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
+    if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
       console.log(`User with email: ${email} has already been approved for a card`);
-      emitDecisionToSocket(email, inquiryId, applicationStatus);
+      emitDecisionToSocket(email, inquiryId, existingApplicationData);
       return;
     }
 
     if (!inquiryId || !inquiryTemplateId) {
       console.log(`No inquiryId or inquiryTemplateId found in webhook for email: ${email}`);
-      emitDecisionToSocket(email, inquiryId, applicationStatus);
+      emitDecisionToSocket(email, inquiryId, existingApplicationData);
       return;
     }
 
     console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
-    const hasSavedApplicationAndKycResult = !!application && !!applicationStatus?.kycResult?.status;
+
     const isManualApproval = inquiryStatus === PersonaInquiryStatusEnum.Approved;
     const receivedFromGovIdAndSelfieOrDocs = inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
     const receivedFromDataCollection = inquiryTemplateId === PersonaInquiryTemplateIdEnum.DataCollection;
-    if (hasSavedApplicationAndKycResult && (isManualApproval || receivedFromGovIdAndSelfieOrDocs)) {
+    if (hasSavedApplicationAndKycResult(application, existingApplicationData) && (isManualApproval || receivedFromGovIdAndSelfieOrDocs)) {
       // if this request is coming from this template, it could have failed db verification, but passed with new document data
       console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId);
-      applicationStatus = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id);
+      existingApplicationData = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id);
     } else if (receivedFromDataCollection || isManualApproval) {
       console.log('going into startApplicationFromInquiry process for inquiry with id: ', inquiryId);
-      applicationStatus = await startApplicationFromInquiry(req);
+      existingApplicationData = await startApplicationFromInquiry(req);
     } else {
       console.log(`No action taken for inquiry with id ${inquiryId} from template: ${inquiryTemplateId}`);
     }
 
-    if (!applicationStatus) {
+    if (!existingApplicationData) {
       throw new Error('No result found');
     }
 
-    emitDecisionToSocket(email, inquiryId, applicationStatus);
+    emitDecisionToSocket(email, inquiryId, existingApplicationData);
   } catch (e) {
     console.log(`Error in application process: ${e}`);
   }
@@ -305,14 +311,13 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     console.log('No action taken for inquiry with id: ', inquiryId);
     return;
   }
-  // pull the application
-  const decision = await getUserApplicationStatus(email);
-  // if they failed marqeta, proceed with gov id, selfie, and doc verification
-  const failedMarqeta = decision?.kycResult?.status === MarqetaKYCStatus.FAILURE
-    && decision?.kycResult?.codes.length > 0
-    && !decision?.kycResult?.codes?.includes(ReasonCode.Approved);
 
-  // check if they've already received this notification
+  const existingApplicationData = await getUserApplicationStatus(email);
+  // if they failed marqeta, proceed with gov id, selfie, and doc verification
+  const failedMarqeta = existingApplicationData?.marqeta?.kycResult?.status === IMarqetaKycState.failure
+    && existingApplicationData?.marqeta?.kycResult?.codes.length > 0
+    && !existingApplicationData?.marqeta?.kycResult?.codes?.includes(ReasonCode.Approved);
+
   const user = await UserModel.findOne({ 'emails.email': email });
   const visitor = await VisitorModel.findOne({ email });
 
@@ -329,6 +334,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   } else {
     query.visitor = visitor._id;
   }
+  // check if they've already received this notification
   const notification = await UserNotificationModel.findOne(query);
   if (notification) {
     console.log(`Notification already queued for user or visitor with email ${email}`);

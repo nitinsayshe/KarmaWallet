@@ -45,11 +45,10 @@ import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import * as VisitorService from '../visitor';
 import {
-  ApplicationDecision,
   hasKarmaWalletCards,
   openBrowserAndAddShareASaleCode,
   ReasonCode,
-  SourceResponse,
+  ApplicationDecision,
   updateActiveCampaignDataAndJoinGroupForApplicant,
 } from './utils';
 
@@ -77,6 +76,7 @@ export interface IKarmaCardRequestBody {
   sscid?: string;
   sscidCreatedOn?: string;
   xType?: string;
+  productSubscriptionId?: string;
 }
 
 interface IApplySuccessData {
@@ -296,7 +296,7 @@ export const handleKarmaCardApplySuccess = async ({
 export const storeApplicationAndHandleSuccesState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
-): Promise<SourceResponse> => {
+): Promise<IMarqetaUserIntegrations> => {
   if (!entity) return;
 
   const entityIsUser = isUserDocument(entity);
@@ -340,7 +340,7 @@ export const storeApplicationAndHandleSuccesState = async (
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
   await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
-  return userDocument?.toObject()?.integrations?.marqeta as SourceResponse;
+  return userDocument?.toObject()?.integrations?.marqeta;
 };
 
 export const updateEntityKycResult = async (entity: IUserDocument | IVisitorDocument, kycResult: IMarqetaKycResult) => {
@@ -374,21 +374,24 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
     if (!kycResult) throw new CustomError('No kyc result found for the user or visitor', ErrorTypes.NOT_FOUND);
 
     // pull the persona inquiry
-    let passedInternalKyc = false;
+    let userPassedInternalKyc = false;
     let templateId;
     if (!!inquiryId) {
-      const internalKycResult = await fetchInquiryAndCreateOrUpdateIntegration(inquiryId, user || visitor);
-      passedInternalKyc = personaInquiryInSuccessState(internalKycResult);
+      const { newInquiry: internalKycResult, integration: _ } = await fetchInquiryAndCreateOrUpdateIntegration(inquiryId, user || visitor);
+      userPassedInternalKyc = personaInquiryInSuccessState(internalKycResult);
       templateId = internalKycResult?.templateId;
     } else {
-      const internalKycResult = await fetchCaseAndCreateOrUpdateIntegration(caseId, user || visitor);
-      passedInternalKyc = personaCaseInSuccessState(internalKycResult);
+      const { newCase: internalKycResult, integration: _ } = await fetchCaseAndCreateOrUpdateIntegration(caseId, user || visitor);
+      userPassedInternalKyc = personaCaseInSuccessState(internalKycResult);
     }
+
+    const entity = user || visitor;
+    const marqetaIntegration = entity.integrations.marqeta;
+    const personaIntegration = entity.integrations.persona;
 
     // check to see if they have already been approved, if so return early
     if (application.status === ApplicationStatus.SUCCESS) {
-      const marqetaIntegration = !!user ? user.integrations.marqeta : visitor.integrations.marqeta;
-      return { ...(marqetaIntegration as SourceResponse), internalKycTemplateId: templateId };
+      return { marqeta: marqetaIntegration, persona: personaIntegration, internalKycTemplateId: templateId };
     }
 
     // check that failed internal kyc was the only failure reason
@@ -397,27 +400,29 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
       kycResult?.codes?.length >= 1
       && (!kycResult?.codes?.includes(ReasonCode.Approved) || !kycResult?.codes?.includes(ReasonCode.FailedInternalKyc))
     ) {
-      const marqetaIntegration = !!user ? user.integrations.marqeta : visitor.integrations.marqeta;
-      return { ...(marqetaIntegration as unknown as SourceResponse), internalKycTemplateId: templateId };
+      return { marqeta: marqetaIntegration, persona: personaIntegration, internalKycTemplateId: templateId };
     }
 
-    if (!passedInternalKyc) {
+    if (!userPassedInternalKyc) {
       if (!kycResult?.codes?.includes(ReasonCode.FailedInternalKyc)) {
         if (!kycResult?.codes) kycResult.codes = [];
         kycResult.codes.push(ReasonCode.FailedInternalKyc);
       }
-      // we aren't using the nuewly updated user/visitor, so marqeta integration would still be the whole status,
-      const updatedEntity = await updateEntityKycResult(user || visitor, kycResult);
-      const marqetaIntegration = updatedEntity.integrations.marqeta;
-      /// looks like we are returning the marqeta  integration here and not what we just updated since kycResult is defined in here?
+
+      // we aren't using the newly updated user/visitor, so marqeta integration would still be the whole status,
+      const updatedEntity = await updateEntityKycResult(entity, kycResult);
+      const { marqeta, persona } = updatedEntity.integrations;
+
       return {
-        ...(marqetaIntegration as unknown as SourceResponse),
+        marqeta,
+        persona,
         internalKycTemplateId: templateId,
       };
     }
 
     return {
-      ...((await storeApplicationAndHandleSuccesState(application, user || visitor)) as unknown as SourceResponse),
+      marqeta: await storeApplicationAndHandleSuccesState(application, user || visitor),
+      persona: personaIntegration,
       internalKycTemplateId: templateId,
     };
   } catch (err) {
@@ -429,21 +434,20 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
   }
 };
 
-export const getApplicationStatus = async (email: string): Promise<ApplicationDecision> => {
+export const getApplicationData = async (email: string): Promise<ApplicationDecision> => {
   try {
     const user = await UserModel.findOne({ 'emails.email': email }).lean();
     const visitor = await VisitorModel.findOne({ email }).lean();
     if (!user && !visitor) throw new CustomError(`No user or visitor found with email: ${email}`, ErrorTypes.NOT_FOUND);
-    if (!!user) {
-      const latestInquiryIndex = !!user.integrations?.persona?.inquiries?.length ? user.integrations.persona.inquiries.length - 1 : 0;
-      const latestInquiry = user.integrations?.persona?.inquiries?.[latestInquiryIndex >= 1 ? latestInquiryIndex : 0];
-      return { ...(user.integrations.marqeta as unknown as SourceResponse), internalKycTemplateId: latestInquiry?.templateId };
-    }
-    if (!!visitor) {
-      const latestInquiryIndex = !!visitor.integrations?.persona?.inquiries?.length ? visitor.integrations.persona.inquiries.length - 1 : 0;
-      const latestInquiry = visitor.integrations?.persona?.inquiries?.[latestInquiryIndex >= 1 ? latestInquiryIndex : 0];
-      return { ...(visitor.integrations.marqeta as unknown as SourceResponse), internalKycTemplateId: latestInquiry?.templateId };
-    }
+    const entity = user || visitor;
+
+    const latestInquiryIndex = !!entity?.integrations?.persona?.inquiries?.length ? entity.integrations.persona.inquiries.length - 1 : 0;
+    const latestInquiry = entity?.integrations?.persona?.inquiries?.[latestInquiryIndex >= 1 ? latestInquiryIndex : 0];
+    return {
+      marqeta: entity?.integrations?.marqeta,
+      persona: entity?.integrations?.persona,
+      internalKycTemplateId: latestInquiry?.templateId,
+    };
   } catch (err) {
     if ((err as CustomError)?.isCustomError) {
       throw err;
@@ -453,10 +457,10 @@ export const getApplicationStatus = async (email: string): Promise<ApplicationDe
 };
 
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>): Promise<ApplicationDecision> => {
-  console.log('////// init apply for card');
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
+  // product subscription id can be defaulted to our standard for now, but if in the future we need another one we have that option
   const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
@@ -486,10 +490,13 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     const hasKarmaCards = await hasKarmaWalletCards(existingUser);
     if (!!hasKarmaCards) {
       const applyResponse = {
-        kycResult: {
-          status: IMarqetaKycState.failure,
-          codes: [ReasonCode.Already_Registered],
+        marqeta: {
+          kycResult: {
+            status: IMarqetaKycState.failure,
+            codes: [ReasonCode.Already_Registered],
+          },
         },
+        persona: existingUser?.integrations?.persona,
       };
       return applyResponse;
     }
@@ -521,7 +528,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   }
 
   // pull the persona inquiry data
-  const inquiryResult = await fetchInquiryAndCreateOrUpdateIntegration(personaInquiryId, existingUser || _visitor);
+  const { newInquiry: inquiryResult, integration: personaIntegration } = await fetchInquiryAndCreateOrUpdateIntegration(personaInquiryId, existingUser || _visitor);
 
   // MARQETA KYC: Prepare Data to create a User in Marqeta and submit for Marqeta KYC
   const marqetaKYCInfo: IMarqetaCreateUser = {
@@ -550,32 +557,28 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const { marqetaUserResponse, kycResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
 
   // get the kyc result code
-  let { status } = kycResponse.result;
+  const { status } = kycResponse.result;
   const { codes } = kycResponse.result;
-  let kycErrorCodes = codes?.map((item: any) => item.code);
+  const kycErrorCodes = codes?.map((item: any) => item.code);
 
-  // check the status of the persona inquiry
-  const failedPersonaInquiry = !personaInquiryInSuccessState(inquiryResult);
-  if (failedPersonaInquiry) {
-    status = IMarqetaKycState.failure;
-    kycErrorCodes = !!kycErrorCodes ? [...kycErrorCodes, ReasonCode.FailedInternalKyc] : [ReasonCode.FailedInternalKyc];
-  }
-
-  const marqeta = {
-    userToken: marqetaUserResponse.token,
-    kycResult: { status, codes: kycErrorCodes },
-    email,
+  const applicationDecision = {
+    marqeta: {
+      userToken: marqetaUserResponse.token,
+      kycResult: { status, codes: kycErrorCodes },
+      email,
+      ...marqetaUserResponse,
+    },
+    persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
-    ...marqetaUserResponse,
   };
 
   const kycStatus = status;
 
   if (!existingUser) {
-    console.log('///// should create a visitor', _visitor, marqeta);
+    console.log('///// should create a visitor', _visitor, applicationDecision);
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
-      marqeta,
+      marqeta: applicationDecision.marqeta,
       email,
       params: urlParams,
       sscid,
@@ -589,7 +592,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     if (!existingUser.integrations) existingUser.integrations = {};
 
     if (!!sscid) existingUser.integrations.shareasale = { sscid, sscidCreatedOn, xTypeParam: xType };
-    existingUser.integrations.marqeta = marqeta;
+    existingUser.integrations.marqeta = applicationDecision.marqeta;
     // TODO: store group code
     if (!!urlParams) await updateUserUrlParams(existingUser, urlParams);
     await existingUser.save();
@@ -615,14 +618,16 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     lastModified: dayjs().utc().toDate(),
   };
 
+  // check the status of the persona inquiry
+  const failedPersonaInquiry = !personaInquiryInSuccessState(inquiryResult);
   // FAILED OR PENDING KYC, already saved to user or visitor object
-  if (kycStatus !== IMarqetaKycState.success) {
+  if (kycStatus !== IMarqetaKycState.success || failedPersonaInquiry) {
     if (!!existingUser) {
       karmaCardApplication.userId = existingUser._id.toString();
     } else {
       karmaCardApplication.visitorId = _visitor._id;
       const newData: VisitorService.ICreateAccountRequest = {
-        marqeta,
+        marqeta: applicationDecision.marqeta,
         email,
         actions: [{ type: VisitorActionEnum.ApplicationDeclined, createdOn: getUtcDate().toDate() }],
       };
@@ -633,11 +638,12 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     // set this marqeta user's status to suspended because they failed KYC
     await updateMarqetaUserStatus(!!existingUser ? existingUser : _visitor, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
     await storeKarmaCardApplication(karmaCardApplication);
-    return marqeta;
+    return applicationDecision;
   }
 
   return {
-    ...(await storeApplicationAndHandleSuccesState(karmaCardApplication, existingUser || _visitor)),
+    marqeta: await storeApplicationAndHandleSuccesState(karmaCardApplication, existingUser || _visitor),
+    persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
   };
 };

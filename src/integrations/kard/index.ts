@@ -18,6 +18,7 @@ import {
   KardEnvironmentEnumValues,
   GetRewardsMerchantsResponse,
   Merchant,
+  GetEligibleLocationsRequest,
 } from '../../clients/kard/types';
 import { CardStatus, CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
@@ -407,7 +408,7 @@ export const getRefferingPartnerUserIdFromKardEnv = async (env: KardEnvironmentE
   return null;
 };
 
-export const getEligibleLocations = async (user: IUserDocument, req: GetLocationsRequest = {}): Promise<KardMerchantLocations> => {
+export const getEligibleLocations = async (user: IUserDocument, req: GetEligibleLocationsRequest): Promise<KardMerchantLocations> => {
   try {
     const client = new KardClient();
     const referringPartnerUserId = await getRefferingPartnerUserIdFromKardEnv(client.getEnv(), user);

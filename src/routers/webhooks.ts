@@ -24,6 +24,9 @@ router.route('/kard')
 router.route('/marqeta')
   .post(WebhooksController.handleMarqetaWebhook);
 
+router.route('/stripe')
+  .post(WebhooksController.handleStripeWebhook);
+
 // legacy api passthrough route
 router.route('/plaid/user-transactions-map')
   .post(WebhooksController.userPlaidTransactionsMap);

@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { createContact, getSubscribedLists, subscribeContactToList } from '../../integrations/activecampaign';
 import { sleep } from '../../lib/misc';
-import { ActiveCampaignListId } from '../../types/subscription';
+import { ActiveCampaignListId } from '../../types/marketing_subscription';
 
 const backoffMs = 1000;
 

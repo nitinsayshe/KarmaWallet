@@ -2,13 +2,13 @@ import puppeteer from 'puppeteer';
 import { FilterQuery, Types, PaginateResult } from 'mongoose';
 import { terminateMarqetaCards, listCards } from '../../../integrations/marqeta/card';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
-import { IGPABalanceResponse, IMarqetaKycState } from '../../../integrations/marqeta/types';
+import { IGPABalanceResponse, IMarqetaKycState, IMarqetaUserIntegrations } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { GroupModel } from '../../../models/group';
 import { IUserDocument } from '../../../models/user';
 import { joinGroup } from '../../groups/utils';
-import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../subscription';
+import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../marketingSubscription';
 import { getDaysFromPreviousDate } from '../../../lib/date';
 import { IUrlParam } from '../../user/types';
 import { transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
@@ -19,6 +19,8 @@ import { Transactions } from '../../../clients/marqeta/transactions';
 
 import { sleep } from '../../../lib/misc';
 import { IKarmaCardApplicationDocument, KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
+import { IPersonaIntegration } from '../../../integrations/persona/types';
+import { passedInternalKyc } from '../../../integrations/persona';
 
 export type KarmaCardApplicationIterationRequest<FieldsType> = {
   batchQuery: FilterQuery<IKarmaCardApplicationDocument>;
@@ -85,43 +87,52 @@ interface PuppateerShareASaleParams {
   sscidCreatedOn: string;
 }
 
+export const ApplicationDecisionStatus = {
+  failure: 'failure',
+  success: 'success',
+  pending: 'pending',
+} as const;
+export type ApplicationDecisionStatusValues = (typeof ApplicationDecisionStatus)[keyof typeof ApplicationDecisionStatus];
+
 interface TransformedResponse {
-  status: IMarqetaKycState;
+  status: ApplicationDecisionStatusValues;
   reason?: ReasonCode;
   internalKycTemplateId?: string;
   authkey?: string;
 }
 
-export interface SourceResponse {
-  userToken: string;
-  email: string;
-  kycResult: {
-    status: string;
-    codes: ReasonCode[];
-  };
+export interface ApplicationDecision {
+  marqeta?: Partial<IMarqetaUserIntegrations>;
+  persona?: IPersonaIntegration
+  internalKycTemplateId?: string;
+  paymentLink?: string;
 }
-
-export type ApplicationDecision = Partial<SourceResponse> & { internalKycTemplateId?: string };
 
 export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
   if (!res) return;
+  const { marqeta, persona, internalKycTemplateId } = res;
+  const { kycResult } = marqeta;
 
-  const { internalKycTemplateId, kycResult } = res;
+  const reasonCode = kycResult?.codes?.[0] as ReasonCode;
+  const failedMarqeta: ReasonCode = marqeta?.kycResult?.codes?.find((code) => code !== ReasonCode.Approved) as ReasonCode;
 
-  // send the marqeta failure code over the internal kyc failure code since that indicates a more severe issue
-  let reasonCode: ReasonCode;
-  if (kycResult?.codes?.length > 1) {
-    if (kycResult.codes.includes(ReasonCode.Approved)) {
-      reasonCode = kycResult.codes.find((code: ReasonCode) => code !== ReasonCode.Approved);
-    } else if (kycResult.codes.includes(ReasonCode.FailedInternalKyc)) {
-      reasonCode = kycResult.codes.find((code: ReasonCode) => code !== ReasonCode.FailedInternalKyc);
-    }
-  } else {
-    reasonCode = kycResult?.codes?.[0];
+  if (failedMarqeta) {
+    return {
+      status: IMarqetaKycState.failure,
+      reason: failedMarqeta,
+      internalKycTemplateId,
+    };
   }
 
+  if (!passedInternalKyc(persona)) {
+    return {
+      status: IMarqetaKycState.failure,
+      reason: ReasonCode.FailedInternalKyc,
+      internalKycTemplateId,
+    };
+  }
   const transformed: TransformedResponse = {
-    status: (kycResult?.status as IMarqetaKycState) || IMarqetaKycState.failure,
+    status: kycResult?.status || IMarqetaKycState.failure,
     reason: reasonCode,
     internalKycTemplateId,
   };

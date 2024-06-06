@@ -6,6 +6,7 @@ import marqetaRouter from './marqeta';
 import biometricRouter from './biometric';
 import personaRouter from './persona';
 import kardRouter from './kard';
+import stripeRouter from './stripe';
 
 /**
  * this file is used for direct communication with the integration APIs
@@ -23,5 +24,6 @@ integrationsRouter.use('/marqeta', marqetaRouter);
 integrationsRouter.use('/biometric', biometricRouter);
 integrationsRouter.use('/persona', personaRouter);
 integrationsRouter.use('/kard', kardRouter);
+integrationsRouter.use('/stripe', stripeRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

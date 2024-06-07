@@ -1,7 +1,7 @@
 /* eslint-disable import/no-cycle */
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
-import { IMarqetaListKYCResponse, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
+import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { updateCustomFields } from '../../integrations/activecampaign';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
@@ -137,9 +137,10 @@ export const getShareableKarmaCardApplication = ({
   lastModified,
 });
 
-export const isUserKYCVerified = (kycResponse: IMarqetaListKYCResponse) => {
-  if (kycResponse.data.length === 0) return false;
-  const hasSuccessfulKYC = kycResponse.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
+export const isUserKYCVerified = (kycResponse: IMarqetaKycResult[]) => {
+  console.log('////// this is the kyc response', kycResponse);
+  if (kycResponse.length === 0) return false;
+  const hasSuccessfulKYC = kycResponse.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
   return !!hasSuccessfulKYC;
 };
 
@@ -199,6 +200,7 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
 
   // perform the kyc through marqeta & create the card
   if (!isUserKYCVerified(existingKYCChecks)) {
+    console.log('///// user is not verified');
     kycResponse = await processUserKyc(marqetaUserResponse.token);
   } else {
     kycResponse = existingKYCChecks.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);

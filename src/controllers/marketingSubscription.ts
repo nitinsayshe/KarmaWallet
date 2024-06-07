@@ -5,9 +5,9 @@ import * as MarketingSubscriptionService from '../services/marketingSubscription
 
 export const newsletterUnsubscribe: IRequestHandler<{}, {}, MarketingSubscriptionService.INewsletterUnsubscribeData> = async (req, res) => {
   try {
-    const { email, preserveSubscriptions } = req.body;
+    const { email, resubscribeList } = req.body;
     if (process.env.NODE_ENV !== 'production') return output.api(req, res, null);
-    await MarketingSubscriptionService.newsletterUnsubscribe(req, email, preserveSubscriptions);
+    await MarketingSubscriptionService.newsletterUnsubscribe(req, email, resubscribeList);
     output.api(req, res, null);
   } catch (err) {
     output.error(req, res, asCustomError(err));

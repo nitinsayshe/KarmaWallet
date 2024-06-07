@@ -1,5 +1,5 @@
 import { HubspotClient, ISubmitFormRequest } from '../../clients/hubspot';
-import { HubspotFormId } from '../../types/subscription';
+import { HubspotFormId } from '../../types/marketing_subscription';
 
 export enum InterestCategory {
   EmployerBenefit = 'employerBenefit',

@@ -30,7 +30,7 @@ import { IRequest } from '../../types/request';
 import { addCashbackToUser, IAddKarmaCommissionToUserRequestParams } from '../commission';
 import { sendChangeEmailRequestAffirmationEmail, sendChangeEmailRequestConfirmationEmail, sendChangePasswordEmail, sendDeleteAccountRequestEmail, sendPasswordResetEmail } from '../email';
 import * as Session from '../session';
-import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../subscription';
+import { cancelAllUserSubscriptions, updateNewUserSubscriptions } from '../marketingSubscription';
 import * as TokenService from '../token';
 import {
   IRegisterUserData,
@@ -741,7 +741,6 @@ export const updateExistingUserFromMarqetaWebhook = async (
       const { sscid, xTypeParam, sscidCreatedOn, trackingId } = user.integrations.shareasale;
       await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });
     }
-
     await handleMarqetaUserActiveTransition(user, false);
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user.integrations.referrals?.params);
     await updateCustomFields(user.emails.find((e) => e.primary).email, [
@@ -818,7 +817,6 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // EXISTING USER with Marqeta integration already saved
   // Check if the status has changed for this user
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
-    console.log('////// Updating existing user from Marqeta User Transaction Webhook', existingUser._id.toString());
     updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 

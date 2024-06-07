@@ -367,14 +367,21 @@ export const mapKardCommissionToKarmaCommisison = async (
     const user = await UserModel.findOne({ _id: card.userId });
     if (!user?._id) throw new Error(`User not found for user id: ${card.userId}`);
 
-    const newCommission = new CommissionModel({
+    const newCommissionData = {
       user: user._id,
       company: company?._id,
       merchant: merchant?._id,
       transaction: associatedTransaction?._id,
       ...commissionData,
-      status: getKarmaCommissionStatusFromKardStatus(reward.status, null),
-    });
+    };
+
+    if (merchant?.id === '6615a83576547113b207c48b') {
+      newCommissionData.status = KarmaCommissionStatus.ReceivedFromVendor;
+    } else {
+      newCommissionData.status = getKarmaCommissionStatusFromKardStatus(reward.status, null);
+    }
+
+    const newCommission = new CommissionModel(newCommissionData);
 
     /* update cash back eligible purchase status in active campaign if first commssion */
     const userCommissions = await CommissionModel.find({ user: user._id });

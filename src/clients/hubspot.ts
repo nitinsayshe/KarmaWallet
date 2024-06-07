@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { SdkClient } from './sdkClient';
 import { asCustomError } from '../lib/customError';
 import { HubspotPortalId } from '../lib/constants';
-import { HubspotFormId } from '../types/subscription';
+import { HubspotFormId } from '../types/marketing_subscription';
 
 const { HUBSPOT_APP_TOKEN, HUBSPOT_URL } = process.env;
 

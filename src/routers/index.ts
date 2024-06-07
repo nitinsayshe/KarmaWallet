@@ -18,7 +18,7 @@ import { group, groups } from './group';
 import card from './card';
 import bankConnections from './bankConnections';
 import notFound from './404';
-import subscription from './subscription';
+import marketingSubscription from './marketingSubscription';
 import upload from './upload';
 import userImpactReports from './userImpactReports';
 import dataSource from './dataSource';
@@ -50,7 +50,7 @@ const routers = (app: Express) => {
   jobPostings(app);
   meta(app);
   sectors(app);
-  subscription(app);
+  marketingSubscription(app);
   transaction(app);
   unsdgs(app);
   upload(app);

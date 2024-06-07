@@ -16,7 +16,6 @@ import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser, updateMarq
 import { fetchCaseAndCreateOrUpdateIntegration, fetchInquiryAndCreateOrUpdateIntegration, personaCaseInSuccessState, personaInquiryInSuccessState } from '../../integrations/persona';
 import { ErrorTypes } from '../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { NotificationChannelEnum, NotificationTypeEnum } from '../../lib/constants/notification';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { formatName, generateRandomPasswordString } from '../../lib/misc';
@@ -35,11 +34,10 @@ import {
   KarmaMembershipStatusEnum,
   KarmaMembershipTypeEnumValues,
 } from '../../models/user/types';
-import { UserNotificationModel } from '../../models/user_notification';
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
-import { handleMarqetaUserActiveTransition, updateUserUrlParams } from '../user';
+import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
@@ -76,6 +74,7 @@ export interface IKarmaCardRequestBody {
   sscid?: string;
   sscidCreatedOn?: string;
   xType?: string;
+  productSubscriptionId?: string;
 }
 
 interface IApplySuccessData {
@@ -176,28 +175,6 @@ export const performKycForUserOrVisitor = async (
       return { virtualCardResponse, physicalCardResponse };
     }
   }
-};
-
-export const performKycAndSendWelcomeEmailForUser = async (user: IUserDocument) => {
-  const { virtualCardResponse, physicalCardResponse } = await performKycForUserOrVisitor(user);
-  if (!virtualCardResponse || !physicalCardResponse) {
-    console.error(`Failed kyc or card creation for user: ${user._id}`);
-    return;
-  }
-
-  try {
-    // check if they've received the welcome email
-    const welcomeNotification = await UserNotificationModel.findOne({
-      user: user._id,
-      type: NotificationTypeEnum.KarmaCardWelcome,
-      channel: NotificationChannelEnum.Email,
-    });
-
-    if (!welcomeNotification) await createKarmaCardWelcomeUserNotification(user, false);
-  } catch (err) {
-    console.error(`Error sending welcome email for user: ${user._id}`);
-  }
-  return { virtualCardResponse, physicalCardResponse };
 };
 
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
@@ -343,7 +320,6 @@ export const storeApplicationAndHandleSuccesState = async (
 
   userDocument = await userDocument.save();
   await storeKarmaCardApplication(karmaCardApplication);
-  await handleMarqetaUserActiveTransition(userDocument, !entityIsUser);
   return userDocument?.toObject()?.integrations?.marqeta;
 };
 
@@ -457,10 +433,10 @@ export const getApplicationData = async (email: string): Promise<ApplicationDeci
 };
 
 export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>): Promise<ApplicationDecision> => {
-  console.log('////// init apply for card');
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
+  // product subscription id can be defaulted to our standard for now, but if in the future we need another one we have that option
   const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId } = req.body;
 
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
@@ -575,7 +551,6 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const kycStatus = status;
 
   if (!existingUser) {
-    console.log('///// should create a visitor', _visitor, applicationDecision);
     // Update the visitors marqeta Kyc status
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
       marqeta: applicationDecision.marqeta,

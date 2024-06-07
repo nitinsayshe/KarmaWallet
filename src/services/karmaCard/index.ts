@@ -220,6 +220,7 @@ export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApp
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
 
 export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
+  console.log('//// handle existing user apply success');
   const userEmail = userObject.emails.find((email) => !!email.primary).email;
   try {
     if (!!urlParams) {
@@ -231,6 +232,7 @@ export const handleExistingUserApplySuccess = async (userObject: IUserDocument, 
 
     // add existingUser flag to active campaign
     await updateCustomFields(userEmail, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
+    console.log('//// send welcome email, handleExistingUserApplySuccess');
     await createKarmaCardWelcomeUserNotification(userObject, false);
   } catch (err) {
     console.error(`Error updating user ${userObject._id} with urlParams: ${urlParams} to success state: ${err}`);
@@ -247,8 +249,10 @@ export const handleKarmaCardApplySuccess = async ({
 }: IApplySuccessData): Promise<IUserDocument> => {
   // find the user again since there is a potential race condition
   let userObject = await UserModel.findOne({ 'emails.email': email });
+  console.log('//// handleKarmaCardApplySuccess');
   // EXISTING USER
   if (!!userObject) {
+    console.log('//// handleKarmaCardApplySuccess, existing user');
     await handleExistingUserApplySuccess(userObject, urlParams);
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
@@ -256,6 +260,7 @@ export const handleKarmaCardApplySuccess = async ({
 
   // NEW USER
   if (!userObject) {
+    console.log('//// handleKarmaCardApplySuccess, new user');
     // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
     // add the marqeta integration to the newly created user or the existing user (userObject)
     const { user } = await UserService.register({
@@ -278,7 +283,10 @@ export const storeApplicationAndHandleSuccesState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IMarqetaUserIntegrations> => {
+  console.log('///// storeApplicationAndhandleSuccessState');
   if (!entity) return;
+
+  console.log(' [2] ///// storeApplicationAndhandleSuccessState');
 
   const entityIsUser = isUserDocument(entity);
   // PASSED KYC

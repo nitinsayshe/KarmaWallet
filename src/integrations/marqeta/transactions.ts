@@ -349,9 +349,8 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
   console.log('existingTransaction', JSON.stringify(existingTransaction));
   if (!!existingTransaction) {
     const hasPrecedingRelatedTransactionToken = !!t?.marqeta_transaction?.preceding_related_transaction_token;
+    const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type, t.marqeta_transaction?.state);
     if (hasPrecedingRelatedTransactionToken) {
-      const updatedStatus = getUpdatedTransactionStatusFromRelatedTransactionType(t.marqeta_transaction.type, t.marqeta_transaction?.state);
-
       let relatedTransactions = existingTransaction?.integrations?.marqeta?.relatedTransactions;
       const currentTransactionIsInRelatedTransactions = !!relatedTransactions?.find(
         (relatedTransaction) => relatedTransaction.token === t.marqeta_transaction.token,
@@ -364,11 +363,10 @@ const getNewOrUpdatedTransactionFromMarqetaTransaction = async (
         ...existingTransaction.integrations.marqeta,
         relatedTransactions,
       };
-      existingTransaction.status = updatedStatus || existingTransaction.status;
     } else {
       existingTransaction.integrations.marqeta = t.marqeta_transaction;
-      existingTransaction.status = t.marqeta_transaction.state;
     }
+    existingTransaction.status = updatedStatus || existingTransaction?.status;
     existingTransaction.amount = t.amount;
     existingTransaction.lastModified = dayjs().utc().toDate();
 

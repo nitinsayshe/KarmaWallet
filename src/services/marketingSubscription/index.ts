@@ -218,8 +218,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
       }
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
       try {
-        const res = await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
-        console.log('///// response from update active vampaign', res);
+        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
       } catch (err) {
         console.error('Error subscribing user to lists', err);
       }

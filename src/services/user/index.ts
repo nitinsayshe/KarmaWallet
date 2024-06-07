@@ -800,6 +800,11 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const visitor = await VisitorModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });
   const foundEntity = !!existingUser ? existingUser : visitor;
+  console.log('/////// handleMarqetaUserTransitionWebhook', foundEntity?._id.toString());
+  console.log('data', {
+    user: existingUser,
+    visitor,
+  });
 
   if (!foundEntity) {
     console.log('[+] User or Visitor with matching token not found');
@@ -823,16 +828,20 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
   // EXISTING USER with Marqeta integration already saved
   // Check if the status has changed for this user
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
+    console.log('///// status is different');
     updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 
   // EXISTING VISITOR, Marqeta integration is saved on the visitor object,
   if (!!visitor?._id && !existingUser?._id) {
+    console.log('///// visitor exists and no existing user');
     visitor.integrations.marqeta.status = currentMarqetaUserData.status;
     await visitor.save();
     await setClosedMarqetaAccountState(visitor, currentMarqetaUserData);
     await updatedVisitorFromMarqetaWebhook(visitor, currentMarqetaUserData);
   }
+
+  console.log('//// after both checks');
 };
 
 export const updateUserUrlParams = async (userObject: IUserDocument, urlParams: IUrlParam[]): Promise<void> => {

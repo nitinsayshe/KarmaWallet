@@ -271,6 +271,7 @@ export const handleKarmaCardApplySuccess = async ({
     });
 
     userObject = user;
+    await handleExistingUserApplySuccess(userObject, urlParams);
   }
 
   await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.ACTIVE, MarqetaReasonCodeEnum.RequestedByYou);

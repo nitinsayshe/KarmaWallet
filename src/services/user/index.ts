@@ -837,7 +837,10 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
   console.log('///// before checks');
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
-    console.log('///// status is different');
+    updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
+  }
+
+  if (!!existingUser?._id && currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE) {
     updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 

@@ -343,7 +343,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
 
   let template: PersonaInquiryTemplateIdEnumValues;
   if (failedMarqeta) {
-    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
+    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs;
   } else {
     template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
   }

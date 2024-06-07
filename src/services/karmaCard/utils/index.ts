@@ -110,8 +110,10 @@ export interface ApplicationDecision {
 
 export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
   if (!res) return;
-  const { marqeta, persona, internalKycTemplateId } = res;
-  const { kycResult } = marqeta;
+  const marqeta = res?.marqeta;
+  const kycResult = marqeta?.kycResult;
+  const persona = res?.persona;
+  const internalKycTemplateId = res?.internalKycTemplateId;
 
   const reasonCode = kycResult?.codes?.[0] as ReasonCode;
   const failedMarqeta: ReasonCode = marqeta?.kycResult?.codes?.find((code) => code !== ReasonCode.Approved) as ReasonCode;

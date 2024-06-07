@@ -134,6 +134,7 @@ export const createOrUpdatePersonaIntegration = async (
   const existingAccountId = entity?.integrations?.persona?.accountId;
   if (!!existingAccountId && existingAccountId !== accountId) {
     const email = entity?.email || (entity as IUserDocument)?.emails?.find((e) => e?.primary);
+    console.log(`Persona account id mismatch. User or visitor with email: ${email} has account id ${existingAccountId} but inquiry or case has account id ${accountId}`);
     console.warn(
       `Persona account id mismatch. User or visitor with email: ${email} has account id ${existingAccountId} but inquiry or case has account id ${accountId}`,
     );
@@ -149,6 +150,8 @@ export const createOrUpdatePersonaIntegration = async (
       const existingInquiryIndex = inquiries.findIndex((i) => i.id === inquiryData.id);
       if (existingInquiryIndex > -1) {
         inquiries[existingInquiryIndex] = inquiryData;
+      } else {
+        inquiries.push(inquiryData);
       }
     } else {
       inquiries.push(inquiryData);
@@ -160,6 +163,8 @@ export const createOrUpdatePersonaIntegration = async (
       const existingCaseIndex = cases.findIndex((i) => i.id === caseData.id);
       if (existingCaseIndex > -1) {
         cases[existingCaseIndex] = caseData;
+      } else {
+        cases.push(caseData);
       }
     } else {
       cases.push(caseData);
@@ -217,6 +222,7 @@ export const fetchInquiryAndCreateOrUpdateIntegration = async (
       templateId,
       createdAt: inquiry?.data?.attributes?.createdAt,
     };
+
     const { integration, inquiry: newInquiry } = (await createOrUpdatePersonaIntegration(entity, accountId, inquiryData));
     return { newInquiry, integration };
   } catch (err) {

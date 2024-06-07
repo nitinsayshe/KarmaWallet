@@ -6,6 +6,7 @@ import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import {
   getSubscribedLists,
   subscribeContactToList,
+  subscribeContactToLists,
   updateActiveCampaignContactData,
   updateCustomFields,
 } from '../../integrations/activecampaign';
@@ -34,7 +35,7 @@ export interface UserSubscriptions {
 
 export interface INewsletterUnsubscribeData {
   email: string;
-  preserveSubscriptions: SubscriptionCode[];
+  resubscribeList: SubscriptionCode[];
 }
 
 export interface IActiveCampaignSubscribeData {
@@ -46,6 +47,7 @@ export interface IActiveCampaignSubscribeData {
 }
 
 const shareableUnsubscribeError = 'Error processing unsubscribe request.';
+const shareableResubscribeError = 'Error processing subscribe request.';
 
 export const cancelUserSubscriptions = async (userId: string, codes: SubscriptionCode[]) => {
   try {
@@ -536,65 +538,107 @@ const unsubscribeFromActiveCampaignNewsletters = async (email: string, unsubscri
   }
 };
 
-export const newsletterUnsubscribe = async (_: IRequest, email: string, preserveSubscriptions: SubscriptionCode[]) => {
+const subscriptionCodeToActiveCampaignId = (mapping: Record<ActiveCampaignListId, SubscriptionCode>): Record<SubscriptionCode, ActiveCampaignListId> => Object.entries(mapping).reduce(
+  (acc, [key, value]) => {
+    acc[value as SubscriptionCode] = key as ActiveCampaignListId;
+    return acc;
+  },
+  {} as Record<SubscriptionCode, ActiveCampaignListId>,
+);
+
+const subscribeToActiveCampaignNewsletters = async (email: string, resubscribeList: SubscriptionCode[]) => {
+  // get active campaign ids from subscription codes
+  const activeCampaignListIdsToSubscribe: ActiveCampaignListId[] = resubscribeList.map(
+    (subscriptionCode) => subscriptionCodeToActiveCampaignId(ProviderProductIdToSubscriptionCode)[subscriptionCode],
+  );
+
+  // update db subscriptions
+  const update: UpdateQuery<ISubscription> = {
+    $set: {
+      status: SubscriptionStatus.Active,
+      lastModified: getUtcDate(),
+    },
+  };
+  const filter: FilterQuery<ISubscription> = {
+    code: { $in: resubscribeList },
+  };
+
+  const user = await getUserByEmail(email);
+  const visitor = await getVisitorByEmail(email);
+  if (!!user) {
+    filter.user = user._id;
+  } else if (!!visitor) {
+    filter.visitor = visitor._id;
+  } else {
+    throw new CustomError(shareableResubscribeError, ErrorTypes.UNPROCESSABLE);
+  }
+  await updateSubscriptionsByQuery(filter, update);
+
+  // subscribe in active campaign
+  await subscribeContactToLists(email, activeCampaignListIdsToSubscribe);
+};
+
+const unsubcribeFromAllActiveCampaignNewsletters = async (email: string) => {
+  // get active campaign subscriptions for this email
+  const activeCampaignListIds = await getActiveCampaignSubscribedListIds(email);
+  if (!activeCampaignListIds || activeCampaignListIds.length <= 0) {
+    // user has no active subscriptions
+    throw new CustomError('No active subscriptions.', ErrorTypes.UNPROCESSABLE);
+  }
+
+  // update db subscriptions
+  const subscriptionCodesToUnsubscribe: SubscriptionCode[] = activeCampaignListIds.map(
+    (providerProductId) => ProviderProductIdToSubscriptionCode[providerProductId],
+  );
+  if (!subscriptionCodesToUnsubscribe || subscriptionCodesToUnsubscribe?.length <= 0) {
+    throw new CustomError(shareableUnsubscribeError, ErrorTypes.UNPROCESSABLE);
+  }
+
+  const update: UpdateQuery<ISubscription> = {
+    $set: {
+      status: SubscriptionStatus.Cancelled,
+      lastModified: getUtcDate(),
+    },
+  };
+  const filter: FilterQuery<ISubscription> = {
+    code: { $in: subscriptionCodesToUnsubscribe },
+  };
+
+  // cancel db subscriptions
+  const user = await getUserByEmail(email);
+  const visitor = await getVisitorByEmail(email);
+  if (!!user) {
+    filter.user = user._id;
+  } else if (!!visitor) {
+    filter.visitor = visitor._id;
+  } else {
+    throw new CustomError(shareableUnsubscribeError, ErrorTypes.UNPROCESSABLE);
+  }
+  await updateSubscriptionsByQuery(filter, update);
+
+  // cancel in active campaign
+  await unsubscribeFromActiveCampaignNewsletters(email, activeCampaignListIds);
+};
+
+export const newsletterUnsubscribe = async (_: IRequest, email: string, resubscribeList: SubscriptionCode[]) => {
   try {
     if (!email || !isemail.validate(email, { minDomainAtoms: 2 })) {
       throw new CustomError('Invalid email format.', ErrorTypes.INVALID_ARG);
     }
     email = email.toLowerCase();
 
-    if (!!preserveSubscriptions && preserveSubscriptions?.length > 0) {
-      if (!subscriptionCodesAreValid(preserveSubscriptions)) {
-        throw new CustomError(shareableUnsubscribeError, ErrorTypes.GEN);
+    const shouldResubscribe = !!resubscribeList && resubscribeList.length > 0;
+
+    if (shouldResubscribe) {
+      if (!subscriptionCodesAreValid(resubscribeList)) {
+        throw new CustomError(shareableResubscribeError, ErrorTypes.GEN);
       }
-    }
-
-    // get active campaign subscrtiptions for this email
-    const activeCampaignListIds = await getActiveCampaignSubscribedListIds(email);
-    if (!activeCampaignListIds || activeCampaignListIds.length <= 0) {
-      // user has no active subscriptions
-      throw new CustomError(shareableUnsubscribeError, ErrorTypes.UNPROCESSABLE);
-    }
-
-    // filter out any in the perserve list
-    const unsubscribeLists = activeCampaignListIds.filter(
-      (providerProductId) => !preserveSubscriptions.includes(ProviderProductIdToSubscriptionCode[providerProductId]),
-    );
-
-    // update db subscriptions
-    const unsubscribe: SubscriptionCode[] = unsubscribeLists.map(
-      (providerProductId) => ProviderProductIdToSubscriptionCode[providerProductId],
-    );
-    if (!unsubscribe || unsubscribe?.length <= 0) {
-      throw new CustomError(shareableUnsubscribeError, ErrorTypes.UNPROCESSABLE);
-    }
-
-    const update: UpdateQuery<ISubscription> = {
-      $set: {
-        status: SubscriptionStatus.Cancelled,
-        lastModified: getUtcDate(),
-      },
-    };
-    const filter: FilterQuery<ISubscription> = {
-      code: { $in: unsubscribe },
-    };
-
-    // cancel db subscriptions
-    const user = await getUserByEmail(email);
-    const visitor = await getVisitorByEmail(email);
-    if (!!user) {
-      filter.user = user._id;
-    } else if (!!visitor) {
-      filter.visitor = visitor._id;
+      await subscribeToActiveCampaignNewsletters(email, resubscribeList);
     } else {
-      throw new CustomError(shareableUnsubscribeError, ErrorTypes.UNPROCESSABLE);
+      await unsubcribeFromAllActiveCampaignNewsletters(email);
     }
-    await updateSubscriptionsByQuery(filter, update);
-
-    // cancel in active campaign
-    await unsubscribeFromActiveCampaignNewsletters(email, unsubscribeLists);
   } catch (err) {
-    console.log('Error unsubcribing', err);
+    console.log('Error updating newsletter subscriptions.', err);
     throw err;
   }
 };

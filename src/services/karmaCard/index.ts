@@ -199,11 +199,16 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   const existingKYCChecks = await listUserKyc(userToken);
 
   // perform the kyc through marqeta & create the card
+  console.log('///// existingKYCChecks', isUserKYCVerified(existingKYCChecks));
   if (!isUserKYCVerified(existingKYCChecks)) {
     console.log('///// user is not verified');
     kycResponse = await processUserKyc(marqetaUserResponse.token);
   } else {
-    kycResponse = existingKYCChecks.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
+    console.log('//// in else');
+    kycResponse = existingKYCChecks?.data.find((kyc: any) => kyc?.result?.status === IMarqetaKycState.success);
+    if (!kycResponse) {
+      kycResponse = await processUserKyc(marqetaUserResponse.token);
+    }
   }
 
   return { marqetaUserResponse, kycResponse };
@@ -541,6 +546,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   // MARQETA KYC/CREATE USER
   const { marqetaUserResponse, kycResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
+  console.log('//// this is the kyc response', kycResponse);
 
   // get the kyc result code
   const { status } = kycResponse.result;

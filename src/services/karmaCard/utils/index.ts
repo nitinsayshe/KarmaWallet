@@ -126,15 +126,17 @@ export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedRe
     };
   }
 
-  if (!passedInternalKyc(persona)) {
+  const passedPersona = passedInternalKyc(persona);
+  if (!!persona && !passedPersona) {
     return {
       status: IMarqetaKycState.failure,
       reason: ReasonCode.FailedInternalKyc,
       internalKycTemplateId,
     };
   }
+
   const transformed: TransformedResponse = {
-    status: kycResult?.status || IMarqetaKycState.failure,
+    status: kycResult?.status || undefined,
     reason: reasonCode,
     internalKycTemplateId,
   };

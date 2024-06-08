@@ -503,11 +503,13 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 
 export const handlePersonaWebhookByEventName = async (req: PersonaWebhookBody) => {
   switch (req?.data?.attributes?.name) {
+    case EventNamesEnum.inquiryApproved:
+      await handleInquiryTransitionedWebhook(req);
+      break;
     case EventNamesEnum.inquiryTransitioned:
       console.log('inquiry.transitioned event');
       await handleInquiryTransitionedWebhook(req);
       break;
-
     case EventNamesEnum.caseStatusUpdated:
       console.log('case.status-udated event');
       await handleCaseStatusUpdatedWebhook(req);

@@ -83,7 +83,7 @@ export const getMarqetaMerchantName = (marqetaData: IMarqetaTransactionIntegrati
   if (!!marqetaData?.relatedTransactions?.length) {
     const completedTransaction = marqetaData?.relatedTransactions.find((t: any) => t.state === TransactionModelStateEnum.Completion);
     if (!!completedTransaction && isDirectDeposit) return completedTransaction?.direct_deposit?.company_name || '';
-    return completedTransaction?.card_acceptor?.name || '';
+    return completedTransaction?.card_acceptor?.name || marqetaData?.card_acceptor?.name || '';
   }
 
   return marqetaData?.card_acceptor?.name || '';

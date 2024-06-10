@@ -423,7 +423,7 @@ export const testKarmaCardDeclinedEmail = async (req: IRequest<{}, {}, {}>) => {
     if (!user?.integrations?.persona?.accountId) throw new CustomError('No persona account id found for user.', ErrorTypes.INVALID_ARG);
     const { email } = user.emails.find(e => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
-    const resubmitDocumentsLink = composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs, user.integrations.persona.accountId);
+    const resubmitDocumentsLink = composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.KW5, user.integrations.persona.accountId);
     // This date is just for testing. In prod, the user will be given 10 days to resubmit documents.
     const applicationExpirationDate = dayjs().add(10, 'day').toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const emailResponse = await sendKarmaCardDeclinedEmail({

@@ -118,7 +118,7 @@ export type PersonaGetCaseResponse = {
 
 export const PersonaInquiryTemplateIdEnum = {
   // TODO: change this back to itmpl_AFqvVNPPTmMy752PwyeopspV8mSe
-  DataCollection: 'itmpl_bbGdQaESkPsAfysa1mypvXtP7vcM', // KW - 1 Data Collection
+  DataCollection: 'itmpl_vgVhpStQRDohjxx9ZxvQ3eSCbsUD', // KW - 1 Data Collection
   KW5: 'itmpl_bbGdQaESkPsAfysa1mypvXtP7vcM',
 } as const;
 export type PersonaInquiryTemplateIdEnumValues = (typeof PersonaInquiryTemplateIdEnum)[keyof typeof PersonaInquiryTemplateIdEnum];

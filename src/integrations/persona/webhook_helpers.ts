@@ -226,13 +226,13 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
 
     const isManualApproval = inquiryStatus === PersonaInquiryStatusEnum.Approved;
-    const receivedFromGovIdAndSelfieOrDocs = inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
     const receivedFromDataCollection = inquiryTemplateId === PersonaInquiryTemplateIdEnum.DataCollection;
-    if (hasSavedApplicationAndKycResult(application, existingApplicationData) && (isManualApproval || receivedFromGovIdAndSelfieOrDocs)) {
-      // if this request is coming from this template, it could have failed db verification, but passed with new document data
-      console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId);
-      existingApplicationData = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id);
-    } else if (receivedFromDataCollection || isManualApproval) {
+    /* if (hasSavedApplicationAndKycResult(application, existingApplicationData) && (isManualApproval || receivedFromGovIdAndSelfieOrDocs)) { */
+    /*   // if this request is coming from this template, it could have failed db verification, but passed with new document data */
+    /*   console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId); */
+    /*   existingApplicationData = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id); */
+    /* } else  */
+    if (receivedFromDataCollection || isManualApproval) {
       console.log('going into startApplicationFromInquiry process for inquiry with id: ', inquiryId);
       existingApplicationData = await startApplicationFromInquiry(req);
     } else {
@@ -341,12 +341,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     return;
   }
 
-  let template: PersonaInquiryTemplateIdEnumValues;
-  if (failedMarqeta) {
-    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs;
-  } else {
-    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
-  }
+  const template = PersonaInquiryTemplateIdEnum.KW5;
 
   const continueUrl = composePersonaContinueUrl(template, accountId);
   await createResumeKarmaCardApplicationUserNotification({
@@ -378,10 +373,7 @@ export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) =
     throw new Error('No user or visitor found, not sending pending documents email.');
   }
 
-  if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs) {
-    await createPendingReviewKarmaWalletCardUserNotification(dataObj);
-  } else if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs && inquiryStatus === PersonaInquiryStatusEnum.Failed) {
-    console.log('////// should send the decline email');
+  if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.KW5 && (inquiryStatus === PersonaInquiryStatusEnum.Failed || inquiryStatus === PersonaInquiryStatusEnum.Completed)) {
     await createPendingReviewKarmaWalletCardUserNotification(dataObj);
   }
 };
@@ -436,7 +428,7 @@ export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
       user: isUser ? entity._id : undefined,
       visitor: !isUser ? entity._id : undefined,
       name: isUser ? entity.name : entity?.integrations?.marqeta?.first_name,
-      resubmitDocumentsLink: composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs, entity.integrations.persona.accountId),
+      resubmitDocumentsLink: composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.KW5, entity.integrations.persona.accountId),
       applicationExpirationDate: application.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
     };
 

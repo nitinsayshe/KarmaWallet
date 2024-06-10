@@ -343,7 +343,7 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
 
   let template: PersonaInquiryTemplateIdEnumValues;
   if (failedMarqeta) {
-    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
+    template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieAndDocs;
   } else {
     template = PersonaInquiryTemplateIdEnum.GovIdAndSelfieOrDocs;
   }
@@ -476,6 +476,12 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendPendingEmail(email, req);
       break;
+    case PersonaInquiryStatusEnum.Approved:
+      console.log('Inquiry approved transitioned inquiry status');
+      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      await startOrContinueApplyProcessForTransitionedInquiry(req);
+      await sendPendingEmail(email, req);
+      break;
     case PersonaInquiryStatusEnum.Pending:
       console.log('Inquiry pending transitioned inquiry status');
       // check if a visitor or user exists for this inquiry
@@ -497,11 +503,13 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 
 export const handlePersonaWebhookByEventName = async (req: PersonaWebhookBody) => {
   switch (req?.data?.attributes?.name) {
+    case EventNamesEnum.inquiryApproved:
+      await handleInquiryTransitionedWebhook(req);
+      break;
     case EventNamesEnum.inquiryTransitioned:
       console.log('inquiry.transitioned event');
       await handleInquiryTransitionedWebhook(req);
       break;
-
     case EventNamesEnum.caseStatusUpdated:
       console.log('case.status-udated event');
       await handleCaseStatusUpdatedWebhook(req);

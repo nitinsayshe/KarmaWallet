@@ -48,6 +48,8 @@ export const transactionStatusesToExcludeFromImpactReports = [
 
 export const TriggerDeclinedTransactionTypeEnum = {
   AchCancel: TransactionModelTypeEnum.AchCancel,
+  AchPushReturned: TransactionModelTypeEnum.AchPushReturned,
+  AchPullReturned: TransactionModelTypeEnum.AchPullReturned,
   AuthorizationClearingChargebackReversal: TransactionModelTypeEnum.AuthorizationClearingChargebackReversal,
   AuthorizationReversal: TransactionModelTypeEnum.AuthorizationReversal,
   DirectdepositCreditPendingReversal: TransactionModelTypeEnum.DirectdepositCreditPendingReversal,

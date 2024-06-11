@@ -19,7 +19,10 @@ export const MarketingSubscriptionCodeToProviderProductId = {
   [MarketingSubscriptionCode.internalTestGroup]: ActiveCampaignListId.InternalTestGroup,
   [MarketingSubscriptionCode.monthlyNewsletters]: ActiveCampaignListId.MonthyNewsletters,
   [MarketingSubscriptionCode.q2Payout]: ActiveCampaignListId.Q2Payout,
+  [MarketingSubscriptionCode.doneGoodShoppers]: ActiveCampaignListId.DoneGoodShoppers,
   [MarketingSubscriptionCode.doneGood]: ActiveCampaignListId.DoneGood,
+  [MarketingSubscriptionCode.b2bKarmaCollective]: ActiveCampaignListId.B2BKarmaCollective,
+  [MarketingSubscriptionCode.b2bOtherBrandContacts]: ActiveCampaignListId.B2BOtherBrandContacts,
 };
 
 export const ProviderProductIdToMarketingSubscriptionCode = {
@@ -36,7 +39,10 @@ export const ProviderProductIdToMarketingSubscriptionCode = {
   [ActiveCampaignListId.InternalTestGroup]: MarketingSubscriptionCode.internalTestGroup,
   [ActiveCampaignListId.MonthyNewsletters]: MarketingSubscriptionCode.monthlyNewsletters,
   [ActiveCampaignListId.Q2Payout]: MarketingSubscriptionCode.q2Payout,
+  [ActiveCampaignListId.DoneGoodShoppers]: MarketingSubscriptionCode.doneGoodShoppers,
   [ActiveCampaignListId.DoneGood]: MarketingSubscriptionCode.doneGood,
+  [ActiveCampaignListId.B2BKarmaCollective]: MarketingSubscriptionCode.b2bKarmaCollective,
+  [ActiveCampaignListId.B2BOtherBrandContacts]: MarketingSubscriptionCode.b2bOtherBrandContacts,
 };
 
 export const InterestCategoryToMarketingSubscriptionCode = {

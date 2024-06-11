@@ -19,7 +19,7 @@ import { Transactions } from '../../../clients/marqeta/transactions';
 
 import { sleep } from '../../../lib/misc';
 import { IKarmaCardApplicationDocument, KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
-import { IPersonaIntegration } from '../../../integrations/persona/types';
+import { IPersonaIntegration, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum } from '../../../integrations/persona/types';
 import { passedInternalKyc } from '../../../integrations/persona';
 
 export type KarmaCardApplicationIterationRequest<FieldsType> = {
@@ -114,7 +114,6 @@ export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedRe
   const kycResult = marqeta?.kycResult;
   const persona = res?.persona;
   const internalKycTemplateId = res?.internalKycTemplateId;
-
   const reasonCode = kycResult?.codes?.[0] as ReasonCode;
   const failedMarqeta: ReasonCode = marqeta?.kycResult?.codes?.find((code) => code !== ReasonCode.Approved) as ReasonCode;
 
@@ -126,15 +125,20 @@ export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedRe
     };
   }
 
-  if (!passedInternalKyc(persona)) {
+  const passedPersona = passedInternalKyc(persona);
+
+  // if all inquiries are in a pending state and no cases
+  const allPersonaInquiriesInPendingAndNoCases = persona?.inquiries?.every((inquiry) => inquiry.status === PersonaInquiryStatusEnum.Pending) && !persona?.cases?.length;
+  if (!!persona && !passedPersona) {
     return {
-      status: IMarqetaKycState.failure,
+      status: allPersonaInquiriesInPendingAndNoCases ? IMarqetaKycState.pending : IMarqetaKycState.failure,
       reason: ReasonCode.FailedInternalKyc,
-      internalKycTemplateId,
+      internalKycTemplateId: allPersonaInquiriesInPendingAndNoCases ? PersonaInquiryTemplateIdEnum.DataCollection : internalKycTemplateId,
     };
   }
+
   const transformed: TransformedResponse = {
-    status: kycResult?.status || IMarqetaKycState.failure,
+    status: kycResult?.status || undefined,
     reason: reasonCode,
     internalKycTemplateId,
   };

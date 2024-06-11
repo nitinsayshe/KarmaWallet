@@ -35,7 +35,11 @@ export const getApplicationStatus: IRequestHandler<{}, {}, { email: string }> = 
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const applyResponse = await KarmaCardService.getApplicationData(parsed.data.email);
-    api(req, res, getShareableMarqetaUser(applyResponse));
+    const transformedResponse = getShareableMarqetaUser(applyResponse);
+    if (!transformedResponse.status) {
+      throw new CustomError('No application found', ErrorTypes.NOT_FOUND);
+    }
+    api(req, res, transformedResponse);
   } catch (err) {
     error(req, res, asCustomError(err));
   }

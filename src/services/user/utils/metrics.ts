@@ -22,7 +22,6 @@ import { NotificationTypeEnum } from '../../../lib/constants/notification';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
 import { ACHTransferModel } from '../../../models/achTransfer';
 import { IACHTransferTypes } from '../../../models/achTransfer/types';
-import { IKarmaMembershipData, KarmaMembershipStatusEnum, KarmaMembershipPaymentPlanEnumValues } from '../../../models/user/types';
 
 dayjs.extend(quarterOfYear);
 
@@ -1019,17 +1018,17 @@ export const getCollectiveCommunityImpact = async (): Promise<{
   }
 };
 
-export const getKarmaMembershipPlanType = async (
-  karmaMemberships: IKarmaMembershipData[],
-): Promise<KarmaMembershipPaymentPlanEnumValues | null> => {
-  try {
-    const karmaMembership = karmaMemberships.length > 0
-      && karmaMemberships.find(
-        (membership) => membership.status === KarmaMembershipStatusEnum.active,
-      );
-    return karmaMembership ? karmaMembership.paymentPlan : null;
-  } catch (err) {
-    console.error(err);
-    return null;
-  }
-};
+// export const getKarmaMembershipPlanType = async (
+//   karmaMemberships: IKarmaMembershipData[],
+// ): Promise<KarmaMembershipPaymentPlanEnumValues | null> => {
+//   try {
+//     const karmaMembership = karmaMemberships.length > 0
+//       && karmaMemberships.find(
+//         (membership) => membership.status === KarmaMembershipStatusEnum.active,
+//       );
+//     return karmaMembership ? karmaMembership.paymentPlan : null;
+//   } catch (err) {
+//     console.error(err);
+//     return null;
+//   }
+// };

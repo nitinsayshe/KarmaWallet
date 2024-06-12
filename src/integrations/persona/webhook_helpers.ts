@@ -211,6 +211,8 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     let existingApplicationData = await getUserApplicationStatus(email);
     const kycStatus = existingApplicationData?.marqeta?.kycResult?.status;
     const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
+    console.log('//// before emission of decision');
+
     if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
       console.log(`User with email: ${email} has already been approved for a card`);
       emitDecisionToSocket(email, inquiryId, existingApplicationData);
@@ -242,6 +244,8 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     if (!existingApplicationData) {
       throw new Error('No result found');
     }
+
+    console.log('////// return to the webhook', existingApplicationData);
 
     emitDecisionToSocket(email, inquiryId, existingApplicationData);
   } catch (e) {

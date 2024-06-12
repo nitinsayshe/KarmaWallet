@@ -8,11 +8,13 @@ import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../midd
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
-import { IUser, IUserIntegrations, KarmaMembershipStatusEnum } from '../../../models/user/types';
+import { IKarmaMembershipData, IUser, IUserIntegrations, KarmaMembershipStatusEnum, KarmaMembershipStatusEnumValues } from '../../../models/user/types';
 import { getMarqetaUser } from '../../../integrations/marqeta/user';
 import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { VisitorModel } from '../../../models/visitor';
 import { IEntityData } from '../types';
+import { getUtcDate } from '../../../lib/date';
+import { IProductSubscription } from '../../../models/productSubscription/types';
 
 export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;
@@ -188,4 +190,48 @@ export const checkIfUserActiveInMarqeta = async (userId: string) => {
   const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
   if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
   return false;
+};
+
+export const activeMembershipOfProductSubscriptionType = (user: IUserDocument, productSubscriptionType: IProductSubscription) => user.karmaMemberships?.find(
+  (membership) => membership.productSubscription === productSubscriptionType && membership.status === KarmaMembershipStatusEnum.active,
+);
+
+export const activeMembership = (user: IUserDocument) => user.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
+
+export const addKarmaMembershipToUser = async (
+  user: IUserDocument,
+  membershipType: IProductSubscription,
+  status: KarmaMembershipStatusEnumValues,
+) => {
+  try {
+    if (activeMembershipOfProductSubscriptionType(user, membershipType)) {
+      throw new CustomError('User already has an active membership of this type', ErrorTypes.CONFLICT);
+    }
+
+    const existingActiveMembership = activeMembership(user);
+    if (existingActiveMembership) {
+      existingActiveMembership.status = 'cancelled';
+      existingActiveMembership.cancelledOn = getUtcDate().toDate();
+      existingActiveMembership.lastModified = getUtcDate().toDate();
+    }
+
+    const newMembership: IKarmaMembershipData = {
+      productSubscription: membershipType,
+      status,
+      lastModified: getUtcDate().toDate(),
+      startDate: getUtcDate().toDate(),
+    };
+
+    if (!user.karmaMemberships) user.karmaMemberships = [];
+    user.karmaMemberships.push(newMembership);
+    return user.save();
+  } catch (err) {
+    console.error(
+      `Erroradding karma membership data ${membershipType} to user  ${user._id} : ${err}`,
+    );
+    if ((err as CustomError)?.isCustomError) {
+      throw err;
+    }
+    throw new CustomError('Error subscribing user to karma membership', ErrorTypes.SERVER);
+  }
 };

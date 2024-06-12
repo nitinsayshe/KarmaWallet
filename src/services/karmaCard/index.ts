@@ -27,21 +27,17 @@ import {
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
 import { IUserDocument, UserModel } from '../../models/user';
 import {
-  IKarmaMembershipData,
-  KarmaMembershipPaymentPlanEnumValues,
   KarmaMembershipStatusEnum,
-  KarmaMembershipTypeEnumValues,
 } from '../../models/user/types';
 import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
-import { createShareasaleTrackingId, isUserDocument } from '../user/utils';
+import { addKarmaMembershipToUser, createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import * as VisitorService from '../visitor';
 import {
-  hasKarmaWalletCards,
   openBrowserAndAddShareASaleCode,
   ReasonCode,
   ApplicationDecision,
@@ -54,6 +50,9 @@ import { UserProductSubscriptionStatus } from '../../models/userProductSubscript
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { updateCustomFields } from '../../integrations/activecampaign';
+import { ICreateAccountRequest } from '../visitor';
+import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
+import { StandardKarmaWalletSubscriptionId } from '../productSubscription';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -82,15 +81,6 @@ export interface IKarmaCardRequestBody {
   productSubscriptionId?: string;
 }
 
-interface IApplySuccessData {
-  email: string;
-  firstName: string;
-  lastName: string;
-  urlParams?: IUrlParam[];
-  visitorId?: string;
-  postalCode: string;
-}
-
 export interface INewLegalTextRequestBody {
   text: string;
   name: string;
@@ -98,11 +88,6 @@ export interface INewLegalTextRequestBody {
 export interface IUpdateLegalTextRequestParams {
   legalTextId: string;
 }
-
-export type AddKarmaMembershipToUserRequest = {
-  type: KarmaMembershipTypeEnumValues;
-  paymentPlan: KarmaMembershipPaymentPlanEnumValues;
-};
 
 export const getShareableKarmaCardApplication = ({
   _id,
@@ -204,12 +189,9 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
   const existingKYCChecks = await listUserKyc(userToken);
 
   // perform the kyc through marqeta & create the card
-  console.log('///// existingKYCChecks', isUserKYCVerified(existingKYCChecks));
   if (!isUserKYCVerified(existingKYCChecks)) {
-    console.log('///// user is not verified');
     kycResponse = await processUserKyc(marqetaUserResponse.token);
   } else {
-    console.log('//// in else');
     kycResponse = existingKYCChecks?.data.find((kyc: any) => kyc?.result?.status === IMarqetaKycState.success);
     if (!kycResponse) {
       kycResponse = await processUserKyc(marqetaUserResponse.token);
@@ -271,27 +253,27 @@ export const createUserProductSubscriptionAndPaymentLink = async (userObject: IU
   }
 };
 
-export const handleKarmaCardApplySuccess = async ({
-  email,
-  firstName,
-  lastName,
-  urlParams,
-  visitorId,
-  postalCode,
-}: IApplySuccessData): Promise<{ userDocument: IUserDocument, paymentLink: string }> => {
+// UPON SUCCESSFUL KYC IN PERSONA AND MARQETA UPDATE THE USER OR CREATE A USER
+export const updateVisitorOrUserOnApproved = async (
+  entity: IUserDocument | IVisitorDocument,
+): Promise<IUserDocument> => {
+  const entityIsUser = isUserDocument(entity);
+  const email = entity?.integrations?.marqeta?.email;
+  const firstName = entity?.integrations?.marqeta?.first_name;
+  const lastName = entity?.integrations?.marqeta?.last_name;
+  const visitorId = entityIsUser ? '' : entity?._id;
+  const postalCode = entity?.integrations?.marqeta?.postal_code;
+  const urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity.integrations?.urlParams;
   // find the user again since there is a potential race condition
   let userObject = await UserModel.findOne({ 'emails.email': email });
-  // EXISTING USER
+
   if (!!userObject) {
+    // EXISTING USER
     await updateUserUrlParams(userObject, urlParams);
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
-  }
-
-  // NEW USER
-  if (!userObject) {
-    // if there is no existing user, create a new user based on the visitor you created before KYC/Marqeta
-    // add the marqeta integration to the newly created user or the existing user (userObject)
+  } else {
+    // NEW USER
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,
       password: generateRandomPasswordString(14),
@@ -302,49 +284,9 @@ export const handleKarmaCardApplySuccess = async ({
     userObject = user;
   }
 
-  const paymentLink = await createUserProductSubscriptionAndPaymentLink(userObject);
+  // TRANSITION USER TO SUSPENDED IN MARQETA
   await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou);
-  // store the karma card application log
-  await userObject.save();
-  return {
-    userDocument: userObject,
-    paymentLink,
-  };
-};
-
-export const storeApplicationAndHandleSuccesState = async (
-  karmaCardApplication: IKarmaCardApplication,
-  entity: IUserDocument | IVisitorDocument,
-): Promise<IMarqetaUserIntegrations> => {
-  console.log('///// storeApplicationAndhandleSuccessState');
-  if (!entity) return;
-
-  console.log(' [2] ///// storeApplicationAndhandleSuccessState');
-
-  const entityIsUser = isUserDocument(entity);
-  // PASSED KYC
-  const successData: IApplySuccessData = {
-    email: entity.integrations?.marqeta?.email,
-    firstName: entity.integrations?.marqeta?.first_name,
-    lastName: entity.integrations?.marqeta?.last_name,
-    visitorId: entityIsUser ? '' : entity?._id,
-    postalCode: entity.integrations?.marqeta?.postal_code,
-  };
-
-  successData.urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity.integrations?.urlParams;
-
-  const response = await handleKarmaCardApplySuccess(successData);
-  const { paymentLink } = response;
-  let { userDocument } = response;
-
-  karmaCardApplication.status = ApplicationStatus.SUCCESS;
-  karmaCardApplication.kycResult = {
-    status: IMarqetaKycState.success,
-    codes: [],
-  };
-
-  karmaCardApplication.userId = userDocument._id.toString();
-  userDocument.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
+  userObject.integrations.marqeta.status = IMarqetaUserStatus.SUSPENDED;
 
   const sscid = entityIsUser ? entity.integrations.shareasale?.sscid : entity.integrations.shareASale?.sscid;
   const sscidCreatedOn = entityIsUser ? entity.integrations.shareasale?.sscidCreatedOn : entity.integrations.shareASale?.sscidCreatedOn;
@@ -352,7 +294,7 @@ export const storeApplicationAndHandleSuccesState = async (
 
   if (!!sscid && !!sscidCreatedOn && !!xType) {
     const trackingId = await createShareasaleTrackingId();
-    userDocument.integrations.shareasale = {
+    userObject.integrations.shareasale = {
       sscid,
       sscidCreatedOn,
       xTypeParam: xType,
@@ -361,9 +303,34 @@ export const storeApplicationAndHandleSuccesState = async (
     await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
   }
 
-  userDocument = await userDocument.save();
+  userObject = await userObject.save();
+  return userObject;
+};
+
+export const updateKarmaCardApplicationFromApproved = async (
+  karmaCardApplication: IKarmaCardApplication,
+  userId: string,
+) => {
+  karmaCardApplication.status = ApplicationStatus.SUCCESS;
+  karmaCardApplication.kycResult = {
+    status: IMarqetaKycState.success,
+    codes: [],
+  };
+  karmaCardApplication.userId = userId;
+
   await storeKarmaCardApplication(karmaCardApplication);
-  return userDocument?.toObject()?.integrations?.marqeta;
+};
+
+export const handleApprovedState = async (
+  karmaCardApplication: IKarmaCardApplication,
+  entity: IUserDocument | IVisitorDocument,
+): Promise<IUserDocument> => {
+  if (!entity) return;
+  const userObject = await updateVisitorOrUserOnApproved(entity);
+  await updateKarmaCardApplicationFromApproved(karmaCardApplication, userObject._id.toString());
+  const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
+  await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
+  return userObject;
 };
 
 export const updateEntityKycResult = async (entity: IUserDocument | IVisitorDocument, kycResult: IMarqetaKycResult) => {
@@ -439,8 +406,11 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
       };
     }
 
+    // User has passed marqeta and persona
+    const marqeta = await handleApprovedState(application, user || visitor);
+
     return {
-      marqeta: await storeApplicationAndHandleSuccesState(application, user || visitor),
+      marqeta,
       persona: personaIntegration,
       internalKycTemplateId: templateId,
     };
@@ -475,18 +445,67 @@ export const getApplicationData = async (email: string): Promise<ApplicationDeci
   }
 };
 
-export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestBody>): Promise<ApplicationDecision> => {
+const _checkIfValidApplyForKarmaCard = (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
+  const { body, requestor } = req;
+  const { email, firstName, lastName, address1, birthDate, phone, postalCode, state, ssn, city } = body;
+  if (firstName || lastName || address1 || birthDate || phone || postalCode || state || ssn || city) {
+    throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
+  }
+
+  if (!requestor && !email) throw new Error('Missing required fields');
+};
+
+export const _createNewVisitorFromApply = async (
+  email: string,
+  urlParams: IUrlParam[],
+  sscid: string,
+  sscidCreatedOn: string,
+  xType: string,
+) => {
+  const visitorData: ICreateAccountRequest = { email };
+
+  if (!!urlParams) {
+    visitorData.params = urlParams;
+    const groupCode = urlParams.find((param) => param.key === 'groupCode');
+    if (!!groupCode) {
+      visitorData.groupCode = groupCode?.value;
+    }
+  }
+
+  if (!!sscid && !!sscidCreatedOn && !!xType) {
+    visitorData.sscid = sscid;
+    visitorData.sscidCreatedOn = sscidCreatedOn;
+    visitorData.xTypeParam = xType;
+  }
+
+  const newVisitor = await VisitorService.createCreateAccountVisitor(visitorData);
+  return newVisitor;
+};
+
+export const applyForKarmaCard = async (
+  req: IRequest<{}, {}, IKarmaCardRequestBody>,
+): Promise<ApplicationDecision> => {
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
   // product subscription id can be defaulted to our standard for now, but if in the future we need another one we have that option
-  const { address1, address2, birthDate, phone, postalCode, state, ssn, city, urlParams, sscid, sscidCreatedOn, xType, personaInquiryId } = req.body;
+  const {
+    address1,
+    address2,
+    birthDate,
+    phone,
+    postalCode,
+    state,
+    ssn,
+    city,
+    urlParams,
+    sscid,
+    sscidCreatedOn,
+    xType,
+    personaInquiryId,
+  } = req.body;
 
-  if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
-    throw new Error('Missing required fields');
-  }
-
-  if (!requestor && !email) throw new Error('Missing required fields');
+  _checkIfValidApplyForKarmaCard(req);
 
   if (!!requestor && requestor.emails.find((e) => !!e.primary).email !== email) {
     requestor = null;
@@ -498,17 +517,16 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   const existingVisitor = await VisitorModel.findOne({ email });
   const existingUser = (await UserModel.findOne({ 'emails.email': email })) as IUserDocument;
-  // if an applicant is using an email that belongs to a user
+  // Email belongs to existing user, throw an error and have user log in
   if (!requestor && existingUser) throw new Error('Email already registered with Karma Wallet account. Please sign in to continue.');
-
-  // if they are an existing visitor but not an existing user (could have applied previously)
+  // Existing visitor without an existing user (could have applied previously)
   if (!!existingVisitor && !existingUser) _visitor = existingVisitor;
 
-  // EXISTING USER WITH KARMA WALLET CARDS SHOULD NOT BE ABLE TO APPLY, FRONTEND SHOULD HAVE ALSO CHECKED THIS
+  // I. EXISTING USER WITH KARMA WALLET ACCOUNT SHOULD NOT BE ABLE TO APPLY, FRONTEND SHOULD HAVE ALSO CHECKED THIS
   if (!!existingUser) {
-    const hasKarmaCards = await hasKarmaWalletCards(existingUser);
-    if (!!hasKarmaCards) {
-      const applyResponse = {
+    if (await userHasActiveOrSuspendedDepositAccount(existingUser._id.toString())) {
+      // early return since user is already registered
+      return {
         marqeta: {
           kycResult: {
             status: IMarqetaKycState.failure,
@@ -517,37 +535,19 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
         },
         persona: existingUser?.integrations?.persona,
       };
-      return applyResponse;
     }
   }
 
-  // CREATE A NEW VISITOR IF THERE IS NO VISITOR OR USER FOR THE APPLICANT
-  // if the visitor passes KYC, we will create a user for them based on the visitor data later in this function
+  // II. CREATE NEW VISITOR IF NO VISITOR OR USER YET
   if (!existingVisitor && !existingUser) {
-    const visitorData: any = {
-      email,
-    };
-
-    if (!!urlParams) {
-      visitorData.params = urlParams;
-      const groupCode = urlParams.find((param) => param.key === 'groupCode');
-      if (!!groupCode) {
-        visitorData.groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
-      }
-    }
-
-    if (!!sscid && !!sscidCreatedOn && !!xType) {
-      visitorData.sscid = sscid;
-      visitorData.sscidCreatedOn = sscidCreatedOn;
-      visitorData.xTypeParam = xType;
-    }
-
-    const newVisitorResponse = await VisitorService.createCreateAccountVisitor(visitorData);
-    _visitor = newVisitorResponse;
+    _visitor = await _createNewVisitorFromApply(email, urlParams, sscid, sscidCreatedOn, xType);
   }
 
   // pull the persona inquiry data
-  const { newInquiry: inquiryResult, integration: personaIntegration } = await fetchInquiryAndCreateOrUpdateIntegration(personaInquiryId, existingUser || _visitor);
+  const {
+    newInquiry: inquiryResult,
+    integration: personaIntegration,
+  } = await fetchInquiryAndCreateOrUpdateIntegration(personaInquiryId, existingUser || _visitor);
 
   // MARQETA KYC: Prepare Data to create a User in Marqeta and submit for Marqeta KYC
   const marqetaKYCInfo: IMarqetaCreateUser = {
@@ -561,7 +561,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     // hard coded to the US for all applications for now
     country: 'US',
     city,
-    email,
+    email: email.toLowerCase(),
     identifications: [
       {
         type: 'SSN',
@@ -574,20 +574,17 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
 
   // MARQETA KYC/CREATE USER
   const { marqetaUserResponse, kycResponse } = await performMarqetaCreateAndKYC(marqetaKYCInfo);
-  console.log('//// this is the kyc response', kycResponse);
-
-  // get the kyc result code
-  const { status } = kycResponse.result;
-  const { codes } = kycResponse.result;
+  const { status, codes } = kycResponse.result;
   const kycErrorCodes = codes?.map((item: any) => item.code);
+  const marqetaIntegration = {
+    userToken: marqetaUserResponse.token,
+    kycResult: { status, codes: kycErrorCodes },
+    email,
+    ...marqetaUserResponse,
+  };
 
   const applicationDecision = {
-    marqeta: {
-      userToken: marqetaUserResponse.token,
-      kycResult: { status, codes: kycErrorCodes },
-      email,
-      ...marqetaUserResponse,
-    },
+    marqeta: marqetaIntegration,
     persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
   };
@@ -595,7 +592,7 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
   const kycStatus = status;
 
   if (!existingUser) {
-    // Update the visitors marqeta Kyc status
+    // IF VISITOR ONLY, UPDATE VISITOR WITH MARQETA DECISION
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
       marqeta: applicationDecision.marqeta,
       email,
@@ -606,13 +603,11 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
       actions: [{ type: VisitorActionEnum.AppliedForCard, createdOn: getUtcDate().toDate() }],
     });
   } else {
-    // Update the existing user
+    // IF EXISTING USER, UPDATE USER WITH MARQETA DECISION
     // Is it ok to overwrite the shareasale data if it already exists?
     if (!existingUser.integrations) existingUser.integrations = {};
-
     if (!!sscid) existingUser.integrations.shareasale = { sscid, sscidCreatedOn, xTypeParam: xType };
     existingUser.integrations.marqeta = applicationDecision.marqeta;
-    // TODO: store group code
     if (!!urlParams) await updateUserUrlParams(existingUser, urlParams);
     await existingUser.save();
   }
@@ -637,10 +632,10 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     lastModified: dayjs().utc().toDate(),
   };
 
-  // check the status of the persona inquiry
-  const failedPersonaInquiry = !personaInquiryInSuccessState(inquiryResult);
+  const notApproved = kycStatus !== IMarqetaKycState.success || !personaInquiryInSuccessState(inquiryResult);
+
   // FAILED OR PENDING KYC, already saved to user or visitor object
-  if (kycStatus !== IMarqetaKycState.success || failedPersonaInquiry) {
+  if (notApproved) {
     if (!!existingUser) {
       karmaCardApplication.userId = existingUser._id.toString();
     } else {
@@ -660,10 +655,14 @@ export const applyForKarmaCard = async (req: IRequest<{}, {}, IKarmaCardRequestB
     return applicationDecision;
   }
 
+  // SUCCESSFUL KYC, initiate Approved State actions
+  const userObject = await handleApprovedState(karmaCardApplication, existingUser || _visitor);
+
   return {
-    marqeta: await storeApplicationAndHandleSuccesState(karmaCardApplication, existingUser || _visitor),
+    marqeta: userObject.toObject()?.integrations?.marqeta,
     persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
+    paymentLink: await createUserProductSubscriptionAndPaymentLink(userObject),
   };
 };
 
@@ -723,79 +722,22 @@ export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
   }
 };
 
-export const addKarmaMembershipToUser = async (
-  user: IUserDocument,
-  membershipType: KarmaMembershipTypeEnumValues,
-  paymentPlan: KarmaMembershipPaymentPlanEnumValues,
-) => {
-  try {
-    const existingMembership = user.karmaMemberships?.find(
-      (membership) => membership.type === membershipType && membership.status === KarmaMembershipStatusEnum.active,
-    );
-    if (!!existingMembership) throw new CustomError('User already has an active membership of this type', ErrorTypes.CONFLICT);
+// export const cancelKarmaMembership = async (user: IUserDocument, membershipType: KarmaMembershipTypeEnumValues) => {
+//   try {
+//     const existingMembership = user.karmaMemberships?.find(
+//       (membership) => membership.type === membershipType && membership.status === KarmaMembershipStatusEnum.active,
+//     );
+//     if (!existingMembership) throw new CustomError('User does not have an active membership to cancel', ErrorTypes.NOT_FOUND);
 
-    const existingActiveMembership = user.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
-    if (!!existingActiveMembership) {
-      existingActiveMembership.status = 'cancelled';
-      existingActiveMembership.cancelledOn = getUtcDate().toDate();
-    }
-
-    const newMembership: IKarmaMembershipData = {
-      type: membershipType,
-      status: KarmaMembershipStatusEnum.active,
-      paymentPlan,
-      lastModified: getUtcDate().toDate(),
-      startDate: getUtcDate().toDate(),
-    };
-
-    if (!user.karmaMemberships) user.karmaMemberships = [];
-    user.karmaMemberships.push(newMembership);
-    return user.save();
-  } catch (err) {
-    console.error(
-      `Error subscribing user to karma membership ${membershipType} using ${paymentPlan} payment plan for user ${user._id} : ${err}`,
-    );
-    if ((err as CustomError)?.isCustomError) {
-      throw err;
-    }
-    throw new CustomError('Error subscribing user to karma membership', ErrorTypes.SERVER);
-  }
-};
-
-export const updateKarmaMembershipPaymentPlan = async (user: IUserDocument, paymentPlan: KarmaMembershipPaymentPlanEnumValues) => {
-  try {
-    const existingMembership = user.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
-    if (!existingMembership) throw new CustomError('User does not have an active membership to update', ErrorTypes.NOT_FOUND);
-    if (existingMembership.paymentPlan === paymentPlan) throw new CustomError('User already has this payment plan', ErrorTypes.CONFLICT);
-
-    existingMembership.paymentPlan = paymentPlan;
-    existingMembership.lastModified = getUtcDate().toDate();
-    return user.save();
-  } catch (err) {
-    console.error(`Error updating to ${paymentPlan} for user ${user._id}: ${err}`);
-    if ((err as CustomError)?.isCustomError) {
-      throw err;
-    }
-    throw new CustomError('Error updating karma membership payment plan', ErrorTypes.SERVER);
-  }
-};
-
-export const cancelKarmaMembership = async (user: IUserDocument, membershipType: KarmaMembershipTypeEnumValues) => {
-  try {
-    const existingMembership = user.karmaMemberships?.find(
-      (membership) => membership.type === membershipType && membership.status === KarmaMembershipStatusEnum.active,
-    );
-    if (!existingMembership) throw new CustomError('User does not have an active membership to cancel', ErrorTypes.NOT_FOUND);
-
-    existingMembership.status = KarmaMembershipStatusEnum.cancelled;
-    existingMembership.lastModified = getUtcDate().toDate();
-    existingMembership.cancelledOn = getUtcDate().toDate();
-    return user.save();
-  } catch (err) {
-    console.error(`Error cancelling ${membershipType} membership for user ${user._id}: ${err}`);
-    if ((err as CustomError)?.isCustomError) {
-      throw err;
-    }
-    throw new CustomError('Error cancelling karma membership', ErrorTypes.SERVER);
-  }
-};
+//     existingMembership.status = KarmaMembershipStatusEnum.cancelled;
+//     existingMembership.lastModified = getUtcDate().toDate();
+//     existingMembership.cancelledOn = getUtcDate().toDate();
+//     return user.save();
+//   } catch (err) {
+//     console.error(`Error cancelling ${membershipType} membership for user ${user._id}: ${err}`);
+//     if ((err as CustomError)?.isCustomError) {
+//       throw err;
+//     }
+//     throw new CustomError('Error cancelling karma membership', ErrorTypes.SERVER);
+//   }
+// };

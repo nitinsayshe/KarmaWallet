@@ -5,6 +5,7 @@ import { IPromo, IPromoDocument } from '../promo';
 import { IMarqetaUserIntegrations } from '../../integrations/marqeta/types';
 import { IWPArticle } from '../wpArticle';
 import { IPersonaIntegration } from '../../integrations/persona/types';
+import { IShareableProductSubscription } from '../productSubscription/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',
@@ -16,15 +17,9 @@ export enum UserEmailStatus {
 export const KarmaMembershipStatusEnum = {
   active: 'active',
   cancelled: 'cancelled',
+  unpaid: 'unpaid',
 } as const;
 export type KarmaMembershipStatusEnumValues = typeof KarmaMembershipStatusEnum[keyof typeof KarmaMembershipStatusEnum];
-
-export const KarmaMembershipPaymentPlanEnum = {
-  free: 'free',
-  monthly: 'monthly',
-  annual: 'annual',
-} as const;
-export type KarmaMembershipPaymentPlanEnumValues = typeof KarmaMembershipPaymentPlanEnum[keyof typeof KarmaMembershipPaymentPlanEnum];
 
 export const KarmaMembershipTypeEnum = {
   standard: 'standard',
@@ -127,9 +122,8 @@ export interface IDeviceInfo {
 }
 
 export interface IKarmaMembershipData {
-  type: KarmaMembershipTypeEnumValues;
+  productSubscription: IRef<ObjectId, IShareableProductSubscription>;
   status: KarmaMembershipStatusEnumValues;
-  paymentPlan: KarmaMembershipPaymentPlanEnumValues;
   lastModified: Date;
   startDate: Date;
   cancelledOn?: Date;

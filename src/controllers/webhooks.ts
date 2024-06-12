@@ -503,6 +503,7 @@ export const handleStripeWebhook: IRequestHandler<{}, {}, string | Buffer> = asy
     const event = await stripeClient.createEventAndVerifyWebhook(req.rawBody, req.headers['stripe-signature']);
     await processStripeWebhookEvent(event);
     await WebhookModel.create({ provider: WebhookProviders.Stripe, body: req.body, event: event.data });
+    // output.api(req, res, { message: 'Stripe webhook processed successfully.' });
   } catch (e) {
     console.log('///// Unable to process Stripe webhook /////');
     error(req, res, asCustomError(e));

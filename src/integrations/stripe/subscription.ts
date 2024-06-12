@@ -38,10 +38,12 @@ export const createUserProductSubscriptionFromStripeSubscription = async (data: 
   const product = await ProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.object.items.data[0].price.product });
   const invoice = await InvoiceModel.findOne({ 'integrations.stripe.id': data.object.latest_invoice });
   // create a user product subscription
+  const rightNow = dayjs().utc().toDate();
   const userProductSubscription = await UserProductSubscriptionModel.create({
     user: user._id,
-    nextBillingDate: dayjs(data.object.current_period_end).utc().toDate(),
-    lastBilledDate: dayjs(data.object.current_period_start).utc().toDate(),
+    expirationDate: dayjs().utc().add(1, 'year').toDate(),
+    nextBillingDate: dayjs().utc().add(1, 'year').toDate(),
+    lastBilledDate: rightNow,
     latestInvoice: invoice?._id || null,
     integrations: {
       stripe: {

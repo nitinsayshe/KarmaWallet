@@ -47,7 +47,7 @@ export const updateProductSubscription = async (id: string, params: ICreateProdu
   }
 };
 
-export const createStripePaymentLink = async (email: string, entityId: string, promoCode: string) => {
+export const createStripePaymentLink = async (email: string, entityId: string, promoCode?: string) => {
   // we are defaulting to standard for everyone, we will want to change this later
   const productSubscriptionId = '664e2adfdc54c92877715499';
   const paymentData: IPaymentLinkData = {

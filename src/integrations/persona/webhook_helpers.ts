@@ -464,6 +464,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
   const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
   const inquiryId = req?.data?.attributes?.payload?.data?.id;
   const email = req?.data?.attributes?.payload?.data?.attributes?.fields?.applicationData?.value?.email;
+  console.log('///// received webhook!', req);
 
   switch (inquiryStatus) {
     case PersonaInquiryStatusEnum.Completed:

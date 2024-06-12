@@ -99,6 +99,7 @@ interface TransformedResponse {
   reason?: ReasonCode;
   internalKycTemplateId?: string;
   authkey?: string;
+  paymentLink?: string;
 }
 
 export interface ApplicationDecision {
@@ -141,6 +142,7 @@ export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedRe
     status: kycResult?.status || undefined,
     reason: reasonCode,
     internalKycTemplateId,
+    paymentLink: res?.paymentLink || undefined,
   };
 
   return transformed;

@@ -45,8 +45,6 @@ import {
 } from './utils';
 import { createKarmaCardMembershipCustomerSession } from '../../integrations/stripe/checkout';
 import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
-import { createUserProductSubscription } from '../userProductSubscription';
-import { UserProductSubscriptionStatus } from '../../models/userProductSubscription/types';
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { updateCustomFields } from '../../integrations/activecampaign';
@@ -169,12 +167,14 @@ export const performKycForUserOrVisitor = async (
 };
 
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
+  console.log('///// create new marqeta user?');
   // find the email is already register with marqeta or not
   const { data } = await getMarqetaUserByEmail({ email: userData.email });
   let userToken;
   let marqetaUserResponse;
   let kycResponse;
 
+  console.log('///// data from get user', data);
   if (data.length > 0) {
     // If existing user by email in Marqeta, update the user
     userToken = data[0].token;
@@ -233,20 +233,17 @@ export const handleExistingUserApplySuccess = async (userObject: IUserDocument, 
   }
 };
 
-export const createUserProductSubscriptionAndPaymentLink = async (userObject: IUserDocument) => {
+export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: IUserDocument) => {
   try {
-  // create a customer in stripe
-    const customer = await createStripeCustomerAndAddToUser(userObject);
-    if (!customer) throw new Error('Error creating Stripe customer');
+    // create a customer in stripe
+    if (!userObject?.integrations?.stripe) {
+      const stripeCustomer = await createStripeCustomerAndAddToUser(userObject);
+      userObject.integrations.stripe = stripeCustomer;
+    }
     // create a customer checkout session
     const session = await createKarmaCardMembershipCustomerSession(userObject);
-    const productSubscription = await ProductSubscriptionModel.findOne({ name: 'Standard Karma Wallet Membership' });
-    await createUserProductSubscription({
-      user: userObject._id,
-      productSubscription,
-      status: UserProductSubscriptionStatus.UNPAID,
-    });
-
+    const productSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
+    await addKarmaMembershipToUser(userObject, productSubscription, KarmaMembershipStatusEnum.unpaid);
     return session.url;
   } catch (err) {
     throw new Error(`Error creating Stripe Payment Link: ${err}`);
@@ -446,9 +443,10 @@ export const getApplicationData = async (email: string): Promise<ApplicationDeci
 };
 
 const _checkIfValidApplyForKarmaCard = (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
+  console.log('//// req nodu', req.body);
   const { body, requestor } = req;
   const { email, firstName, lastName, address1, birthDate, phone, postalCode, state, ssn, city } = body;
-  if (firstName || lastName || address1 || birthDate || phone || postalCode || state || ssn || city) {
+  if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {
     throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   }
 
@@ -542,6 +540,7 @@ export const applyForKarmaCard = async (
   if (!existingVisitor && !existingUser) {
     _visitor = await _createNewVisitorFromApply(email, urlParams, sscid, sscidCreatedOn, xType);
   }
+  console.log('///// line 545');
 
   // pull the persona inquiry data
   const {
@@ -591,6 +590,8 @@ export const applyForKarmaCard = async (
 
   const kycStatus = status;
 
+  console.log('///// line 596');
+
   if (!existingUser) {
     // IF VISITOR ONLY, UPDATE VISITOR WITH MARQETA DECISION
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
@@ -602,6 +603,7 @@ export const applyForKarmaCard = async (
       xTypeParam: xType,
       actions: [{ type: VisitorActionEnum.AppliedForCard, createdOn: getUtcDate().toDate() }],
     });
+    console.log('///// new visitor', _visitor);
   } else {
     // IF EXISTING USER, UPDATE USER WITH MARQETA DECISION
     // Is it ok to overwrite the shareasale data if it already exists?
@@ -634,6 +636,8 @@ export const applyForKarmaCard = async (
 
   const notApproved = kycStatus !== IMarqetaKycState.success || !personaInquiryInSuccessState(inquiryResult);
 
+  console.log('//// are they approved?', !notApproved);
+
   // FAILED OR PENDING KYC, already saved to user or visitor object
   if (notApproved) {
     if (!!existingUser) {
@@ -662,7 +666,7 @@ export const applyForKarmaCard = async (
     marqeta: userObject.toObject()?.integrations?.marqeta,
     persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
-    paymentLink: await createUserProductSubscriptionAndPaymentLink(userObject),
+    paymentLink: await performMembershipPaymentUpdatesAndCreateLink(userObject),
   };
 };
 

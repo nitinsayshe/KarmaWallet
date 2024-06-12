@@ -192,11 +192,11 @@ export const checkIfUserActiveInMarqeta = async (userId: string) => {
   return false;
 };
 
-export const activeMembershipOfProductSubscriptionType = (user: IUserDocument, productSubscriptionType: IProductSubscription) => user.karmaMemberships?.find(
-  (membership) => membership.productSubscription === productSubscriptionType && membership.status === KarmaMembershipStatusEnum.active,
+export const membershipOfProductSubscriptionType = (user: IUserDocument, productSubscriptionType: IProductSubscription) => user?.karmaMemberships?.find(
+  (membership) => membership.productSubscription === productSubscriptionType,
 );
 
-export const activeMembership = (user: IUserDocument) => user.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
+export const activeMembership = (user: IUserDocument) => user?.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
 
 export const addKarmaMembershipToUser = async (
   user: IUserDocument,
@@ -204,11 +204,17 @@ export const addKarmaMembershipToUser = async (
   status: KarmaMembershipStatusEnumValues,
 ) => {
   try {
-    if (activeMembershipOfProductSubscriptionType(user, membershipType)) {
-      throw new CustomError('User already has an active membership of this type', ErrorTypes.CONFLICT);
+    console.log('//// should add to the user');
+    const membershipOfSameType = membershipOfProductSubscriptionType(user, membershipType);
+
+    if (membershipOfSameType) {
+      membershipOfSameType.status = status;
+      membershipOfSameType.lastModified = getUtcDate().toDate();
+      return await user.save();
     }
 
     const existingActiveMembership = activeMembership(user);
+
     if (existingActiveMembership) {
       existingActiveMembership.status = 'cancelled';
       existingActiveMembership.cancelledOn = getUtcDate().toDate();
@@ -222,9 +228,11 @@ export const addKarmaMembershipToUser = async (
       startDate: getUtcDate().toDate(),
     };
 
-    if (!user.karmaMemberships) user.karmaMemberships = [];
+    if (!user?.karmaMemberships) user.karmaMemberships = [];
     user.karmaMemberships.push(newMembership);
-    return user.save();
+    const savedUser = await user.save();
+    console.log('///// should save this uesr');
+    return savedUser;
   } catch (err) {
     console.error(
       `Erroradding karma membership data ${membershipType} to user  ${user._id} : ${err}`,

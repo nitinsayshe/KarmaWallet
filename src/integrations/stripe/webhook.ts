@@ -46,31 +46,31 @@ export const handleInvoiceEvent = async (event: Stripe.Event) => {
       // create an invoice for the user
       break;
     case 'invoice.finalized':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // finalize the invoice
       break;
     case 'invoice.paid':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice to paid
       break;
     case 'invoice.updated':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice
       break;
     case 'invoice.payment_failed':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice to failed
       break;
     case 'invoice.payment_succeeded':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice to paid
       break;
     case 'invoice.marked_uncollectible':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice to uncollectible
       break;
     case 'invoice.deleted':
-      updateInvoiceFromStripeInvoice(event.data);
+      updateInvoiceFromStripeInvoice(event.data.object);
       // delete the invoice in our database
       break;
     default:

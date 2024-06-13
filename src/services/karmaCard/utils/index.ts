@@ -21,6 +21,7 @@ import { sleep } from '../../../lib/misc';
 import { IKarmaCardApplicationDocument, KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 import { IPersonaIntegration, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum } from '../../../integrations/persona/types';
 import { passedInternalKyc } from '../../../integrations/persona';
+import { ICheckoutSessionInfo } from '../../../integrations/stripe/types';
 
 export type KarmaCardApplicationIterationRequest<FieldsType> = {
   batchQuery: FilterQuery<IKarmaCardApplicationDocument>;
@@ -99,17 +100,17 @@ interface TransformedResponse {
   reason?: ReasonCode;
   internalKycTemplateId?: string;
   authkey?: string;
-  paymentLink?: string;
+  paymentData?: ICheckoutSessionInfo;
 }
 
-export interface ApplicationDecision {
+export interface IApplicationDecision {
   marqeta?: Partial<IMarqetaUserIntegrations>;
   persona?: IPersonaIntegration
   internalKycTemplateId?: string;
-  paymentLink?: string;
+  paymentData?: ICheckoutSessionInfo;
 }
 
-export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedResponse => {
+export const getShareableMarqetaUser = (res: IApplicationDecision): TransformedResponse => {
   if (!res) return;
   const marqeta = res?.marqeta;
   const kycResult = marqeta?.kycResult;
@@ -142,7 +143,7 @@ export const getShareableMarqetaUser = (res: ApplicationDecision): TransformedRe
     status: kycResult?.status || undefined,
     reason: reasonCode,
     internalKycTemplateId,
-    paymentLink: res?.paymentLink || undefined,
+    paymentData: res.paymentData,
   };
 
   return transformed;

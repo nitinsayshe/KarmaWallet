@@ -1,6 +1,7 @@
 /* eslint-disable import/no-cycle */
 import dayjs from 'dayjs';
 import { FilterQuery } from 'mongoose';
+import Stripe from 'stripe';
 import { IMarqetaListKYCResponse, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
@@ -40,8 +41,8 @@ import * as VisitorService from '../visitor';
 import {
   openBrowserAndAddShareASaleCode,
   ReasonCode,
-  ApplicationDecision,
   updateActiveCampaignDataAndJoinGroupForApplicant,
+  IApplicationDecision,
 } from './utils';
 import { createKarmaCardMembershipCustomerSession } from '../../integrations/stripe/checkout';
 import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
@@ -233,7 +234,7 @@ export const handleExistingUserApplySuccess = async (userObject: IUserDocument, 
   }
 };
 
-export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: IUserDocument) => {
+export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: IUserDocument, uiMode?: Stripe.Checkout.SessionCreateParams.UiMode) => {
   try {
     // create a customer in stripe
     if (!userObject?.integrations?.stripe) {
@@ -241,10 +242,14 @@ export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: I
       userObject.integrations.stripe = stripeCustomer;
     }
     // create a customer checkout session
-    const session = await createKarmaCardMembershipCustomerSession(userObject);
+    const session = await createKarmaCardMembershipCustomerSession({ user: userObject, uiMode });
     const productSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
     await addKarmaMembershipToUser(userObject, productSubscription, KarmaMembershipStatusEnum.unpaid);
-    return session.url;
+
+    return {
+      url: session.url,
+      client_secret: session.client_secret,
+    };
   } catch (err) {
     throw new Error(`Error creating Stripe Payment Link: ${err}`);
   }
@@ -337,7 +342,7 @@ export const updateEntityKycResult = async (entity: IUserDocument | IVisitorDocu
 };
 
 // expects case id or inquiry id
-export const continueKarmaCardApplication = async (email: string, inquiryId?: string, caseId?: string): Promise<ApplicationDecision> => {
+export const continueKarmaCardApplication = async (email: string, inquiryId?: string, caseId?: string): Promise<IApplicationDecision> => {
   if (!inquiryId && !caseId) throw new CustomError('Missing required fields', ErrorTypes.INVALID_ARG);
   try {
     // pull visitor or email from the db
@@ -420,25 +425,41 @@ export const continueKarmaCardApplication = async (email: string, inquiryId?: st
   }
 };
 
-export const getApplicationData = async (email: string): Promise<ApplicationDecision> => {
+export const getApplicationData = async (email: string): Promise<IApplicationDecision> => {
   try {
-    const user = await UserModel.findOne({ 'emails.email': email }).lean();
-    const visitor = await VisitorModel.findOne({ email }).lean();
+    const user = await UserModel.findOne({ 'emails.email': email });
+    const visitor = await VisitorModel.findOne({ email });
     if (!user && !visitor) throw new CustomError(`No user or visitor found with email: ${email}`, ErrorTypes.NOT_FOUND);
     const entity = user || visitor;
-
     const latestInquiryIndex = !!entity?.integrations?.persona?.inquiries?.length ? entity.integrations.persona.inquiries.length - 1 : 0;
     const latestInquiry = entity?.integrations?.persona?.inquiries?.[latestInquiryIndex >= 1 ? latestInquiryIndex : 0];
-    return {
+
+    const applicationData: IApplicationDecision = {
       marqeta: entity?.integrations?.marqeta,
       persona: entity?.integrations?.persona,
       internalKycTemplateId: latestInquiry?.templateId,
     };
+
+    if (!!user) {
+      // return the embedded url or client secret
+      if (user.karmaMemberships.find((membership) => membership.status === KarmaMembershipStatusEnum.unpaid)) {
+        const paymentData = await createKarmaCardMembershipCustomerSession({ user, uiMode: 'embedded' });
+        console.log('//// session data', paymentData);
+        applicationData.paymentData = {
+          url: paymentData.url,
+          client_secret: paymentData.client_secret,
+        };
+      }
+    }
+
+    console.log('////// this is the application data', applicationData);
+
+    return applicationData;
   } catch (err) {
     if ((err as CustomError)?.isCustomError) {
       throw err;
     }
-    throw new CustomError('Error getting application status', ErrorTypes.SERVER);
+    throw new CustomError(`Error getting application status:${err}`, ErrorTypes.SERVER);
   }
 };
 
@@ -482,7 +503,7 @@ export const _createNewVisitorFromApply = async (
 
 export const applyForKarmaCard = async (
   req: IRequest<{}, {}, IKarmaCardRequestBody>,
-): Promise<ApplicationDecision> => {
+): Promise<IApplicationDecision> => {
   let _visitor;
   let { requestor } = req;
   let { firstName, lastName, email } = req.body;
@@ -666,7 +687,7 @@ export const applyForKarmaCard = async (
     marqeta: userObject.toObject()?.integrations?.marqeta,
     persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
-    paymentLink: await performMembershipPaymentUpdatesAndCreateLink(userObject),
+    paymentData: await performMembershipPaymentUpdatesAndCreateLink(userObject),
   };
 };
 

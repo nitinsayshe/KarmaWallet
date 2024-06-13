@@ -5,7 +5,7 @@ import { getUtcDate } from '../../lib/date';
 import { KarmaCardApplicationModel, ApplicationStatus, IKarmaCardApplicationDocument } from '../../models/karmaCardApplication';
 import { UserModel, IUserDocument } from '../../models/user';
 import { VisitorModel, VisitorActionEnum, IVisitorDocument } from '../../models/visitor';
-import { getShareableMarqetaUser, ReasonCode, ApplicationDecision } from '../../services/karmaCard/utils';
+import { getShareableMarqetaUser, ReasonCode, IApplicationDecision } from '../../services/karmaCard/utils';
 import { SocketClient } from '../../clients/socket';
 import { IRequest } from '../../types/request';
 import {
@@ -39,12 +39,12 @@ import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;
 
-export const hasSavedApplicationAndKycResult = (application: IKarmaCardApplicationDocument, existingApplicationData: ApplicationDecision): boolean => {
+export const hasSavedApplicationAndKycResult = (application: IKarmaCardApplicationDocument, existingApplicationData: IApplicationDecision): boolean => {
   const hasPersonaCaseOrInquiryData = hasInquiriesOrCases(existingApplicationData?.persona);
   return !!application && !!existingApplicationData?.marqeta?.kycResult?.status && hasPersonaCaseOrInquiryData;
 };
 
-export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<ApplicationDecision> => {
+export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Promise<IApplicationDecision> => {
   // start the application process
   const inquiryData = req?.data?.attributes?.payload?.data?.attributes;
   const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
@@ -94,7 +94,7 @@ export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Prom
   }
 };
 
-const emitDecisionToSocket = (email: string, inquiryId: string, result: ApplicationDecision) => {
+const emitDecisionToSocket = (email: string, inquiryId: string, result: IApplicationDecision) => {
   console.log(`Emitting application decision to room: ${SocketRooms.CardApplication}/${email} for inquiryId or caseId: ${inquiryId}`);
   const data = getShareableMarqetaUser(result);
   SocketClient.socket.emit({
@@ -105,7 +105,7 @@ const emitDecisionToSocket = (email: string, inquiryId: string, result: Applicat
   });
 };
 
-const getUserApplicationStatus = async (email: string): Promise<ApplicationDecision> => {
+const getUserApplicationStatus = async (email: string): Promise<IApplicationDecision> => {
   try {
     if (!email) {
       throw new Error('No email found');

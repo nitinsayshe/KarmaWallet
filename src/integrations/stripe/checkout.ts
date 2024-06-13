@@ -1,8 +1,9 @@
 import Stripe from 'stripe';
 import { Checkout } from '../../clients/stripe/checkout';
 import { StripeClient } from '../../clients/stripe/stripeClient';
-import { IUserDocument } from '../../models/user';
 import { MembershipPromoModel } from '../../models/membershipPromo';
+import { IUrlParam } from '../../models/user/types';
+import { ICheckoutSessionParams } from './types';
 
 export const createCheckoutSession = async (params: Stripe.Checkout.SessionCreateParams) => {
   const stripeClient = new StripeClient();
@@ -18,15 +19,13 @@ export const retrieveCheckoutSession = async (checkoutSessionId: string) => {
   return response;
 };
 
-export const createKarmaCardMembershipCustomerSession = async (
-  user: IUserDocument,
-  productPrice?: string,
-  uiMode?: Stripe.Checkout.SessionCreateParams.UiMode,
-) => {
+export const createKarmaCardMembershipCustomerSession = async (params: ICheckoutSessionParams): Promise<Stripe.Checkout.Session> => {
+  const { user, productPrice, uiMode } = params;
+
   if (!user) throw new Error('User not found');
   let promoCode = '';
 
-  const membershipPromoCode = user.integrations?.referrals?.params.find((referral) => referral.key === 'membershipPromoCode');
+  const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
   if (membershipPromoCode) {
     const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode });
     if (!membershipPromoDocument) console.log('///// no promo code found for this value');
@@ -50,11 +49,16 @@ export const createKarmaCardMembershipCustomerSession = async (
     customer: stripeCustomerID,
     client_reference_id: user._id.toString(),
     mode: 'subscription',
-    success_url: 'https://karmawallet.io',
     // do we want to add a cancel_url?
   };
 
   if (!!promoCode) stripeData.discounts = [{ promotion_code: promoCode }];
+  if (uiMode === 'hosted') {
+    stripeData.success_url = 'https://karmawallet.io/karma-card/membership?success=true';
+  } else {
+    stripeData.redirect_on_completion = 'never';
+  }
   const newSession = await createCheckoutSession(stripeData);
+  console.log('///// new session', newSession.client_secret);
   return newSession;
 };

@@ -140,14 +140,14 @@ export const updateCreateAccountVisitor = async (
   info: ICreateAccountRequest,
 ): Promise<IVisitorDocument> => {
   try {
-    if (!visitor.integrations) visitor.integrations = {};
-    if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-    if (!!info.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
-    if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
-    if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
+    if (!visitor?.integrations) visitor.integrations = {};
+    if (!!info?.groupCode) visitor.integrations.groupCode = info.groupCode;
+    if (!!info?.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
+    if (!!info?.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
+    if (!!info?.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
     if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
-    if (!!info.persona) visitor.integrations.persona = info.persona;
-    if (!!info.params) {
+    if (!!info?.persona) visitor.integrations.persona = info.persona;
+    if (!!info?.params) {
       await updateVisitorUrlParams(visitor, info.params);
       if (info.params.find((p) => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find((p) => p.key === 'groupCode')?.value;

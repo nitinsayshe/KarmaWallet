@@ -242,11 +242,6 @@ export type LocationMerchant =
     type?: string;
   };
 
-export const KardEnvironmentEnum = {
-  Aggregator: 'Aggregator',
-  Issuer: 'Issuer',
-};
-
 export type PaginationFields = {
   page?: number; // Page number (number >= 0)
   limit?: number; // number [1..200]
@@ -337,8 +332,6 @@ export type KardMerchantLocation = {
 export type GetLocationsByMerchantIdRequest = { id: string } | (PaginationFields & { id: string });
 
 export type KardMerchantLocations = KardMerchantLocation[];
-
-export type KardEnvironmentEnumValues = (typeof KardEnvironmentEnum)[keyof typeof KardEnvironmentEnum];
 
 export type GetRewardsMerchantsResponse = Merchant[];
 

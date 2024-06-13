@@ -4,7 +4,6 @@ import { CommissionAndPreviouslyExistingData, mapKardCommissionToKarmaCommisison
 import {
   CardNetwork,
   EarnedRewardWebhookBody,
-  KardEnvironmentEnum,
   MerchantSource,
   RewardStatus,
   RewardType,
@@ -198,7 +197,7 @@ describe('tests commission utils logic', () => {
   });
 
   it('mapKardCommissionToKarmaCommisison processes a valid EarnedWebhookBody successfully', async () => {
-    const karmaCommission = ((await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Aggregator, testEarnedWebhookBody)) as CommissionAndPreviouslyExistingData)?.commission;
+    const karmaCommission = ((await mapKardCommissionToKarmaCommisison(testEarnedWebhookBody)) as CommissionAndPreviouslyExistingData)?.commission;
     expect(karmaCommission).toBeDefined();
     expect(karmaCommission).not.toBeNull();
     expect(karmaCommission).toHaveProperty('allocation');

@@ -135,7 +135,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!skipSubscribe) {
-      const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
+      const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as IUserDocument);
       await updateActiveCampaignGroupListsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
       await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
     }

@@ -35,6 +35,9 @@ import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/types';
 import { updateMarqetaUserStatus } from '../marqeta/user';
 import { SocketEvents, daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
 import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
+import { updateUserSubscriptions, updateVisitorSubscriptions } from '../../services/marketingSubscription';
+import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/marketing_subscription';
+import { unsubscribeContactFromLists } from '../activecampaign';
 
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;
@@ -312,12 +315,6 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     return;
   }
 
-  const existingApplicationData = await getUserApplicationStatus(email);
-  // if they failed marqeta, proceed with gov id, selfie, and doc verification
-  const failedMarqeta = existingApplicationData?.marqeta?.kycResult?.status === IMarqetaKycState.failure
-    && existingApplicationData?.marqeta?.kycResult?.codes.length > 0
-    && !existingApplicationData?.marqeta?.kycResult?.codes?.includes(ReasonCode.Approved);
-
   const user = await UserModel.findOne({ 'emails.email': email });
   const visitor = await VisitorModel.findOne({ email });
 
@@ -382,6 +379,56 @@ export const handleCaseApprovedStatus = async (req: PersonaWebhookBody) => {
   await continueApplyProcessForApprovedCase(req);
 };
 
+export const updateMarqetaUserStatusToSuspended = async (entity: IUserDocument | IVisitorDocument) => {
+  if (entity.integrations?.marqeta?.status !== IMarqetaUserStatus.SUSPENDED && entity.integrations.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
+    await updateMarqetaUserStatus(entity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.FailedKYC);
+  }
+};
+
+export const updateEntityKycStatus = async (entity: IUserDocument | IVisitorDocument) => {
+  // update user or visitor's kycStatus in their marqeta integration
+  if (!!entity?.integrations?.marqeta?.kycResult) {
+    entity.integrations.marqeta.kycResult.status = IMarqetaKycState.failure;
+    const { codes } = entity.integrations.marqeta.kycResult;
+    if (!codes.includes(ReasonCode.FailedInternalKyc)) {
+      entity.integrations.marqeta.kycResult.codes.push(ReasonCode.FailedInternalKyc);
+    }
+    await entity.save();
+  }
+};
+
+export const updateApplicationStatusToDeclined = async (application: IKarmaCardApplicationDocument) => {
+  // update status of application in karma application collection
+  if (!!application && !application.expirationDate) {
+    application.status = ApplicationStatus.DECLINED;
+    application.lastModified = getUtcDate().toDate();
+    application.expirationDate = getUtcDate().add(daysUntilKarmaCardApplicationExpiration, 'day').toDate();
+    await application.save();
+  }
+};
+
+export const sendDeclinedNotification = async (entity: IUserDocument | IVisitorDocument, application: IKarmaCardApplicationDocument) => {
+  const isUser = isUserDocument(entity);
+  // send declined email
+  const notificationData: IKarmaCardDeclinedEmailData = {
+    user: isUser ? entity._id : undefined,
+    visitor: !isUser ? entity._id : undefined,
+    name: isUser ? entity.name : entity?.integrations?.marqeta?.first_name,
+    resubmitDocumentsLink: composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.KW5, entity.integrations.persona.accountId),
+    applicationExpirationDate: application.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+  };
+
+  await createDeclinedKarmaWalletCardUserNotification(notificationData);
+};
+
+export const removeUserFromDebitCardHoldersList = async (entity: IUserDocument | IVisitorDocument) => {
+  const isUser = isUserDocument(entity);
+  const entityId = entity._id.toString();
+  await unsubscribeContactFromLists(getEmailFromUserOrVisitor(entity), [ActiveCampaignListId.DebitCardHolders]);
+  if (isUser) await updateUserSubscriptions(entityId, [], [MarketingSubscriptionCode.debitCardHolders]);
+  else await updateVisitorSubscriptions(entityId, [], [MarketingSubscriptionCode.debitCardHolders]);
+};
+
 export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
   const eventId = req.data.id;
   try {
@@ -397,42 +444,16 @@ export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
     };
 
     await createOrUpdatePersonaIntegration(entity, accountId, null, caseData);
+    const email = getEmailFromUserOrVisitor(entity);
 
     // find application in karma application collection
-    const email = getEmailFromUserOrVisitor(entity);
     const application = await KarmaCardApplicationModel.findOne({ email });
-    // update status of application in karma application collection
-    if (!!application && !application.expirationDate) {
-      application.status = ApplicationStatus.DECLINED;
-      application.lastModified = getUtcDate().toDate();
-      application.expirationDate = getUtcDate().add(daysUntilKarmaCardApplicationExpiration, 'day').toDate();
-      await application.save();
-    }
-    // update user or visitor's kycStatus in their marqeta integration
-    if (!!entity?.integrations?.marqeta?.kycResult) {
-      entity.integrations.marqeta.kycResult.status = IMarqetaKycState.failure;
-      const { codes } = entity.integrations.marqeta.kycResult;
-      if (!codes.includes(ReasonCode.FailedInternalKyc)) {
-        entity.integrations.marqeta.kycResult.codes.push(ReasonCode.FailedInternalKyc);
-      }
-      await entity.save();
-    }
+    await updateApplicationStatusToDeclined(application);
+    await updateEntityKycStatus(entity);
 
-    if (entity.integrations?.marqeta?.status !== IMarqetaUserStatus.SUSPENDED && entity.integrations.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
-      await updateMarqetaUserStatus(entity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.FailedKYC);
-    }
-    const isUser = isUserDocument(entity);
-
-    // send declined email
-    const notificationData: IKarmaCardDeclinedEmailData = {
-      user: isUser ? entity._id : undefined,
-      visitor: !isUser ? entity._id : undefined,
-      name: isUser ? entity.name : entity?.integrations?.marqeta?.first_name,
-      resubmitDocumentsLink: composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.KW5, entity.integrations.persona.accountId),
-      applicationExpirationDate: application.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
-    };
-
-    await createDeclinedKarmaWalletCardUserNotification(notificationData);
+    await removeUserFromDebitCardHoldersList(entity);
+    await updateMarqetaUserStatusToSuspended(entity);
+    await sendDeclinedNotification(entity, application);
   } catch (e) {
     console.log(`Error processing case declined webhook with eventId: ${eventId}`);
     console.log(e);

@@ -1,6 +1,6 @@
 import { AxiosInstance } from 'axios';
 import dayjs from 'dayjs';
-import { Schema, Types } from 'mongoose';
+import { Schema } from 'mongoose';
 import {
   ActiveCampaignClient,
   IContactAutomation,
@@ -45,6 +45,8 @@ import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactRepor
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
 import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/marketing_subscription';
+import { IVisitorDocument } from '../../models/visitor';
+import { isUserDocument } from '../../services/user/utils';
 
 export type FieldIds = Array<{ name: string; id: number }>;
 export type FieldValues = Array<{ id: number; value: string }>;
@@ -588,7 +590,7 @@ const getSubscriptionLists = async (
 
 /* Usage of this funcion is deprecated in favor of the more general: updateActiveCampaignData() */
 export const updateActiveCampaignGroupListsAndTags = async (
-  user: IUserDocument,
+  entity: IUserDocument | IVisitorDocument,
   subscriptions: {
     userId: string;
     subscribe: MarketingSubscriptionCode[];
@@ -601,7 +603,7 @@ export const updateActiveCampaignGroupListsAndTags = async (
 }> => {
   try {
     const ac = new ActiveCampaignClient();
-    const userData = await UserModel.findById(user);
+    const isUser = isUserDocument(entity);
 
     ac.withHttpClient(client);
     if (!subscriptions) {
@@ -614,9 +616,10 @@ export const updateActiveCampaignGroupListsAndTags = async (
       unsubscribeCodes.map((code: MarketingSubscriptionCode) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
     );
 
+    const email = isUser ? entity?.emails?.find((e) => e?.primary)?.email : entity?.email;
     const contacts = [
       {
-        email: userData.emails?.find((e) => e.primary).email,
+        email,
         subscribe,
         unsubscribe,
         tags: (await getActiveCampaignTags(!!subscriptions.userId ? subscriptions.userId : '')) || [],
@@ -630,13 +633,12 @@ export const updateActiveCampaignGroupListsAndTags = async (
 };
 
 export type UpdateActiveCampaignDataRequest = {
-  userId: Types.ObjectId;
   email: string;
   firstName?: string;
   lastName?: string;
   subscriptions?: {
-    subscribe: MarketingSubscriptionCode[];
-    unsubscribe: MarketingSubscriptionCode[];
+    subscribe?: MarketingSubscriptionCode[];
+    unsubscribe?: MarketingSubscriptionCode[];
   };
   tags?: {
     add: string[];
@@ -649,7 +651,6 @@ export const updateActiveCampaignData = async (
   req: UpdateActiveCampaignDataRequest,
   client?: AxiosInstance,
 ): Promise<{
-  userId: string;
   lists: { subscribe: MarketingSubscriptionCode[]; unsubscribe: MarketingSubscriptionCode[] };
 }> => {
   try {
@@ -664,19 +665,18 @@ export const updateActiveCampaignData = async (
     const contacts = [
       {
         email: req.email,
-        first_name: req.firstName,
-        last_name: req.lastName,
-        subscribe: subscribe.length > 0 ? subscribe : undefined,
-        unsubscribe: unsubscribe.length > 0 ? unsubscribe : undefined,
-        tags: req.tags?.add?.length > 0 ? req.tags.add : undefined,
-        fields: req.customFields?.length > 0 ? req.customFields : undefined,
+        first_name: req?.firstName,
+        last_name: req?.lastName,
+        subscribe: subscribe?.length > 0 ? subscribe : undefined,
+        unsubscribe: unsubscribe?.length > 0 ? unsubscribe : undefined,
+        tags: req?.tags?.add?.length > 0 ? req.tags.add : undefined,
+        fields: req?.customFields?.length > 0 ? req.customFields : undefined,
       },
     ];
 
     await ac.importContacts({ contacts });
 
     return {
-      userId: req.userId.toString(),
       lists: {
         subscribe: subscribeCodes,
         unsubscribe: unsubscribeCodes,
@@ -976,6 +976,35 @@ export const subscribeContactToList = async (email: string, listId: ActiveCampai
     });
   } catch (err) {
     console.error('Error subscribing contact to list', err);
+  }
+};
+
+export const unsubscribeContactFromLists = async (email: string, listIds: ActiveCampaignListId[], client?: AxiosInstance): Promise<void> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      throw new Error('No contact found');
+    }
+
+    const subscribedLists = await getSubscribedLists(email, client);
+    const { id } = contactData.contacts[0];
+
+    for (const listId of listIds) {
+      if (!subscribedLists.includes(listId)) {
+        console.log('Contact not subscribed to list with id: ', listId);
+        continue;
+      }
+
+      console.log(`Unsubscribing contact with email: ${email} from list id: ${listId}`);
+      await ac.updateContactListStatus({
+        contactList: { contact: parseInt(id), list: parseInt(listId), status: UpdateContactListStatusEnum.unsubscribe },
+      });
+    }
+  } catch (err) {
+    console.error('Error unsubscribing contact from lists', err);
   }
 };
 

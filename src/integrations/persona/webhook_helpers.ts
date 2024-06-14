@@ -470,7 +470,7 @@ export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
     const application = await KarmaCardApplicationModel.findOne({ email });
     await updateApplicationStatusToDeclined(application);
     await updateEntityKycStatus(entity);
-
+    
     await removeUserFromDebitCardHoldersList(entity);
     await updateMarqetaUserStatusToSuspended(entity);
     await sendDeclinedNotification(entity, application);
@@ -509,6 +509,12 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendPendingEmail(email, req);
       break;
+    case PersonaInquiryStatusEnum.Approved:
+      console.log('Inquiry approved transitioned inquiry status');
+      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      await startOrContinueApplyProcessForTransitionedInquiry(req);
+      await sendPendingEmail(email, req);
+      break;
     case PersonaInquiryStatusEnum.Pending:
       console.log('Inquiry pending transitioned inquiry status');
       // check if a visitor or user exists for this inquiry
@@ -530,11 +536,13 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 
 export const handlePersonaWebhookByEventName = async (req: PersonaWebhookBody) => {
   switch (req?.data?.attributes?.name) {
+    case EventNamesEnum.inquiryApproved:
+      await handleInquiryTransitionedWebhook(req);
+      break;
     case EventNamesEnum.inquiryTransitioned:
       console.log('inquiry.transitioned event');
       await handleInquiryTransitionedWebhook(req);
       break;
-
     case EventNamesEnum.caseStatusUpdated:
       console.log('case.status-udated event');
       await handleCaseStatusUpdatedWebhook(req);

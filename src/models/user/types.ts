@@ -144,6 +144,6 @@ export interface IUser extends IShareableUser {
       article: IRef<ObjectId, IWPArticle>;
     }[];
   };
-  karmaMemberships?: IKarmaMembershipData[];
+  karmaMembership?: IKarmaMembershipData;
   deviceInfo?:IDeviceInfo[]
 }

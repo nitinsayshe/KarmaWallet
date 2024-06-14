@@ -46,11 +46,11 @@ import {
 } from './utils';
 import { createKarmaCardMembershipCustomerSession } from '../../integrations/stripe/checkout';
 import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
-import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { updateCustomFields } from '../../integrations/activecampaign';
 import { ICreateAccountRequest } from '../visitor';
 import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
+import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { StandardKarmaWalletSubscriptionId } from '../productSubscription';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
@@ -243,9 +243,6 @@ export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: I
     }
     // create a customer checkout session
     const session = await createKarmaCardMembershipCustomerSession({ user: userObject, uiMode });
-    const productSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
-    await addKarmaMembershipToUser(userObject, productSubscription, KarmaMembershipStatusEnum.unpaid);
-
     return {
       url: session.url,
       client_secret: session.client_secret,
@@ -306,7 +303,9 @@ export const updateVisitorOrUserOnApproved = async (
   }
 
   userObject = await userObject.save();
-  return userObject;
+  const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
+  const userWithMembership = await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
+  return userWithMembership;
 };
 
 export const updateKarmaCardApplicationFromApproved = async (
@@ -330,8 +329,6 @@ export const handleApprovedState = async (
   if (!entity) return;
   const userObject = await updateVisitorOrUserOnApproved(entity);
   await updateKarmaCardApplicationFromApproved(karmaCardApplication, userObject._id.toString());
-  const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
-  await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
   return userObject;
 };
 
@@ -442,7 +439,7 @@ export const getApplicationData = async (email: string): Promise<IApplicationDec
 
     if (!!user) {
       // return the embedded url or client secret
-      if (user.karmaMemberships.find((membership) => membership.status === KarmaMembershipStatusEnum.unpaid)) {
+      if (user?.karmaMembership && user.karmaMembership.status === KarmaMembershipStatusEnum.unpaid) {
         const paymentData = await createKarmaCardMembershipCustomerSession({ user, uiMode: 'embedded' });
         console.log('//// session data', paymentData);
         applicationData.paymentData = {
@@ -559,9 +556,10 @@ export const applyForKarmaCard = async (
 
   // II. CREATE NEW VISITOR IF NO VISITOR OR USER YET
   if (!existingVisitor && !existingUser) {
+    console.log('///// create a new visitor');
     _visitor = await _createNewVisitorFromApply(email, urlParams, sscid, sscidCreatedOn, xType);
   }
-  console.log('///// line 545');
+  console.log('///// line 545', _visitor);
 
   // pull the persona inquiry data
   const {
@@ -615,6 +613,7 @@ export const applyForKarmaCard = async (
 
   if (!existingUser) {
     // IF VISITOR ONLY, UPDATE VISITOR WITH MARQETA DECISION
+    console.log('/////// this is the visitor to update', _visitor);
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
       marqeta: applicationDecision.marqeta,
       email,

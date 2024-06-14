@@ -349,7 +349,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
     await userGroup.save();
     const newGroup = await group.save();
 
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as IUserDocument);
     await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
     return newGroup;
@@ -1009,7 +1009,7 @@ export const joinGroup = async (req: IRequest<{}, {}, IJoinGroupRequest>) => {
     }
 
     if (!skipSubscribe) {
-      const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as Partial<IUserDocument>);
+      const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userUserGroupDocument.user as IUserDocument);
       await updateActiveCampaignGroupListsAndTags(userUserGroupDocument.user as IUserDocument, userSubscriptions);
       await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
     }
@@ -1041,7 +1041,7 @@ export const removeFromGroup = async (userGroup: IUserGroupDocument) => {
     }
 
     await userGroup.save();
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as IUserDocument);
     await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
   } catch (err) {
@@ -1416,7 +1416,7 @@ export const updateUserGroup = async (req: IRequest<IUpdateUserGroupRequestParam
     userGroup.lastModified = dayjs().utc().toDate();
     await userGroup.save();
 
-    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>);
+    const userSubscriptions = await getUserGroupSubscriptionsToUpdate(userGroup.user as IUserDocument);
     await updateActiveCampaignGroupListsAndTags(userGroup.user as IUserDocument, userSubscriptions);
     await updateUserSubscriptions(userSubscriptions.userId, userSubscriptions.subscribe, userSubscriptions.unsubscribe);
 

@@ -49,19 +49,16 @@ const userSchema = new Schema({
       ],
     },
   },
-  karmaMemberships: [
-    {
-      productSubscription: {
-        type: Schema.Types.ObjectId,
-        ref: 'product_subscription',
-        required: true,
-      },
-      status: { type: String, required: true, enum: Object.values(KarmaMembershipStatusEnum) },
-      startDate: { type: Date, default: () => getUtcDate().toDate() },
-      cancelledOn: { type: Date },
-      lastModified: { type: Date, default: () => getUtcDate().toDate() },
+  karmaMembership: {
+    productSubscription: {
+      type: Schema.Types.ObjectId,
+      ref: 'product_subscription',
+      required: true,
     },
-  ],
+    status: { type: String, required: true, enum: Object.values(KarmaMembershipStatusEnum) },
+    createdOn: { type: Date, default: () => getUtcDate().toDate() },
+    lastModified: { type: Date, default: () => getUtcDate().toDate() },
+  },
   integrations: {
     marqeta: {
       type: {

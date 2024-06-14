@@ -8,7 +8,6 @@ import {
   Merchant,
   CommissionType,
   OfferType,
-  KardEnvironmentEnum,
 } from '../../clients/kard/types';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { IKardMerchantIntegration, IMerchantDocument, MerchantModel } from '../../models/merchant';
@@ -155,7 +154,7 @@ const getKardOfferData = async (merchants?: Merchant[]): Promise<{
   domains: Domain[];
 } | null> => {
   try {
-    const kc = new KardClient(KardEnvironmentEnum.Issuer);
+    const kc = new KardClient();
     const kardMerchants = merchants || await kc.getRewardsMerchants();
 
     if (!kardMerchants) return null;

@@ -25,7 +25,8 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/marketing_subscription';
-import { IUser, IEmail } from '../../models/user/types';
+import { IEmail } from '../../models/user/types';
+import { isUserDocument } from '../user/utils';
 
 export interface UserSubscriptions {
   userId: string;
@@ -299,6 +300,32 @@ export const updateUserSubscriptions = async (user: string, subscribe: Array<Mar
   }
 };
 
+export const updateVisitorSubscriptions = async (visitor: string, subscribe: Array<MarketingSubscriptionCode>, unsubscribe: Array<MarketingSubscriptionCode>) => {
+  if (subscribe?.length > 0) {
+    await Promise.all(
+      subscribe.map(async (code) => {
+        await MarketingSubscriptionModel.findOneAndUpdate(
+          { visitor, code },
+          {
+            visitor,
+            code,
+            lastModified: getUtcDate(),
+            status: MarketingSubscriptionStatus.Active,
+          },
+          { upsert: true },
+        );
+      }),
+    );
+  }
+
+  if (unsubscribe?.length > 0) {
+    await MarketingSubscriptionModel.updateMany(
+      { visitor, code: { $in: unsubscribe } },
+      { lastModified: getUtcDate(), status: MarketingSubscriptionStatus.Cancelled },
+    );
+  }
+};
+
 export const cancelAllUserSubscriptions = async (userId: string) => {
   try {
     const subs = await MarketingSubscriptionModel.find({ user: userId }).lean();
@@ -383,19 +410,20 @@ export const getNonActiveCampaignSubscriptions = async (userId: Types.ObjectId):
 };
 
 export const getUserGroupSubscriptionsToUpdate = async (
-  user: Partial<IUser & { _id: ObjectId }>,
+  entity: IUserDocument | IVisitorDocument,
   groupToBeDeleted?: ObjectId,
 ): Promise<UserSubscriptions> => {
   try {
     const userSub: UserSubscriptions = {
-      userId: user._id.toString(),
+      userId: entity._id.toString(),
       subscribe: [],
       unsubscribe: [],
     };
 
-    const email = user?.emails?.find((e: IEmail) => e.primary)?.email;
+    const isUser = isUserDocument(entity);
+    const email = isUser ? entity?.emails?.find((e: IEmail) => e.primary)?.email : entity.email;
     if (!email) {
-      console.log(JSON.stringify(user));
+      console.log(JSON.stringify(entity));
       return userSub;
     }
 
@@ -403,15 +431,15 @@ export const getUserGroupSubscriptionsToUpdate = async (
     const activeCampaignListIds = await getActiveCampaignSubscribedListIds(email);
 
     // add ids of any active subs not from active campaign
-    const nonActiveCampaignSubs = await getNonActiveCampaignSubscriptions(user._id as unknown as Types.ObjectId);
+    const nonActiveCampaignSubs = await getNonActiveCampaignSubscriptions(entity._id as unknown as Types.ObjectId);
 
     // update db with active campaign subscriptions
-    await reconcileActiveCampaignListSubscriptions(new Types.ObjectId(user._id.toString()), activeCampaignListIds, nonActiveCampaignSubs);
+    await reconcileActiveCampaignListSubscriptions(new Types.ObjectId(entity._id.toString()), activeCampaignListIds, nonActiveCampaignSubs);
 
     /* Should the user be enrolled in the admin list? */
     const adminQuery: FilterQuery<IUserGroup> = {
       $and: [
-        { user: user._id },
+        { user: entity._id },
         { role: { $in: [UserGroupRole.Admin, UserGroupRole.SuperAdmin, UserGroupRole.Owner] } },
         { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } },
       ],
@@ -432,7 +460,7 @@ export const getUserGroupSubscriptionsToUpdate = async (
 
     // check if they are a member of any groups
     const memberQuery: FilterQuery<IUserGroup> = {
-      $and: [{ user: user._id }, { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } }],
+      $and: [{ user: entity._id }, { status: { $nin: [UserGroupStatus.Left, UserGroupStatus.Banned, UserGroupStatus.Removed] } }],
     };
     if (!!groupToBeDeleted) {
       memberQuery.$and.push({ group: { $ne: groupToBeDeleted } });
@@ -473,7 +501,7 @@ export const getUpdatedGroupChangeSubscriptions = async (
     }
 
     let userSubscriptions = await Promise.all(
-      groupUsers.map(async (userGroup) => getUserGroupSubscriptionsToUpdate(userGroup.user as Partial<IUserDocument>, groupToBeDeleted ? group._id : undefined)),
+      groupUsers.map(async (userGroup) => getUserGroupSubscriptionsToUpdate(userGroup.user as IUserDocument, groupToBeDeleted ? group._id : undefined)),
     );
 
     userSubscriptions = userSubscriptions.filter((sub) => sub.subscribe.length > 0 || sub.unsubscribe.length > 0);

@@ -3,10 +3,10 @@ import crypto from 'crypto';
 import console from 'console';
 import dayjs from 'dayjs';
 import { MainBullClient } from '../clients/bull/main';
-import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard/types';
+import { EarnedRewardWebhookBody } from '../clients/kard/types';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
-import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
+import { verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 import { handleTransactionDisputeMacros, handleTransactionNotifications, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import {
   IMarqetaWebhookBody,
@@ -311,25 +311,13 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('A token is required for authentication', ErrorTypes.FORBIDDEN));
     }
-    let kardEnv: KardEnvironmentEnumValues = '';
 
-    const errorVerifyingAggregatorEnvSignature = await verifyAggregatorEnvWebhookSignature(req, headers['notify-signature']);
     const errorVerifyingIssuerEnvSignature = await verifyIssuerEnvWebhookSignature(req, headers['notify-signature']);
-
-    if (errorVerifyingIssuerEnvSignature && errorVerifyingAggregatorEnvSignature) {
-      if (
-        errorVerifyingIssuerEnvSignature === KardInvalidSignatureError
-        || errorVerifyingAggregatorEnvSignature === KardInvalidSignatureError
-      ) {
-        console.log('\n KARD WEBHOOK: Invalid Token Provided \n');
-        console.log(`Event ID: ${eventId}`);
-        return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.AUTHENTICATION));
-      }
+    if (errorVerifyingIssuerEnvSignature) {
       console.log('\n KARD WEBHOOK: Bad Request \n');
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
     }
-    kardEnv = !!errorVerifyingAggregatorEnvSignature ? KardEnvironmentEnum.Issuer : KardEnvironmentEnum.Aggregator;
 
     try {
       const webhookBodyToSave = { ...req.body, card: { ...req.body.card } };
@@ -340,7 +328,7 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`-- error saving Kard webhook. processing will continue. error: ${e}---`);
     }
 
-    const processingError = await processKardWebhook(kardEnv, req.body);
+    const processingError = await processKardWebhook(req.body);
     if (!!processingError) {
       return error(req, res, processingError);
     }

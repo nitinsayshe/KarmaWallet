@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 import dayjs from 'dayjs';
 import { ObjectId } from 'mongoose';
-import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, RewardStatus } from '../../../clients/kard/types';
+import { EarnedRewardWebhookBody, RewardStatus } from '../../../clients/kard/types';
 import { updateMadeCashBackEligiblePurchaseStatus } from '../../../integrations/activecampaign';
 import { CentsInUSD, CommissionPayoutMonths, ErrorTypes, UserCommissionPercentage } from '../../../lib/constants';
 import CustomError from '../../../lib/customError';
@@ -273,41 +273,24 @@ export const getKarmaCommissionStatusFromKardStatus = (kardStatus: RewardStatus,
   }
 };
 
-const getAssociatedTransaction = async (kardEnv: KardEnvironmentEnumValues, transaction: EarnedRewardWebhookBody['transaction']) => {
-  switch (kardEnv) {
-    case KardEnvironmentEnum.Aggregator:
-      return TransactionModel.findOne({ 'integrations.kard.id': transaction.issuerTransactionId });
-    case KardEnvironmentEnum.Issuer:
-      return TransactionModel.findOne({
-        $or: [
-          {
-            $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': transaction.issuerTransactionId }],
-          },
-          {
-            $and: [
-              { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
-              { 'integrations.marqeta.relatedTransactions.token': transaction.issuerTransactionId },
-            ],
-          },
-        ],
-      });
-    default:
-  }
-};
+const getAssociatedTransaction = async (transaction: EarnedRewardWebhookBody['transaction']) => TransactionModel.findOne({
+  $or: [
+    {
+      $and: [{ 'integrations.marqeta.token': { $exists: true } }, { 'integrations.marqeta.token': transaction.issuerTransactionId }],
+    },
+    {
+      $and: [
+        { 'integrations.marqeta.relatedTransactions.token': { $exists: true } },
+        { 'integrations.marqeta.relatedTransactions.token': transaction.issuerTransactionId },
+      ],
+    },
+  ],
+});
 
 // card could be from our marqeta integration or from plaid
-const getUserCard = async (kardEnv: KardEnvironmentEnumValues, kardUser: EarnedRewardWebhookBody['user']) => {
-  switch (kardEnv) {
-    case KardEnvironmentEnum.Aggregator:
-      return CardModel.findOne({ 'integrations.kard.userId': kardUser?.referringPartnerUserId });
-    case KardEnvironmentEnum.Issuer:
-      return CardModel.findOne({ 'integrations.marqeta.user_token': kardUser?.referringPartnerUserId });
-    default:
-  }
-};
+const getUserCard = async (kardUser: EarnedRewardWebhookBody['user']) => CardModel.findOne({ 'integrations.marqeta.user_token': kardUser?.referringPartnerUserId });
 
 export const mapKardCommissionToKarmaCommisison = async (
-  kardEnv: KardEnvironmentEnumValues,
   kardCommission: EarnedRewardWebhookBody,
 ): Promise<CommissionAndPreviouslyExistingData> => {
   const { user: kardUser, reward, transaction, error } = kardCommission;
@@ -321,7 +304,7 @@ export const mapKardCommissionToKarmaCommisison = async (
   }
 
   // get the associated transaction looking it up either by the id we added or the marqeta transaction id
-  const associatedTransaction = await getAssociatedTransaction(kardEnv, transaction);
+  const associatedTransaction = await getAssociatedTransaction(transaction);
   if (!associatedTransaction?._id) throw new Error('Transaction not found');
 
   if (!!associatedTransaction?.integrations?.kard) {
@@ -361,7 +344,7 @@ export const mapKardCommissionToKarmaCommisison = async (
     const company = await CompanyModel.findOne({ merchant: merchant?._id });
     if (!company?._id) throw new Error('Company not found');
 
-    const card = await getUserCard(kardEnv, kardUser);
+    const card = await getUserCard(kardUser);
     if (!card?._id) throw new Error(`Card not found for refferringPartnerUserId: ${kardUser?.referringPartnerUserId}`);
 
     const user = await UserModel.findOne({ _id: card.userId });
@@ -408,11 +391,10 @@ export const mapKardCommissionToKarmaCommisison = async (
 };
 
 export const processKardWebhook = async (
-  kardEnv: KardEnvironmentEnumValues,
   body: EarnedRewardWebhookBody,
 ): Promise<CustomError | void> => {
   try {
-    const commission = (await mapKardCommissionToKarmaCommisison(kardEnv, body) as CommissionAndPreviouslyExistingData)?.commission;
+    const commission = (await mapKardCommissionToKarmaCommisison(body) as CommissionAndPreviouslyExistingData)?.commission;
     if (!commission) throw Error('Error creating karma commisison');
     await createEarnedCashbackNotificationsFromCommission(commission, ['email', 'push']);
   } catch (e) {

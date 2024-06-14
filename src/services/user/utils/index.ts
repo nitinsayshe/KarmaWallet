@@ -8,7 +8,7 @@ import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../midd
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
-import { IKarmaMembershipData, IUser, IUserIntegrations, KarmaMembershipStatusEnum, KarmaMembershipStatusEnumValues } from '../../../models/user/types';
+import { IKarmaMembershipData, IUser, IUserIntegrations, KarmaMembershipStatusEnumValues } from '../../../models/user/types';
 import { getMarqetaUser } from '../../../integrations/marqeta/user';
 import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { VisitorModel } from '../../../models/visitor';
@@ -63,7 +63,7 @@ export const getShareableUser = ({
   zipcode,
   role,
   legacyId,
-  karmaMemberships,
+  karmaMembership,
   integrations,
 }: IUserDocument) => {
   const _integrations: Partial<IUserIntegrations> = {};
@@ -88,10 +88,7 @@ export const getShareableUser = ({
     };
   }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;
-  let activeMembership;
-  if (!!karmaMemberships) {
-    activeMembership = karmaMemberships.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
-  }
+
   return {
     _id,
     email,
@@ -101,7 +98,7 @@ export const getShareableUser = ({
     zipcode,
     role,
     legacyId,
-    karmaMembership: activeMembership,
+    karmaMembership,
     integrations: _integrations,
   };
 };
@@ -192,35 +189,13 @@ export const checkIfUserActiveInMarqeta = async (userId: string) => {
   return false;
 };
 
-export const membershipOfProductSubscriptionType = (user: IUserDocument, productSubscriptionType: IProductSubscription) => user?.karmaMemberships?.find(
-  (membership) => membership.productSubscription === productSubscriptionType,
-);
-
-export const activeMembership = (user: IUserDocument) => user?.karmaMemberships?.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
-
 export const addKarmaMembershipToUser = async (
   user: IUserDocument,
   membershipType: IProductSubscription,
   status: KarmaMembershipStatusEnumValues,
 ) => {
+  console.log('///// add subscription to user');
   try {
-    console.log('//// should add to the user');
-    const membershipOfSameType = membershipOfProductSubscriptionType(user, membershipType);
-
-    if (membershipOfSameType) {
-      membershipOfSameType.status = status;
-      membershipOfSameType.lastModified = getUtcDate().toDate();
-      return await user.save();
-    }
-
-    const existingActiveMembership = activeMembership(user);
-
-    if (existingActiveMembership) {
-      existingActiveMembership.status = 'cancelled';
-      existingActiveMembership.cancelledOn = getUtcDate().toDate();
-      existingActiveMembership.lastModified = getUtcDate().toDate();
-    }
-
     const newMembership: IKarmaMembershipData = {
       productSubscription: membershipType,
       status,
@@ -228,14 +203,12 @@ export const addKarmaMembershipToUser = async (
       startDate: getUtcDate().toDate(),
     };
 
-    if (!user?.karmaMemberships) user.karmaMemberships = [];
-    user.karmaMemberships.push(newMembership);
+    user.karmaMembership = newMembership;
     const savedUser = await user.save();
-    console.log('///// should save this uesr');
     return savedUser;
   } catch (err) {
     console.error(
-      `Erroradding karma membership data ${membershipType} to user  ${user._id} : ${err}`,
+      `Error adding karma membership data ${membershipType} to user  ${user._id} : ${err}`,
     );
     if ((err as CustomError)?.isCustomError) {
       throw err;

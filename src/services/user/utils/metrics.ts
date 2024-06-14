@@ -1017,18 +1017,3 @@ export const getCollectiveCommunityImpact = async (): Promise<{
     };
   }
 };
-
-// export const getKarmaMembershipPlanType = async (
-//   karmaMemberships: IKarmaMembershipData[],
-// ): Promise<KarmaMembershipPaymentPlanEnumValues | null> => {
-//   try {
-//     const karmaMembership = karmaMemberships.length > 0
-//       && karmaMemberships.find(
-//         (membership) => membership.status === KarmaMembershipStatusEnum.active,
-//       );
-//     return karmaMembership ? karmaMembership.paymentPlan : null;
-//   } catch (err) {
-//     console.error(err);
-//     return null;
-//   }
-// };

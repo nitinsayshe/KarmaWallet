@@ -852,8 +852,6 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     await setClosedMarqetaAccountState(visitor, currentMarqetaUserData);
     await updatedVisitorFromMarqetaWebhook(visitor, currentMarqetaUserData);
   }
-
-  console.log('//// after both checks');
 };
 
 export const updateUserUrlParams = async (userObject: IUserDocument, urlParams: IUrlParam[]): Promise<void> => {

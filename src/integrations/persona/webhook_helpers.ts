@@ -315,6 +315,22 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     return;
   }
 
+  const karmaCardApplication = await KarmaCardApplicationModel.findOne({ email });
+  if (!karmaCardApplication?._id) {
+    console.log(`No karma card application found for email: ${email}`);
+  }
+
+  if (karmaCardApplication.status === ApplicationStatus.SUCCESS) {
+    console.log(`User with email: ${email} has already been approved for a card`);
+    return;
+  }
+
+  if (!karmaCardApplication.expirationDate) {
+    karmaCardApplication.expirationDate = getUtcDate().add(daysUntilKarmaCardApplicationExpiration, 'day').toDate();
+    karmaCardApplication.lastModified = getUtcDate().toDate();
+    await karmaCardApplication.save();
+  }
+
   const user = await UserModel.findOne({ 'emails.email': email });
   const visitor = await VisitorModel.findOne({ email });
 
@@ -341,7 +357,11 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   const template = PersonaInquiryTemplateIdEnum.KW5;
 
   const continueUrl = composePersonaContinueUrl(template, accountId);
+  const name = !!user ? user.name : visitor.integrations?.marqeta?.first_name.concat(' ', visitor.integrations?.marqeta?.last_name);
+  const applicationExpirationDate = karmaCardApplication?.expirationDate?.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) || '';
   await createResumeKarmaCardApplicationUserNotification({
+    name,
+    applicationExpirationDate,
     link: continueUrl,
     recipientEmail: email,
     user: !!user ? user : undefined,

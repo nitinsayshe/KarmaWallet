@@ -1,10 +1,12 @@
 import { IMarqetaCardTransition, IMarqetaCreateCard } from '../../integrations/marqeta/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
+import { VgsClient } from '../vgs';
 import { MarqetaClient } from './marqetaClient';
 
 export class Card {
   private _marqetaClient: MarqetaClient;
+  private _vgsClient = new VgsClient();
 
   constructor(marqetaClient: MarqetaClient) {
     this._marqetaClient = marqetaClient;

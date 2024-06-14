@@ -468,10 +468,13 @@ export const testResumeKarmaCardApplicationEmail = async (req: IRequest<{}, {}, 
     if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
     const { email } = user.emails.find(e => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const applicationExpirationDate = dayjs().add(10, 'day').toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const emailResponse = await sendResumeKarmaCardApplicationEmail({
       user: req.requestor,
       recipientEmail: email,
       link: 'https://karmawallet.io',
+      applicationExpirationDate,
+      name: user.name,
     });
 
     if (!!emailResponse) {

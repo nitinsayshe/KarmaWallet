@@ -1,6 +1,5 @@
 import { AwsClient } from '../clients/aws';
 import { KardAwsEnv, KardIssuerIssuerName } from '../clients/kard';
-import { KardEnvironmentEnumValues, KardEnvironmentEnum } from '../clients/kard/types';
 import { mapKardCommissionToKarmaCommisison } from '../services/commission/utils';
 import { createEarnedCashbackNotificationsFromCommission } from '../services/user_notification';
 
@@ -8,15 +7,14 @@ interface IJobData {
   startDate?: Date;
 }
 
-const getReconciliationFilesForKardEnvironment = async (kardEnvironment: KardEnvironmentEnumValues, startDate: Date) => {
+const getReconciliationFilesForKardEnvironment = async (startDate: Date) => {
   try {
     const awsClient = new AwsClient();
 
-    console.log('assuming kard role for kard environment:', kardEnvironment);
+    console.log('assuming kard\'s aws role environment');
     const basePrefix = `${KardAwsEnv}/kard/reconciliation/${KardIssuerIssuerName.toLowerCase()}/daily`;
 
     const backupFileWebhooks = await awsClient.assumeKardRoleAndGetBucketContents(
-      kardEnvironment,
       'rewards-transactions',
       `${basePrefix}/backup/`,
       startDate,
@@ -24,7 +22,6 @@ const getReconciliationFilesForKardEnvironment = async (kardEnvironment: KardEnv
     console.log('backup file webhooks', backupFileWebhooks);
 
     const uploadFileWebhooks = await awsClient.assumeKardRoleAndGetBucketContents(
-      kardEnvironment,
       'rewards-transactions',
       `${basePrefix}/upload/`,
       startDate,
@@ -35,7 +32,7 @@ const getReconciliationFilesForKardEnvironment = async (kardEnvironment: KardEnv
     await Promise.all(
       backupFileWebhooks.map(async (webhook) => {
         try {
-          const backupFileCommission = await mapKardCommissionToKarmaCommisison(KardEnvironmentEnum.Issuer, webhook);
+          const backupFileCommission = await mapKardCommissionToKarmaCommisison(webhook);
           if (!backupFileCommission.previouslyExisting) {
             await createEarnedCashbackNotificationsFromCommission(backupFileCommission.commission, ['email', 'push']);
           }
@@ -52,7 +49,7 @@ const getReconciliationFilesForKardEnvironment = async (kardEnvironment: KardEnv
     await Promise.all(
       uploadFileWebhooks.map(async (webhook) => {
         try {
-          const uploadFileCommission = await mapKardCommissionToKarmaCommisison(kardEnvironment, webhook);
+          const uploadFileCommission = await mapKardCommissionToKarmaCommisison(webhook);
           if (!uploadFileCommission.previouslyExisting) {
             console.error(`this commission was expected to already exist, but was not found: ${uploadFileCommission.commission}`);
             await createEarnedCashbackNotificationsFromCommission(uploadFileCommission.commission, ['email', 'push']);
@@ -65,7 +62,7 @@ const getReconciliationFilesForKardEnvironment = async (kardEnvironment: KardEnv
     );
     console.log('mapped from update', mappedFromUpdate);
   } catch (err) {
-    console.log('Error getting reconciliation files for kard environment', kardEnvironment, err);
+    console.log('Error getting reconciliation files: ', err);
   }
 };
 
@@ -73,10 +70,8 @@ export const exec = async (data?: IJobData) => {
   try {
     console.log('starting kard commission reconciliation job...');
 
-    console.log('starting reconciliation for issuer environment commissions:');
-    await getReconciliationFilesForKardEnvironment(KardEnvironmentEnum.Issuer, data?.startDate);
-    console.log('getting reconciliation for aggregator environment commissions:');
-    await getReconciliationFilesForKardEnvironment(KardEnvironmentEnum.Aggregator, data?.startDate);
+    console.log('starting reconciliation for commissions:');
+    await getReconciliationFilesForKardEnvironment(data?.startDate);
 
     console.log('kard commission reconciliation job complete');
   } catch (err) {

@@ -3,7 +3,6 @@ import crypto, { createHmac } from 'crypto';
 import { asCustomError } from '../../lib/customError';
 import { SdkClient } from '../sdkClient';
 import {
-  KardEnvironmentEnum,
   GetSessionTokenResponse,
   CreateUserRequest,
   KardAccessToken,
@@ -12,7 +11,6 @@ import {
   UpdateUserRequest,
   QueueTransactionsRequest,
   GetRewardsMerchantsResponse,
-  KardEnvironmentEnumValues,
   KardInvalidSignatureError,
   KardServerError,
   GetEligibleLocationsRequest,
@@ -27,14 +25,11 @@ import {
 const {
   KARD_API_URL,
   KARD_COGNITO_URL,
-  KARD_CLIENT_HASH,
   KARD_ISSUER_NAME,
-  KARD_WEBHOOK_KEY,
   KARD_ISSUER_WEBHOOK_KEY,
   KARD_ISSUER_CLIENT_HASH,
   KARD_ISSUER_ISSUER_NAME,
   KARD_KARMAWALLET_AWS_ROLE,
-  KARD_AWS_ROLE,
   KARD_ISSUER_AWS_ROLE,
   KARD_AWS_ENV,
 } = process.env;
@@ -47,14 +42,8 @@ const validateEnvironmentVariables = (): Error | null => {
   if (!KARD_COGNITO_URL) {
     return new Error(`${loadingErrorPrefix}KARD_COGNITO_URL not found`);
   }
-  if (!KARD_CLIENT_HASH) {
-    return new Error(`${loadingErrorPrefix}KARD_CLIENT_HASH not found`);
-  }
   if (!KARD_ISSUER_NAME) {
     return new Error(`${loadingErrorPrefix}KARD_ISSUER_NAME not found`);
-  }
-  if (!KARD_WEBHOOK_KEY) {
-    return new Error(`${loadingErrorPrefix}KARD_WEBHOOK_KEY not found`);
   }
   if (!KARD_ISSUER_WEBHOOK_KEY) {
     return new Error(`${loadingErrorPrefix}KARD_ISSUER_WEBHOOK_KEY not found`);
@@ -68,9 +57,6 @@ const validateEnvironmentVariables = (): Error | null => {
   if (!KARD_KARMAWALLET_AWS_ROLE) {
     return new Error(`${loadingErrorPrefix}KARD_KARMAWALLET_AWS_ROLE not found`);
   }
-  if (!KARD_AWS_ROLE) {
-    return new Error(`${loadingErrorPrefix}KARD_AWS_ROLE not found`);
-  }
   if (!KARD_ISSUER_AWS_ROLE) {
     return new Error(`${loadingErrorPrefix}KARD_ISSUER_AWS_ROLE not found`);
   }
@@ -81,22 +67,18 @@ const validateEnvironmentVariables = (): Error | null => {
   return null;
 };
 
-export const KardIssuerName = KARD_ISSUER_NAME;
 export const KardIssuerIssuerName = KARD_ISSUER_ISSUER_NAME;
 export const KardIssuerClientHash = KARD_ISSUER_CLIENT_HASH;
 export const KardIssuerWebhookKey = KARD_ISSUER_WEBHOOK_KEY;
 export const KardKarmaWalletAwsRole = KARD_KARMAWALLET_AWS_ROLE;
-export const KardAwsRole = KARD_AWS_ROLE;
 export const KardIssuerAwsRole = KARD_ISSUER_AWS_ROLE;
 export const KardAwsEnv = KARD_AWS_ENV;
 
 export class KardClient extends SdkClient {
   private _client: AxiosInstance;
-  private _env: KardEnvironmentEnumValues;
 
-  constructor(env: KardEnvironmentEnumValues = KardEnvironmentEnum.Issuer) {
+  constructor() {
     super('Kard');
-    this._env = env;
   }
 
   protected _init() {
@@ -113,10 +95,6 @@ export class KardClient extends SdkClient {
     });
   }
 
-  public getEnv(): KardEnvironmentEnumValues {
-    return this._env;
-  }
-
   public withHttpClient(client: AxiosInstance) {
     if (!client) {
       return;
@@ -126,10 +104,9 @@ export class KardClient extends SdkClient {
 
   public async getSessionToken(): Promise<GetSessionTokenResponse> {
     try {
-      const clientHash = this._env === KardEnvironmentEnum.Aggregator ? KARD_CLIENT_HASH : KARD_ISSUER_CLIENT_HASH;
       const headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${clientHash}`,
+        Authorization: `Basic ${KARD_ISSUER_CLIENT_HASH}`,
       };
       const { data } = await this._client({
         url: '/oauth2/token?grant_type=client_credentials',
@@ -149,7 +126,7 @@ export class KardClient extends SdkClient {
 
   public async verifyWebhookSignature(body: string, signature: string): Promise<Error | null> {
     try {
-      const key = this._env === KardEnvironmentEnum.Aggregator ? KARD_WEBHOOK_KEY : KARD_ISSUER_WEBHOOK_KEY;
+      const key = KARD_ISSUER_WEBHOOK_KEY;
 
       const hash = createHmac('sha256', key).update(body).digest('base64');
       if (crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(signature))) {
@@ -171,7 +148,7 @@ export class KardClient extends SdkClient {
       token = sessionToken.access_token;
     }
     if (!!req?.cardInfo) {
-      req.cardInfo.issuer = this._env === KardEnvironmentEnum.Aggregator ? KARD_ISSUER_NAME : KARD_ISSUER_ISSUER_NAME;
+      req.cardInfo.issuer = KARD_ISSUER_ISSUER_NAME;
     }
     try {
       const data = await this._client.post('/users/users', { ...req }, { headers: { Authorization: token } });
@@ -192,7 +169,7 @@ export class KardClient extends SdkClient {
       token = sessionToken.access_token;
     }
     if (!!req?.cardInfo) {
-      req.cardInfo.issuer = this._env === KardEnvironmentEnum.Aggregator ? KARD_ISSUER_NAME : KARD_ISSUER_ISSUER_NAME;
+      req.cardInfo.issuer = KARD_ISSUER_ISSUER_NAME;
     }
     try {
       const { data }: AxiosResponse<AddCardToUserResponse, any> = await this._client.post(

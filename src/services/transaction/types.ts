@@ -31,6 +31,9 @@ export interface ITransactionsRequestQuery extends AqpQuery {
   integrationType?: TransactionIntegrationTypesEnumValues;
   startDate: Date;
   endDate: Date;
+  merchant_name?: string;
+  name?: string;
+  company?: string;
 }
 
 export interface ITransactionsAggregationRequestQuery {

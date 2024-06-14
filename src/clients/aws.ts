@@ -8,8 +8,8 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { SdkClient } from './sdkClient';
 import { EmailAddresses, ErrorTypes, KarmaWalletCdnUrl } from '../lib/constants';
 import { sleep } from '../lib/misc';
-import { KardEnvironmentEnum, EarnedRewardWebhookBody, KardEnvironmentEnumValues } from './kard/types';
-import { KardKarmaWalletAwsRole, KardAwsRole, KardIssuerAwsRole } from './kard/index';
+import { EarnedRewardWebhookBody } from './kard/types';
+import { KardKarmaWalletAwsRole, KardIssuerAwsRole } from './kard/index';
 
 dayjs.extend(utc);
 
@@ -193,7 +193,7 @@ export class AwsClient extends SdkClient {
     }
   };
 
-  private getKardBucketClient = async (kardEnvironment: KardEnvironmentEnumValues): Promise<aws.S3> => {
+  private getKardBucketClient = async (): Promise<aws.S3> => {
     // assume correct role at karma wallet
     const creds = await this.assumeRole(KardKarmaWalletAwsRole, `session-KardKarmaWalletAwsRole-${(new Types.ObjectId()).toString()}`);
     const { AccessKeyId, SecretAccessKey, SessionToken } = creds;
@@ -203,10 +203,9 @@ export class AwsClient extends SdkClient {
     });
 
     // assume correct role at kard
-    const awsRole = kardEnvironment === KardEnvironmentEnum.Aggregator.toString() ? KardAwsRole : KardIssuerAwsRole;
     const kardCredSTSClient = await client
       .assumeRole({
-        RoleArn: awsRole,
+        RoleArn: KardIssuerAwsRole,
         RoleSessionName: `session-KardAwsRole-${(new Types.ObjectId()).toString()}`,
         DurationSeconds: 3600,
       })
@@ -221,8 +220,8 @@ export class AwsClient extends SdkClient {
     });
   };
 
-  public assumeKardRoleAndGetBucketContents = async (kardEnvironment: KardEnvironmentEnumValues, bucket: string, prefix: string, startDate?: Date): Promise<EarnedRewardWebhookBody[]> => {
-    const s3Client = await this.getKardBucketClient(kardEnvironment);
+  public assumeKardRoleAndGetBucketContents = async (bucket: string, prefix: string, startDate?: Date): Promise<EarnedRewardWebhookBody[]> => {
+    const s3Client = await this.getKardBucketClient();
 
     const params = {
       Bucket: bucket,

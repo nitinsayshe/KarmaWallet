@@ -194,6 +194,8 @@ export interface IResumeKarmaCardApplicationEmail extends IBaseEmailParams {
   visitor?: IVisitorDocument;
   user?: IUserDocument;
   link: string;
+  name: string;
+  applicationExpirationDate: string;
 }
 
 export interface IChangeEmailConfirmationParams {

@@ -1,3 +1,4 @@
+import aqp from 'api-query-params';
 import { IRequestHandler } from '../../types/request';
 import * as output from '../../services/output';
 import { asCustomError } from '../../lib/customError';
@@ -80,6 +81,16 @@ export const getMatchedCompanies: IRequestHandler<{}, TransactionTypes.IGetMatch
   try {
     const message = await TransactionService.getMatchedCompanies(req);
     output.api(req, res, message);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
+export const getTransactions: IRequestHandler<{}, TransactionTypes.ITransactionsRequestQuery, {}> = async (req, res) => {
+  try {
+    const query = aqp(req.query as any, { skipKey: 'page' });
+    const data = await TransactionService.getTransactions(req, query, true);
+    output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));
   }

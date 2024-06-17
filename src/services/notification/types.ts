@@ -4,6 +4,8 @@ import { IVisitorDocument } from '../../models/visitor';
 export interface IResumeKarmaCardEmailData {
   link: string;
   recipientEmail: string;
+  applicationExpirationDate: string;
+  name: string;
   user?: IUserDocument;
   visitor?: IVisitorDocument;
 }

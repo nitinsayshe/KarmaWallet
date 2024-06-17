@@ -1073,11 +1073,13 @@ export const sendResumeKarmaCardApplicationEmail = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   link,
+  name,
+  applicationExpirationDate,
 }: IResumeKarmaCardApplicationEmail) => {
   const emailTemplateConfig = EmailTemplateConfigs.ResumeKarmaCardApplication;
-  const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail'], { link, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail', 'name', 'applicationExpirationDate'], { link, recipientEmail, name, applicationExpirationDate });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link } });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link, name, applicationExpirationDate } });
   const subject = 'Complete Your Karma Wallet Card Application';
   const jobData: IEmailJobData = {
     template,

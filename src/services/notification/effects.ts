@@ -405,6 +405,8 @@ export const handleResumeKarmaCardApplication = async ({ user, visitor, data }: 
   try {
     const recipientEmail = !!user ? user?.emails?.find((email: any) => email?.primary)?.email : visitor?.email;
     const sendEmailData: IResumeKarmaCardEmailData = {
+      applicationExpirationDate: data.applicationExpirationDate,
+      name: data.name,
       link: data.link,
       recipientEmail,
     };

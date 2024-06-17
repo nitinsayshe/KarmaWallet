@@ -67,13 +67,18 @@ export const cancelUserSubscriptions = async (userId: string, codes: MarketingSu
 
 const activateSubscriptions = async (userId: Types.ObjectId, codes: MarketingSubscriptionCode[]) => {
   try {
-    await MarketingSubscriptionModel.updateMany(
-      { user: userId, code: { $in: codes } },
-      {
-        status: MarketingSubscriptionStatus.Active,
-        lastModified: getUtcDate(),
-      },
-      { upsert: true },
+    await Promise.all(
+      codes.map(async (code) => {
+        await MarketingSubscriptionModel.findOneAndUpdate(
+          { user: userId, code },
+          {
+            status: MarketingSubscriptionStatus.Active,
+            lastModified: getUtcDate(),
+            code,
+          },
+          { upsert: true },
+        );
+      }),
     );
   } catch (err) {
     console.error('Error activating subscription', err);
@@ -368,13 +373,26 @@ export const reconcileActiveCampaignListSubscriptions = async (
   const subscribeFilter: FilterQuery<IMarketingSubscription> = visitor
     ? {
       user: id,
-      code: { $in: codes },
     }
     : {
       visitor: id,
-      code: { $in: codes },
     };
   if (activeCampaignSubs && activeCampaignSubs.length > 0) {
+    for (const sub of activeCampaignSubs) {
+      await MarketingSubscriptionModel.findOneAndUpdate(
+        {
+          ...subscribeFilter,
+          code: ProviderProductIdToMarketingSubscriptionCode[sub],
+        },
+        {
+          ...subscribeFilter,
+          lastModified: getUtcDate(),
+          status: MarketingSubscriptionStatus.Active,
+          code: ProviderProductIdToMarketingSubscriptionCode[sub],
+        },
+        { upsert: true },
+      );
+    }
     await MarketingSubscriptionModel.updateMany(
       subscribeFilter,
       {

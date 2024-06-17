@@ -243,6 +243,7 @@ export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: I
     }
     // create a customer checkout session
     const session = await createKarmaCardMembershipCustomerSession({ user: userObject, uiMode });
+
     return {
       url: session.url,
       client_secret: session.client_secret,
@@ -304,6 +305,7 @@ export const updateVisitorOrUserOnApproved = async (
 
   userObject = await userObject.save();
   const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
+  console.log('///// found this subscription', standardSubscription);
   const userWithMembership = await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
   return userWithMembership;
 };
@@ -556,10 +558,8 @@ export const applyForKarmaCard = async (
 
   // II. CREATE NEW VISITOR IF NO VISITOR OR USER YET
   if (!existingVisitor && !existingUser) {
-    console.log('///// create a new visitor');
     _visitor = await _createNewVisitorFromApply(email, urlParams, sscid, sscidCreatedOn, xType);
   }
-  console.log('///// line 545', _visitor);
 
   // pull the persona inquiry data
   const {
@@ -609,11 +609,8 @@ export const applyForKarmaCard = async (
 
   const kycStatus = status;
 
-  console.log('///// line 596');
-
   if (!existingUser) {
     // IF VISITOR ONLY, UPDATE VISITOR WITH MARQETA DECISION
-    console.log('/////// this is the visitor to update', _visitor);
     _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, {
       marqeta: applicationDecision.marqeta,
       email,
@@ -623,7 +620,6 @@ export const applyForKarmaCard = async (
       xTypeParam: xType,
       actions: [{ type: VisitorActionEnum.AppliedForCard, createdOn: getUtcDate().toDate() }],
     });
-    console.log('///// new visitor', _visitor);
   } else {
     // IF EXISTING USER, UPDATE USER WITH MARQETA DECISION
     // Is it ok to overwrite the shareasale data if it already exists?
@@ -656,8 +652,6 @@ export const applyForKarmaCard = async (
 
   const notApproved = kycStatus !== IMarqetaKycState.success || !personaInquiryInSuccessState(inquiryResult);
 
-  console.log('//// are they approved?', !notApproved);
-
   // FAILED OR PENDING KYC, already saved to user or visitor object
   if (notApproved) {
     if (!!existingUser) {
@@ -686,7 +680,7 @@ export const applyForKarmaCard = async (
     marqeta: userObject.toObject()?.integrations?.marqeta,
     persona: personaIntegration,
     internalKycTemplateId: inquiryResult?.templateId,
-    paymentData: await performMembershipPaymentUpdatesAndCreateLink(userObject),
+    paymentData: await performMembershipPaymentUpdatesAndCreateLink(userObject, 'embedded'),
   };
 };
 

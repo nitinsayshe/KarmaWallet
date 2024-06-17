@@ -194,7 +194,7 @@ export const addKarmaMembershipToUser = async (
   membershipType: IProductSubscription,
   status: KarmaMembershipStatusEnumValues,
 ) => {
-  console.log('///// add subscription to user');
+  console.log('///// Add Karma Membership to User');
   try {
     const newMembership: IKarmaMembershipData = {
       productSubscription: membershipType,

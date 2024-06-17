@@ -53,9 +53,8 @@ const userSchema = new Schema({
     productSubscription: {
       type: Schema.Types.ObjectId,
       ref: 'product_subscription',
-      required: true,
     },
-    status: { type: String, required: true, enum: Object.values(KarmaMembershipStatusEnum) },
+    status: { type: String, enum: Object.values(KarmaMembershipStatusEnum) },
     createdOn: { type: Date, default: () => getUtcDate().toDate() },
     lastModified: { type: Date, default: () => getUtcDate().toDate() },
   },

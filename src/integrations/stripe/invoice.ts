@@ -6,6 +6,7 @@ import { InvoiceStatus } from '../../models/invoice/types';
 import { Invoice } from '../../clients/stripe/invoice';
 import { StripeClient } from '../../clients/stripe/stripeClient';
 import { asCustomError } from '../../lib/customError';
+import { KarmaMembershipStatusEnum } from '../../models/user/types';
 
 export const getInvoiceStatusFromStripeStatus = (status: Stripe.Invoice.Status) => {
   switch (status) {
@@ -51,27 +52,47 @@ export const updateInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
     },
   );
   if (!invoice) throw new Error('Invoice not found');
+
+  const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.subscription });
+  if (userProductSubscription) {
+    userProductSubscription.latestInvoice = invoice._id;
+  }
   return invoice;
 };
 
 export const createInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
+  console.log('//// create an invoice from stripe invoice', data);
   const existingInvoice = await InvoiceModel.findOne({ 'integrations.stripe.id': data.id });
   if (existingInvoice) return updateInvoiceFromStripeInvoice(data);
 
   const user = await UserModel.findOne({ 'integrations.stripe.id': data.customer });
   if (!user) throw asCustomError(`[x] No user found with stripe id: ${data.customer}`);
-  const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.subscription });
 
   const newInvoice = await InvoiceModel.create({
     amount: data.amount_due / 100,
     status: data.status,
     paymentLink: data.hosted_invoice_url,
     user: user?._id,
-    userProductSubscription: userProductSubscription?._id || null,
     integrations: {
       stripe: data,
     },
   });
 
+  const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.subscription });
+  if (userProductSubscription) {
+    userProductSubscription.latestInvoice = newInvoice._id;
+  }
+
   return newInvoice;
+};
+
+export const handleStripeInvoicePaid = async (data: Stripe.Invoice) => {
+  console.log('/// update the user');
+  // update the invoice in the invoice collection
+  const invoice = await updateInvoiceFromStripeInvoice(data);
+  // update the user status to active
+  const user = await UserModel.findById(invoice.user);
+  user.karmaMembership.status = KarmaMembershipStatusEnum.active;
+  await user.save();
+  return invoice;
 };

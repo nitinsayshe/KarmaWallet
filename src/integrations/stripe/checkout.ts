@@ -32,7 +32,7 @@ export const createKarmaCardMembershipCustomerSession = async (params: ICheckout
     else promoCode = membershipPromoDocument.integrations.stripe.id;
   }
 
-  const stripeCustomerID = user.integrations.stripe.id;
+  const stripeCustomerID = user?.integrations?.stripe?.id;
   if (!stripeCustomerID) throw new Error('Stripe customer ID not found');
   // check the uyser for promo codes and find the id fopr the promo code in our promo collection
   // add it to the checkout session if there is a matching one
@@ -42,7 +42,7 @@ export const createKarmaCardMembershipCustomerSession = async (params: ICheckout
     line_items: [
       {
         // defaults to the Standard Karma Card Membership price
-        price: productPrice || 'price_1PJIiMFvwRyik3wAWneIxPQX',
+        price: productPrice || 'price_1PRIbXIhaX1nT8IVbJwQvkTf',
         quantity: 1,
       },
     ],

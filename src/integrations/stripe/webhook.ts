@@ -1,8 +1,8 @@
 import Stripe from 'stripe';
 import { deleteProductSubscriptionFromStripeProduct, updateOrCreateProductSubscriptionFromStripeProduct } from './product';
 import { addStripeIntegrationToUser, updateStripeIntegrationForUser } from './customer';
-import { createInvoiceFromStripeInvoice, updateInvoiceFromStripeInvoice } from './invoice';
-import { createUserProductSubscriptionFromStripeSubscription } from './subscription';
+import { createInvoiceFromStripeInvoice, handleStripeInvoicePaid, updateInvoiceFromStripeInvoice } from './invoice';
+import { createUserProductSubscriptionFromStripeSubscription, updateUserProductSubscriptionFromStripeSubscription } from './subscription';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
   const { type } = event;
@@ -50,7 +50,7 @@ export const handleInvoiceEvent = async (event: Stripe.Event) => {
       // finalize the invoice
       break;
     case 'invoice.paid':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      handleStripeInvoicePaid(event.data.object);
       // update the invoice to paid
       break;
     case 'invoice.updated':
@@ -112,6 +112,7 @@ export const handleSubscriptionEvent = async (event: Stripe.Event) => {
       // create a subscription for the user
       break;
     case 'customer.subscription.updated':
+      await updateUserProductSubscriptionFromStripeSubscription(event.data);
       // update the subscription for the user
       break;
     case 'customer.subscription.deleted':

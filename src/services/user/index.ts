@@ -850,11 +850,11 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
   console.log('///// before checks');
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
-    updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
+    await updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 
   if (!!existingUser?._id && currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE) {
-    updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
+    await updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 
   // EXISTING VISITOR, Marqeta integration is saved on the visitor object,

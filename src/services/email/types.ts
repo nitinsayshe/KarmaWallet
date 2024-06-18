@@ -83,6 +83,10 @@ export interface IKarmacardWelcomeTemplateParams extends IEmailTemplateParams {
   newUser: boolean;
 }
 
+export interface ILowBalanceTemplateParams extends IEmailTemplateParams {
+  name: string;
+}
+
 export interface IEmailVerificationTemplateParams extends IEmailTemplateParams {
   token: string;
   groupName?: string;

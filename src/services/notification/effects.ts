@@ -35,6 +35,7 @@ import {
   sendKarmaCardPendingReviewEmail,
   sendResumeKarmaCardApplicationEmail,
   sendKarmaCardDeclinedEmail,
+  sendLowBalanceEmail,
 } from '../email';
 import {
   IACHTransferEmailData,
@@ -419,6 +420,19 @@ export const handleResumeKarmaCardApplication = async ({ user, visitor, data }: 
   }
 };
 
+export const handleLowBalanceEventEmailEffect = async ({ user } : IEffectFunctionParams): Promise<void> => {
+  try {
+    await sendLowBalanceEmail({
+      user: user._id,
+      name: user?.integrations?.marqeta?.first_name,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending low balance email', ErrorTypes.SERVER);
+  }
+};
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: ({ user, visitor, data }: IEffectFunctionParams) => Promise<void>;
 } = {
@@ -442,6 +456,7 @@ export const NotificationEffectsFunctions: {
   SendCaseLostProvisionalCreditNotAlreadyIssued: handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect,
   SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
   SendResumeKarmaCardApplicationEmail: handleResumeKarmaCardApplication,
+  SendLowBalanceEventEmail: handleLowBalanceEventEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {
@@ -465,6 +480,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued,
     NotificationEffectsEnum.SendEmployerGiftEmail,
     NotificationEffectsEnum.SendResumeKarmaCardApplicationEmail,
+    NotificationEffectsEnum.SendLowBalanceEventEmail,
   ],
   [NotificationChannelEnum.Push]: [NotificationEffectsEnum.SendPushNotification],
   [NotificationChannelEnum.InApp]: [],

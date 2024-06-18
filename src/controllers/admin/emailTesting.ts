@@ -57,6 +57,15 @@ export const testKarmaCardWelcomeEmail: IRequestHandler<{}, {}, {}> = async (req
   }
 };
 
+export const testLowBalanceEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
+  try {
+    const email = await EmailTestingService.testLowBalanceEmail(req);
+    output.api(req, res, email);
+  } catch (err) {
+    output.error(req, res, asCustomError(err));
+  }
+};
+
 export const testChangePasswordEmail: IRequestHandler<{}, {}, {}> = async (req, res) => {
   try {
     const email = await EmailTestingService.testChangePasswordEmail(req);

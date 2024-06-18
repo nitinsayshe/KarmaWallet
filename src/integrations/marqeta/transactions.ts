@@ -3,6 +3,7 @@ import dayjs from 'dayjs';
 import { parseInt } from 'lodash';
 import { Transaction } from 'plaid';
 import { ObjectId } from 'mongoose';
+import utc from 'dayjs/plugin/utc';
 import { getMarqetaResources, GetPaginiatedResourceParams } from '.';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../clients/marqeta/transactions';
@@ -13,7 +14,7 @@ import {
   TransactionModelTypeEnum,
   TransactionModelTypeEnumValues,
 } from '../../clients/marqeta/types';
-import { ErrorTypes } from '../../lib/constants';
+import { ErrorTypes, MIN_BALANCE } from '../../lib/constants';
 import {
   AdjustmentTransactionTypeEnum,
   CreditTransactionTypeEnum,
@@ -36,7 +37,7 @@ import { CardModel } from '../../models/card';
 import { CompanyModel, ICompanyDocument } from '../../models/company';
 import { ISectorDocument, SectorModel } from '../../models/sector';
 import { ITransaction, ITransactionDocument, TransactionModel as MongooseTransactionModel } from '../../models/transaction';
-import { UserModel } from '../../models/user';
+import { IUserDocument, UserModel } from '../../models/user';
 import { IRef } from '../../types/model';
 import { IRequest } from '../../types/request';
 import { IMatchedTransaction } from '../plaid/types';
@@ -52,9 +53,13 @@ import {
 import { IMarqetaGPACustomTags } from '../../services/transaction/types';
 import { GroupModel } from '../../models/group';
 import { ACHTransferModel } from '../../models/achTransfer';
-import { createEmployerGiftEmailUserNotification, createPushUserNotificationFromUserAndPushData } from '../../services/user_notification';
+import { createEmployerGiftEmailUserNotification, createLowBalanceEmailNotification, createLowBalancePushNotification, createPushUserNotificationFromUserAndPushData } from '../../services/user_notification';
 import { PushNotificationTypes } from '../../lib/constants/notification';
 import { matchTransactionCompanies } from '../../services/transaction';
+import { LowBalanceEventModel } from '../../models/lowBalanceEvent';
+import { getGPABalance } from './gpa';
+
+dayjs.extend(utc);
 
 export interface IMarqetaTokenTransactionDictionary {
   [key: string]: ITransactionDocument;
@@ -662,6 +667,55 @@ export const handleCreditNotification = async (transaction: ITransactionDocument
   }
 };
 
+export const handleLowBalanceEvent = async (user: IUserDocument, transaction: ITransactionDocument): Promise<void> => {
+  try {
+    if (transaction.status === TransactionModelStateEnum.Completion) {
+      const lowBalanceData = await LowBalanceEventModel.findOne({ user: user._id });
+      const balanceData = await getGPABalance(user.integrations?.marqeta?.userToken);
+      const availableBalance = balanceData?.data?.gpa?.available_balance;
+
+      if (availableBalance < MIN_BALANCE) {
+        if (!lowBalanceData) {
+          await createLowBalancePushNotification(user);
+          await createLowBalanceEmailNotification(user);
+
+          const timestamp = dayjs().utc().toDate();
+          await LowBalanceEventModel.create({
+            user,
+            createdDate: timestamp,
+            lastEmailSent: timestamp,
+          });
+        } else {
+          // send push notifications
+          await createLowBalancePushNotification(user);
+        }
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+export const handleCreditAndDepositEvent = async (transaction: ITransactionDocument) => {
+  try {
+    if (transaction.status === TransactionModelStateEnum.Completion) {
+      const user = await UserModel.findById(transaction.user);
+      const lowBalanceData = await LowBalanceEventModel.findOne({ user: user._id });
+
+      if (!!lowBalanceData) {
+        const balanceData = await getGPABalance(user.integrations?.marqeta?.userToken);
+        const availableBalance = balanceData?.data?.gpa?.available_balance;
+
+        if (availableBalance >= MIN_BALANCE) {
+          await lowBalanceData.delete();
+        }
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 const _sendTransactionNotifications = (transaction: ITransactionDocument) => {
   // advice is an adjustment to an existing transaction, no need to send a notification even though it will be in a pending state
   if (transaction.integrations.marqeta.type === 'authorization.advice') return false;
@@ -701,6 +755,8 @@ export const handleDebitNotification = async (transaction: ITransactionDocument)
         body: 'You bought gas. We donated to reforestation.',
       });
     }
+
+    await handleLowBalanceEvent(user, transaction);
   }
 };
 
@@ -711,12 +767,13 @@ export const handleTransactionNotifications = async (transactions: ITransactionD
         switch (t.type) {
           case TransactionTypeEnum.Credit:
             handleCreditNotification(t);
+            handleCreditAndDepositEvent(t);
             break;
           case TransactionTypeEnum.Debit:
             handleDebitNotification(t);
             break;
           case TransactionTypeEnum.Deposit:
-            // add code as needed
+            handleCreditAndDepositEvent(t);
             break;
           case TransactionTypeEnum.Adjustment:
             // add code as needed

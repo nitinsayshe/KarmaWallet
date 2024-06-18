@@ -330,3 +330,5 @@ export const FastFoodMccCode = '5814';
 export const PhoneNumberLength = 10;
 export const PostalCodeLength = 5;
 export const daysUntilKarmaCardApplicationExpiration = 10;
+
+export const MIN_BALANCE = 50;

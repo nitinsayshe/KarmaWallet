@@ -64,6 +64,7 @@ export enum JobNames {
   KardCommissionReconciliation = 'kard-commission-reconciliation',
   OrderKarmaWalletCards = 'order-karma-wallet-cards',
   WordpressArticleSync = 'wordpress-article-sync',
+  BalanceThreshold = 'BalanceThreshold',
 }
 
 export const MarqetaDataSyncTypeEnum = {

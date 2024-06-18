@@ -62,6 +62,7 @@ export class _MainBullClient extends _BullClient {
     this.createJob(JobNames.GenerateKarmaCardStatements, null, { jobId: `${JobNames.GenerateKarmaCardStatements}-monthly`, repeat: { cron: '0 7 1 * *' } });
     this.createJob(JobNames.WordpressArticleSync, null, { jobId: `${JobNames.WordpressArticleSync}-daily`, repeat: { cron: '0 4 * * *' } });
     this.createJob(JobNames.UpdateExpiredApplications, null, { jobId: `${JobNames.UpdateExpiredApplications}-every-4-hours`, repeat: { cron: '0 */4 * * *' } });
+    this.createJob(JobNames.BalanceThreshold, null, { jobId: `${JobNames.BalanceThreshold}-daily`, repeat: { cron: '0 4 * * *' } });
 
     if (process.env.NODE_ENV === 'production') {
       // active campaign sync

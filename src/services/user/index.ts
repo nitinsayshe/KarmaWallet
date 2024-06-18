@@ -783,7 +783,6 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
   console.log('//// updatedVisitorFromMarqetaWebhook');
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
     if (!visitor.user) {
-      console.log('/////// update visitor from active!');
       // Visitor only created
       const user = await createNewUserFromMarqetaWebhook(visitor);
       await handleMarqetaUserActiveTransition(user, true);

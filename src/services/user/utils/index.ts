@@ -194,10 +194,11 @@ export const addKarmaMembershipToUser = async (
   membershipType: IProductSubscription,
   status: KarmaMembershipStatusEnumValues,
 ) => {
-  console.log('///// Add Karma Membership to User');
+  console.log('///// Add Karma Membership to User', membershipType);
+  // STILL NEED TO ORDER THE CARDS AND TRANSITION THE USER TO ACTIVE
   try {
     const newMembership: IKarmaMembershipData = {
-      productSubscription: membershipType,
+      productSubscription: membershipType._id,
       status,
       lastModified: getUtcDate().toDate(),
       startDate: getUtcDate().toDate(),

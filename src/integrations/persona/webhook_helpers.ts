@@ -168,8 +168,9 @@ export const continueApplyProcessForApprovedCase = async (req: PersonaWebhookBod
 
     const kycStatus = applicationStatus?.marqeta?.kycResult?.status;
     const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
+    console.log('///// continue application for approve case');
     if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
-      console.log(`User with email: ${email} has already been approved for a card`);
+      console.log(`User with email: ${email} has already been approved for a card [continueApplyProcessForApprovedCase]`);
       return;
     }
 
@@ -202,6 +203,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
       throw new Error('No email found');
     }
     const application = await KarmaCardApplicationModel.findOne({ email });
+    console.log('///// this is the application', application);
     if (!!application?.expirationDate && application?.expirationDate < getUtcDate().toDate()) {
       console.log(`Application for email: ${email} has expired`);
       return;
@@ -214,7 +216,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     let existingApplicationData = await getUserApplicationStatus(email);
     const kycStatus = existingApplicationData?.marqeta?.kycResult?.status;
     const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
-    console.log('//// before emission of decision');
+    console.log('//// before emission of decision startorcontinue');
 
     if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
       console.log(`User with email: ${email} has already been approved for a card`);

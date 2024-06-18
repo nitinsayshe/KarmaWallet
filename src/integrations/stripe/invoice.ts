@@ -61,9 +61,11 @@ export const updateInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
 };
 
 export const createInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
-  console.log('//// create an invoice from stripe invoice', data);
   const existingInvoice = await InvoiceModel.findOne({ 'integrations.stripe.id': data.id });
-  if (existingInvoice) return updateInvoiceFromStripeInvoice(data);
+  if (!!existingInvoice) {
+    const updated = await updateInvoiceFromStripeInvoice(data);
+    return updated;
+  }
 
   const user = await UserModel.findOne({ 'integrations.stripe.id': data.customer });
   if (!user) throw asCustomError(`[x] No user found with stripe id: ${data.customer}`);
@@ -87,7 +89,6 @@ export const createInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
 };
 
 export const handleStripeInvoicePaid = async (data: Stripe.Invoice) => {
-  console.log('/// update the user');
   // update the invoice in the invoice collection
   const invoice = await updateInvoiceFromStripeInvoice(data);
   // update the user status to active

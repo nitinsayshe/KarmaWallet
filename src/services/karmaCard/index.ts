@@ -168,14 +168,12 @@ export const performKycForUserOrVisitor = async (
 };
 
 const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
-  console.log('///// create new marqeta user?');
   // find the email is already register with marqeta or not
   const { data } = await getMarqetaUserByEmail({ email: userData.email });
   let userToken;
   let marqetaUserResponse;
   let kycResponse;
 
-  console.log('///// data from get user', data);
   if (data.length > 0) {
     // If existing user by email in Marqeta, update the user
     userToken = data[0].token;

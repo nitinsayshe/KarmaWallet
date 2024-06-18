@@ -33,6 +33,7 @@ const getSubscriptionStatusFromStripeStatus = (status: Stripe.Subscription.Statu
 
 export const createUserProductSubscriptionFromStripeSubscription = async (data: Stripe.CustomerSubscriptionCreatedEvent.Data) => {
   // create a user product subscription
+  console.log('///// event data', data);
   const user = await UserModel.findOne({ 'integrations.stripe.id': data.object.customer });
   if (!user) throw asCustomError(new Error('Error creating user product subscription, user not found.'));
   const product = await ProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.object.items.data[0].price.product });
@@ -57,34 +58,30 @@ export const createUserProductSubscriptionFromStripeSubscription = async (data: 
   return userProductSubscription;
 };
 
-// export const createSubscription = async (user: IUserDocument, product: IProductSubscription) => {
-//   // const customerId = user.integrations.stripe.id;
-//   // const productId = product.integrations.stripe.id;
-
-//   // const stripeClient = new StripeClient();
-//   // const subscriptionClient = new Subscription(stripeClient);
-//   // await subscriptionClient.createSubscription({
-//   //   customer: customerId,
-//   //   current_period_start: dayjs().utc().unix(),
-//   //   current_period_end: dayjs().add(1, 'year').utc().unix(),
-//   //   items: [
-//   //     {
-//   //       price: productId,
-//   //     },
-//   //   ],
-//   // });
-// };
-
 export const updateUserProductSubscriptionFromStripeSubscription = async (data: Stripe.CustomerSubscriptionUpdatedEvent.Data) => {
-  // update the user product subscription
-  const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integration.stripe.id': data.object.id });
-  if (!userProductSubscription) throw asCustomError(new Error('Error updating user product subscription, subscription not found.'));
-  const invoice = await InvoiceModel.findOne({ 'integrations.stripe.id': data.object.latest_invoice });
-  userProductSubscription.nextBillingDate = dayjs(data.object.current_period_end).utc().toDate();
-  userProductSubscription.lastBilledDate = dayjs(data.object.current_period_start).utc().toDate();
-  userProductSubscription.latestInvoice = invoice?._id || null;
-  userProductSubscription.integrations.stripe = data.object;
-  userProductSubscription.status = getSubscriptionStatusFromStripeStatus(data.object.status);
-  await userProductSubscription.save();
-  return userProductSubscription;
+  try {
+    console.log('///// data', data.object);
+    const invoice = await InvoiceModel.findOne({ 'integrations.stripe.id': data.object?.latest_invoice });
+
+    const userProductSubscription = await UserProductSubscriptionModel.findOneAndUpdate(
+      { 'integration.stripe.id': data.object.id },
+      {
+        latestInvoice: invoice?._id || null,
+        nextBillingDate: dayjs(data.object.current_period_end * 1000).utc().toDate(),
+        lastBilledDate: dayjs(data.object.current_period_start * 1000).utc().toDate(),
+        createdOn: dayjs(data.object.created * 1000).utc().toDate(),
+        lastModified: dayjs().utc().toDate(),
+        integrations: {
+          stripe: data.object,
+        },
+        status: getSubscriptionStatusFromStripeStatus(data.object.status),
+      },
+    );
+
+    if (!userProductSubscription) throw asCustomError(new Error('Error updating user product subscription, subscription not found.'));
+    return userProductSubscription;
+  } catch (err) {
+    console.log('///// error updating user product subscription', err);
+    throw asCustomError(err);
+  }
 };

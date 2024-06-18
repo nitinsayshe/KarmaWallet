@@ -4,7 +4,7 @@ import { asCustomError } from '../../lib/customError';
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { ICreateProductSubscriptionData } from './types';
 
-export const StandardKarmaWalletSubscriptionId = '664e2adfdc54c92877715499';
+export const StandardKarmaWalletSubscriptionId = '666b41cbd9aae931c32ba130';
 
 export const createProductSubscription = async (params: ICreateProductSubscriptionData) => {
   try {

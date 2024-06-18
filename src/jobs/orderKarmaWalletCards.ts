@@ -2,6 +2,7 @@ import { createCard } from '../integrations/marqeta/card';
 import { createDepositAccount, listDepositAccountsForUser } from '../integrations/marqeta/depositAccount';
 import { MarqetaCardState } from '../integrations/marqeta/types';
 import { IUserDocument } from '../models/user';
+import { KarmaMembershipStatusEnum } from '../models/user/types';
 import { mapMarqetaCardtoCard } from '../services/card';
 import { karmaWalletCardBreakdown } from '../services/karmaCard/utils';
 
@@ -12,6 +13,11 @@ export const exec = async (user: IUserDocument) => {
   let physicalCardResponse = null;
   const karmaWalletCards = await karmaWalletCardBreakdown(user);
   const karmaWalletDepositAccounts = await listDepositAccountsForUser(user._id);
+
+  if (user?.karmaMembership?.status !== KarmaMembershipStatusEnum.active) {
+    console.log('///// User has not paid membership yet');
+    return;
+  }
 
   if (!user?.integrations?.marqeta?.userToken) {
     console.error('User does not have marqeta integration');

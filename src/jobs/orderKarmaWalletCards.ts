@@ -4,7 +4,7 @@ import { MarqetaCardState } from '../integrations/marqeta/types';
 import { IUserDocument } from '../models/user';
 import { KarmaMembershipStatusEnum } from '../models/user/types';
 import { mapMarqetaCardtoCard } from '../services/card';
-import { karmaWalletCardBreakdown } from '../services/karmaCard/utils';
+import { karmaWalletCardBreakdown, updateActiveCampaignDataAndJoinGroupForApplicant } from '../services/karmaCard/utils';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -65,4 +65,6 @@ export const exec = async (user: IUserDocument) => {
     await createDepositAccount(user);
     console.log('[+] Created a deposit account for userId', user._id);
   }
+
+  await updateActiveCampaignDataAndJoinGroupForApplicant(user);
 };

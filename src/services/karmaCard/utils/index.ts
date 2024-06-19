@@ -341,15 +341,6 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
 
   if (!!urlParams) {
     const groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
-    // employer beta card group
-    if (!!urlParams.find((param) => param.key === 'employerBeta')) {
-      subscribeData.employerBeta = true;
-    }
-
-    // beta card group
-    if (!!urlParams.find((param) => param.key === 'beta')) {
-      subscribeData.beta = true;
-    }
 
     if (!!groupCode) {
       const mockRequest = {

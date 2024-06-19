@@ -36,18 +36,14 @@ import * as UserService from '../user';
 import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { addKarmaMembershipToUser, createShareasaleTrackingId, isUserDocument } from '../user/utils';
-import { createKarmaCardWelcomeUserNotification } from '../user_notification';
 import * as VisitorService from '../visitor';
 import {
   openBrowserAndAddShareASaleCode,
   ReasonCode,
-  updateActiveCampaignDataAndJoinGroupForApplicant,
   IApplicationDecision,
 } from './utils';
 import { createKarmaCardMembershipCustomerSession } from '../../integrations/stripe/checkout';
 import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
-import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
-import { updateCustomFields } from '../../integrations/activecampaign';
 import { ICreateAccountRequest } from '../visitor';
 import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
 import { ProductSubscriptionModel } from '../../models/productSubscription';
@@ -211,26 +207,6 @@ const storeKarmaCardApplication = async (cardApplicationData: IKarmaCardApplicat
 export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApplication>) => KarmaCardApplicationModel.find(query).sort({ lastModified: -1 });
 
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
-
-export const handleExistingUserApplySuccess = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
-  console.log('//// handle existing user apply success');
-  const userEmail = userObject.emails.find((email) => !!email.primary).email;
-  try {
-    if (!!urlParams) {
-      await updateUserUrlParams(userObject, urlParams);
-      await updateActiveCampaignDataAndJoinGroupForApplicant(userObject, urlParams);
-    } else {
-      await updateActiveCampaignDataAndJoinGroupForApplicant(userObject);
-    }
-
-    // add existingUser flag to active campaign
-    await updateCustomFields(userEmail, [{ field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' }]);
-    console.log('//// send welcome email, handleExistingUserApplySuccess');
-    await createKarmaCardWelcomeUserNotification(userObject, false);
-  } catch (err) {
-    console.error(`Error updating user ${userObject._id} with urlParams: ${urlParams} to success state: ${err}`);
-  }
-};
 
 export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: IUserDocument, uiMode?: Stripe.Checkout.SessionCreateParams.UiMode) => {
   try {

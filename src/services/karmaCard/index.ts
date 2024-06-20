@@ -417,15 +417,12 @@ export const getApplicationData = async (email: string): Promise<IApplicationDec
       // return the embedded url or client secret
       if (user?.karmaMembership && user.karmaMembership.status === KarmaMembershipStatusEnum.unpaid) {
         const paymentData = await createKarmaCardMembershipCustomerSession({ user, uiMode: 'embedded' });
-        console.log('//// session data', paymentData);
         applicationData.paymentData = {
           url: paymentData.url,
           client_secret: paymentData.client_secret,
         };
       }
     }
-
-    console.log('////// this is the application data', applicationData);
 
     return applicationData;
   } catch (err) {
@@ -437,7 +434,6 @@ export const getApplicationData = async (email: string): Promise<IApplicationDec
 };
 
 const _checkIfValidApplyForKarmaCard = (req: IRequest<{}, {}, IKarmaCardRequestBody>) => {
-  console.log('//// req nodu', req.body);
   const { body, requestor } = req;
   const { email, firstName, lastName, address1, birthDate, phone, postalCode, state, ssn, city } = body;
   if (!firstName || !lastName || !address1 || !birthDate || !phone || !postalCode || !state || !ssn || !city) {

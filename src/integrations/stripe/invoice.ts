@@ -37,6 +37,8 @@ export const getInvoiceFromStripe = async (invoiceId: string) => {
 };
 
 export const updateInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
+  console.log('///// this is the invoive id', data.id);
+
   const invoice = await InvoiceModel.findOneAndUpdate(
     {
       'integrations.stripe.id': data.id,
@@ -51,6 +53,7 @@ export const updateInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
       new: true,
     },
   );
+
   if (!invoice) throw new Error('Invoice not found');
 
   const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.subscription });
@@ -93,6 +96,7 @@ export const handleStripeInvoicePaid = async (data: Stripe.Invoice) => {
   const invoice = await updateInvoiceFromStripeInvoice(data);
   // update the user status to active
   const user = await UserModel.findById(invoice.user);
+  console.log('//// should update the user', user);
   user.karmaMembership.status = KarmaMembershipStatusEnum.active;
   await user.save();
   return invoice;

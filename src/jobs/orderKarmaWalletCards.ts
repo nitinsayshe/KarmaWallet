@@ -9,6 +9,7 @@ import { karmaWalletCardBreakdown, updateActiveCampaignDataAndJoinGroupForApplic
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
 export const exec = async (user: IUserDocument) => {
+  console.log('//// should order cards');
   let virtualCardResponse = null;
   let physicalCardResponse = null;
   const karmaWalletCards = await karmaWalletCardBreakdown(user);

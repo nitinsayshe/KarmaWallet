@@ -24,7 +24,7 @@ export class VgsClient extends SdkClient {
     this.agentOptions = {
       proxy: this.outboundProxy,
       proxyRequestOptions: {
-        ca: [process.env.VGS_SANDBOX_PEM],
+        ca: [process.env.VGS_PEM],
         rejectUnauthorized: false,
       },
     };

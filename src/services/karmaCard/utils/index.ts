@@ -2,26 +2,29 @@ import puppeteer from 'puppeteer';
 import { FilterQuery, Types, PaginateResult } from 'mongoose';
 import { terminateMarqetaCards, listCards } from '../../../integrations/marqeta/card';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
-import { IGPABalanceResponse, IMarqetaKycState, IMarqetaUserIntegrations } from '../../../integrations/marqeta/types';
+import { IGPABalanceResponse } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
-import { GroupModel } from '../../../models/group';
 import { IUserDocument } from '../../../models/user';
-import { joinGroup } from '../../groups/utils';
-import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../marketingSubscription';
 import { getDaysFromPreviousDate } from '../../../lib/date';
-import { IUrlParam } from '../../user/types';
 import { transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
 import { ACHFundingSourceModel } from '../../../models/achFundingSource';
 import { BankConnectionModel } from '../../../models/bankConnection';
 import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../../clients/marqeta/transactions';
-
 import { sleep } from '../../../lib/misc';
-import { IKarmaCardApplicationDocument, KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
+import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 import { IPersonaIntegration, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum } from '../../../integrations/persona/types';
 import { passedInternalKyc } from '../../../integrations/persona';
 import { ICheckoutSessionInfo } from '../../../integrations/stripe/types';
+import { IMarqetaUserIntegrations, IMarqetaKycState } from '../../../integrations/marqeta/user/types';
+import { IUrlParam, KarmaMembershipStatusEnum } from '../../../models/user/types';
+import { executeOrderKarmaWalletCardsJob } from '../../card/utils';
+import { createKarmaCardWelcomeUserNotification } from '../../user_notification';
+import { GroupModel } from '../../../models/group';
+import { joinGroup } from '../../groups';
+import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../marketingSubscription';
+import { IKarmaCardApplicationDocument } from '../../../models/karmaCardApplication/types';
 
 export type KarmaCardApplicationIterationRequest<FieldsType> = {
   batchQuery: FilterQuery<IKarmaCardApplicationDocument>;
@@ -355,6 +358,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
       } as any;
 
       const userGroup = await joinGroup(mockRequest);
+
       if (!!userGroup) {
         const group = await GroupModel.findById(userGroup.group);
         subscribeData.groupName = group.name;
@@ -364,4 +368,20 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
   }
   await updateNewUserSubscriptions(userObject, subscribeData);
   return userObject;
+};
+
+export const handleUserPaidMembership = async (user: IUserDocument) => {
+  // mark membership as paid
+  // order cards
+  // send welcome email
+  // update in active campaign
+  try {
+    user.karmaMembership.status = KarmaMembershipStatusEnum.active;
+    await user.save();
+    executeOrderKarmaWalletCardsJob(user);
+    await createKarmaCardWelcomeUserNotification(user, false);
+    await updateActiveCampaignDataAndJoinGroupForApplicant(user);
+  } catch (error) {
+    console.log('Error handling user paid membership', error);
+  }
 };

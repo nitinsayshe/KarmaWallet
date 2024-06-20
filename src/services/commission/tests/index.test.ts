@@ -4,7 +4,7 @@ import { ObjectId, Types } from 'mongoose';
 import { generateCommissionPayoutOverview } from '..';
 import { MerchantSource, RewardStatus, RewardType } from '../../../clients/kard/types';
 import { MongoClient } from '../../../clients/mongo';
-import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/user/types';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { cleanUpDocuments } from '../../../lib/model';

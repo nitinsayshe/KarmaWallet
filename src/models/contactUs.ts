@@ -8,7 +8,7 @@ import {
 import { IModel, IRef } from '../types/model';
 import { IShareableUser } from './user/types';
 import { getUtcDate } from '../lib/date';
-import { IShareableVisitor } from './visitor';
+import { IShareableVisitor } from './visitor/types';
 
 export interface IContactUs {
   _id: ObjectId;

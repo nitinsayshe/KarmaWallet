@@ -9,8 +9,6 @@ import { IUserDocument, UserModel } from '../../../models/user';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
 import { IKarmaMembershipData, IUser, IUserIntegrations, KarmaMembershipStatusEnumValues } from '../../../models/user/types';
-import { getMarqetaUser } from '../../../integrations/marqeta/user';
-import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
 import { VisitorModel } from '../../../models/visitor';
 import { IEntityData } from '../types';
 import { getUtcDate } from '../../../lib/date';
@@ -181,21 +179,11 @@ export const createShareasaleTrackingId = async () => {
   return uniqueId;
 };
 
-export const checkIfUserActiveInMarqeta = async (userId: string) => {
-  const user = await UserModel.findById(userId);
-  if (!user) console.log(`[+] No User found with this id ${userId}`);
-  const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
-  if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
-  return false;
-};
-
 export const addKarmaMembershipToUser = async (
   user: IUserDocument,
   membershipType: IProductSubscription,
   status: KarmaMembershipStatusEnumValues,
 ) => {
-  console.log('///// Add Karma Membership to User', membershipType);
-  // STILL NEED TO ORDER THE CARDS AND TRANSITION THE USER TO ACTIVE
   try {
     const newMembership: IKarmaMembershipData = {
       productSubscription: membershipType._id,

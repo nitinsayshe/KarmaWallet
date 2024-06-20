@@ -6,7 +6,7 @@ import { InvoiceStatus } from '../../models/invoice/types';
 import { Invoice } from '../../clients/stripe/invoice';
 import { StripeClient } from '../../clients/stripe/stripeClient';
 import { asCustomError } from '../../lib/customError';
-import { KarmaMembershipStatusEnum } from '../../models/user/types';
+import { handleUserPaidMembership } from '../../services/karmaCard/utils';
 
 export const getInvoiceStatusFromStripeStatus = (status: Stripe.Invoice.Status) => {
   switch (status) {
@@ -37,8 +37,6 @@ export const getInvoiceFromStripe = async (invoiceId: string) => {
 };
 
 export const updateInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
-  console.log('///// this is the invoive id', data.id);
-
   const invoice = await InvoiceModel.findOneAndUpdate(
     {
       'integrations.stripe.id': data.id,
@@ -96,8 +94,6 @@ export const handleStripeInvoicePaid = async (data: Stripe.Invoice) => {
   const invoice = await updateInvoiceFromStripeInvoice(data);
   // update the user status to active
   const user = await UserModel.findById(invoice.user);
-  console.log('//// should update the user', user);
-  user.karmaMembership.status = KarmaMembershipStatusEnum.active;
-  await user.save();
+  await handleUserPaidMembership(user);
   return invoice;
 };

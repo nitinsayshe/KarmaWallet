@@ -2,9 +2,9 @@ import { FilterQuery } from 'mongoose';
 import { createOrUpdatePersonaIntegration, hasInquiriesOrCases, passedInternalKyc } from '.';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { getUtcDate } from '../../lib/date';
-import { KarmaCardApplicationModel, ApplicationStatus, IKarmaCardApplicationDocument } from '../../models/karmaCardApplication';
 import { UserModel, IUserDocument } from '../../models/user';
-import { VisitorModel, VisitorActionEnum, IVisitorDocument } from '../../models/visitor';
+import { IVisitorDocument } from '../../models/visitor';
+import { VisitorActionEnum } from '../../models/visitor/types';
 import { getShareableMarqetaUser, ReasonCode, IApplicationDecision } from '../../services/karmaCard/utils';
 import { SocketClient } from '../../clients/socket';
 import { IRequest } from '../../types/request';
@@ -31,13 +31,16 @@ import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
 import { states } from '../../lib/constants/states';
 import { IKarmaCardUpdateData, IKarmaCardDeclinedEmailData } from '../../services/email/types';
 import { isUserDocument } from '../../services/user/utils';
-import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/types';
 import { updateMarqetaUserStatus } from '../marqeta/user';
 import { SocketEvents, daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
 import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
 import { updateUserSubscriptions, updateVisitorSubscriptions } from '../../services/marketingSubscription';
 import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/marketing_subscription';
 import { unsubscribeContactFromLists } from '../activecampaign';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/user/types';
+import { KarmaCardApplicationModel } from '../../models/karmaCardApplication';
+import { IKarmaCardApplicationDocument, ApplicationStatus } from '../../models/karmaCardApplication/types';
+import { VisitorModel } from '../../models/visitor';
 
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;
@@ -168,7 +171,6 @@ export const continueApplyProcessForApprovedCase = async (req: PersonaWebhookBod
 
     const kycStatus = applicationStatus?.marqeta?.kycResult?.status;
     const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
-    console.log('///// continue application for approve case');
     if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
       console.log(`User with email: ${email} has already been approved for a card [continueApplyProcessForApprovedCase]`);
       return;
@@ -203,7 +205,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
       throw new Error('No email found');
     }
     const application = await KarmaCardApplicationModel.findOne({ email });
-    console.log('///// this is the application', application);
+
     if (!!application?.expirationDate && application?.expirationDate < getUtcDate().toDate()) {
       console.log(`Application for email: ${email} has expired`);
       return;

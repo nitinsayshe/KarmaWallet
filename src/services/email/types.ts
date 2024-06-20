@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { EmailTemplateKeys, EmailTemplateTypes, IEmailTemplateConfig } from '../../lib/constants/email';
 import { IUserDocument } from '../../models/user';
 import { IVisitorDocument } from '../../models/visitor';
-import { IMarqetaKycState } from '../../integrations/marqeta/types';
+import { IMarqetaKycState } from '../../integrations/marqeta/user/types';
 
 interface IBaseEmailParams {
   domain?: string;

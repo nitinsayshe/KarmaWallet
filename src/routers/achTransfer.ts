@@ -2,7 +2,7 @@ import { Express, Router } from 'express';
 import authenticate from '../middleware/authenticate';
 import * as AchTransferController from '../controllers/achTransfer';
 import protectedRequirements from '../middleware/protected';
-import { IMarqetaUserStatus } from '../integrations/marqeta/types';
+import { IMarqetaUserStatus } from '../integrations/marqeta/user/types';
 
 const router = Router();
 

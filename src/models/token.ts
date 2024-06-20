@@ -8,7 +8,7 @@ import { TokenTypes } from '../lib/constants';
 import { IModel, IRef } from '../types/model';
 import { IShareableUser, IUser } from './user/types';
 import { getUtcDate } from '../lib/date';
-import { IShareableVisitor, IVisitor } from './visitor';
+import { IShareableVisitor, IVisitor } from './visitor/types';
 
 export interface IToken {
   type: TokenTypes;

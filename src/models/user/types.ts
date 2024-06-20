@@ -2,10 +2,10 @@ import { ObjectId } from 'mongoose';
 import Stripe from 'stripe';
 import { IRef } from '../../types/model';
 import { IPromo, IPromoDocument } from '../promo';
-import { IMarqetaUserIntegrations } from '../../integrations/marqeta/types';
 import { IWPArticle } from '../wpArticle';
 import { IPersonaIntegration } from '../../integrations/persona/types';
 import { IShareableProductSubscription } from '../productSubscription/types';
+import { IMarqetaUserIntegrations } from '../../integrations/marqeta/user/types';
 
 export enum UserEmailStatus {
   Unverified = 'unverified',

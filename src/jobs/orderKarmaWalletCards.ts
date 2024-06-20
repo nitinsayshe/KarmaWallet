@@ -66,6 +66,4 @@ export const exec = async (user: IUserDocument) => {
     await createDepositAccount(user);
     console.log('[+] Created a deposit account for userId', user._id);
   }
-
-  await updateActiveCampaignDataAndJoinGroupForApplicant(user);
 };

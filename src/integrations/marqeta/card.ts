@@ -12,7 +12,6 @@ const marqetaClient = new MarqetaClient();
 const cardClient = new Card(marqetaClient);
 
 export const createCard = async (params: IMarqetaCreateCard) => {
-  console.log('///// Ordering a card with product token:', params.cardProductToken);
   const cardResponse = await cardClient.createCard(params);
   return cardResponse;
 };

@@ -34,7 +34,6 @@ import { Logger } from '../services/logger';
 import * as output from '../services/output';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
-import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
 import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
@@ -44,6 +43,7 @@ import { encrypt } from '../lib/encryption';
 import { handlePersonaWebhookByEventName } from '../integrations/persona/webhook_helpers';
 import { StripeClient } from '../clients/stripe/stripeClient';
 import { processStripeWebhookEvent } from '../integrations/stripe/webhook';
+import { handleMarqetaUserTransitionWebhook } from '../integrations/marqeta/user/utils';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 

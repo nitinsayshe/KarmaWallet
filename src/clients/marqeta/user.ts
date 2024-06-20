@@ -1,4 +1,5 @@
-import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaLookUp, IMarqetaUserTransition, IMarqetaUserToken, IMarqetaUpdateUser } from '../../integrations/marqeta/types';
+import { IMarqetaClientAccessToken } from '../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaLookUp, IMarqetaUpdateUser, IMarqetaUserTransition, IMarqetaUserToken } from '../../integrations/marqeta/user/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';

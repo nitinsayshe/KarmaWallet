@@ -5,13 +5,6 @@ import Stripe from 'stripe';
 import { IMarqetaListKYCResponse, MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
-import {
-  IMarqetaCreateUser,
-  IMarqetaKycResult,
-  IMarqetaKycState,
-  IMarqetaUserIntegrations,
-  IMarqetaUserStatus,
-} from '../../integrations/marqeta/types';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
 import { fetchCaseAndCreateOrUpdateIntegration, fetchInquiryAndCreateOrUpdateIntegration, personaCaseInSuccessState, personaInquiryInSuccessState } from '../../integrations/persona';
 import { ErrorTypes } from '../../lib/constants';
@@ -19,10 +12,6 @@ import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { formatName, generateRandomPasswordString } from '../../lib/misc';
 import {
-  ApplicationStatus,
-  IKarmaCardApplication,
-  IKarmaCardApplicationDocument,
-  IShareableCardApplication,
   KarmaCardApplicationModel,
 } from '../../models/karmaCardApplication';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
@@ -30,7 +19,7 @@ import { IUserDocument, UserModel } from '../../models/user';
 import {
   KarmaMembershipStatusEnum,
 } from '../../models/user/types';
-import { IVisitorDocument, VisitorActionEnum, VisitorModel } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import * as UserService from '../user';
 import { updateUserUrlParams } from '../user';
@@ -48,6 +37,9 @@ import { ICreateAccountRequest } from '../visitor';
 import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { StandardKarmaWalletSubscriptionId } from '../productSubscription';
+import { IMarqetaKycState, IMarqetaUserIntegrations, IMarqetaUserStatus, IMarqetaCreateUser, IMarqetaKycResult } from '../../integrations/marqeta/user/types';
+import { IKarmaCardApplicationDocument, IShareableCardApplication, IKarmaCardApplication, ApplicationStatus } from '../../models/karmaCardApplication/types';
+import { VisitorActionEnum } from '../../models/visitor/types';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -123,7 +115,6 @@ export const getShareableKarmaCardApplication = ({
 });
 
 export const isUserKYCVerified = (kycResponse: IMarqetaListKYCResponse) => {
-  console.log('////// this is the kyc response', kycResponse);
   if (kycResponse?.data.length === 0) return false;
   const hasSuccessfulKYC = kycResponse.data.find((kyc: any) => kyc.result.status === IMarqetaKycState.success);
   return !!hasSuccessfulKYC;

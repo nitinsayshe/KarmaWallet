@@ -122,7 +122,6 @@ interface IPaypalWebhookBody {
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
 
-
 // KARD WEBHOOK
 export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = async (req, res) => {
   try {

@@ -100,6 +100,7 @@ export const getShareableUser = ({
     integrations: _integrations,
   };
 };
+
 export const iterateOverUsersAndExecWithDelay = async <Req, Res>(
   request: UserIterationRequest<Req>,
   exec: (req: UserIterationRequest<Req>, userBatch: PaginateResult<IUserDocument>) => Promise<UserIterationResponse<Res>[]>,

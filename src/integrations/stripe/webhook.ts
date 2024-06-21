@@ -4,6 +4,7 @@ import { addStripeIntegrationToUser, updateStripeIntegrationForUser } from './cu
 import { createInvoiceFromStripeInvoice, handleStripeInvoicePaid, updateInvoiceFromStripeInvoice } from './invoice';
 import { createUserProductSubscriptionFromStripeSubscription, updateUserProductSubscriptionFromStripeSubscription } from './subscription';
 import { updateOrCreateProductSubscriptionPriceFromStripePrice } from '../../services/productSubscriptionPrice';
+import { createMembershipPromoFromStripePromo, updateMembershipPromoFromStripePromo } from './promo';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
   const { type } = event;
@@ -122,7 +123,7 @@ export const handlePriceEvent = async (event: Stripe.Event) => {
     default:
       break;
   }
-}
+};
 
 export const handleSubscriptionEvent = async (event: Stripe.Event) => {
   const { type } = event;
@@ -144,6 +145,23 @@ export const handleSubscriptionEvent = async (event: Stripe.Event) => {
   }
 };
 
+export const handlerPromotionCodeEvent = async (event: Stripe.Event) => {
+  const { type } = event;
+
+  switch (type) {
+    case 'promotion_code.created':
+      await createMembershipPromoFromStripePromo(event.data.object);
+      // create a promotion code for the user
+      break;
+    case 'promotion_code.updated':
+      await updateMembershipPromoFromStripePromo(event.data.object);
+      // update the promotion code for the user
+      break;
+    default:
+      break;
+  }
+};
+
 export const processStripeWebhookEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
@@ -155,6 +173,7 @@ export const processStripeWebhookEvent = async (event: Stripe.Event) => {
   if (type.includes('product')) handleProductEvent(event);
   if (type.includes('customer.subscription')) handleSubscriptionEvent(event);
   if (type.includes('price')) handlePriceEvent(event);
+  if (type.includes('promotion_code')) handlerPromotionCodeEvent(event);
 };
 
 // EVENTS SENT WHEN SUCCESSFULLY PAYING THE STRIPE PAYMENT LINK

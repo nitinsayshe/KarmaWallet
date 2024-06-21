@@ -203,11 +203,11 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
   if (!user) throw new Error('User not found');
   let promoCode = '';
 
-  console.log('///// tyope')
+  console.log('///// tyodfsdfsdfsdfsfpe', user);
   const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
-  console.log('////// this is the membershupPromoCode', membershipPromoCode)
+  console.log('////// this is the membershupPromoCode', membershipPromoCode);
   if (membershipPromoCode) {
-    const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode });
+    const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode.value });
     if (!membershipPromoDocument) console.log('///// no promo code found for this value');
     else promoCode = membershipPromoDocument.integrations.stripe.id;
   }
@@ -252,7 +252,7 @@ export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: I
     if (!userObject?.integrations?.stripe) {
       const stripeCustomer = await createStripeCustomerAndAddToUser(userObject);
       userObject.integrations.stripe = stripeCustomer;
-    };
+    }
     // create a customer checkout session
     const session = await createKarmaCardMembershipCheckoutSession({ user: userObject, uiMode });
 
@@ -748,8 +748,6 @@ export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
   }
 };
 
-
-
 // export const cancelKarmaMembership = async (user: IUserDocument, membershipType: KarmaMembershipTypeEnumValues) => {
 //   try {
 //     const existingMembership = user.karmaMemberships?.find(
@@ -773,7 +771,7 @@ export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
 export const createMembershipCheckoutSession = async (req: IRequest<{}, {}, ICheckoutSessionParams>) => {
   try {
     const user = req.requestor;
-    const checkoutSession = await createKarmaCardMembershipCheckoutSession({ 
+    const checkoutSession = await createKarmaCardMembershipCheckoutSession({
       user,
       productPrice: req.body.productPrice,
     });
@@ -781,4 +779,4 @@ export const createMembershipCheckoutSession = async (req: IRequest<{}, {}, IChe
   } catch (err) {
     throw asCustomError(err);
   }
-}
+};

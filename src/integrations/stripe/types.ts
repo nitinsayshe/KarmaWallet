@@ -18,3 +18,15 @@ export interface ICheckoutSessionInfo {
   url: string;
   client_secret: string;
 }
+
+enum IPriceType {
+  one_time = 'one_time',
+  recurring = 'recurring',
+}
+
+export interface IListPricesParams {
+  active?: boolean;
+  numberToList?: number;
+  product?: string;
+  type?: IPriceType;
+}

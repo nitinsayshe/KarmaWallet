@@ -31,7 +31,6 @@ import {
   ReasonCode,
   IApplicationDecision,
 } from './utils';
-import { createKarmaCardMembershipCustomerSession } from '../../integrations/stripe/checkout';
 import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
 import { ICreateAccountRequest } from '../visitor';
 import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
@@ -40,6 +39,9 @@ import { StandardKarmaWalletSubscriptionId } from '../productSubscription';
 import { IMarqetaKycState, IMarqetaUserIntegrations, IMarqetaUserStatus, IMarqetaCreateUser, IMarqetaKycResult } from '../../integrations/marqeta/user/types';
 import { IKarmaCardApplicationDocument, IShareableCardApplication, IKarmaCardApplication, ApplicationStatus } from '../../models/karmaCardApplication/types';
 import { VisitorActionEnum } from '../../models/visitor/types';
+import { createCheckoutSession } from '../../integrations/stripe/checkout';
+import { MembershipPromoModel } from '../../models/membershipPromo';
+import { ICheckoutSessionParams } from '../../integrations/stripe/types';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -195,6 +197,49 @@ const storeKarmaCardApplication = async (cardApplicationData: IKarmaCardApplicat
   });
 };
 
+export const createKarmaCardMembershipCheckoutSession = async (params: ICheckoutSessionParams): Promise<Stripe.Checkout.Session> => {
+  const { user, productPrice, uiMode } = params;
+
+  if (!user) throw new Error('User not found');
+  let promoCode = '';
+
+  const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
+  if (membershipPromoCode) {
+    const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode });
+    if (!membershipPromoDocument) console.log('///// no promo code found for this value');
+    else promoCode = membershipPromoDocument.integrations.stripe.id;
+  }
+
+  const stripeCustomerID = user?.integrations?.stripe?.id;
+  if (!stripeCustomerID) throw new Error('Stripe customer ID not found');
+  // check the uyser for promo codes and find the id fopr the promo code in our promo collection
+  // add it to the checkout session if there is a matching one
+  //
+  const stripeData: Stripe.Checkout.SessionCreateParams = {
+    ui_mode: uiMode || 'hosted',
+    line_items: [
+      {
+        // defaults to the Standard Karma Card Membership price
+        price: productPrice || 'price_1PRIbXIhaX1nT8IVbJwQvkTf',
+        quantity: 1,
+      },
+    ],
+    customer: stripeCustomerID,
+    client_reference_id: user._id.toString(),
+    mode: 'subscription',
+    // do we want to add a cancel_url?
+  };
+
+  if (!!promoCode) stripeData.discounts = [{ promotion_code: promoCode }];
+  if (uiMode === 'hosted') {
+    stripeData.success_url = 'https://karmawallet.io/karma-card/membership?success=true';
+  } else {
+    stripeData.redirect_on_completion = 'never';
+  }
+  const newSession = await createCheckoutSession(stripeData);
+  return newSession;
+};
+
 export const _getKarmaCardApplications = async (query: FilterQuery<IKarmaCardApplication>) => KarmaCardApplicationModel.find(query).sort({ lastModified: -1 });
 
 export const getKarmaCardApplications = async () => _getKarmaCardApplications({});
@@ -205,9 +250,9 @@ export const performMembershipPaymentUpdatesAndCreateLink = async (userObject: I
     if (!userObject?.integrations?.stripe) {
       const stripeCustomer = await createStripeCustomerAndAddToUser(userObject);
       userObject.integrations.stripe = stripeCustomer;
-    }
+    };
     // create a customer checkout session
-    const session = await createKarmaCardMembershipCustomerSession({ user: userObject, uiMode });
+    const session = await createKarmaCardMembershipCheckoutSession({ user: userObject, uiMode });
 
     return {
       url: session.url,
@@ -407,7 +452,7 @@ export const getApplicationData = async (email: string): Promise<IApplicationDec
     if (!!user) {
       // return the embedded url or client secret
       if (user?.karmaMembership && user.karmaMembership.status === KarmaMembershipStatusEnum.unpaid) {
-        const paymentData = await createKarmaCardMembershipCustomerSession({ user, uiMode: 'embedded' });
+        const paymentData = await createKarmaCardMembershipCheckoutSession({ user, uiMode: 'embedded' });
         applicationData.paymentData = {
           url: paymentData.url,
           client_secret: paymentData.client_secret,
@@ -701,6 +746,8 @@ export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
   }
 };
 
+
+
 // export const cancelKarmaMembership = async (user: IUserDocument, membershipType: KarmaMembershipTypeEnumValues) => {
 //   try {
 //     const existingMembership = user.karmaMemberships?.find(
@@ -720,3 +767,16 @@ export const deleteKarmaCardLegalText = async (req: IRequest<IUpdateLegalTextReq
 //     throw new CustomError('Error cancelling karma membership', ErrorTypes.SERVER);
 //   }
 // };
+
+export const createMembershipCheckoutSession = async (req: IRequest<{}, {}, ICheckoutSessionParams>) => {
+  try {
+    const user = req.requestor;
+    const checkoutSession = await createKarmaCardMembershipCheckoutSession({ 
+      user,
+      productPrice: req.body.productPrice,
+    });
+    return checkoutSession;
+  } catch (err) {
+    throw asCustomError(err);
+  }
+}

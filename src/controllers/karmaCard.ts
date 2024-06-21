@@ -6,6 +6,11 @@ import * as KarmaCardService from '../services/karmaCard';
 import { getShareableMarqetaUser } from '../services/karmaCard/utils';
 import { ErrorTypes } from '../lib/constants';
 import { getShareableFieldErrors } from '../lib/validation';
+import { ICheckoutSessionParams } from '../integrations/stripe/types';
+import Stripe from 'stripe';
+import { createCheckoutSession } from '../integrations/stripe/checkout';
+import { MembershipPromoModel } from '../models/membershipPromo';
+import { IUrlParam } from '../models/user/types';
 
 export const applyForKarmaCard: IRequestHandler<{}, {}, KarmaCardService.IKarmaCardRequestBody> = async (req, res) => {
   try {
@@ -59,6 +64,16 @@ export const getKarmaCardLegalText: IRequestHandler<{}, {}, {}> = async (req, re
     error(req, res, asCustomError(err));
   }
 };
+
+export const createMembershipCheckoutSession: IRequestHandler<{}, {}, ICheckoutSessionParams> = async (req, res) => {
+  try {
+    const checkoutSession = await KarmaCardService.createMembershipCheckoutSession(req);
+    api(req, res, checkoutSession);
+  } catch (err) {
+    error(req, res, asCustomError(err));
+  }
+}
+
 
 // export const addKarmaMembershipToUser: IRequestHandler<{}, {}, KarmaCardService.AddKarmaMembershipToUserRequest> = async (req, res) => {
 //   try {
@@ -132,3 +147,4 @@ export const getKarmaCardLegalText: IRequestHandler<{}, {}, {}> = async (req, re
 //     error(req, res, asCustomError(err));
 //   }
 // };
+

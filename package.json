@@ -15,7 +15,7 @@
     "dockerTest": "docker-compose -f docker-compose.test.yml down; docker-compose -f docker-compose.test.yml up --build --exit-code-from karmawallet-backend-ts-test; docker-compose -f docker-compose.test.yml rm -fsv",
     "postbuild": "npm run copy",
     "postinstall": "npm run build",
-    "start": "cross-env-shell NODE_ENV=development 'tsc -w --sourcemap & nodemon dist/index.js & npm run copy'",
+    "start": "cross-env-shell NODE_ENV=development 'tsc & nodemon dist/index.js & npm run copy'",
     "start:frontend": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/frontend.js & npm run copy'",
     "start:prod": "cross-env-shell NODE_ENV=production 'npm run build & node dist/index.js'",
     "start:prod:frontend": "cross-env-shell NODE_ENV=production 'npm run build & node dist/frontend.js'",

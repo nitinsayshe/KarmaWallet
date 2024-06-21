@@ -203,7 +203,9 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
   if (!user) throw new Error('User not found');
   let promoCode = '';
 
+  console.log('///// tyope')
   const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
+  console.log('////// this is the membershupPromoCode', membershipPromoCode)
   if (membershipPromoCode) {
     const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode });
     if (!membershipPromoDocument) console.log('///// no promo code found for this value');

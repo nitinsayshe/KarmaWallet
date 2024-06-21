@@ -3,6 +3,7 @@ import { deleteProductSubscriptionFromStripeProduct, updateOrCreateProductSubscr
 import { addStripeIntegrationToUser, updateStripeIntegrationForUser } from './customer';
 import { createInvoiceFromStripeInvoice, handleStripeInvoicePaid, updateInvoiceFromStripeInvoice } from './invoice';
 import { createUserProductSubscriptionFromStripeSubscription, updateUserProductSubscriptionFromStripeSubscription } from './subscription';
+import { updateOrCreateProductSubscriptionPriceFromStripePrice } from '../../services/productSubscriptionPrice';
 
 export const handleCheckoutEvent = async (event: Stripe.Event) => {
   const { type } = event;
@@ -103,6 +104,26 @@ export const handleProductEvent = async (event: Stripe.Event) => {
   }
 };
 
+export const handlePriceEvent = async (event: Stripe.Event) => {
+  const { type } = event;
+
+  switch (type) {
+    case 'price.created':
+      updateOrCreateProductSubscriptionPriceFromStripePrice(event.data.object);
+      // cannot figure out how to programatically link a payment_link to a product
+      break;
+    case 'price.updated':
+      updateOrCreateProductSubscriptionPriceFromStripePrice(event.data.object);
+      // update the subscription in our database
+      break;
+    case 'price.deleted':
+      // delete the subscription in our database?
+      break;
+    default:
+      break;
+  }
+}
+
 export const handleSubscriptionEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
@@ -133,6 +154,7 @@ export const processStripeWebhookEvent = async (event: Stripe.Event) => {
   if (type.includes('payment_intent')) handlePaymentIntentEvent(event);
   if (type.includes('product')) handleProductEvent(event);
   if (type.includes('customer.subscription')) handleSubscriptionEvent(event);
+  if (type.includes('price')) handlePriceEvent(event);
 };
 
 // EVENTS SENT WHEN SUCCESSFULLY PAYING THE STRIPE PAYMENT LINK

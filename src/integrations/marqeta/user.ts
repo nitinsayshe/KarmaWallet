@@ -22,7 +22,7 @@ import {
 } from './types';
 
 // Instantiate the MarqetaClient
-const marqetaClient = new MarqetaClient();
+const marqetaClient = new MarqetaClient(false);
 
 // Instantiate the User class
 const user = new User(marqetaClient);

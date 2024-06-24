@@ -365,6 +365,20 @@ export const getLocationsByMerchantId = async (req: GetLocationsByMerchantIdRequ
   }
 };
 
+export const getRewardsMerchantById = async (req: GetLocationsByMerchantIdRequest): Promise<Merchant> => {
+  try {
+    const client = new KardClient();
+    const _merchantId = req.id;
+    const res = await client.getRewardsMerchantById(_merchantId);
+    if (!res) {
+      throw new Error('Error getting Rewards Merchant By Id');
+    }
+    return res;
+  } catch (err) {
+    throw new Error(`Error getting Rewards for merchant with id: ${req.id}`);
+  }
+};
+
 export const getLocations = async (req: GetLocationsRequest = {}): Promise<KardMerchantLocations> => {
   try {
     const client = new KardClient();

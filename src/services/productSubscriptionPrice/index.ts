@@ -4,7 +4,6 @@ import { ProductSubscriptionPriceModel } from '../../models/productSubscriptionP
 import { asCustomError } from '../../lib/customError';
 
 export const updateOrCreateProductSubscriptionPriceFromStripePrice = async (price: Stripe.Price) => {
-  console.log('///// Update or Create Price');
   try {
     let productSubscriptionPrice = await ProductSubscriptionPriceModel.findOne({ 'integrations.stripe.id': price.id });
 
@@ -29,6 +28,14 @@ export const updateOrCreateProductSubscriptionPriceFromStripePrice = async (pric
       productSubscriptionPrice.integrations.stripe = price;
       productSubscriptionPrice.save();
     }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const deleteProductSubscriptionPrice = async (priceId: string) => {
+  try {
+    await ProductSubscriptionPriceModel.deleteOne({ 'integrations.stripe.id': priceId });
   } catch (err) {
     throw asCustomError(err);
   }

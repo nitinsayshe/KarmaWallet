@@ -35,6 +35,7 @@ export const NotificationTypeEnum = {
   CardShipped: 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
   ResumeKarmaCardApplication: 'resumeKarmaCardApplication',
+  PayMembershipReminder: 'payMembershipReminder',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
 
@@ -59,6 +60,7 @@ export const NotificationEffectsEnum = {
   SendCardShippedEmail: 'SendCardShippedEmail',
   SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
   SendResumeKarmaCardApplicationEmail: 'SendResumeKarmaCardApplicationEmail',
+  SendPayMembershipReminderEmail: 'SendPayMembershipReminderEmail',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 

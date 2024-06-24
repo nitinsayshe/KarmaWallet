@@ -219,3 +219,10 @@ export interface IChangeEmailAffirmationParams {
   replyToAddresses?: string[];
   senderEmail?: string;
 }
+
+export interface IPayMembershipReminderEmailData extends IBaseEmailParams {
+  link: string;
+  recipientEmail: string;
+  name: string;
+  user?: IUserDocument;
+}

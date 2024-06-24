@@ -35,6 +35,7 @@ export enum EmailTemplateKeys {
   ChangeEmailRequestVerification = 'changeEmailRequestVerification',
   ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
   ResumeKarmaCardApplication = 'resumeKarmaCardApplication',
+  PayMembershipReminder = 'payMembershipReminder',
 }
 
 export enum EmailTemplateTypes {
@@ -203,6 +204,10 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   },
   ResumeKarmaCardApplication: {
     name: EmailTemplateKeys.ResumeKarmaCardApplication,
+    type: EmailTemplateTypes.Support,
+  },
+  PayMembershipReminder: {
+    name: EmailTemplateKeys.PayMembershipReminder,
     type: EmailTemplateTypes.Support,
   },
 };

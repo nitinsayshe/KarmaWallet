@@ -59,6 +59,7 @@ export class _MainBullClient extends _BullClient {
     // At 03:00 AM, on day 5 of the month, only in January, April, July, and October
     this.createJob(JobNames.GenerateCommissionPayouts, null, { jobId: `${JobNames.GenerateCommissionPayouts}-quarterly`, repeat: { cron: '0 0 3 5 1,4,7,10 *' } });
     this.createJob(JobNames.UpdateWildfireCommissions, null, { jobId: `${JobNames.UpdateWildfireCommissions}-daily`, repeat: { cron: '0 5 * * *' } });
+    this.createJob(JobNames.CheckUnpaidMemberships, null, { jobId: `${JobNames.CheckUnpaidMemberships}-daily`, repeat: { cron: '0 10 * * *' } });
     this.createJob(JobNames.GenerateKarmaCardStatements, null, { jobId: `${JobNames.GenerateKarmaCardStatements}-monthly`, repeat: { cron: '0 7 1 * *' } });
     this.createJob(JobNames.WordpressArticleSync, null, { jobId: `${JobNames.WordpressArticleSync}-daily`, repeat: { cron: '0 4 * * *' } });
     this.createJob(JobNames.UpdateExpiredApplications, null, { jobId: `${JobNames.UpdateExpiredApplications}-every-4-hours`, repeat: { cron: '0 */4 * * *' } });

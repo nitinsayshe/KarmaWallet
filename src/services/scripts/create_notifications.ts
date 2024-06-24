@@ -116,16 +116,21 @@ const template: { [key: string]: Partial<INotificationDocument> } = {
   //   channels: [NotificationChannelEnum.Email],
   //   effects: [NotificationEffectsEnum.SendKarmaCardDeclinedEmail],
   // },
-  [NotificationTypeEnum.KarmaCardPendingReview]: {
-    type: NotificationTypeEnum.KarmaCardPendingReview,
-    channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendKarmaCardPendingReviewEmail],
-  },
+  // [NotificationTypeEnum.KarmaCardPendingReview]: {
+  //   type: NotificationTypeEnum.KarmaCardPendingReview,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendKarmaCardPendingReviewEmail],
+  // },
 
-  [NotificationTypeEnum.KarmaCardDeclined]: {
-    type: NotificationTypeEnum.KarmaCardPendingReview,
+  // [NotificationTypeEnum.KarmaCardDeclined]: {
+  //   type: NotificationTypeEnum.KarmaCardPendingReview,
+  //   channels: [NotificationChannelEnum.Email],
+  //   effects: [NotificationEffectsEnum.SendKarmaCardDeclinedEmail],
+  // },
+  [NotificationTypeEnum.PayMembershipReminder]: {
+    type: NotificationTypeEnum.PayMembershipReminder,
     channels: [NotificationChannelEnum.Email],
-    effects: [NotificationEffectsEnum.SendKarmaCardDeclinedEmail],
+    effects: [NotificationEffectsEnum.SendPayMembershipReminderEmail],
   },
 };
 

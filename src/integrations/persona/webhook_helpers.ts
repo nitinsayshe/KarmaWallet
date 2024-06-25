@@ -19,7 +19,7 @@ import {
   IPersonaCaseData,
   PersonaCaseStatusEnumValues,
 } from './types';
-import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationData, continueKarmaCardApplication } from '../../services/karmaCard';
+import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationData, continueKarmaCardApplication, handleApprovedState } from '../../services/karmaCard';
 import { IUserNotificationDocument, UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
 import {
@@ -196,6 +196,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
   // if so, update the persona application status
   // run the user through the continue application flow
   try {
+    console.log('//// is the new code showing?!!!!!')
     const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
     const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
     const entity = await getUserOrVisitorFromAccountId(accountId);
@@ -217,7 +218,6 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     let existingApplicationData = await getUserApplicationStatus(email);
     const kycStatus = existingApplicationData?.marqeta?.kycResult?.status;
     const passedKyc = kycStatus === IMarqetaKycState.success && passedInternalKyc(entity?.integrations?.persona);
-    console.log('//// before emission of decision startorcontinue');
 
     if (passedKyc && !!application && application?.status === ApplicationStatus.SUCCESS) {
       console.log(`User with email: ${email} has already been approved for a card`);
@@ -240,7 +240,15 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     /*   console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId); */
     /*   existingApplicationData = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id); */
     /* } else  */
-    if (receivedFromDataCollection || isManualApproval) {
+
+    if (isManualApproval) {
+      const applicationData = await KarmaCardApplicationModel.findOne({ email });
+      await handleApprovedState(applicationData, entity, true);
+      // do not need to emit a decision
+      return;
+    }
+
+    if (receivedFromDataCollection) {
       console.log('going into startApplicationFromInquiry process for inquiry with id: ', inquiryId);
       existingApplicationData = await startApplicationFromInquiry(req);
     } else {
@@ -383,8 +391,7 @@ export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) =
   const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
   const user = await UserModel.findOne({ 'emails.email': email });
   const visitor = await VisitorModel.findOne({ email });
-
-  console.log('////// this is the template id', inquiryTemplateId, '//// status', inquiryStatus);
+  console.log('///// send pending email')
   const dataObj: IKarmaCardUpdateData = {
     name: '',
   };
@@ -446,6 +453,8 @@ export const sendDeclinedNotification = async (entity: IUserDocument | IVisitorD
     resubmitDocumentsLink: composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.KW5, entity.integrations.persona.accountId),
     applicationExpirationDate: application.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   };
+
+  console.log('///// send decline email')
 
   await createDeclinedKarmaWalletCardUserNotification(notificationData);
 };
@@ -528,7 +537,6 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       // check if a visitor or user exists for this inquiry
       // update the integration if so, otherwise create a new visitor with a persona integration
       await createVisitorOrUpdatePersonaIntegration(email, req);
-      await sendPendingEmail(email, req);
       break;
     case PersonaInquiryStatusEnum.Failed:
       console.log('Inquiry failed transitioned inquiry status');

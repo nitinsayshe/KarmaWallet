@@ -57,9 +57,9 @@ export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const user = await UserModel.findById(_id);
+    const user: any = await UserModel.findById(_id);
     if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find((e) => !!e.primary);
+    const { email } = user.emails.find((e: any) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendKarmaCardWelcomeEmail({

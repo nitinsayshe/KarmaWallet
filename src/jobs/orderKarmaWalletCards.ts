@@ -1,10 +1,13 @@
+import { MarqetaClient } from '../clients/marqeta/marqetaClient';
 import { createCard } from '../integrations/marqeta/card';
 import { createDepositAccount, listDepositAccountsForUser } from '../integrations/marqeta/depositAccount';
 import { MarqetaCardState } from '../integrations/marqeta/types';
+import { Card } from '../clients/marqeta/card';
 import { IUserDocument } from '../models/user';
 import { KarmaMembershipStatusEnum } from '../models/user/types';
 import { mapMarqetaCardtoCard } from '../services/card';
 import { karmaWalletCardBreakdown, updateActiveCampaignDataAndJoinGroupForApplicant } from '../services/karmaCard/utils';
+import { updateMarqetaCards } from '../services/scripts/marqetaDataSync';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -39,7 +42,9 @@ export const exec = async (user: IUserDocument) => {
     if (!!virtualCardResponse) {
       // virtual card should start out in active state
       virtualCardResponse.state = MarqetaCardState.ACTIVE;
+      // for some reason the virtual card is being created as UNACTIVATED when it should be ACTIVATED
       await mapMarqetaCardtoCard(user._id.toString(), virtualCardResponse); // map physical card
+
     } else {
       console.log(`[+] Card Creation Error: Error creating virtual card for user with id: ${user._id}`);
     }
@@ -61,9 +66,11 @@ export const exec = async (user: IUserDocument) => {
     }
   }
 
-  // Create new deposit account for active marqeta user, must have cards before can create a deposit account
-  if (karmaWalletDepositAccounts.data.length === 0) {
-    await createDepositAccount(user);
-    console.log('[+] Created a deposit account for userId', user._id);
-  }
+    // Create new deposit account for active marqeta user, must have cards before can create a deposit account
+    if (karmaWalletDepositAccounts.data.length === 0) {
+      setTimeout(async () => {
+        await createDepositAccount(user);
+        console.log('[+] Created a deposit account for userId', user._id);
+      }, 30000);
+    }
 };

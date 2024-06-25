@@ -42,6 +42,8 @@ import { VisitorActionEnum } from '../../models/visitor/types';
 import { createCheckoutSession } from '../../integrations/stripe/checkout';
 import { MembershipPromoModel } from '../../models/membershipPromo';
 import { ICheckoutSessionParams } from '../../integrations/stripe/types';
+import { handleSendKarmaCardManualApproveEmailEffect, handleSendPayMembershipReminderEmailEffect } from '../notification/effects';
+import { link } from 'pdfkit';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -203,11 +205,9 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
   if (!user) throw new Error('User not found');
   let promoCode = '';
 
-  console.log('///// tyodfsdfsdfsdfsfpe', user);
   const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
-  console.log('////// this is the membershupPromoCode', membershipPromoCode);
   if (membershipPromoCode) {
-    const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode.value });
+    const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode.value.toUpperCase() });
     if (!membershipPromoDocument) console.log('///// no promo code found for this value');
     else promoCode = membershipPromoDocument.integrations.stripe.id;
   }
@@ -281,11 +281,14 @@ export const updateVisitorOrUserOnApproved = async (
 
   if (!!userObject) {
     // EXISTING USER
-    await updateUserUrlParams(userObject, urlParams);
+    if (urlParams) {
+      await updateUserUrlParams(userObject, urlParams);
+    }
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
   } else {
     // NEW USER
+    console.log('///// CREATE A NEW USER AND SEND THEM A PASSWORD RESET EMAIL!!!!')
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,
       password: generateRandomPasswordString(14),
@@ -339,10 +342,24 @@ export const updateKarmaCardApplicationFromApproved = async (
 export const handleApprovedState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
+  isManualApproval = false,
 ): Promise<IUserDocument> => {
   if (!entity) return;
   const userObject = await updateVisitorOrUserOnApproved(entity);
   await updateKarmaCardApplicationFromApproved(karmaCardApplication, userObject._id.toString());
+  
+  if (isManualApproval) {
+    await handleSendKarmaCardManualApproveEmailEffect({
+      user: userObject,
+      data: {
+        link: 'https://karmawallet.io/account',
+        name: userObject.integrations.marqeta.first_name,
+        email: userObject.emails.find((e) => !!e.primary).email,
+      }
+    });
+    // send an email to the user letting them know they were approved and they need to pay membership
+  }
+
   return userObject;
 };
 

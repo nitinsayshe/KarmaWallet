@@ -1080,3 +1080,23 @@ export const createPayMembershipReminderUserNotification = async (
     console.log(`Error creating pay membership user notification: ${err}`);
   }
 };
+
+export const createKarmaCardManualApproveNotification = async (
+  data: IPayMembershipReminderEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.KarmaCardManualApprove,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: data?.user?._id?.toString?.() || undefined,
+        data,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating pay membership user notification: ${err}`);
+  }
+}

@@ -7,7 +7,7 @@ import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { IUserDocument } from '../../../models/user';
 import { getDaysFromPreviousDate } from '../../../lib/date';
-import { transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
+import { transitionMarqetaUser, transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
 import { ACHFundingSourceModel } from '../../../models/achFundingSource';
 import { BankConnectionModel } from '../../../models/bankConnection';
 import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
@@ -17,7 +17,7 @@ import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication'
 import { IPersonaIntegration, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum } from '../../../integrations/persona/types';
 import { passedInternalKyc } from '../../../integrations/persona';
 import { ICheckoutSessionInfo } from '../../../integrations/stripe/types';
-import { IMarqetaUserIntegrations, IMarqetaKycState } from '../../../integrations/marqeta/user/types';
+import { IMarqetaUserIntegrations, IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/user/types';
 import { IUrlParam, KarmaMembershipStatusEnum } from '../../../models/user/types';
 import { executeOrderKarmaWalletCardsJob } from '../../card/utils';
 import { createKarmaCardWelcomeUserNotification } from '../../user_notification';
@@ -378,9 +378,17 @@ export const handleUserPaidMembership = async (user: IUserDocument) => {
   try {
     user.karmaMembership.status = KarmaMembershipStatusEnum.active;
     await user.save();
+    await transitionMarqetaUser({
+      userToken: user.integrations.marqeta.userToken,
+      channel: 'API',
+      reason: 'User Paid Membership',
+      reasonCode: '01',
+      status: IMarqetaUserStatus.ACTIVE,
+    });
+
     executeOrderKarmaWalletCardsJob(user);
     await createKarmaCardWelcomeUserNotification(user, false);
-    await updateActiveCampaignDataAndJoinGroupForApplicant(user);
+    await updateActiveCampaignDataAndJoinGroupForApplicant(user, user.integrations.referrals.params);
   } catch (error) {
     console.log('Error handling user paid membership', error);
   }

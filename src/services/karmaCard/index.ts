@@ -675,8 +675,10 @@ export const applyForKarmaCard = async (
       _visitor = await VisitorService.updateCreateAccountVisitor(_visitor, newData);
     }
 
-    // set this marqeta user's status to suspended because they failed KYC
-    await updateMarqetaUserStatus(!!existingUser ? existingUser : _visitor, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
+    if (kycStatus === IMarqetaKycState.success) {
+      // only mark to suspended if they had been approved in Marqeta, otherwise they will already be in unverified state (cannot transtiion to suspended from unfverified)
+      await updateMarqetaUserStatus(!!existingUser ? existingUser : _visitor, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
+    }
     await storeKarmaCardApplication(karmaCardApplication);
     return applicationDecision;
   }

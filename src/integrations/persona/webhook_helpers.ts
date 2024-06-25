@@ -3,7 +3,7 @@ import { createOrUpdatePersonaIntegration, hasInquiriesOrCases, passedInternalKy
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { getUtcDate } from '../../lib/date';
 import { UserModel, IUserDocument } from '../../models/user';
-import { IVisitorDocument } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { VisitorActionEnum } from '../../models/visitor/types';
 import { getShareableMarqetaUser, ReasonCode, IApplicationDecision } from '../../services/karmaCard/utils';
 import { SocketClient } from '../../clients/socket';
@@ -40,7 +40,6 @@ import { unsubscribeContactFromLists } from '../activecampaign';
 import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/user/types';
 import { KarmaCardApplicationModel } from '../../models/karmaCardApplication';
 import { IKarmaCardApplicationDocument, ApplicationStatus } from '../../models/karmaCardApplication/types';
-import { VisitorModel } from '../../models/visitor';
 
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;
@@ -307,6 +306,8 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   const email = applicationData?.email;
   const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
 
+  console.log('///// should send continue application email', email, inquiryTemplateId, inquiryId, accountId);
+
   if (!email) {
     console.log('No email found in inquiry data');
     return;
@@ -527,6 +528,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       // check if a visitor or user exists for this inquiry
       // update the integration if so, otherwise create a new visitor with a persona integration
       await createVisitorOrUpdatePersonaIntegration(email, req);
+      await sendPendingEmail(email, req);
       break;
     case PersonaInquiryStatusEnum.Failed:
       console.log('Inquiry failed transitioned inquiry status');

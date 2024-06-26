@@ -346,23 +346,29 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
     const groupCode = urlParams.find((param) => param.key === 'groupCode')?.value;
 
     if (!!groupCode) {
-      const mockRequest = {
-        requestor: userObject,
-        authKey: '',
-        body: {
-          code: groupCode,
-          email: userObject?.emails?.find((e) => e.primary)?.email,
-          userId: userObject._id.toString(),
-          skipSubscribe: true,
-        },
-      } as any;
+      const existingGroup = await GroupModel.findOne({ code: groupCode });
 
-      const userGroup = await joinGroup(mockRequest);
-
-      if (!!userGroup) {
-        const group = await GroupModel.findById(userGroup.group);
-        subscribeData.groupName = group.name;
-        subscribeData.tags = [group.name];
+      if (existingGroup) {
+        const mockRequest = {
+          requestor: userObject,
+          authKey: '',
+          body: {
+            code: groupCode,
+            email: userObject?.emails?.find((e) => e.primary)?.email,
+            userId: userObject._id.toString(),
+            skipSubscribe: true,
+          },
+        } as any;
+  
+        const userGroup = await joinGroup(mockRequest);
+  
+        if (!!userGroup) {
+          const group = await GroupModel.findById(userGroup.group);
+          subscribeData.groupName = group.name;
+          subscribeData.tags = [group.name];
+        }
+      } else {
+        console.log('Group not found');
       }
     }
   }
@@ -388,7 +394,7 @@ export const handleUserPaidMembership = async (user: IUserDocument) => {
 
     executeOrderKarmaWalletCardsJob(user);
     await createKarmaCardWelcomeUserNotification(user, false);
-    await updateActiveCampaignDataAndJoinGroupForApplicant(user, user.integrations.referrals.params);
+    await updateActiveCampaignDataAndJoinGroupForApplicant(user, user?.integrations?.referrals?.params);
   } catch (error) {
     console.log('Error handling user paid membership', error);
   }

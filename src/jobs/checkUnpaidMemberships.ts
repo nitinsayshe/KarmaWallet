@@ -15,7 +15,9 @@ export const exec = async () => {
       },
     });
 
-    if (!users || !users.length) throw new CustomError('No visitors to nudge.', ErrorTypes.GEN);
+    if (!users || !users.length) {
+      console.log('No users to nudge for membership payment.');
+    }
 
     for (const user of users) {
       const userEmail = user.emails.find((email: any) => email.primary)?.email;
@@ -26,9 +28,9 @@ export const exec = async () => {
         user,
       });
       if (!!reminderEmail) emailsSent += 1;
-      console.log(`[+] Nudge email sent to visitor ${user._id}`);
+      console.log(`[+] Pay Membership nudge email sent to visitor ${user._id}`);
     }
-    console.log(`[+] Nudge emails sent to ${emailsSent} visitors}`);
+    console.log(`[+] Pay Membership nudge emails sent to ${emailsSent} visitors}`);
   } catch (err) {
     console.log('Error nudging visitors to finish account creation', err);
     throw err;

@@ -1103,13 +1103,11 @@ export const sendPayMembershipReminderEmail = async ({
   link,
   name,
 }: IPayMembershipReminderEmailData) => {
-  console.log('//// this is the email!!', recipientEmail)
   const emailTemplateConfig = EmailTemplateConfigs.PayMembershipReminder;
   const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail', 'name'], { link, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link, name } });
   const subject = 'Redeem Your Karma Wallet Membership';
-  console.log('///// this is the link', link);
   const jobData: IEmailJobData = {
     template,
     subject,
@@ -1120,7 +1118,6 @@ export const sendPayMembershipReminderEmail = async ({
     link,
     user: user._id,
   };
-
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -1133,13 +1130,11 @@ export const sendKarmaCardManualApproveEmail = async ({
   link,
   name,
 }: IPayMembershipReminderEmailData) => {
-  console.log('//// this is the email!!', recipientEmail)
   const emailTemplateConfig = EmailTemplateConfigs.KarmaCardManualApprove;
   const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail', 'name'], { link, recipientEmail, name });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link, name } });
   const subject = 'Your Karma Wallet Card Application Has Been Approved';
-  console.log('///// this is the link', link);
   const jobData: IEmailJobData = {
     template,
     subject,
@@ -1150,7 +1145,6 @@ export const sendKarmaCardManualApproveEmail = async ({
     link,
     user: user._id,
   };
-
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

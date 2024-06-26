@@ -18,6 +18,7 @@ import {
   PersonaInquiryStatusEnumValues,
   IPersonaCaseData,
   PersonaCaseStatusEnumValues,
+  IPersonaInquiryData,
 } from './types';
 import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationData, continueKarmaCardApplication, handleApprovedState } from '../../services/karmaCard';
 import { IUserNotificationDocument, UserNotificationModel } from '../../models/user_notification';
@@ -196,14 +197,12 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
   // if so, update the persona application status
   // run the user through the continue application flow
   try {
-    console.log('//// is the new code showing?!!!!!')
     const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
     const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
+    console.log('///// this is the accountId', accountId)
     const entity = await getUserOrVisitorFromAccountId(accountId);
     const email = getEmailFromUserOrVisitor(entity) || applicationData?.email;
-    if (!email) {
-      throw new Error('No email found');
-    }
+    if (!email) throw new Error('No email found');
     const application = await KarmaCardApplicationModel.findOne({ email });
 
     if (!!application?.expirationDate && application?.expirationDate < getUtcDate().toDate()) {
@@ -235,13 +234,16 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
 
     const isManualApproval = inquiryStatus === PersonaInquiryStatusEnum.Approved;
     const receivedFromDataCollection = inquiryTemplateId === PersonaInquiryTemplateIdEnum.DataCollection;
-    /* if (hasSavedApplicationAndKycResult(application, existingApplicationData) && (isManualApproval || receivedFromGovIdAndSelfieOrDocs)) { */
-    /*   // if this request is coming from this template, it could have failed db verification, but passed with new document data */
-    /*   console.log('going into continueKarmaCardApplication process for inquiry with id: ', inquiryId); */
-    /*   existingApplicationData = await continueKarmaCardApplication(email, req.data.attributes.payload.data.id); */
-    /* } else  */
 
     if (isManualApproval) {
+      const inquiryData: IPersonaInquiryData = {
+        id: inquiryId,
+        status: PersonaInquiryStatusEnum.Approved,
+        createdAt: req?.data?.attributes?.payload?.data?.attributes?.createdAt,
+        templateId: inquiryTemplateId,
+      };
+  
+      await createOrUpdatePersonaIntegration(entity, accountId, inquiryData);
       const applicationData = await KarmaCardApplicationModel.findOne({ email });
       await handleApprovedState(applicationData, entity, true);
       // do not need to emit a decision
@@ -256,10 +258,11 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     }
 
     if (!existingApplicationData) {
+      console.log('////  no application data was found')
       throw new Error('No result found');
     }
 
-    console.log('////// return to the webhook', existingApplicationData);
+    console.log('//// should emit to the frontend', email, inquiryId, existingApplicationData);
 
     emitDecisionToSocket(email, inquiryId, existingApplicationData);
   } catch (e) {
@@ -314,8 +317,6 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   const email = applicationData?.email;
   const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
 
-  console.log('///// should send continue application email', email, inquiryTemplateId, inquiryId, accountId);
-
   if (!email) {
     console.log('No email found in inquiry data');
     return;
@@ -326,7 +327,6 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
     return;
   }
 
-  console.log(`received inquiryId: ${inquiryId} from template: ${inquiryTemplateId})`);
   if (inquiryTemplateId !== PersonaInquiryTemplateIdEnum.DataCollection) {
     console.log('No action taken for inquiry with id: ', inquiryId);
     return;
@@ -386,28 +386,28 @@ export const sendContinueApplicationEmail = async (req: PersonaWebhookBody) => {
   });
 };
 
-export const sendPendingEmail = async (email: string, req: PersonaWebhookBody) => {
+export const sendPendingEmail = async (req: PersonaWebhookBody) => {
   const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
   const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
-  const user = await UserModel.findOne({ 'emails.email': email });
-  const visitor = await VisitorModel.findOne({ email });
-  console.log('///// send pending email')
-  const dataObj: IKarmaCardUpdateData = {
-    name: '',
-  };
+  const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
+  const user = await UserModel.findOne({ 'integrations.persona.accountId':  accountId }); 
+  const visitor = await VisitorModel.findOne({ 'integrations.persona.accountId':  accountId });
+  const dataObj: IKarmaCardUpdateData = { name: '' };
 
-  if (user) {
+  if (!!user) {
     dataObj.name = user.name;
     dataObj.user = user;
-  } else if (visitor) {
+  } else if (!!visitor) {
     dataObj.name = visitor.integrations?.marqeta?.first_name;
     dataObj.visitor = visitor;
   } else {
-    throw new Error('No user or visitor found, not sending pending documents email.');
+    console.log('No user or visitor found, not sending pending documents email.');
   }
 
-  if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.KW5 && (inquiryStatus === PersonaInquiryStatusEnum.Failed || inquiryStatus === PersonaInquiryStatusEnum.Completed)) {
+  if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.KW5
+  && (inquiryStatus === PersonaInquiryStatusEnum.Failed || inquiryStatus === PersonaInquiryStatusEnum.Completed)) {
     await createPendingReviewKarmaWalletCardUserNotification(dataObj);
+    console.log('///// should send the pending review email')
   }
 };
 
@@ -524,13 +524,13 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       console.log('Inquiry completed transitioned inquiry status');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
-      await sendPendingEmail(email, req);
+      await sendPendingEmail(req);
       break;
     case PersonaInquiryStatusEnum.Approved:
       console.log('Inquiry approved transitioned inquiry status');
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
-      await sendPendingEmail(email, req);
+      await sendPendingEmail(req);
       break;
     case PersonaInquiryStatusEnum.Pending:
       console.log('Inquiry pending transitioned inquiry status');
@@ -543,7 +543,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
       console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendContinueApplicationEmail(req);
-      await sendPendingEmail(email, req);
+      await sendPendingEmail(req);
       break;
     default:
       console.log(`Inquiry status not handled: ${inquiryStatus}`);
@@ -556,6 +556,9 @@ export const handlePersonaWebhookByEventName = async (req: PersonaWebhookBody) =
     case EventNamesEnum.inquiryApproved:
       await handleInquiryTransitionedWebhook(req);
       break;
+    // case EventNamesEnum.inquiryCompleted:
+    //   await handleInquiryTransitionedWebhook(req);
+    //   break;
     case EventNamesEnum.inquiryTransitioned:
       console.log('inquiry.transitioned event');
       await handleInquiryTransitionedWebhook(req);

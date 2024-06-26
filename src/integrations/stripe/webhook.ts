@@ -18,7 +18,6 @@ export const handleCheckoutEvent = async (event: Stripe.Event) => {
     default:
       break;
   }
-  console.log('///// event', event);
 };
 
 export const handleCustomerEvent = async (event: Stripe.Event) => {

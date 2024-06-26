@@ -472,7 +472,7 @@ export const NotificationEffectsFunctions: {
   SendACHReturnedEmail: handleSendACHReturnedEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
-  SendKarmaKardPendingReviewEmail: handleKarmaCardPendingReviewEmailEffect,
+  SendKarmaCardPendingReviewEmail: handleKarmaCardPendingReviewEmailEffect,
   SendKarmaCardDeclinedEmail: handleKarmaCardDeclinedEmailEffect,
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,

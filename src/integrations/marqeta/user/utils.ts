@@ -199,6 +199,9 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     visitor.integrations.marqeta.status = currentMarqetaUserData.status;
     await visitor.save();
     await setClosedMarqetaAccountState(visitor, currentMarqetaUserData);
-    await updatedVisitorFromMarqetaWebhook(visitor, currentMarqetaUserData);
+
+    if (visitor.integrations.marqeta.status !== currentMarqetaUserData?.status) {
+      await updatedVisitorFromMarqetaWebhook(visitor, currentMarqetaUserData);
+    }
   }
 };

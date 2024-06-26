@@ -52,7 +52,7 @@ export const NotificationEffectsEnum = {
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
   SendKarmaCardDeclinedEmail: 'SendKarmaCardDeclinedEmail',
-  SendKarmaCardPendingReviewEmail: 'SendKarmaKardPendingReviewEmail',
+  SendKarmaCardPendingReviewEmail: 'SendKarmaCardPendingReviewEmail',
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: 'SendCaseLostProvisionalCreditAlreadyIssuedEmail',
   SendProvisionalCreditIssuedEmail: 'SendProvisionalCreditIssuedEmail',
   SendBankLinkedConfirmationEmail: 'SendBankLinkedConfirmationEmail',

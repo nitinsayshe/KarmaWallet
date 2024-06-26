@@ -44,6 +44,8 @@ import { MembershipPromoModel } from '../../models/membershipPromo';
 import { ICheckoutSessionParams } from '../../integrations/stripe/types';
 import { handleSendKarmaCardManualApproveEmailEffect, handleSendPayMembershipReminderEmailEffect } from '../notification/effects';
 import { link } from 'pdfkit';
+import { NotificationTypeEnum } from '../../lib/constants/notification';
+import { UserNotificationModel } from '../../models/user_notification';
 
 export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
 
@@ -339,6 +341,24 @@ export const updateKarmaCardApplicationFromApproved = async (
   await storeKarmaCardApplication(karmaCardApplication);
 };
 
+export const sendManualApproveEmail = async (user: IUserDocument) => {
+  const existingEmail = await UserNotificationModel.findOne({ 
+    userId: user._id,
+    type: NotificationTypeEnum.KarmaCardManualApprove
+  });
+
+  if (existingEmail) return;
+  
+  await handleSendKarmaCardManualApproveEmailEffect({
+    user: user,
+    data: {
+      link: 'https://karmawallet.io/account',
+      name: user.integrations.marqeta.first_name,
+      email: user.emails.find((e) => !!e.primary).email,
+    }
+  });
+}
+
 export const handleApprovedState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
@@ -349,14 +369,11 @@ export const handleApprovedState = async (
   await updateKarmaCardApplicationFromApproved(karmaCardApplication, userObject._id.toString());
   
   if (isManualApproval) {
-    await handleSendKarmaCardManualApproveEmailEffect({
-      user: userObject,
-      data: {
-        link: 'https://karmawallet.io/account',
-        name: userObject.integrations.marqeta.first_name,
-        email: userObject.emails.find((e) => !!e.primary).email,
-      }
-    });
+    if (!userObject?.integrations?.stripe) {
+      const stripeCustomer = await createStripeCustomerAndAddToUser(userObject);
+      userObject.integrations.stripe = stripeCustomer;
+    }
+    await sendManualApproveEmail(userObject);
     // send an email to the user letting them know they were approved and they need to pay membership
   }
 

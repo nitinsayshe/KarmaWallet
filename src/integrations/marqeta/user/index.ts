@@ -101,8 +101,14 @@ export const updateMarqetaUserStatus = async (
     if (!entity?.integrations?.marqeta?.userToken) {
       throw new Error('User does not have a Marqeta user token');
     }
-    if (entity.integrations.marqeta.status === status) {
-      throw new Error('User is already in the requested status');
+
+    const marqetaClient = new MarqetaClient();
+    const userClient = new User(marqetaClient);
+    const userInMarqeta = await userClient.getMarqetaUser(entity.integrations.marqeta.userToken);
+
+    if (status === userInMarqeta.status) {
+      console.log(`User is already in status ${status}`);
+      return;
     }
 
     const mockRequest = {
@@ -117,7 +123,7 @@ export const updateMarqetaUserStatus = async (
     } as IRequest<{ userToken: string }, {}, IMarqetaUserTransition>;
     await userMarqetaTransition(mockRequest);
   } catch (error) {
-    console.log('Error updating user status to suspended', error);
+    console.log(`[X] Error updating user status to ${status}`, error);
   }
 };
 

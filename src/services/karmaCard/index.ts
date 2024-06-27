@@ -209,7 +209,11 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
 
   const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
   if (membershipPromoCode) {
-    const membershipPromoDocument = await MembershipPromoModel.findOne({ code: membershipPromoCode.value.toUpperCase() });
+    const membershipPromoDocument = await MembershipPromoModel.findOne({ 
+      code: membershipPromoCode.value.toUpperCase(),
+      status: 'active'
+    });
+    
     if (!membershipPromoDocument) console.log('///// no promo code found for this value');
     else promoCode = membershipPromoDocument.integrations.stripe.id;
   }

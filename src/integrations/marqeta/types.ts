@@ -1,6 +1,10 @@
 import { ObjectId } from 'mongoose';
 import { Transaction } from 'plaid';
-import { ChargebackResponseChannelEnumValues, ChargebackResponseStateEnumValues, TransactionModel } from '../../clients/marqeta/types';
+import {
+  ChargebackResponseChannelEnumValues,
+  ChargebackResponseStateEnumValues,
+  TransactionModel,
+} from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
 import { IMarqetaUserTransitionsEvent } from './user/types';
 
@@ -79,6 +83,19 @@ export interface IMarqetaACHBankTransferTransition {
 export enum ControlTokenType {
   set_pin = 'SET_PIN',
   reveal_pin = 'REVEAL_PIN',
+}
+
+export interface IVGSToken {
+  pan?: string;
+  cvvNumber?: string;
+  cvv_number?: string;
+  expiration?: string;
+}
+
+export interface IShareableTokenizedCard {
+  pan: string;
+  cvvNumber: string;
+  expiration: string;
 }
 
 export enum CardholderVerificationMethod {
@@ -357,13 +374,15 @@ export const DirectDepositStateEnum = {
   Reversed: 'REVERSED',
   Rejected: 'REJECTED',
 } as const;
-export type DirectDepositStateEnumValues = (typeof DirectDepositStateEnum)[keyof typeof DirectDepositStateEnum];
+export type DirectDepositStateEnumValues =
+  (typeof DirectDepositStateEnum)[keyof typeof DirectDepositStateEnum];
 
 export const DirectDepositTypeEnum = {
   Credit: 'CREDIT',
   Debit: 'DEBIT',
 } as const;
-export type DirectDepositTypeEnumValues = (typeof DirectDepositTypeEnum)[keyof typeof DirectDepositTypeEnum];
+export type DirectDepositTypeEnumValues =
+  (typeof DirectDepositTypeEnum)[keyof typeof DirectDepositTypeEnum];
 
 export type DirectDepositModel = {
   token: string;
@@ -428,7 +447,8 @@ export const WebhookEventTypeEnum = {
   BusinessTransition: 'businesstransition',
   Transaction: 'transaction',
 } as const;
-export type WebhookEventTypeEnumValues = (typeof WebhookEventTypeEnum)[keyof typeof WebhookEventTypeEnum];
+export type WebhookEventTypeEnumValues =
+  (typeof WebhookEventTypeEnum)[keyof typeof WebhookEventTypeEnum];
 
 export type ChargebackTransition = {
   token: string;
@@ -501,7 +521,8 @@ export const NACHAACHReturnCodesEnum = {
   R38: 'Stop Payment on Source Document',
   R39: 'Improper Source Document',
 } as const;
-export type NACHAACHReturnCodeEnumValues = (typeof NACHAACHReturnCodesEnum)[keyof typeof NACHAACHReturnCodesEnum];
+export type NACHAACHReturnCodeEnumValues =
+  (typeof NACHAACHReturnCodesEnum)[keyof typeof NACHAACHReturnCodesEnum];
 
 export interface IMarqetaBankTransferTransitionEvent {
   token: string;
@@ -568,7 +589,7 @@ export enum IMarqetaDepositAccountChannel {
   ADMIN = 'ADMIN',
   IVR = 'IVR',
   FRAUD = 'FRAUD',
-  SYSTEM = 'SYSTEM'
+  SYSTEM = 'SYSTEM',
 }
 
 export interface IMarqetaDepositAccountTransition {
@@ -626,7 +647,7 @@ export interface IGPABalanceResponse {
 export enum IDeviceType {
   MOBILE_PHONE = 'MOBILE_PHONE',
   WATCH = 'WATCH',
-  TABLET = 'TABLET'
+  TABLET = 'TABLET',
 }
 
 export interface IAppleWalletProvision {
@@ -662,15 +683,15 @@ enum IDigitalWalletTransitionChannel {
   IVR = 'IVR',
   FRAUD = 'FRAUD',
   ADMIN = 'ADMIN',
-  SYSTEM = 'SYSTEM'
+  SYSTEM = 'SYSTEM',
 }
 
 export interface IDigitalWalletTokenTransition {
-  channel?:IDigitalWalletTransitionChannel;
+  channel?: IDigitalWalletTransitionChannel;
   digitalWalletToken: {
     token: string;
     cardToken?: string;
-  },
+  };
   state: string;
   reason?: string;
   reasonCode?: string;

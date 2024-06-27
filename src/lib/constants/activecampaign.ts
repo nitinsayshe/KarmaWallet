@@ -8,6 +8,7 @@ export enum ActiveCampaignSyncTypes {
   DAILY = 'daily',
   GROUP = 'group',
   INITIAL = 'initial',
+  LOCATION_DATA_BACKFILL = 'locationDataBackfill',
   KARMA_CARD_MEMBERSHIP_TYPE = 'karmaCardMembershipType',
   LINKED_ACCOUNTS= 'linkedAccounts',
   MONTHLY = 'monthly',

@@ -192,19 +192,6 @@ export const register = async ({ password, name, token, promo, zipcode, visitorI
   const newUser = await UserModel.create(newUserData);
   if (!newUser) throw new CustomError('Error creating user', ErrorTypes.SERVER);
 
-  // sync marketing source with active campaign
-  let source = null;
-  if (integrations?.shareasale) {
-    source = 'sharesale';
-  } else if (integrations?.referrals?.params) {
-    const params = _validUrlParams.find((p) => p.key === 'utm_source');
-    if (!!params) {
-      source = params.value;
-    }
-  }
-
-  await updateCustomFields(emails.find((e) => e.primary).email, [{ field: ActiveCampaignCustomFields.source, update: source }]);
-
   try {
     let authKey = '';
     authKey = await Session.createSession(newUser._id.toString());

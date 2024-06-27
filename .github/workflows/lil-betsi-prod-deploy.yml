@@ -110,5 +110,7 @@ jobs:
     - run: echo 'PERSONA_WEBHOOK_KEY=${{secrets.PERSONA_PRODUCTION_WEBHOOK_KEY}}' >> .env
     - run: echo 'PERSONA_ENVIRONMENT_ID=env_ZmnA9H4U4Uq3iw7w9FeesRMwv5x7' >> .env
     - run: echo 'STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY}}' >> .env
+    - run: echo 'STRIPE_WEBHOOK_ID=${{secrets.PRODUCTION_STRIPE_WEBHOOK_ID}}' >> .env
+    - run: echo 'STRIPE_WEBHOOK_SECRET=${{secrets.PRODUCTION_STRIPE_WEBHOOK_SECRET}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env

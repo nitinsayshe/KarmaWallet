@@ -16,4 +16,12 @@ export class Subscription {
       throw asCustomError(e);
     }
   }
+
+  async getSubscriptionById(subscriptionId: string) {
+    try {
+      return this._stripeClient._client.subscriptions.retrieve(subscriptionId);
+    } catch (e) {
+      throw asCustomError(e);
+    }
+  }
 }

@@ -57,6 +57,7 @@ export const updateInvoiceFromStripeInvoice = async (data: Stripe.Invoice) => {
   const userProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.subscription });
   if (userProductSubscription) {
     userProductSubscription.latestInvoice = invoice._id;
+    await userProductSubscription.save();
   }
   return invoice;
 };

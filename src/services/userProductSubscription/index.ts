@@ -22,7 +22,6 @@ export const createUserProductSubscription = async (data: IUserProductSubscripti
   };
 
   if (data.integrations.stripe) {
-    console.log('//// set the expiration date', dayjs(data.integrations.stripe.current_period_end * 1000).utc().toDate());
     userProductSubscriptionData.expirationDate = dayjs(data.integrations.stripe.current_period_end * 1000).utc().toDate();
     userProductSubscriptionData.nextBillingDate = dayjs(data.integrations.stripe.current_period_end * 1000).utc().toDate();
     userProductSubscriptionData.lastBilledDate = dayjs(data.integrations.stripe.current_period_start * 1000).utc().toDate();

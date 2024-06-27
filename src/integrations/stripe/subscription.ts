@@ -7,6 +7,8 @@ import { UserProductSubscriptionModel } from '../../models/userProductSubscripti
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { UserProductSubscriptionStatus } from '../../models/userProductSubscription/types';
 import { InvoiceModel } from '../../models/invoice';
+import { StripeClient } from '../../clients/stripe/stripeClient';
+import { Subscription } from '../../clients/stripe/subscription';
 
 dayjs.extend(utc);
 
@@ -62,16 +64,21 @@ export const createUserProductSubscriptionFromStripeSubscription = async (data: 
 
 export const updateUserProductSubscriptionFromStripeSubscription = async (data: Stripe.CustomerSubscriptionUpdatedEvent.Data) => {
   try {
-    const invoice = await InvoiceModel.findOne({ 'integrations.stripe.id': data.object?.latest_invoice });
-    const existingProductSubscription = await UserProductSubscriptionModel.findOne({ 'integration.stripe.id': data.object.id });
+    const stripeClient = new StripeClient();
+    const checkoutClient = new Subscription(stripeClient);
+    const currentSubscriptionData = await checkoutClient.getSubscriptionById(data.object.id);
+    const existingProductSubscription = await UserProductSubscriptionModel.findOne({ 'integrations.stripe.id': data.object.id });
+    const invoice = await InvoiceModel.findOne({ 'integrations.stripe.id': currentSubscriptionData.latest_invoice });
+    console.log('////// found exisitng', existingProductSubscription._id);
+    console.log('///// from stripe', currentSubscriptionData);
     existingProductSubscription.latestInvoice = invoice?._id || null;
-    existingProductSubscription.nextBillingDate = dayjs(data.object.current_period_end * 1000).utc().toDate();
-    existingProductSubscription.lastBilledDate = dayjs(data.object.current_period_start * 1000).utc().toDate();
+    existingProductSubscription.nextBillingDate = dayjs(currentSubscriptionData.current_period_end * 1000).utc().toDate();
+    existingProductSubscription.lastBilledDate = dayjs(currentSubscriptionData.current_period_start * 1000).utc().toDate();
     existingProductSubscription.lastModified = dayjs().utc().toDate();
     existingProductSubscription.integrations = {
-      stripe: data.object,
+      stripe: currentSubscriptionData,
     };
-    existingProductSubscription.status = getSubscriptionStatusFromStripeStatus(data.object.status);
+    existingProductSubscription.status = getSubscriptionStatusFromStripeStatus(currentSubscriptionData.status);
     await existingProductSubscription.save();
     return existingProductSubscription;
   } catch (err) {

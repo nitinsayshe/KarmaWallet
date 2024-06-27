@@ -63,7 +63,7 @@ export const handleInvoiceEvent = async (event: Stripe.Event) => {
       // update the invoice to failed
       break;
     case 'invoice.payment_succeeded':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      handleStripeInvoicePaid(event.data.object);
       // update the invoice to paid
       break;
     case 'invoice.marked_uncollectible':

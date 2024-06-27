@@ -2,10 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { parse } from 'json2csv';
 import { Types } from 'mongoose';
-import { IMarqetaUserStatus, IACHTransferTypes } from '../../integrations/marqeta/types';
+import { IACHTransferTypes } from '../../integrations/marqeta/types';
 import { ACHTransferModel } from '../../models/achTransfer';
 import { CardModel, ICardDocument } from '../../models/card';
 import { UserModel, IUserDocument } from '../../models/user';
+import { IMarqetaUserStatus } from '../../integrations/marqeta/user/types';
 
 type UserReport = {
   id?: Types.ObjectId;

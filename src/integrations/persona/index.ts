@@ -205,7 +205,7 @@ export const fetchCaseAndCreateOrUpdateIntegration = async (
   }
 };
 
-// fetch persona inquiry and case data and update the integration
+// Fetch Persona inquiry and case data and update the integration
 export const fetchInquiryAndCreateOrUpdateIntegration = async (
   inquiryId: string,
   entity: IUserDocument | IVisitorDocument,

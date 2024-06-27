@@ -32,7 +32,6 @@ import {
   getCollectiveCommunityImpact,
   getCollectiveReforestationDonationCount,
   getCollectiveMealsDonationCount,
-  getKarmaMembershipPlanType,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -423,10 +422,10 @@ export const prepareDailyUpdatedFields = async (
   }
 
   customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.membershipType);
-  if (!!customField) {
-    const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
-    fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
-  }
+  // if (!!customField) {
+  //   const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
+  //   fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
+  // }
 
   return fieldValues;
 };

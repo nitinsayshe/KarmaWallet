@@ -1,4 +1,4 @@
-import { IMarqetaACHGroup } from '../../integrations/marqeta/types';
+import { IMarqetaACHGroup } from '../../integrations/marqeta/user/types';
 import { asCustomError } from '../../lib/customError';
 import { camelToSnakeCase } from '../../services/utilities';
 import { MarqetaClient } from './marqetaClient';

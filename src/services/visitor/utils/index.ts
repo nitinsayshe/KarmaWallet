@@ -1,6 +1,7 @@
 import { FilterQuery, Types, PaginateResult } from 'mongoose';
 import { sleep } from '../../../lib/misc';
-import { IVisitor, IVisitorDocument, VisitorModel } from '../../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../../models/visitor';
+import { IVisitor } from '../../../models/visitor/types';
 
 export type VisitorIterationRequest<FieldsType> = {
   batchQuery: FilterQuery<IVisitor>;

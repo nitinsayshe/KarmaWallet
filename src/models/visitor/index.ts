@@ -1,81 +1,10 @@
-import {
-  Document, model, ObjectId, PaginateModel, Schema,
-} from 'mongoose';
+import { model, PaginateModel, Schema, Document } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { IMarqetaKycState, IMarqetaUserStatus } from '../integrations/marqeta/types';
-import { getUtcDate } from '../lib/date';
-import { IModel, IRef } from '../types/model';
-import { IShareableUser, IUser, IUrlParam, UserEmailStatus } from './user/types';
-import { PersonaIntegrationSchema } from './schemas';
-import { IPersonaIntegration } from '../integrations/persona/types';
-
-interface IMarqetaKycResult {
-  status: IMarqetaKycState;
-  codes: string[];
-}
-
-interface IMarqetaIdentification {
-  type: string;
-  value: string;
-}
-
-export const VisitorActionEnum = {
-  PendingApplication: 'pendingApplication',
-  AppliedForCard: 'appliedForCard',
-  ApplicationDeclined: 'applicationDeclined',
-} as const;
-export type VisitorActionEnumValues = typeof VisitorActionEnum[keyof typeof VisitorActionEnum];
-
-export interface IMarqetaVisitorData {
-  userToken: string;
-  email: string;
-  kycResult: IMarqetaKycResult;
-  first_name?: string;
-  last_name?: string;
-  birth_date?: string;
-  phone?: string;
-  address1?: string;
-  address2?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  postal_code?: string;
-  account_holder_group_token?: string;
-  identifications?: IMarqetaIdentification[];
-  status?: IMarqetaUserStatus;
-  created_time?: string;
-}
-
-export interface IVisitorIntegrations {
-  groupCode?: string;
-  urlParams?: IUrlParam[];
-  shareASale?: {
-    sscid?: string;
-    xTypeParam?: string;
-    sscidCreatedOn?: string;
-    trackingId?: string;
-  };
-  marqeta?: IMarqetaVisitorData;
-  persona?: IPersonaIntegration;
-}
-
-export interface IVisitorAction {
-  type: VisitorActionEnumValues;
-  createdOn: Date;
-}
-
-export interface IShareableVisitor {
-  email: string;
-  emailStatus: UserEmailStatus;
-  integrations?: IVisitorIntegrations;
-  statusLastModified: Date;
-  createdOn: Date;
-}
-
-export interface IVisitor extends IShareableVisitor {
-  user?: IRef<ObjectId, (IShareableUser | IUser)>;
-  actions?: IVisitorAction[];
-}
+import { getUtcDate } from '../../lib/date';
+import { IModel } from '../../types/model';
+import { PersonaIntegrationSchema } from '../schemas';
+import { UserEmailStatus } from '../user/types';
+import { IVisitor, VisitorActionEnum } from './types';
 
 export interface IVisitorDocument extends IVisitor, Document { }
 export type IVisitorModel = IModel<IVisitor>;

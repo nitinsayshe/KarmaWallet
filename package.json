@@ -16,7 +16,7 @@
     "postbuild": "npm run copy",
     "postinstall": "npm run build",
     "start": "cross-env-shell NODE_ENV=development 'tsc -w --sourcemap && nodemon dist/index.js && npm run copy'",
-    "start:frontend": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/frontend.js && npm run copy'",
+    "start:frontend": "cross-env-shell NODE_ENV=development 'tsc -w & nodemon dist/frontend.js & npm run copy'",
     "start:prod": "cross-env-shell NODE_ENV=production 'npm run build & node dist/index.js'",
     "start:prod:frontend": "cross-env-shell NODE_ENV=production 'npm run build & node dist/frontend.js'",
     "deploy:sandbox": "ts-node bin/deploy-sandbox -- --env sandbox",

@@ -31,7 +31,7 @@ export const executeOrderKarmaWalletCardsJob = (userDocument: IUserDocument) => 
     JobNames.OrderKarmaWalletCards,
     userDocument,
     {
-      delay: 1 * 60 * 1000,
+      delay: 1 * 20 * 1000,
       jobId: `${JobNames.OrderKarmaWalletCards}-${userDocument._id}`,
       attempts: 3,
       backoff: {

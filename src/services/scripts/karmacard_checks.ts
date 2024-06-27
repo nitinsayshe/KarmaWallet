@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { IMarqetaUserStatus, MarqetaCardState } from '../../integrations/marqeta/types';
 import { CardModel, ICard } from '../../models/card';
 import { UserModel } from '../../models/user';
 import { IUser } from '../../models/user/types';
+import { MarqetaCardState } from '../../integrations/marqeta/types';
+import { IMarqetaUserStatus } from '../../integrations/marqeta/user/types';
 
 export const activeVirtualCards = (cards: ICard[]) => cards.filter(c => c.integrations.marqeta.instrument_type === 'VIRTUAL_PAN' && (c.integrations.marqeta.state === MarqetaCardState.ACTIVE || c.integrations.marqeta.state === MarqetaCardState.LIMITED));
 

@@ -10,7 +10,7 @@ import {
 } from '..';
 import { MerchantSource, RewardType, RewardStatus } from '../../../clients/kard/types';
 import { MongoClient } from '../../../clients/mongo';
-import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/types';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/user/types';
 import { CardNetwork, CardStatus, KardEnrollmentStatus } from '../../../lib/constants';
 import { getUtcDate } from '../../../lib/date';
 import { cleanUpDocuments } from '../../../lib/model';

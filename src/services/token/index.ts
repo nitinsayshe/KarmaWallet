@@ -6,7 +6,7 @@ import { TokenTypes } from '../../lib/constants';
 import { getDateFrom } from '../../lib/date';
 import { IToken, TokenModel } from '../../models/token';
 import { IUserDocument } from '../../models/user';
-import { IVisitor } from '../../models/visitor';
+import { IVisitor } from '../../models/visitor/types';
 
 dayjs.extend(utc);
 

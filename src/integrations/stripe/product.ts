@@ -35,6 +35,7 @@ export const getPrice = async (priceId: string) => {
 
 // Update or Create a Product Subscription from a Stripe Product
 export const updateOrCreateProductSubscriptionFromStripeProduct = async (data: Stripe.Product) => {
+  console.log('///// Updating or creating a product subscription from a Stripe Product', data.id);
   let productSubscription = await ProductSubscriptionModel.findOne({
     'integrations.stripe': { $exists: true },
     'integrations.stripe.id': data.id,
@@ -74,5 +75,22 @@ export const createProductSubscriptionsFromStripeProducts = async () => {
   if (products?.data) {
     const productSubscriptions = await Promise.all(products.data.map(async (product: Stripe.Product) => updateOrCreateProductSubscriptionFromStripeProduct(product)));
     return productSubscriptions;
+  }
+};
+
+export const deleteProductSubscriptionFromStripeProduct = async (data: Stripe.Product) => {
+  try {
+    const productSubscription = await ProductSubscriptionModel.findOne({
+      'integrations.stripe': { $exists: true },
+      'integrations.stripe.id': data.id,
+    });
+
+    if (productSubscription) {
+      await productSubscription.delete();
+    }
+
+    console.log('Product subscription deleted successfully.');
+  } catch (e) {
+    throw new Error(`Error deleting product subscription: ${e}`);
   }
 };

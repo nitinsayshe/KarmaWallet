@@ -1,8 +1,8 @@
-import { IMarqetaProcessKyc } from '../../../integrations/marqeta/types';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import { asCustomError } from '../../../lib/customError';
 import * as KYCService from '../../../integrations/marqeta/kyc';
+import { IMarqetaProcessKyc } from '../../../integrations/marqeta/user/types';
 
 export const processUserKyc: IRequestHandler<{ userToken: string }, {}, IMarqetaProcessKyc> = async (req, res) => {
   try {

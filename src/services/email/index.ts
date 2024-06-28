@@ -220,7 +220,12 @@ export const sendAccountCreationVerificationEmail = async ({
     recipientEmail,
   });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const urlParamsString = visitor.integrations.urlParams.map((param) => `${param.key}=${param.value}`).join('&');
+  const visitorParams = visitor?.integrations?.urlParams;
+  let urlParamsString = '';
+  if (visitorParams) {
+    const signInParamRemoved = visitor?.integrations?.urlParams.filter((p) => p.key !== 'signin');
+    if (signInParamRemoved.length > 0) urlParamsString = signInParamRemoved.map((param) => `${param.key}=${param.value}`).join('&');
+  }
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}?verifyaccount=${token}${!!urlParamsString ? `&${urlParamsString}` : ''}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });

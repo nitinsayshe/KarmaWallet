@@ -64,6 +64,7 @@ export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument)
 };
 
 export const handleMarqetaUserActiveTransition = async (user: IUserDocument) => {
+  console.log('////// SHOULD ADD KYC RESULT TO USER')
   user.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: [] };
   user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
   const savedUser = await user.save();
@@ -130,10 +131,6 @@ export const updateExistingUserFromMarqetaWebhook = async (
   }
 
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
-    if (user.karmaMembership.status === KarmaMembershipStatusEnum.unpaid) {
-      await handleMarqetaUserActiveTransition(user);
-    }
-
     if (!!user.integrations?.shareasale) {
       const { sscid, xTypeParam, sscidCreatedOn, trackingId } = user.integrations.shareasale;
       await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });

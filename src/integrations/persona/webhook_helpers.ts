@@ -421,7 +421,7 @@ export const updateMarqetaUserStatusToSuspended = async (entity: IUserDocument |
   }
 };
 
-export const updateEntityKycStatus = async (entity: IUserDocument | IVisitorDocument) => {
+export const updateEntityKycStatusToFailed = async (entity: IUserDocument | IVisitorDocument) => {
   // update user or visitor's kycStatus in their marqeta integration
   if (!!entity?.integrations?.marqeta?.kycResult) {
     entity.integrations.marqeta.kycResult.status = IMarqetaKycState.failure;
@@ -487,7 +487,7 @@ export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
     // find application in karma application collection
     const application = await KarmaCardApplicationModel.findOne({ email });
     await updateApplicationStatusToDeclined(application);
-    await updateEntityKycStatus(entity);
+    await updateEntityKycStatusToFailed(entity);
     await removeUserFromDebitCardHoldersList(entity);
     await updateMarqetaUserStatusToSuspended(entity);
     await sendDeclinedNotification(entity, application);

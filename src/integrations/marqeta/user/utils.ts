@@ -1,10 +1,7 @@
 import { getMarqetaUser, transitionMarqetaUser, updateMarqetaUser } from '.';
-import { ErrorTypes } from '../../../lib/constants';
 import { ActiveCampaignCustomFields } from '../../../lib/constants/activecampaign';
-import CustomError from '../../../lib/customError';
 import { generateRandomPasswordString } from '../../../lib/misc';
 import { IUserDocument, UserModel } from '../../../models/user';
-import { KarmaMembershipStatusEnum } from '../../../models/user/types';
 import { IVisitorDocument, VisitorModel } from '../../../models/visitor';
 import { openBrowserAndAddShareASaleCode } from '../../../services/karmaCard/utils';
 import { register, checkIfUserPassedInternalKycAndUpdateMarqetaStatus, formatMarqetaClosedEmail } from '../../../services/user';
@@ -75,7 +72,7 @@ export const handleMarqetaVisitorActiveTransition = async (visitor: IVisitorDocu
   visitor.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
   const savedVisitor = await visitor.save();
   return savedVisitor;
-}
+};
 
 const updateMarqetaUserEmail = async (userToken: string, email: string) => {
   try {
@@ -191,9 +188,7 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
 
   if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
     await updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
-  }
-
-  if (!!existingUser?._id && currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE) {
+  } else if (!!existingUser?._id && currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE) {
     await updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
 

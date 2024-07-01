@@ -3,16 +3,17 @@ import { FilterQuery, ObjectId, PaginateResult, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { ErrorTypes } from '../../../lib/constants';
 import CustomError, { asCustomError } from '../../../lib/customError';
+import { getUtcDate } from '../../../lib/date';
 import { sleep } from '../../../lib/misc';
 import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../middleware/rateLimiter';
+import { IProductSubscription } from '../../../models/productSubscription/types';
 import { IUserDocument, UserModel } from '../../../models/user';
+import { VisitorModel, IVisitorDocument } from '../../../models/visitor';
+import { UserLogModel } from '../../../models/userLog';
+import { IUser, IUserIntegrations, KarmaMembershipStatusEnumValues, IKarmaMembershipData } from '../../../models/user/types';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
-import { IKarmaMembershipData, IUser, IUserIntegrations, KarmaMembershipStatusEnumValues } from '../../../models/user/types';
-import { VisitorModel } from '../../../models/visitor';
 import { IEntityData } from '../types';
-import { getUtcDate } from '../../../lib/date';
-import { IProductSubscription } from '../../../models/productSubscription/types';
 
 export type UserIterationRequest<T> = {
   httpClient?: AxiosInstance;
@@ -205,4 +206,18 @@ export const addKarmaMembershipToUser = async (
     }
     throw new CustomError('Error subscribing user to karma membership', ErrorTypes.SERVER);
   }
+};
+
+export const storeNewLogin = async (userId: string, loginDate: Date, authKey: string) => {
+  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate, authKey }, { upsert: true }).sort({
+    date: -1,
+  });
+};
+
+export const getEmailFromUserOrVisitor = (entity: IUserDocument | IVisitorDocument): string => {
+  if (!entity) return null;
+  if (isUserDocument(entity)) {
+    return entity.emails.find((email) => email.primary)?.email;
+  }
+  return entity.email;
 };

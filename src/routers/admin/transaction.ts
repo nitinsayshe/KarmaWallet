@@ -35,7 +35,7 @@ router.route('/matched-companies')
 
 router.route('/')
   .get(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin, UserRoles.Admin] }), TransactionController.getTransactions);
-  
+
 router.route('/gpa-deposits')
   .post(authenticate, protectedRequirements({ roles: [UserRoles.SuperAdmin, UserRoles.Admin] }), TransactionController.createGPADeposits);
 

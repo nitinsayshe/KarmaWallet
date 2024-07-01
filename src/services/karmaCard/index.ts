@@ -6,81 +6,42 @@ import { IMarqetaListKYCResponse, MarqetaReasonCodeEnum } from '../../clients/ma
 import { createCard } from '../../integrations/marqeta/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
 import { createMarqetaUser, getMarqetaUserByEmail, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
+import { IMarqetaKycState, IMarqetaUserIntegrations, IMarqetaUserStatus, IMarqetaCreateUser, IMarqetaKycResult } from '../../integrations/marqeta/user/types';
 import { fetchCaseAndCreateOrUpdateIntegration, fetchInquiryAndCreateOrUpdateIntegration, personaCaseInSuccessState, personaInquiryInSuccessState } from '../../integrations/persona';
+import { ICheckoutSessionParams } from '../../integrations/stripe/types';
+import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
+import { createCheckoutSession } from '../../integrations/stripe/checkout';
 import { ErrorTypes } from '../../lib/constants';
+import { NotificationTypeEnum } from '../../lib/constants/notification';
 import CustomError, { asCustomError } from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { formatName, generateRandomPasswordString } from '../../lib/misc';
 import {
   KarmaCardApplicationModel,
 } from '../../models/karmaCardApplication';
+import { IKarmaCardApplicationDocument, IShareableCardApplication, IKarmaCardApplication, ApplicationStatus } from '../../models/karmaCardApplication/types';
 import { KarmaCardLegalModel } from '../../models/karmaCardLegal';
+import { ProductSubscriptionModel } from '../../models/productSubscription';
+import { MembershipPromoModel } from '../../models/membershipPromo';
 import { IUserDocument, UserModel } from '../../models/user';
 import {
   KarmaMembershipStatusEnum,
 } from '../../models/user/types';
+import { UserNotificationModel } from '../../models/user_notification';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { VisitorActionEnum } from '../../models/visitor/types';
 import { IRequest } from '../../types/request';
+import { StandardKarmaWalletSubscriptionId } from '../productSubscription';
+import { handleSendKarmaCardManualApproveEmailEffect } from '../notification/effects';
+import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
 import * as UserService from '../user';
 import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
 import { addKarmaMembershipToUser, createShareasaleTrackingId, isUserDocument } from '../user/utils';
 import * as VisitorService from '../visitor';
-import {
-  openBrowserAndAddShareASaleCode,
-  ReasonCode,
-  IApplicationDecision,
-} from './utils';
-import { createStripeCustomerAndAddToUser } from '../../integrations/stripe/customer';
-import { ICreateAccountRequest } from '../visitor';
-import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
-import { ProductSubscriptionModel } from '../../models/productSubscription';
-import { StandardKarmaWalletSubscriptionId } from '../productSubscription';
-import { IMarqetaKycState, IMarqetaUserIntegrations, IMarqetaUserStatus, IMarqetaCreateUser, IMarqetaKycResult } from '../../integrations/marqeta/user/types';
-import { IKarmaCardApplicationDocument, IShareableCardApplication, IKarmaCardApplication, ApplicationStatus } from '../../models/karmaCardApplication/types';
-import { VisitorActionEnum } from '../../models/visitor/types';
-import { createCheckoutSession } from '../../integrations/stripe/checkout';
-import { MembershipPromoModel } from '../../models/membershipPromo';
-import { ICheckoutSessionParams } from '../../integrations/stripe/types';
-import { handleSendKarmaCardManualApproveEmailEffect, handleSendPayMembershipReminderEmailEffect } from '../notification/effects';
-import { link } from 'pdfkit';
-import { NotificationTypeEnum } from '../../lib/constants/notification';
-import { UserNotificationModel } from '../../models/user_notification';
-
-export const { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN } = process.env;
-
-export interface IContinueKarmanCardApplicationRequestBody {
-  email: string;
-  personaInquiryId: string;
-}
-
-export interface IKarmaCardRequestBody {
-  address1: string;
-  address2?: string;
-  birthDate: string;
-  phone: string;
-  city: string;
-  email?: string;
-  firstName: string;
-  lastName: string;
-  personaInquiryId: string;
-  postalCode: string;
-  ssn: string;
-  state: string;
-  urlParams?: IUrlParam[];
-  sscid?: string;
-  sscidCreatedOn?: string;
-  xType?: string;
-  productSubscriptionId?: string;
-}
-
-export interface INewLegalTextRequestBody {
-  text: string;
-  name: string;
-}
-export interface IUpdateLegalTextRequestParams {
-  legalTextId: string;
-}
+import { IApplicationDecision, ReasonCode } from './utils/types';
+import { openBrowserAndAddShareASaleCode } from './utils';
+import { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN, IKarmaCardRequestBody, INewLegalTextRequestBody, IUpdateLegalTextRequestParams } from './types';
 
 export const getShareableKarmaCardApplication = ({
   _id,
@@ -209,11 +170,11 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
 
   const membershipPromoCode = user.integrations?.referrals?.params.find((referral: IUrlParam) => referral.key === 'membershipPromoCode');
   if (membershipPromoCode) {
-    const membershipPromoDocument = await MembershipPromoModel.findOne({ 
+    const membershipPromoDocument = await MembershipPromoModel.findOne({
       code: membershipPromoCode.value.toUpperCase(),
-      status: 'active'
+      status: 'active',
     });
-    
+
     if (!membershipPromoDocument) console.log('///// no promo code found for this value');
     else promoCode = membershipPromoDocument.integrations.stripe.id;
   }
@@ -294,7 +255,7 @@ export const updateVisitorOrUserOnApproved = async (
     userObject.zipcode = postalCode;
   } else {
     // NEW USER
-    console.log('///// CREATE A NEW USER AND SEND THEM A PASSWORD RESET EMAIL!!!!')
+    console.log('///// CREATE A NEW USER AND SEND THEM A PASSWORD RESET EMAIL!!!!');
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,
       password: generateRandomPasswordString(14),
@@ -346,22 +307,22 @@ export const updateKarmaCardApplicationFromApproved = async (
 };
 
 export const sendManualApproveEmail = async (user: IUserDocument) => {
-  const existingEmail = await UserNotificationModel.findOne({ 
+  const existingEmail = await UserNotificationModel.findOne({
     userId: user._id,
-    type: NotificationTypeEnum.KarmaCardManualApprove
+    type: NotificationTypeEnum.KarmaCardManualApprove,
   });
 
   if (existingEmail) return;
-  
+
   await handleSendKarmaCardManualApproveEmailEffect({
-    user: user,
+    user,
     data: {
       link: 'https://karmawallet.io/account',
       name: user.integrations.marqeta.first_name,
       email: user.emails.find((e) => !!e.primary).email,
-    }
+    },
   });
-}
+};
 
 export const handleApprovedState = async (
   karmaCardApplication: IKarmaCardApplication,
@@ -371,7 +332,7 @@ export const handleApprovedState = async (
   if (!entity) return;
   const userObject = await updateVisitorOrUserOnApproved(entity);
   await updateKarmaCardApplicationFromApproved(karmaCardApplication, userObject._id.toString());
-  
+
   if (isManualApproval) {
     if (!userObject?.integrations?.stripe) {
       const stripeCustomer = await createStripeCustomerAndAddToUser(userObject);
@@ -526,7 +487,7 @@ export const _createNewVisitorFromApply = async (
   sscidCreatedOn: string,
   xType: string,
 ) => {
-  const visitorData: ICreateAccountRequest = { email };
+  const visitorData: VisitorService.ICreateAccountRequest = { email };
 
   if (!!urlParams) {
     visitorData.params = urlParams;

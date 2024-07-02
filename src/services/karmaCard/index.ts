@@ -184,6 +184,7 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
   // check the uyser for promo codes and find the id fopr the promo code in our promo collection
   // add it to the checkout session if there is a matching one
   //
+  const afterSubmitButtonCustomText = 'By confirming your subscription, you allow IMPACTKARMA PBC to charge you for future membership fee payments in accordance with their terms. You have the option to cancel your subscription at any time with 30 days\' notice. By clicking Subscribe, you agree to the [Terms](https://cdn.karmawallet.io/documents/impactkarma_terms_and_conditions.pdf) and [Privacy Policy](https://karmawallet.io/privacy-policy).';
   const stripeData: Stripe.Checkout.SessionCreateParams = {
     ui_mode: uiMode || 'hosted',
     line_items: [
@@ -196,6 +197,12 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
     customer: stripeCustomerID,
     client_reference_id: user._id.toString(),
     mode: 'subscription',
+    custom_text: {
+      after_submit:
+      {
+        message: afterSubmitButtonCustomText,
+      },
+    },
     // do we want to add a cancel_url?
   };
 

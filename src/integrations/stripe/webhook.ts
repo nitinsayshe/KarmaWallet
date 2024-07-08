@@ -50,10 +50,6 @@ export const handleInvoiceEvent = async (event: Stripe.Event) => {
       updateInvoiceFromStripeInvoice(event.data.object);
       // finalize the invoice
       break;
-    case 'invoice.paid':
-      handleStripeInvoicePaid(event.data.object);
-      // update the invoice to paid
-      break;
     case 'invoice.updated':
       updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice

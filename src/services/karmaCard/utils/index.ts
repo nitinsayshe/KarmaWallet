@@ -28,6 +28,7 @@ import { IGPABalanceResponse } from '../../../integrations/marqeta/types';
 import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 import { IKarmaCardApplicationDocument } from '../../../models/karmaCardApplication/types';
 import { createShareasaleTrackingId } from '../../user/utils';
+import { ActiveCampaignCustomTags } from '../../../lib/constants/activecampaign';
 
 export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
   request: KarmaCardApplicationIterationRequest<ReqFieldsType>,
@@ -259,6 +260,7 @@ export const addShareASaleTrackingToUser = async (user: IUserDocument) => {
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
   const subscribeData: IActiveCampaignSubscribeData = {
     debitCardholder: true,
+    tags: [ActiveCampaignCustomTags.MembershipPaid],
   };
 
   if (!!urlParams) {
@@ -314,7 +316,6 @@ export const handleUserPaidMembership = async (user: IUserDocument) => {
     executeOrderKarmaWalletCardsJob(user);
     await createKarmaCardWelcomeUserNotification(user, false);
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user?.integrations?.referrals?.params);
-
     await addShareASaleTrackingToUser(user);
   } catch (error) {
     console.log('Error handling user paid membership', error);

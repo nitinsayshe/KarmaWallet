@@ -37,10 +37,9 @@ import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
 import * as UserService from '../user';
 import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
-import { addKarmaMembershipToUser, createShareasaleTrackingId, isUserDocument } from '../user/utils';
+import { addKarmaMembershipToUser, isUserDocument } from '../user/utils';
 import * as VisitorService from '../visitor';
 import { IApplicationDecision, ReasonCode } from './utils/types';
-import { openBrowserAndAddShareASaleCode } from './utils';
 import { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN, IKarmaCardRequestBody, INewLegalTextRequestBody, IUpdateLegalTextRequestParams } from './types';
 
 export const getShareableKarmaCardApplication = ({
@@ -253,6 +252,7 @@ export const updateVisitorOrUserOnApproved = async (
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
   } else {
+    console.log('//// user is approved, create a new user!');
     // NEW USER
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,

@@ -22,6 +22,11 @@ export enum ActiveCampaignSyncTypes {
   BIWEEKLY = 'biweekly',
 }
 
+export enum ActiveCampaignCustomTags {
+  MembershipUnpaid = 'MembershipUnpaid',
+  MembershipPaid = 'MembershipPaid',
+}
+
 export enum ActiveCampaignCustomFields {
   carbonEmissionsMonthly = 'carbonEmissionsMonthly',
   carbonEmissionsYearly = 'carbonEmissionsYearly',
@@ -32,7 +37,6 @@ export enum ActiveCampaignCustomFields {
   cashbackDollarsEarnedYearly = 'cashbackDollarsEarnedYearly',
   dateJoined = 'dateJoined',
   existingWebAppUser = 'existingWebAppUser',
-  membershipUnpaid = 'membershipUnpaid',
   firstLinkedCardDate = 'firstLinkedCardDate',
   hasLinkedCard = 'hasLinkedCard',
   hasLinkedPaypal = 'hasLinkedPaypal',

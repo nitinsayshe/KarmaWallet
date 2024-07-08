@@ -736,10 +736,8 @@ export const prepareBackfillSyncFields = async (
   fieldValues = await prepareQuarterlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareYearlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareBiweeklyUpdatedFields(user, customFields, fieldValues);
-
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);
-
   return fieldValues;
 };
 
@@ -802,7 +800,7 @@ export const updateActiveCampaignContactData = async (
   if (!!lastName) contacts[0].last_name = lastName;
   if (!!sub) contacts[0].subscribe = sub;
   if (!!unsub) contacts[0].unsubscribe = unsub;
-  if (!!tags) contacts[0].tags = tags;
+  if (!!tags.length) contacts[0].tags = tags;
   if (!!fields) contacts[0].fields = fields;
 
   await ac.importContacts({ contacts });
@@ -1115,4 +1113,36 @@ export const syncUserAddressFields = async (
   } catch (err) {
     console.log(err);
   }
+};
+
+export const listAllTags = async () => {
+  const ac = new ActiveCampaignClient();
+  const tags = await ac.listAllTags();
+  return tags;
+};
+
+export const getTagByName = async (tagName: string) => {
+  const ac = new ActiveCampaignClient();
+  const tags = await ac.listAllTags(tagName);
+  return tags;
+};
+
+export const getContactsTagIds = async (contactId: number) => {
+  const ac = new ActiveCampaignClient();
+  const contactIds = await ac.getContactsTagIds(contactId);
+  return contactIds;
+};
+
+export const removeTagFromUser = async (userDocument: IUserDocument, tag: string) => {
+  const acContact = await getActiveCampaignContactByEmail(userDocument.emails.find((e) => e.primary).email);
+  const acTags = await getTagByName(tag);
+  const acTag = acTags.tags.find((t) => t.tag === tag);
+  const contactIds = await getContactsTagIds(parseInt(acContact.contact.id));
+  const contactTag = contactIds.contactTags.find((t) => t.tag === acTag.id);
+  if (!contactTag.id) {
+    throw new Error(`Tag ${tag} not found`);
+  }
+  const ac = new ActiveCampaignClient();
+  const updatedTags = await ac.removeTagFromUser(contactTag.id);
+  return updatedTags;
 };

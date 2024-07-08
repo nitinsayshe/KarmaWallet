@@ -4,15 +4,16 @@ import isemail from 'isemail';
 import { FilterQuery, ObjectId, Types, UpdateQuery } from 'mongoose';
 import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import {
+  FieldValues,
   getSubscribedLists,
+  removeTagFromUser,
   subscribeContactToList,
   subscribeContactToLists,
   updateActiveCampaignContactData,
-  updateActiveCampaignData,
   updateCustomFields,
 } from '../../integrations/activecampaign';
 import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum, DateKarmaMembershipStoppedbBeingFree } from '../../lib/constants';
-import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { ActiveCampaignCustomFields, ActiveCampaignCustomTags } from '../../lib/constants/activecampaign';
 import { ProviderProductIdToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/marketing_subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -28,8 +29,6 @@ import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/marketing_subscription';
 import { IEmail, IUrlParam } from '../../models/user/types';
 import { isUserDocument } from '../user/utils';
-import { getStateFromZipcode } from '../utilities';
-import { IVisitor } from '../../models/visitor/types';
 
 export interface UserSubscriptions {
   userId: string;
@@ -46,8 +45,6 @@ export interface IActiveCampaignSubscribeData {
   tags?: string[];
   debitCardholder?: boolean;
   groupName?: string;
-  employerBeta?: boolean;
-  beta?: boolean;
   unpaidMembership?: boolean;
 }
 
@@ -101,35 +98,29 @@ export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
   });
 };
 
-const _isExistingWebAppUser = (user: IUserDocument) => {
-  return !!user?.integrations?.marqeta && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined));
-}
+const _isExistingWebAppUser = (user: IUserDocument) => !!user?.integrations?.marqeta && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined));
 
-const _isFreeMembershipUser = (user: IUserDocument) => {
-  return !!user?.integrations?.marqeta?.created_time && dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree);
-}
+const _isFreeMembershipUser = (user: IUserDocument) => !!user?.integrations?.marqeta?.created_time && dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree);
 
 const _userSource = (user: IUserDocument, params?: IUrlParam[]) => {
   if (!!user?.integrations?.shareasale) return 'sharesale';
-  if (!!user.integrations.referrals.params) {
+  if (!!user?.integrations?.referrals?.params) {
     const sourceParam = params?.find((p) => p.key === 'utm_source');
     if (!!sourceParam) return sourceParam.value;
   }
   return null;
-}
+};
 
 export const _buildUserFieldsArray = async (
   user: IUserDocument,
-  customFields: Array<{ name: string; id: number }>, 
-  userSubscribeData?: IActiveCampaignSubscribeData
-) => {
-  const { debitCardholder, groupName, employerBeta, beta, unpaidMembership } = userSubscribeData || {};
+  customFields: Array<{ name: string; id: number }>,
+): Promise<FieldValues> => {
   const fields = [];
   const freeMembershipCustomField = customFields.find((field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser);
   const existingMembershipCustomField = customFields.find((field) => field.name === ActiveCampaignCustomFields.existingWebAppUser);
   const zipCodeField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userZipcode);
   const sourceField = customFields.find((field) => field.name === ActiveCampaignCustomFields.source);
-  const zipCode = user?.integrations?.marqeta?.postal_code || user?.zipcode || null;
+  const zipCode = user?.integrations?.marqeta?.postal_code || user?.zipcode;
   const source = _userSource(user);
   if (freeMembershipCustomField?.id) {
     fields.push({ id: freeMembershipCustomField.id, value: !!_isExistingWebAppUser(user) ? 'true' : 'false' });
@@ -140,9 +131,9 @@ export const _buildUserFieldsArray = async (
   if (!!zipCode && !!zipCodeField?.id) fields.push({ id: zipCodeField.id, value: zipCode });
   if (!!source && !!sourceField?.id) fields.push({ id: sourceField.id, value: source });
   return fields;
-}
+};
 
-export const _buildUnsubscribeArray = async (visitorDocument: IVisitorDocument) => {
+export const _buildUnsubscribeArray = async (visitorDocument: IVisitorDocument, debitCardholder?: boolean) => {
   const unsubscribe = [];
 
   const monthlyNewslettersSubscription = await MarketingSubscriptionModel.findOne({
@@ -154,8 +145,12 @@ export const _buildUnsubscribeArray = async (visitorDocument: IVisitorDocument) 
     unsubscribe.push(ActiveCampaignListId.MonthyNewsletters);
     monthlyNewslettersSubscription.status = MarketingSubscriptionStatus.Cancelled;
   }
+
+  if (!!debitCardholder) {
+    unsubscribe.push(ActiveCampaignListId.AccountUpdates);
+  }
   return unsubscribe;
-}
+};
 
 export const _buildSubscribeArray = async (
   subscribeArray: ActiveCampaignListId[],
@@ -171,19 +166,19 @@ export const _buildSubscribeArray = async (
       visitor: visitorDocument._id,
       code: MarketingSubscriptionCode.generalUpdates,
     });
-  
+
     if (generalUpdatesSubscription?.status !== MarketingSubscriptionStatus.Active || !generalUpdatesSubscription) {
       subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
     }
   }
-  
+
   if (!!additionalData?.debitCardholder) {
     subscribeArray.push(ActiveCampaignListId.DebitCardHolders);
     if (!!additionalData?.groupName) subscribeArray.push(ActiveCampaignListId.GroupMembers);
   }
 
   return subscribeArray;
-}
+};
 
 export const _updateVisitorSubscriptionsForNewUser = async (user: IUserDocument, visitor: IVisitorDocument) => {
   // associate subscriptions with new user
@@ -191,48 +186,48 @@ export const _updateVisitorSubscriptionsForNewUser = async (user: IUserDocument,
 };
 
 export const addMarketingSubscriptionsForNewUser = async (user: IUserDocument) => {
-    // create subscription for acccount updates
-    await MarketingSubscriptionModel.create({
-      code: MarketingSubscriptionCode.accountUpdates,
+  // create subscription for acccount updates
+  await MarketingSubscriptionModel.create({
+    code: MarketingSubscriptionCode.accountUpdates,
+    user: user._id,
+    status: MarketingSubscriptionStatus.Active,
+  });
+
+  // create subscription for general updates
+  await MarketingSubscriptionModel.findOne(
+    {
+      code: MarketingSubscriptionCode.generalUpdates,
       user: user._id,
       status: MarketingSubscriptionStatus.Active,
-    });
-  
-    // create subscription for general updates
-    await MarketingSubscriptionModel.findOne(
-      {
-        code: MarketingSubscriptionCode.generalUpdates,
-        user: user._id,
-        status: MarketingSubscriptionStatus.Active,
-      },
-      {},
-      { upsert: true },
-    );
-}
+    },
+    {},
+    { upsert: true },
+  );
+};
 
 export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscribeData?: IActiveCampaignSubscribeData) => {
   const { email } = user.emails.find((e) => e.primary);
   const visitor = await VisitorModel.findOneAndUpdate({ email }, { user: user._id }, { new: true });
-  const { tags, debitCardholder, groupName, employerBeta, beta } = userSubscribeData || {};
+  const { tags, debitCardholder, unpaidMembership } = userSubscribeData || {};
   const ac = new ActiveCampaignClient();
   const customFields = await ac.getCustomFieldIDs();
-  const fieldsArray = await _buildUserFieldsArray(user, customFields, userSubscribeData);
+  const fieldsArray = await _buildUserFieldsArray(user, customFields);
   let subscribe: ActiveCampaignListId[] = [];
   let unsubscribe: ActiveCampaignListId[] = [];
-
   // EXISTING VISITOR
   if (!!visitor) {
-    unsubscribe = await _buildUnsubscribeArray(visitor);
+    unsubscribe = await _buildUnsubscribeArray(visitor, debitCardholder);
     subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {}, visitor);
     // need try/catch for the debit cardholder route
-    if (!!debitCardholder) {
+    if (!!debitCardholder || !!unpaidMembership) {
       try {
-        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray || []);
+        await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
       } catch (err) {
         console.error('Error subscribing user to lists', err);
       }
     } else {
-      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray || []);
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
     }
   // NOT AN EXISTING VISITOR
   } else {
@@ -241,18 +236,12 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
       await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, [], fieldsArray);
       await addMarketingSubscriptionsForNewUser(user);
     } else {
-      unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
-
-      try {
-        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
-        // remove the membershipUnpaid tag
-        await updateActiveCampaignData({ email, tags: { remove: ['membershipUnpaid'], add: [] }});
-      } catch (err) {
-        console.error('Error subscribing user to lists', err);
-      }
+      unsubscribe = [ActiveCampaignListId.MonthyNewsletters, ActiveCampaignListId.AccountUpdates];
+      await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || [], fieldsArray);
     }
   }
-  
+
   try {
     return await activateSubscriptions(
       user._id,

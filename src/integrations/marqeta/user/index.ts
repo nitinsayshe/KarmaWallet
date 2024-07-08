@@ -4,6 +4,7 @@ import { MarqetaChannelEnum, MarqetaReasonCodeEnumValues } from '../../../client
 import { User } from '../../../clients/marqeta/user';
 import { IUserDocument } from '../../../models/user';
 import { IVisitorDocument } from '../../../models/visitor';
+import { IEntityData } from '../../../services/user/types';
 import { IRequest } from '../../../types/request';
 import { IMarqetaClientAccessToken, PaginatedMarqetaResponse } from '../types';
 import {
@@ -67,6 +68,11 @@ export const userMarqetaTransition = async (req: IRequest<{ userToken: string },
 export const transitionMarqetaUser = async (transitionData: IMarqetaUserTransition) => {
   const marqetaClient = new MarqetaClient();
   const user = new User(marqetaClient);
+  const currentUserInMarqeta = await user.getMarqetaUser(transitionData.userToken);
+  if (currentUserInMarqeta.status === transitionData.status) {
+    console.log(`User is already in status ${transitionData.status}`);
+    return currentUserInMarqeta;
+  }
   const userResponse = await user.userMarqetaTransition(transitionData);
   return userResponse;
 };
@@ -162,4 +168,33 @@ export const getUsers = async (queryParams: GetPaginiatedResourceParams): Promis
   const user = new User(marqetaClient);
   const users = await user.listMarqetaUsers(queryParams);
   return users;
+};
+
+// Will occur when someone manually marks an inquiry/user as declined
+export const closeMarqetaAccount = async (entityData: IEntityData) => {
+  try {
+    const marqetaUserToken = entityData?.data?.integrations?.marqeta?.userToken;
+    if (marqetaUserToken) {
+      throw new Error('User does not have a Marqeta user token');
+    }
+
+    const userInMarqeta = await getMarqetaUser(marqetaUserToken);
+    if (userInMarqeta) {
+      console.log(`Found user in Marqeta with id: ${marqetaUserToken}`);
+      // update user status in marqeta
+      if (userInMarqeta.state !== IMarqetaUserStatus.CLOSED) {
+        await transitionMarqetaUser({
+          channel: 'API',
+          reason: 'Manual Review: Failed KYC',
+          reasonCode: '17',
+          status: IMarqetaUserStatus.CLOSED,
+          userToken: marqetaUserToken,
+        });
+      }
+    } else {
+      console.log(`No user found in Marqeta with id: ${marqetaUserToken}`);
+    }
+  } catch (err) {
+    console.log(`Error closing Marqeta account for user or visitor with id ${entityData.data._id.toString()}`, err);
+  }
 };

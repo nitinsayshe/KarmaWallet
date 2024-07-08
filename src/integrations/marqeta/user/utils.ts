@@ -1,13 +1,9 @@
-import { getMarqetaUser, transitionMarqetaUser, updateMarqetaUser } from '.';
-import { ActiveCampaignCustomFields } from '../../../lib/constants/activecampaign';
+import { closeMarqetaAccount, getMarqetaUser, updateMarqetaUser } from '.';
 import { generateRandomPasswordString } from '../../../lib/misc';
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../../models/visitor';
-import { openBrowserAndAddShareASaleCode } from '../../../services/karmaCard/utils';
 import { register, checkIfUserPassedInternalKycAndUpdateMarqetaStatus, formatMarqetaClosedEmail } from '../../../services/user';
-import { IEntityData } from '../../../services/user/types';
 import { isUserDocument } from '../../../services/user/utils';
-import { updateCustomFields } from '../../activecampaign';
 import { IMarqetaUserStatus, MarqetaUserModel, IMarqetaUserTransitionsEvent, IMarqetaKycState } from './types';
 
 export const checkIfUserActiveInMarqeta = async (userId: string) => {
@@ -16,35 +12,6 @@ export const checkIfUserActiveInMarqeta = async (userId: string) => {
   const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
   if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
   return false;
-};
-
-// Will occur when someone manually marks an inquiry/user as declined
-export const closeMarqetaAccount = async (entityData: IEntityData) => {
-  try {
-    const marqetaUserToken = entityData?.data?.integrations?.marqeta?.userToken;
-    if (marqetaUserToken) {
-      throw new Error('User does not have a Marqeta user token');
-    }
-
-    const userInMarqeta = await getMarqetaUser(marqetaUserToken);
-    if (userInMarqeta) {
-      console.log(`Found user in Marqeta with id: ${marqetaUserToken}`);
-      // update user status in marqeta
-      if (userInMarqeta.state !== IMarqetaUserStatus.CLOSED) {
-        await transitionMarqetaUser({
-          channel: 'API',
-          reason: 'Manual Review: Failed KYC',
-          reasonCode: '17',
-          status: IMarqetaUserStatus.CLOSED,
-          userToken: marqetaUserToken,
-        });
-      }
-    } else {
-      console.log(`No user found in Marqeta with id: ${marqetaUserToken}`);
-    }
-  } catch (err) {
-    console.log(`Error closing Marqeta account for user or visitor with id ${entityData.data._id.toString()}`, err);
-  }
 };
 
 export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument) => {
@@ -162,15 +129,14 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     console.log('[+] Error getting most up to date user information from Marqeta');
   }
 
-  if (!!existingUser?._id && existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status) {
-    await updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
-  } else if (!!existingUser?._id && currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE) {
+  if (!!existingUser?._id && (existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status || currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE)) {
     await updateExistingUserFromMarqetaWebhook(existingUser, currentMarqetaUserData, userTransition);
   }
-
   // EXISTING VISITOR, Marqeta integration is saved on the visitor object,
   if (!!visitor?._id && !existingUser?._id) {
-    await handleMarqetaVisitorActiveTransition(visitor);
+    if (currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE) {
+      await handleMarqetaVisitorActiveTransition(visitor);
+    }
     await setClosedMarqetaAccountState(visitor, currentMarqetaUserData);
   }
 };

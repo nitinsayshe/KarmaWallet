@@ -32,6 +32,7 @@ export enum ActiveCampaignCustomFields {
   cashbackDollarsEarnedYearly = 'cashbackDollarsEarnedYearly',
   dateJoined = 'dateJoined',
   existingWebAppUser = 'existingWebAppUser',
+  membershipUnpaid = 'membershipUnpaid',
   firstLinkedCardDate = 'firstLinkedCardDate',
   hasLinkedCard = 'hasLinkedCard',
   hasLinkedPaypal = 'hasLinkedPaypal',

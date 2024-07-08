@@ -134,33 +134,9 @@ export const updateExistingUserFromMarqetaWebhook = async (
   }
 
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
-    if (!!user.integrations?.shareasale) {
-      const { sscid, xTypeParam, sscidCreatedOn, trackingId } = user.integrations.shareasale;
-      await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });
-    }
     await handleMarqetaUserActiveTransition(user);
-    await updateCustomFields(user.emails.find((e) => e.primary).email, [
-      { field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' },
-    ]);
   }
 };
-// Existing Visitor with Marqeta integration (no existing user with the Marqeta integration although there could be an existing user)
-// export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument, currentMarqetaUserData: MarqetaUserModel) => {
-//   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
-//     if (!visitor.user) {
-//       // Visitor only created
-//       const user = await createNewUserFromMarqetaWebhook(visitor);
-//       await handleMarqetaUserActiveTransition(user);
-//     } else {
-//       // Visitor created a KW account after being declined for a KW card
-//       // Marqeta integration only saved on visitor not on user yet
-//       // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
-//       const user = await UserModel.findById(visitor.user);
-//       if (!user) throw new CustomError('[+] User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
-//       await handleMarqetaUserActiveTransition(user);
-//     }
-//   }
-// };
 
 export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqetaUserTransitionsEvent) => {
   const existingUser = await UserModel.findOne({ 'integrations.marqeta.userToken': userTransition?.user_token });

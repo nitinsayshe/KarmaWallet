@@ -27,6 +27,7 @@ import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/marketing_subscription';
 import { IEmail } from '../../models/user/types';
 import { isUserDocument } from '../user/utils';
+import { getStateFromZipcode } from '../utilities';
 
 export interface UserSubscriptions {
   userId: string;
@@ -101,15 +102,12 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
   const { email } = user.emails.find((e) => e.primary);
   const visitor = await VisitorModel.findOneAndUpdate({ email }, { user: user._id }, { new: true });
   const { tags, debitCardholder, groupName, employerBeta, beta } = additionalData || {};
+
   let subscribe: ActiveCampaignListId[] = [];
   let unsubscribe: ActiveCampaignListId[] = [];
 
   const ac = new ActiveCampaignClient();
   const customFields = await ac.getCustomFieldIDs();
-  const existingWebAppUserCustomField = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.existingWebAppUser,
-  );
-
   let existingWebAppUser = 'false';
   if (
     !!user?.integrations?.marqeta
@@ -127,8 +125,39 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
 
   const fields = [{ id: isFreeMembershipUserCustomField.id, value: isFreeMembershipUser.toString() }];
 
-  if (!!existingWebAppUserCustomField?.id) {
-    fields.push({ id: existingWebAppUserCustomField?.id, value: existingWebAppUser });
+  const existingWebAppUserField = customFields.find(
+    (field) => field.name === ActiveCampaignCustomFields.existingWebAppUser,
+  );
+
+  if (!!existingWebAppUserField?.id) {
+    fields.push({ id: existingWebAppUserField?.id, value: existingWebAppUser });
+  }
+
+  const zipCodeField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userZipcode);
+  const zipCode = user?.integrations?.marqeta?.postal_code;
+  if (!!zipCode && !!zipCodeField?.id) {
+    fields.push({ id: zipCodeField.id, value: zipCode });
+  }
+
+  const stateField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userState);
+  const state = getStateFromZipcode(zipCode);
+  if (!!state && !!stateField?.id) {
+    fields.push({ id: stateField.id, value: state });
+  }
+
+  const sourceField = customFields.find((field) => field.name === ActiveCampaignCustomFields.source);
+  const params = user?.integrations?.referrals?.params;
+  let source = null;
+  if (!!user?.integrations?.shareasale) {
+    source = 'sharesale';
+  } else if (!!params) {
+    const sourceParam = params?.find((p) => p.key === 'utm_source');
+    if (!!sourceParam) {
+      source = sourceParam.value;
+    }
+  }
+  if (!!source && !!sourceField?.id) {
+    fields.push({ id: sourceField.id, value: source });
   }
 
   // EXISTING VISITOR

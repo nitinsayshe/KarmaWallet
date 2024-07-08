@@ -70,7 +70,7 @@ import { TransactionModelStateEnum } from '../../clients/marqeta/types';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
-import {  getShareableUser } from '../user/utils';
+import { getShareableUser } from '../user/utils';
 import { IExternalMappedShareableACHTransfer, IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
 import { IValue, ValueModel } from '../../models/value';

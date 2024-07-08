@@ -1099,4 +1099,4 @@ export const createKarmaCardManualApproveNotification = async (
   } catch (err) {
     console.log(`Error creating pay membership user notification: ${err}`);
   }
-}
+};

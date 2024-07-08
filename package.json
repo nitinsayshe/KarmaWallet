@@ -10,6 +10,7 @@
     "clean": "rm -rf dist",
     "copy": "ts-node ./bin/postbuild.ts",
     "prebuild": "npm run clean",
+    "lint": "eslint --ignore-pattern 'bin/*' --fix --ext .ts .",
     "build": "tsc",
     "test": "LOG_LEVEL=off SUPPRESS_JEST_WARNINGS=1 ./node_modules/.bin/jest --detectOpenHandles --forceExit --setupFiles dotenv/config",
     "dockerTest": "docker-compose -f docker-compose.test.yml down; docker-compose -f docker-compose.test.yml up --build --exit-code-from karmawallet-backend-ts-test; docker-compose -f docker-compose.test.yml rm -fsv",

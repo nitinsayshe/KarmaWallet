@@ -1,41 +1,32 @@
 import puppeteer from 'puppeteer';
-import { FilterQuery, Types, PaginateResult } from 'mongoose';
-import { terminateMarqetaCards, listCards } from '../../../integrations/marqeta/card';
+import { PaginateResult } from 'mongoose';
+import { listCards, terminateMarqetaCards } from '../../../integrations/marqeta/card';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
-import { IGPABalanceResponse } from '../../../integrations/marqeta/types';
 import { CardStatus } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { IUserDocument } from '../../../models/user';
 import { getDaysFromPreviousDate } from '../../../lib/date';
-import { transitionMarqetaUser, transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
-import { ACHFundingSourceModel } from '../../../models/achFundingSource';
-import { BankConnectionModel } from '../../../models/bankConnection';
 import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
 import { Transactions } from '../../../clients/marqeta/transactions';
 import { sleep } from '../../../lib/misc';
-import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
-import { IPersonaIntegration, PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum } from '../../../integrations/persona/types';
+import { PersonaInquiryTemplateIdEnum, PersonaInquiryStatusEnum } from '../../../integrations/persona/types';
 import { passedInternalKyc } from '../../../integrations/persona';
-import { ICheckoutSessionInfo } from '../../../integrations/stripe/types';
-import { IMarqetaUserIntegrations, IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/user/types';
-import { IUrlParam, KarmaMembershipStatusEnum } from '../../../models/user/types';
-import { executeOrderKarmaWalletCardsJob } from '../../card/utils';
-import { createKarmaCardWelcomeUserNotification } from '../../user_notification';
+import { KarmaCardApplicationIterationRequest, KarmaCardApplicationIterationResponse, IApplicationDecision, TransformedResponse, ReasonCode, PuppateerShareASaleParams, ShareASaleXType } from './types';
+import { transitionMarqetaUser, transitionMarqetaUserToClosed } from '../../../integrations/marqeta/user';
+import { ACHFundingSourceModel } from '../../../models/achFundingSource';
+import { BankConnectionModel } from '../../../models/bankConnection';
+import { removeUserFromDebitCardHoldersList } from '../../marketingSubscription/utils';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../../../integrations/marqeta/user/types';
 import { GroupModel } from '../../../models/group';
+import { KarmaMembershipStatusEnum } from '../../../models/user/types';
+import { executeOrderKarmaWalletCardsJob } from '../../card/utils';
 import { joinGroup } from '../../groups';
 import { IActiveCampaignSubscribeData, updateNewUserSubscriptions } from '../../marketingSubscription';
+import { IUrlParam } from '../../user/types';
+import { createKarmaCardWelcomeUserNotification } from '../../user_notification';
+import { IGPABalanceResponse } from '../../../integrations/marqeta/types';
+import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 import { IKarmaCardApplicationDocument } from '../../../models/karmaCardApplication/types';
-
-export type KarmaCardApplicationIterationRequest<FieldsType> = {
-  batchQuery: FilterQuery<IKarmaCardApplicationDocument>;
-  batchLimit: number;
-  fields?: FieldsType;
-};
-
-export type KarmaCardApplicationIterationResponse<FieldsType> = {
-  applicationId: Types.ObjectId;
-  fields?: FieldsType;
-};
 
 export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
   request: KarmaCardApplicationIterationRequest<ReqFieldsType>,
@@ -66,61 +57,14 @@ export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFields
   return report;
 };
 
-export enum ReasonCode {
-  AddressIssue = 'AddressIssue',
-  DateOfBirthIssue = 'DateOfBirthIssue',
-  NameIssue = 'NameIssue',
-  SSNIssue = 'SSNIssue',
-  NoRecordFound = 'NoRecordFound',
-  RiskIssue = 'RiskIssue',
-  Denied_KYC = 'Denied KYC',
-  OFACFailure = 'OFACFailure',
-  Approved = 'Approved',
-  Already_Registered = 'Already_Registered',
-  FailedInternalKyc = 'FailedInternalKyc',
-}
-
-export enum ShareASaleXType {
-  FREE = 'FREE',
-}
-
-interface PuppateerShareASaleParams {
-  sscid: string;
-  trackingid: string;
-  xtype: string;
-  sscidCreatedOn: string;
-}
-
-export const ApplicationDecisionStatus = {
-  failure: 'failure',
-  success: 'success',
-  pending: 'pending',
-} as const;
-export type ApplicationDecisionStatusValues = (typeof ApplicationDecisionStatus)[keyof typeof ApplicationDecisionStatus];
-
-interface TransformedResponse {
-  status: ApplicationDecisionStatusValues;
-  reason?: ReasonCode;
-  internalKycTemplateId?: string;
-  authkey?: string;
-  paymentData?: ICheckoutSessionInfo;
-}
-
-export interface IApplicationDecision {
-  marqeta?: Partial<IMarqetaUserIntegrations>;
-  persona?: IPersonaIntegration
-  internalKycTemplateId?: string;
-  paymentData?: ICheckoutSessionInfo;
-}
-
 export const getShareableMarqetaUser = (res: IApplicationDecision): TransformedResponse => {
   if (!res) return;
   const marqeta = res?.marqeta;
   const kycResult = marqeta?.kycResult;
   const persona = res?.persona;
   const internalKycTemplateId = res?.internalKycTemplateId;
-  const reasonCode = kycResult?.codes?.[0] as ReasonCode;
-  const failedMarqeta: ReasonCode = marqeta?.kycResult?.codes?.find((code) => code !== ReasonCode.Approved) as ReasonCode;
+  const reasonCodes = kycResult?.codes as ReasonCode[];
+  const failedMarqeta: ReasonCode = reasonCodes?.find((code: ReasonCode) => code !== ReasonCode.Approved) as ReasonCode;
 
   if (failedMarqeta) {
     return {
@@ -144,7 +88,7 @@ export const getShareableMarqetaUser = (res: IApplicationDecision): TransformedR
 
   const transformed: TransformedResponse = {
     status: kycResult?.status || undefined,
-    reason: reasonCode,
+    reason: reasonCodes?.[0],
     internalKycTemplateId,
     paymentData: res.paymentData,
   };
@@ -198,56 +142,6 @@ export const checkIfUserHasPendingTransactionsInMarqeta = async (user: IUserDocu
   return true;
 };
 
-export const closeKarmaCard = async (userObject: IUserDocument) => {
-  if (!userObject.integrations.marqeta) {
-    console.log('[+] User does not have a Marqeta integration skip this step');
-    return;
-  }
-
-  const userGPABalance: IGPABalanceResponse = await getKarmaWalletCardBalance(userObject);
-  // Check if any pending credits
-  if (!!userGPABalance.gpa?.pending_credits) {
-    throw new Error('[+] User has pending credits, account cannot be closed yet.');
-  }
-  // check if any pending transactions
-  const pendingTransactions = await checkIfUserHasPendingTransactionsInMarqeta(userObject);
-  const existingBalance = userGPABalance.gpa.available_balance;
-  if (!!existingBalance) {
-    throw new Error('[+] User has a balance on their Karma Wallet Card. Manual review required');
-  }
-
-  if (!pendingTransactions) {
-    const karmaCards = await CardModel.find({
-      userId: userObject._id.toString(),
-      'integrations.marqeta': { $exists: true },
-    });
-
-    if (!karmaCards.length) {
-      console.log('[+] User does not have any marqeta cards');
-      return;
-    }
-    const transitionedCards = await terminateMarqetaCards(karmaCards);
-    if (transitionedCards.length === karmaCards.length) {
-      console.log('[+] All Marqeta cards have been terminated');
-    } else {
-      throw new Error('[+] Error terminating Marqeta cards');
-    }
-
-    const closeUser = await transitionMarqetaUserToClosed(userObject);
-
-    if (closeUser) {
-      console.log('[+] User has been transitioned to Closed status in Marqeta');
-    } else {
-      throw new Error('[+] Error transitioning Marqeta user to closed');
-    }
-
-    // delete ach_funding_sources and bank connection
-    await ACHFundingSourceModel.deleteMany({ userId: userObject._id.toString() });
-    await BankConnectionModel.deleteMany({ userId: userObject._id.toString() });
-  } else {
-    console.log('///// User has no pending transactions with Marqeta');
-  }
-};
 // get a breakdown a user's Karma Wallet cards
 export const karmaWalletCardBreakdown = async (userObject: IUserDocument) => {
   const cardsInMarqeta = await listCards(userObject.integrations.marqeta.userToken);
@@ -359,9 +253,9 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
             skipSubscribe: true,
           },
         } as any;
-  
+
         const userGroup = await joinGroup(mockRequest);
-  
+
         if (!!userGroup) {
           const group = await GroupModel.findById(userGroup.group);
           subscribeData.groupName = group.name;
@@ -397,5 +291,57 @@ export const handleUserPaidMembership = async (user: IUserDocument) => {
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user?.integrations?.referrals?.params);
   } catch (error) {
     console.log('Error handling user paid membership', error);
+  }
+};
+
+export const closeKarmaCard = async (userObject: IUserDocument) => {
+  if (!userObject.integrations.marqeta) {
+    console.log('[+] User does not have a Marqeta integration skip this step');
+    return;
+  }
+
+  const userGPABalance: IGPABalanceResponse = await getKarmaWalletCardBalance(userObject);
+  // Check if any pending credits
+  if (!!userGPABalance.gpa?.pending_credits) {
+    throw new Error('[+] User has pending credits, account cannot be closed yet.');
+  }
+  // check if any pending transactions
+  const pendingTransactions = await checkIfUserHasPendingTransactionsInMarqeta(userObject);
+  const existingBalance = userGPABalance.gpa.available_balance;
+  if (!!existingBalance) {
+    throw new Error('[+] User has a balance on their Karma Wallet Card. Manual review required');
+  }
+
+  if (!pendingTransactions) {
+    const karmaCards = await CardModel.find({
+      userId: userObject._id.toString(),
+      'integrations.marqeta': { $exists: true },
+    });
+
+    if (!karmaCards.length) {
+      console.log('[+] User does not have any marqeta cards');
+      return;
+    }
+    const transitionedCards = await terminateMarqetaCards(karmaCards);
+    if (transitionedCards.length === karmaCards.length) {
+      console.log('[+] All Marqeta cards have been terminated');
+    } else {
+      throw new Error('[+] Error terminating Marqeta cards');
+    }
+
+    const closeUser = await transitionMarqetaUserToClosed(userObject);
+    await removeUserFromDebitCardHoldersList(userObject);
+
+    if (closeUser) {
+      console.log('[+] User has been transitioned to Closed status in Marqeta');
+    } else {
+      throw new Error('[+] Error transitioning Marqeta user to closed');
+    }
+
+    // delete ach_funding_sources and bank connection
+    await ACHFundingSourceModel.deleteMany({ userId: userObject._id.toString() });
+    await BankConnectionModel.deleteMany({ userId: userObject._id.toString() });
+  } else {
+    console.log('///// User has no pending transactions with Marqeta');
   }
 };

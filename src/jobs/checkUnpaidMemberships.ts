@@ -1,8 +1,6 @@
 import dayjs from 'dayjs';
 import { UserModel } from '../models/user';
 import { KarmaMembershipStatusEnum } from '../models/user/types';
-import { ErrorTypes } from '../lib/constants';
-import CustomError from '../lib/customError';
 import { sendPayMembershipReminderEmail } from '../services/email';
 
 export const exec = async () => {

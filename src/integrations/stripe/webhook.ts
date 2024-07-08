@@ -133,7 +133,7 @@ export const handleSubscriptionEvent = async (event: Stripe.Event) => {
       // create a subscription for the user
       break;
     case 'customer.subscription.updated':
-      console.log('///// should update the subscription')
+      console.log('///// should update the subscription');
       await updateUserProductSubscriptionFromStripeSubscription(event.data);
       // update the subscription for the user
       break;

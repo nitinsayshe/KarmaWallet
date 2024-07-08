@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express-serve-static-core';
 import { LegacySessionModel } from '../models/legacySession';
 import { IUserDocument, UserModel } from '../models/user';
 import * as UserService from '../services/user';
+import * as UserUtilsService from '../services/user/utils';
 import * as Session from '../services/session';
 import { UserLogModel } from '../models/userLog';
 import { IRequest } from '../types/request';
@@ -40,7 +41,7 @@ const identify = async (req: Request, _: Response, next: NextFunction) => {
 
       const now = getUtcDate().toDate();
       if (!latestUserLogin || !latestUserLogin.date || areMoreThanOneDayApart(latestUserLogin.date, now)) {
-        await UserService.storeNewLogin(user._id.toString(), now, authKey);
+        await UserUtilsService.storeNewLogin(user._id.toString(), now, authKey);
       }
     }
   } catch (e) {

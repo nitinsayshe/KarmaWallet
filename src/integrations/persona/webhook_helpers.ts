@@ -3,9 +3,6 @@ import { createOrUpdatePersonaIntegration, hasInquiriesOrCases, passedInternalKy
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { getUtcDate } from '../../lib/date';
 import { UserModel, IUserDocument } from '../../models/user';
-import { IVisitorDocument, VisitorModel } from '../../models/visitor';
-import { VisitorActionEnum } from '../../models/visitor/types';
-import { getShareableMarqetaUser, ReasonCode, IApplicationDecision } from '../../services/karmaCard/utils';
 import { SocketClient } from '../../clients/socket';
 import { IRequest } from '../../types/request';
 import {
@@ -20,7 +17,6 @@ import {
   PersonaCaseStatusEnumValues,
   IPersonaInquiryData,
 } from './types';
-import { IKarmaCardRequestBody, applyForKarmaCard, getApplicationData, continueKarmaCardApplication, handleApprovedState } from '../../services/karmaCard';
 import { IUserNotificationDocument, UserNotificationModel } from '../../models/user_notification';
 import { NotificationTypeEnum } from '../../lib/constants/notification';
 import {
@@ -31,16 +27,20 @@ import {
 import { PersonaHostedFlowBaseUrl } from '../../clients/persona';
 import { states } from '../../lib/constants/states';
 import { IKarmaCardUpdateData, IKarmaCardDeclinedEmailData } from '../../services/email/types';
-import { isUserDocument } from '../../services/user/utils';
-import { updateMarqetaUserStatus } from '../marqeta/user';
 import { SocketEvents, daysUntilKarmaCardApplicationExpiration } from '../../lib/constants';
 import { SocketRooms, SocketEventTypes } from '../../lib/constants/sockets';
-import { updateUserSubscriptions, updateVisitorSubscriptions } from '../../services/marketingSubscription';
-import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/marketing_subscription';
-import { unsubscribeContactFromLists } from '../activecampaign';
-import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/user/types';
 import { KarmaCardApplicationModel } from '../../models/karmaCardApplication';
 import { IKarmaCardApplicationDocument, ApplicationStatus } from '../../models/karmaCardApplication/types';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { VisitorActionEnum } from '../../models/visitor/types';
+import { applyForKarmaCard, getApplicationData, continueKarmaCardApplication, handleApprovedState } from '../../services/karmaCard';
+import { IKarmaCardRequestBody } from '../../services/karmaCard/types';
+import { getShareableMarqetaUser } from '../../services/karmaCard/utils';
+import { IApplicationDecision, ReasonCode } from '../../services/karmaCard/utils/types';
+import { removeUserFromDebitCardHoldersList } from '../../services/marketingSubscription/utils';
+import { getEmailFromUserOrVisitor, isUserDocument } from '../../services/user/utils';
+import { updateMarqetaUserStatus } from '../marqeta/user';
+import { IMarqetaKycState, IMarqetaUserStatus } from '../marqeta/user/types';
 
 const PhoneNumberLength = 10;
 const PostalCodeLength = 5;
@@ -139,14 +139,6 @@ export const getUserOrVisitorFromAccountId = async (accountId: string): Promise<
   return null;
 };
 
-export const getEmailFromUserOrVisitor = (entity: IUserDocument | IVisitorDocument): string => {
-  if (!entity) return null;
-  if (isUserDocument(entity)) {
-    return entity.emails.find((email) => email.primary)?.email;
-  }
-  return entity.email;
-};
-
 export const continueApplyProcessForApprovedCase = async (req: PersonaWebhookBody) => {
   try {
     const accountId = req?.data?.attributes?.payload?.data?.relationships?.accounts?.data?.[0]?.id;
@@ -199,7 +191,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
   try {
     const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
     const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
-    console.log('///// this is the accountId', accountId)
+    console.log('///// this is the accountId', accountId);
     const entity = await getUserOrVisitorFromAccountId(accountId);
     const email = getEmailFromUserOrVisitor(entity) || applicationData?.email;
     if (!email) throw new Error('No email found');
@@ -242,10 +234,9 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
         createdAt: req?.data?.attributes?.payload?.data?.attributes?.createdAt,
         templateId: inquiryTemplateId,
       };
-  
+
       await createOrUpdatePersonaIntegration(entity, accountId, inquiryData);
-      const applicationData = await KarmaCardApplicationModel.findOne({ email });
-      await handleApprovedState(applicationData, entity, true);
+      await handleApprovedState(application, entity, true);
       // do not need to emit a decision
       return;
     }
@@ -258,7 +249,7 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
     }
 
     if (!existingApplicationData) {
-      console.log('////  no application data was found')
+      console.log('////  no application data was found');
       throw new Error('No result found');
     }
 
@@ -390,8 +381,8 @@ export const sendPendingEmail = async (req: PersonaWebhookBody) => {
   const inquiryStatus = req?.data?.attributes?.payload?.data?.attributes?.status;
   const inquiryTemplateId = req?.data?.attributes?.payload?.data?.relationships?.inquiryTemplate?.data?.id;
   const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
-  const user = await UserModel.findOne({ 'integrations.persona.accountId':  accountId }); 
-  const visitor = await VisitorModel.findOne({ 'integrations.persona.accountId':  accountId });
+  const user = await UserModel.findOne({ 'integrations.persona.accountId': accountId });
+  const visitor = await VisitorModel.findOne({ 'integrations.persona.accountId': accountId });
   const dataObj: IKarmaCardUpdateData = { name: '' };
 
   if (!!user) {
@@ -407,7 +398,7 @@ export const sendPendingEmail = async (req: PersonaWebhookBody) => {
   if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.KW5
   && (inquiryStatus === PersonaInquiryStatusEnum.Failed || inquiryStatus === PersonaInquiryStatusEnum.Completed)) {
     await createPendingReviewKarmaWalletCardUserNotification(dataObj);
-    console.log('///// should send the pending review email')
+    console.log('///// should send the pending review email');
   }
 };
 
@@ -454,17 +445,9 @@ export const sendDeclinedNotification = async (entity: IUserDocument | IVisitorD
     applicationExpirationDate: application.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   };
 
-  console.log('///// send decline email')
+  console.log('///// send decline email');
 
   await createDeclinedKarmaWalletCardUserNotification(notificationData);
-};
-
-export const removeUserFromDebitCardHoldersList = async (entity: IUserDocument | IVisitorDocument) => {
-  const isUser = isUserDocument(entity);
-  const entityId = entity._id.toString();
-  await unsubscribeContactFromLists(getEmailFromUserOrVisitor(entity), [ActiveCampaignListId.DebitCardHolders]);
-  if (isUser) await updateUserSubscriptions(entityId, [], [MarketingSubscriptionCode.debitCardHolders]);
-  else await updateVisitorSubscriptions(entityId, [], [MarketingSubscriptionCode.debitCardHolders]);
 };
 
 export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {

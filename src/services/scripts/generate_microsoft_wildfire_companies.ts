@@ -9,13 +9,12 @@ import { getCompanyValues } from '../values';
 import { mockRequest } from '../../lib/constants/request';
 import { IValueDocument } from '../../models/value';
 
-const getScoreOutOf100 = (score: number) => score
+const getScoreOutOf100 = (score: number) => score;
 // score = score || 0;
 // const _score = score + 16;
 // const float = parseFloat((_score / 32).toFixed(2));
 // const final = Math.round(float * 100);
 // return final;
-;
 
 export interface IMicrosoftWildfireCompany {
   companyName: string;

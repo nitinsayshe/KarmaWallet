@@ -131,6 +131,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
     fields.push({ id: existingWebAppUserCustomField?.id, value: existingWebAppUser });
   }
 
+  // EXISTING VISITOR
   if (!!visitor) {
     unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
 
@@ -149,15 +150,12 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
     if (!debitCardholder) {
       // add to web account updates
       subscribe.push(ActiveCampaignListId.AccountUpdates);
-
       await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fields || []);
     } else {
       // Debit Card Holder flow
       subscribe.push(ActiveCampaignListId.DebitCardHolders);
       if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
-      if (!!employerBeta) {
-        subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
-      }
+      if (!!employerBeta) subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
       if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
       try {
         await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fields || []);
@@ -191,6 +189,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, additional
       {},
       { upsert: true },
     );
+  // NOT AN EXISTING VISITOR
   } else {
     // if no visitor then we do not need to update any subscriptions, we just need to subscribe the user
     if (!debitCardholder) {

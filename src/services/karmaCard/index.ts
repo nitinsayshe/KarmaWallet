@@ -270,21 +270,6 @@ export const updateVisitorOrUserOnApproved = async (
   await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou);
   userObject.integrations.marqeta.status = IMarqetaUserStatus.SUSPENDED;
 
-  const sscid = entityIsUser ? entity.integrations.shareasale?.sscid : entity.integrations.shareASale?.sscid;
-  const sscidCreatedOn = entityIsUser ? entity.integrations.shareasale?.sscidCreatedOn : entity.integrations.shareASale?.sscidCreatedOn;
-  const xType = entityIsUser ? entity.integrations.shareasale?.xTypeParam : entity.integrations.shareASale?.xTypeParam;
-
-  if (!!sscid && !!sscidCreatedOn && !!xType) {
-    const trackingId = await createShareasaleTrackingId();
-    userObject.integrations.shareasale = {
-      sscid,
-      sscidCreatedOn,
-      xTypeParam: xType,
-      trackingId,
-    };
-    await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
-  }
-
   userObject = await userObject.save();
   const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
   console.log('///// found this subscription', standardSubscription);

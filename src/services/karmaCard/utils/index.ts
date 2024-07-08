@@ -27,6 +27,7 @@ import { createKarmaCardWelcomeUserNotification } from '../../user_notification'
 import { IGPABalanceResponse } from '../../../integrations/marqeta/types';
 import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication';
 import { IKarmaCardApplicationDocument } from '../../../models/karmaCardApplication/types';
+import { createShareasaleTrackingId } from '../../user/utils';
 
 export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
   request: KarmaCardApplicationIterationRequest<ReqFieldsType>,
@@ -209,7 +210,7 @@ export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerS
   await page.evaluate(
     (trackingID = trackingid, xType = xtype) => {
       const img = document.createElement('img');
-      img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=sale&xType=${xType}`;
+      img.src = `https://www.shareasale.com/sale.cfm?tracking=${trackingID}&amount=0.00&merchantID=134163&transtype=lead&xType=${xType}`;
       img.width = 1;
       img.height = 1;
       document.body.appendChild(img);
@@ -229,6 +230,30 @@ export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerS
     await page.close();
     await browser.close();
   }, 2000);
+};
+
+export const addShareASaleTrackingToUser = async (user: IUserDocument) => {
+  try {
+    const sscid = user.integrations.shareasale?.sscid;
+    const sscidCreatedOn = user.integrations.shareasale?.sscidCreatedOn;
+    const xType = user.integrations.shareasale?.xTypeParam;
+    user.integrations.shareasale = {
+      sscid,
+      sscidCreatedOn,
+      xTypeParam: xType,
+    };
+
+    if (!!sscid && !!sscidCreatedOn && !!xType) {
+      const trackingId = await createShareasaleTrackingId();
+      user.integrations.shareasale.trackingId = trackingId || null;
+      await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xType, sscidCreatedOn });
+    } else {
+      console.log('User does not have shareasale tracking info');
+    }
+    await user.save();
+  } catch (error) {
+    console.error('Error adding shareasale tracking to user', error);
+  }
 };
 
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
@@ -289,6 +314,8 @@ export const handleUserPaidMembership = async (user: IUserDocument) => {
     executeOrderKarmaWalletCardsJob(user);
     await createKarmaCardWelcomeUserNotification(user, false);
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user?.integrations?.referrals?.params);
+
+    await addShareASaleTrackingToUser(user);
   } catch (error) {
     console.log('Error handling user paid membership', error);
   }

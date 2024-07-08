@@ -4,7 +4,7 @@ import { asCustomError } from '../../lib/customError';
 import { ProductSubscriptionModel } from '../../models/productSubscription';
 import { ICreateProductSubscriptionData } from './types';
 
-export const StandardKarmaWalletSubscriptionId = '666b41cbd9aae931c32ba130';
+export const StandardKarmaWalletSubscriptionId = process.env.NODE_ENV === 'production' ? '668bf0882131dcea2a04da20' : '666b41cbd9aae931c32ba130';
 
 export const createProductSubscription = async (params: ICreateProductSubscriptionData) => {
   try {

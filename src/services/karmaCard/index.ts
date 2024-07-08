@@ -243,7 +243,6 @@ export const updateVisitorOrUserOnApproved = async (
   const visitorId = entityIsUser ? '' : entity?._id;
   const postalCode = entity?.integrations?.marqeta?.postal_code;
   const urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity.integrations?.urlParams;
-  // find the user again since there is a potential race condition
   let userObject = await UserModel.findOne({ 'emails.email': email });
 
   if (!!userObject) {
@@ -255,7 +254,6 @@ export const updateVisitorOrUserOnApproved = async (
     userObject.zipcode = postalCode;
   } else {
     // NEW USER
-    console.log('///// CREATE A NEW USER AND SEND THEM A PASSWORD RESET EMAIL!!!!');
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,
       password: generateRandomPasswordString(14),
@@ -266,14 +264,14 @@ export const updateVisitorOrUserOnApproved = async (
     userObject = user;
   }
 
-  // TRANSITION USER TO SUSPENDED IN MARQETA
+  // TRANSITION USER TO SUSPENDED (THEY STILL NEED TO PAY TO BE IN ACTIVE STATE)
   await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou);
   userObject.integrations.marqeta.status = IMarqetaUserStatus.SUSPENDED;
-
   const sscid = entityIsUser ? entity.integrations.shareasale?.sscid : entity.integrations.shareASale?.sscid;
   const sscidCreatedOn = entityIsUser ? entity.integrations.shareasale?.sscidCreatedOn : entity.integrations.shareASale?.sscidCreatedOn;
   const xType = entityIsUser ? entity.integrations.shareasale?.xTypeParam : entity.integrations.shareASale?.xTypeParam;
 
+  // THIS SHOULD BE MOVED TO PAYMENT
   if (!!sscid && !!sscidCreatedOn && !!xType) {
     const trackingId = await createShareasaleTrackingId();
     userObject.integrations.shareasale = {
@@ -287,7 +285,6 @@ export const updateVisitorOrUserOnApproved = async (
 
   userObject = await userObject.save();
   const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
-  console.log('///// found this subscription', standardSubscription);
   const userWithMembership = await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
   return userWithMembership;
 };
@@ -324,6 +321,7 @@ export const sendManualApproveEmail = async (user: IUserDocument) => {
   });
 };
 
+// User is approved for KW Card, still need to pay membership fee to complete the process
 export const handleApprovedState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
@@ -339,7 +337,6 @@ export const handleApprovedState = async (
       userObject.integrations.stripe = stripeCustomer;
     }
     await sendManualApproveEmail(userObject);
-    // send an email to the user letting them know they were approved and they need to pay membership
   }
 
   return userObject;

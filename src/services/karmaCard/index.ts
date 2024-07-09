@@ -261,7 +261,6 @@ export const updateVisitorOrUserOnApproved = async (
     userObject.zipcode = postalCode;
     await updateNewUserSubscriptions(userObject, { tags: [ActiveCampaignCustomTags.MembershipUnpaid] });
   } else {
-    console.log('//// user is approved, create a new user!');
     // NEW USER
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,

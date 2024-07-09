@@ -45,7 +45,7 @@ export enum ReasonCode {
 }
 
 export enum ShareASaleXType {
-  FREE = 'FREE',
+  MEMBERSHIP = 'm3mb345h1p',
 }
 
 export interface PuppateerShareASaleParams {

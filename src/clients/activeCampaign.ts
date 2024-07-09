@@ -320,7 +320,6 @@ export class ActiveCampaignClient extends SdkClient {
     } catch (err) {
       // Would we want to retry in cases other than 429?
       if (axios.isAxiosError(err) && (err as AxiosError).response?.status === 429) {
-        console.log('//// ERROR SHOULD RETRY');
         if (retries <= 0) throw err;
         console.error(`Error sending Active Campaign request: ${(err as AxiosError).toJSON()}`);
         console.error(`Retrying request. Retries left: ${retries}`);
@@ -333,6 +332,8 @@ export class ActiveCampaignClient extends SdkClient {
         await sleep(backoffTime);
         return this.sendHttpRequestWithRetry(sendRequestFunction, initialRetries, retries - 1);
       }
+
+      throw err;
     }
   }
 

@@ -164,7 +164,7 @@ const storeKarmaCardApplication = async (cardApplicationData: IKarmaCardApplicat
 };
 
 export const createKarmaCardMembershipCheckoutSession = async (params: ICheckoutSessionParams): Promise<Stripe.Checkout.Session> => {
-  const { user, productPrice, uiMode } = params;
+  const { user, uiMode } = params;
 
   if (!user) throw new Error('User not found');
   let promoCode = '';
@@ -184,13 +184,15 @@ export const createKarmaCardMembershipCheckoutSession = async (params: ICheckout
   if (!stripeCustomerID) throw new Error('Stripe customer ID not found');
   // check the uyser for promo codes and find the id fopr the promo code in our promo collection
   // add it to the checkout session if there is a matching one
+  const productDefaultPrice = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
+  const defaultPrice = productDefaultPrice?.integrations?.stripe?.default_price;
 
   const stripeData: Stripe.Checkout.SessionCreateParams = {
     ui_mode: uiMode || 'hosted',
     line_items: [
       {
         // defaults to the Standard Karma Card Membership price
-        price: productPrice || 'price_1PRIbXIhaX1nT8IVbJwQvkTf',
+        price: defaultPrice.toString(),
         quantity: 1,
       },
     ],

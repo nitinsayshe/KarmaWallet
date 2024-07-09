@@ -2,7 +2,7 @@ import puppeteer from 'puppeteer';
 import { PaginateResult } from 'mongoose';
 import { listCards, terminateMarqetaCards } from '../../../integrations/marqeta/card';
 import { getGPABalance } from '../../../integrations/marqeta/gpa';
-import { CardStatus } from '../../../lib/constants';
+import { CardStatus, SocketEvents } from '../../../lib/constants';
 import { CardModel } from '../../../models/card';
 import { IUserDocument } from '../../../models/user';
 import { getDaysFromPreviousDate } from '../../../lib/date';
@@ -29,6 +29,8 @@ import { KarmaCardApplicationModel } from '../../../models/karmaCardApplication'
 import { IKarmaCardApplicationDocument } from '../../../models/karmaCardApplication/types';
 import { createShareasaleTrackingId } from '../../user/utils';
 import { ActiveCampaignCustomTags } from '../../../lib/constants/activecampaign';
+import { SocketEventTypes, SocketRooms } from '../../../lib/constants/sockets';
+import { SocketClient } from '../../../clients/socket';
 
 export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFieldsType, ResFieldsType>(
   request: KarmaCardApplicationIterationRequest<ReqFieldsType>,
@@ -59,14 +61,23 @@ export const iterateOverKarmaCardApplicationsAndExecWithDelay = async <ReqFields
   return report;
 };
 
-export const getShareableMarqetaUser = (res: IApplicationDecision): TransformedResponse => {
+export const getApplicationDecisionData = (res: IApplicationDecision): TransformedResponse => {
   if (!res) return;
   const marqeta = res?.marqeta;
   const kycResult = marqeta?.kycResult;
   const persona = res?.persona;
+  const paidMembership = res?.paidMembership;
   const internalKycTemplateId = res?.internalKycTemplateId;
   const reasonCodes = kycResult?.codes as ReasonCode[];
   const failedMarqeta: ReasonCode = reasonCodes?.find((code: ReasonCode) => code !== ReasonCode.Approved) as ReasonCode;
+
+  if (paidMembership) {
+    return {
+      status: IMarqetaKycState.success,
+      reason: ReasonCode.Approved,
+      internalKycTemplateId,
+    };
+  }
 
   if (failedMarqeta) {
     return {
@@ -80,6 +91,7 @@ export const getShareableMarqetaUser = (res: IApplicationDecision): TransformedR
 
   // if all inquiries are in a pending state and no cases
   const allPersonaInquiriesInPendingAndNoCases = persona?.inquiries?.every((inquiry) => inquiry.status === PersonaInquiryStatusEnum.Pending) && !persona?.cases?.length;
+
   if (!!persona && !passedPersona) {
     return {
       status: allPersonaInquiriesInPendingAndNoCases ? IMarqetaKycState.pending : IMarqetaKycState.failure,
@@ -268,7 +280,6 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
 
     if (!!groupCode) {
       const existingGroup = await GroupModel.findOne({ code: groupCode });
-
       if (existingGroup) {
         const mockRequest = {
           requestor: userObject,
@@ -297,6 +308,17 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
   return userObject;
 };
 
+export const emitSuccessDecisionToSocket = (email: string, result: IApplicationDecision) => {
+  console.log(`Emitting application decision to room: ${SocketRooms.CardApplication}/${email}`);
+  const data = getApplicationDecisionData(result);
+  SocketClient.socket.emit({
+    rooms: [`${SocketRooms.CardApplication}/${email}`],
+    eventName: SocketEvents.Update,
+    type: SocketEventTypes.CardApplicationDecision,
+    data,
+  });
+};
+
 export const handleUserPaidMembership = async (user: IUserDocument) => {
   // mark membership as paid
   // order cards
@@ -312,7 +334,8 @@ export const handleUserPaidMembership = async (user: IUserDocument) => {
       reasonCode: '01',
       status: IMarqetaUserStatus.ACTIVE,
     });
-
+    const userEmail = user.emails.find((e) => e.primary)?.email;
+    await emitSuccessDecisionToSocket(userEmail, { paidMembership: true });
     executeOrderKarmaWalletCardsJob(user);
     await createKarmaCardWelcomeUserNotification(user, false);
     await updateActiveCampaignDataAndJoinGroupForApplicant(user, user?.integrations?.referrals?.params);

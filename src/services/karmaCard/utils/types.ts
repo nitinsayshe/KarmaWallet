@@ -76,4 +76,5 @@ export interface IApplicationDecision {
   internalKycTemplateId?: string;
   paymentLink?: string;
   paymentData?: ICheckoutSessionInfo;
+  paidMembership?: boolean;
 }

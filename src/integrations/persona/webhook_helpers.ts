@@ -35,7 +35,7 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { VisitorActionEnum } from '../../models/visitor/types';
 import { applyForKarmaCard, getApplicationData, continueKarmaCardApplication, handleApprovedState } from '../../services/karmaCard';
 import { IKarmaCardRequestBody } from '../../services/karmaCard/types';
-import { getShareableMarqetaUser } from '../../services/karmaCard/utils';
+import { getApplicationDecisionData } from '../../services/karmaCard/utils';
 import { IApplicationDecision, ReasonCode } from '../../services/karmaCard/utils/types';
 import { removeUserFromDebitCardHoldersList } from '../../services/marketingSubscription/utils';
 import { getEmailFromUserOrVisitor, isUserDocument } from '../../services/user/utils';
@@ -102,7 +102,7 @@ export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Prom
 
 const emitDecisionToSocket = (email: string, inquiryId: string, result: IApplicationDecision) => {
   console.log(`Emitting application decision to room: ${SocketRooms.CardApplication}/${email} for inquiryId or caseId: ${inquiryId}`);
-  const data = getShareableMarqetaUser(result);
+  const data = getApplicationDecisionData(result);
   SocketClient.socket.emit({
     rooms: [`${SocketRooms.CardApplication}/${email}`],
     eventName: SocketEvents.Update,
@@ -500,7 +500,7 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 
   switch (inquiryStatus) {
     case PersonaInquiryStatusEnum.Completed:
-      console.log('Inquiry completed transitioned inquiry status',  inquiryId);
+      console.log('Inquiry completed transitioned inquiry status', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendPendingEmail(req);
       break;

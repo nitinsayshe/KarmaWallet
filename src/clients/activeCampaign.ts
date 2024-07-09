@@ -318,7 +318,6 @@ export class ActiveCampaignClient extends SdkClient {
     try {
       return await sendRequestFunction();
     } catch (err) {
-      console.log('////// ', (err as AxiosError).response.data.failureReasons);
       // Would we want to retry in cases other than 429?
       if (axios.isAxiosError(err) && (err as AxiosError).response?.status === 429) {
         console.log('//// ERROR SHOULD RETRY');

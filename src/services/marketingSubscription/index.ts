@@ -137,12 +137,13 @@ export const _buildSubscribeArray = async (
   subscribeArray: ActiveCampaignListId[],
   additionalData: IActiveCampaignSubscribeData,
 ): Promise<ActiveCampaignListId[]> => {
-  console.log('///// build subscribe array');
-  subscribeArray.push(ActiveCampaignListId.AccountUpdates);
   subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
+
   if (!!additionalData?.debitCardholder) {
     subscribeArray.push(ActiveCampaignListId.DebitCardHolders);
     if (!!additionalData?.groupName) subscribeArray.push(ActiveCampaignListId.GroupMembers);
+  } else {
+    subscribeArray.push(ActiveCampaignListId.AccountUpdates);
   }
   return subscribeArray;
 };
@@ -189,8 +190,10 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
   if (!!visitor) {
     console.log('////// this is a visitor in updateNewUserSubscriptions');
     subscribe = await _buildSubscribeArray(subscribe, userSubscribeData);
+    console.log('/////// after building subscribe');
     // need try/catch for the debit cardholder route
     if (!!debitCardholder || !!unpaidMembership) {
+      console.log('//////// debit card holder');
       try {
         await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
         console.log('///// removed tag from user');

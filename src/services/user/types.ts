@@ -60,6 +60,7 @@ export interface IUserData extends ILoginData {
   referralParams?: IUrlParam[];
   integrations?: IUserIntegrations;
 }
+
 export interface IRegisterUserData {
   name: string;
   token?: string;

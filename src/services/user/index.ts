@@ -421,29 +421,51 @@ export const updateUserEmail = async ({ user, legacyUser, email, req, pw }: IUpd
   await updateMarqetaUser(user.integrations.marqeta.userToken, { email });
 };
 
+export const updateReferralParams = async (user: IUserDocument, referralParams: IUrlParam[]) => {
+  if (!user.integrations?.referrals?.params) {
+    user.integrations.referrals = { params: referralParams };
+  } else {
+    const existingParams = user.integrations.referrals.params;
+    for (const param of referralParams) {
+      const existingParam = existingParams.find((p) => p.key === param.key);
+      if (existingParam) {
+        existingParam.value = param.value;
+      } else {
+        existingParams.push(param);
+      }
+    }
+
+    user.integrations.referrals.params = existingParams;
+    await user.save();
+  }
+
+  return user;
+};
+
 export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
-  const { requestor } = req;
+  let user = req.requestor;
   const updates = req.body;
-  const legacyUser = await LegacyUserModel.findOne({ _id: requestor.legacyId });
+  const legacyUser = await LegacyUserModel.findOne({ _id: user.legacyId });
   if (!!updates?.email) {
     updates.email = updates.email.toLowerCase()?.trim();
     if (!isemail.validate(updates.email)) throw new CustomError('Invalid email provided', ErrorTypes.INVALID_ARG);
-    await updateUserEmail({ user: requestor, legacyUser, email: updates.email, req, pw: updates?.pw });
+    await updateUserEmail({ user, legacyUser, email: updates.email, req, pw: updates?.pw });
   }
 
-  const email = requestor?.emails?.find((e) => e?.primary)?.email;
-  const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations'];
+  const email = user?.emails?.find((e) => e?.primary)?.email;
+  const allowedFields: UserKeys[] = ['name', 'zipcode', 'integrations', 'referralParams'];
   // TODO: find solution to allow dynamic setting of fields
   for (const key of allowedFields) {
     if (typeof updates?.[key] === 'undefined') continue;
     const name = updates?.name?.replace(/\s/g, ' ');
+
     switch (key) {
       case 'name':
-        requestor.name = name;
+        user.name = name;
         if (legacyUser) legacyUser.name = name;
         break;
       case 'zipcode':
-        requestor.zipcode = updates.zipcode;
+        user.zipcode = updates.zipcode;
         if (legacyUser) legacyUser.zipcode = updates.zipcode;
         // sync with active campaign
         if (email) {
@@ -457,9 +479,9 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
         // update the address data in marqeta and km Db
         if (updates?.integrations?.marqeta) {
           const { marqeta } = updates.integrations;
-          const { userToken } = requestor.integrations.marqeta;
+          const { userToken } = user.integrations.marqeta;
           await updateMarqetaUser(userToken, marqeta);
-          requestor.integrations.marqeta = Object.assign(requestor.integrations.marqeta, marqeta);
+          user.integrations.marqeta = Object.assign(user.integrations.marqeta, marqeta);
         }
         break;
       default:
@@ -467,9 +489,13 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
     }
   }
 
+  if (!!updates?.referralParams) {
+    user = await updateReferralParams(user, updates.referralParams);
+  }
+
   if (legacyUser) await legacyUser.save();
-  await requestor.save();
-  return requestor;
+  await user.save();
+  return user;
 };
 
 // used as endpoint for UI to update password

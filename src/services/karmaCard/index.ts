@@ -249,7 +249,7 @@ export const updateVisitorOrUserOnApproved = async (
   const lastName = entity?.integrations?.marqeta?.last_name;
   const visitorId = entityIsUser ? '' : entity?._id;
   const postalCode = entity?.integrations?.marqeta?.postal_code;
-  const urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity.integrations?.urlParams;
+  const urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity?.integrations?.urlParams;
   let userObject = await UserModel.findOne({ 'emails.email': email });
 
   if (!!userObject) {

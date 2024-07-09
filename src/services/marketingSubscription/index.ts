@@ -133,25 +133,6 @@ export const _buildUserFieldsArray = async (
   return fields;
 };
 
-export const _buildUnsubscribeArray = async (visitorDocument: IVisitorDocument, debitCardholder?: boolean) => {
-  const unsubscribe = [];
-
-  const monthlyNewslettersSubscription = await MarketingSubscriptionModel.findOne({
-    visitor: visitorDocument._id,
-    code: MarketingSubscriptionCode.monthlyNewsletters,
-  });
-
-  if (!!monthlyNewslettersSubscription && monthlyNewslettersSubscription.status === MarketingSubscriptionStatus.Active) {
-    unsubscribe.push(ActiveCampaignListId.MonthyNewsletters);
-    monthlyNewslettersSubscription.status = MarketingSubscriptionStatus.Cancelled;
-  }
-
-  if (!!debitCardholder) {
-    unsubscribe.push(ActiveCampaignListId.AccountUpdates);
-  }
-  return unsubscribe;
-};
-
 export const _buildSubscribeArray = async (
   subscribeArray: ActiveCampaignListId[],
   additionalData: IActiveCampaignSubscribeData,
@@ -216,12 +197,18 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
   let unsubscribe: ActiveCampaignListId[] = [];
   // EXISTING VISITOR
   if (!!visitor) {
-    unsubscribe = await _buildUnsubscribeArray(visitor, debitCardholder);
     subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {}, visitor);
     // need try/catch for the debit cardholder route
     if (!!debitCardholder || !!unpaidMembership) {
       try {
         await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+        unsubscribe.push(ActiveCampaignListId.AccountUpdates);
+        console.log('/////// data', {
+          unsubscribe,
+          subscribe,
+          tags,
+          fieldsArray,
+        });
         await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
       } catch (err) {
         console.error('Error subscribing user to lists', err);

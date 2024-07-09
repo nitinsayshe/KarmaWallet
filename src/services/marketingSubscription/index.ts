@@ -206,7 +206,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
     } else {
       unsubscribe = [ActiveCampaignListId.MonthyNewsletters, ActiveCampaignListId.AccountUpdates];
       await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
-      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || [], fieldsArray);
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
     }
   }
 

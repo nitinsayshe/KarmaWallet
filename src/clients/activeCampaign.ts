@@ -333,7 +333,7 @@ export class ActiveCampaignClient extends SdkClient {
         return this.sendHttpRequestWithRetry(sendRequestFunction, initialRetries, retries - 1);
       }
 
-      throw err;
+      console.log('////// error in sendHttpRequestWithRetry', err);
     }
   }
 
@@ -396,7 +396,6 @@ export class ActiveCampaignClient extends SdkClient {
   /* Note: The API specifies a max of 250 contacts at a time */
   public async importContacts(contactImportData: IContactsImportData) {
     try {
-      console.log('///// IMPORT CONTACTS');
       const { data } = await this.sendHttpRequestWithRetry(() => this._client.post('/import/bulk_import', contactImportData));
       return data;
     } catch (err) {

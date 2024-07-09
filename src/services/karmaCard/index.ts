@@ -261,7 +261,6 @@ export const updateVisitorOrUserOnApproved = async (
     }
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
-    await updateNewUserSubscriptions(userObject, { tags: [ActiveCampaignCustomTags.MembershipUnpaid] });
   } else {
     // NEW USER
     const { user } = await UserService.register({
@@ -280,6 +279,7 @@ export const updateVisitorOrUserOnApproved = async (
   userObject = await userObject.save();
   const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
   const userWithMembership = await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
+  await updateNewUserSubscriptions(userObject, { tags: [ActiveCampaignCustomTags.MembershipUnpaid] });
   return userWithMembership;
 };
 

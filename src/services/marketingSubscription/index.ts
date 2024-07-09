@@ -187,13 +187,9 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
     subscribe = await _buildSubscribeArray(subscribe, userSubscribeData);
     // need try/catch for the debit cardholder route
     if (!!debitCardholder || !!unpaidMembership) {
-      try {
-        await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
-        unsubscribe.push(ActiveCampaignListId.AccountUpdates);
-        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
-      } catch (err) {
-        console.error('Error subscribing user to lists', err);
-      }
+      await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+      unsubscribe.push(ActiveCampaignListId.AccountUpdates);
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
     } else {
       await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
     }

@@ -222,6 +222,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
     if (!!debitCardholder || !!unpaidMembership) {
       try {
         await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+        console.log('////// tags to add to the user', tags);
         await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
       } catch (err) {
         console.error('Error subscribing user to lists', err);

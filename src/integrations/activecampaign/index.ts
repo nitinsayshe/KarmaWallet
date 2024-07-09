@@ -800,7 +800,7 @@ export const updateActiveCampaignContactData = async (
   if (!!lastName) contacts[0].last_name = lastName;
   if (!!sub) contacts[0].subscribe = sub;
   if (!!unsub) contacts[0].unsubscribe = unsub;
-  if (!!tags.length) contacts[0].tags = tags;
+  if (!!tags) contacts[0].tags = tags;
   if (!!fields) contacts[0].fields = fields;
 
   await ac.importContacts({ contacts });

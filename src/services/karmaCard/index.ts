@@ -41,6 +41,8 @@ import { addKarmaMembershipToUser, isUserDocument } from '../user/utils';
 import * as VisitorService from '../visitor';
 import { IApplicationDecision, ReasonCode } from './utils/types';
 import { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN, IKarmaCardRequestBody, INewLegalTextRequestBody, IUpdateLegalTextRequestParams } from './types';
+import { updateNewUserSubscriptions } from '../marketingSubscription';
+import { ActiveCampaignCustomTags } from '../../lib/constants/activecampaign';
 
 export const getShareableKarmaCardApplication = ({
   _id,
@@ -257,6 +259,7 @@ export const updateVisitorOrUserOnApproved = async (
     }
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
+    await updateNewUserSubscriptions(userObject, { tags: [ActiveCampaignCustomTags.MembershipUnpaid] });
   } else {
     console.log('//// user is approved, create a new user!');
     // NEW USER

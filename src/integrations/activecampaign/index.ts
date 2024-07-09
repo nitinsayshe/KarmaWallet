@@ -1144,9 +1144,10 @@ export const removeTagFromUser = async (userDocument: IUserDocument, tag: string
   const acTags = await getTagByName(tag);
   const acTag = acTags.tags.find((t) => t.tag === tag);
   const contactIds = await getContactsTagIds(parseInt(acContact.contact.id));
-  const contactTag = contactIds.contactTags.find((t) => t.tag === acTag.id);
-  if (!contactTag.id) {
-    throw new Error(`Tag ${tag} not found`);
+  const contactTag = contactIds.contactTags.find((t) => t.tag === acTag?.id);
+  if (!contactTag?.id) {
+    console.log('////// this contact does not have the tag, skipping removal');
+    return;
   }
   const ac = new ActiveCampaignClient();
   const updatedTags = await ac.removeTagFromUser(contactTag.id);

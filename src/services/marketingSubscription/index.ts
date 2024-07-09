@@ -199,13 +199,19 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
   const fieldsArray = await _buildUserFieldsArray(user, customFields);
   let subscribe: ActiveCampaignListId[] = [];
   let unsubscribe: ActiveCampaignListId[] = [];
+  console.log('/////// data', {
+    user,
+    userSubscribeData,
+  });
   // EXISTING VISITOR
   if (!!visitor) {
+    console.log('////// this is a visitor in updateNewUserSubscriptions');
     subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {}, visitor);
     // need try/catch for the debit cardholder route
     if (!!debitCardholder || !!unpaidMembership) {
       try {
         await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+        console.log('///// removed tag from user');
         unsubscribe.push(ActiveCampaignListId.AccountUpdates);
         console.log('/////// data', {
           unsubscribe,
@@ -218,10 +224,12 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
         console.error('Error subscribing user to lists', err);
       }
     } else {
+      console.log('///// not debit card holder');
       await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
     }
   // NOT AN EXISTING VISITOR
   } else {
+    console.log('////// this is NOT a visitor in updateNewUserSubscriptions');
     subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {});
     if (!debitCardholder) {
       await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, [], fieldsArray);

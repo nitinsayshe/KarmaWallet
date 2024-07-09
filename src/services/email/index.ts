@@ -539,7 +539,7 @@ export const sendKarmaCardWelcomeEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'newUser'], { domain, recipientEmail, name, newUser });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, newUser } });
-  const subject = 'Welcome to Karma Wallet!';
+  const subject = 'Welcome to Your Karma Wallet Membership!';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };

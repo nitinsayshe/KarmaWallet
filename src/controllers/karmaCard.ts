@@ -4,7 +4,7 @@ import CustomError, { asCustomError } from '../lib/customError';
 import { IRequestHandler } from '../types/request';
 import * as KarmaCardService from '../services/karmaCard';
 import * as KarmaCardTypes from '../services/karmaCard/types';
-import { getShareableMarqetaUser } from '../services/karmaCard/utils';
+import { getApplicationDecisionData } from '../services/karmaCard/utils';
 import { ErrorTypes } from '../lib/constants';
 import { getShareableFieldErrors } from '../lib/validation';
 import { ICheckoutSessionParams } from '../integrations/stripe/types';
@@ -12,7 +12,7 @@ import { ICheckoutSessionParams } from '../integrations/stripe/types';
 export const applyForKarmaCard: IRequestHandler<{}, {}, KarmaCardTypes.IKarmaCardRequestBody> = async (req, res) => {
   try {
     const applyResponse = await KarmaCardService.applyForKarmaCard(req);
-    api(req, res, getShareableMarqetaUser(applyResponse));
+    api(req, res, getApplicationDecisionData(applyResponse));
   } catch (err) {
     error(req, res, asCustomError(err));
   }
@@ -30,7 +30,7 @@ export const getApplicationStatus: IRequestHandler<{}, {}, { email: string }> = 
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
     const applyResponse = await KarmaCardService.getApplicationData(parsed.data.email);
-    const transformedResponse = getShareableMarqetaUser(applyResponse);
+    const transformedResponse = getApplicationDecisionData(applyResponse);
     if (!transformedResponse.status) {
       throw new CustomError('No application found', ErrorTypes.NOT_FOUND);
     }

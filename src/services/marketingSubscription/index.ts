@@ -4,14 +4,16 @@ import isemail from 'isemail';
 import { FilterQuery, ObjectId, Types, UpdateQuery } from 'mongoose';
 import { ActiveCampaignClient } from '../../clients/activeCampaign';
 import {
+  FieldValues,
   getSubscribedLists,
+  removeTagFromUser,
   subscribeContactToList,
   subscribeContactToLists,
   updateActiveCampaignContactData,
   updateCustomFields,
 } from '../../integrations/activecampaign';
 import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum, DateKarmaMembershipStoppedbBeingFree } from '../../lib/constants';
-import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
+import { ActiveCampaignCustomFields, ActiveCampaignCustomTags } from '../../lib/constants/activecampaign';
 import { ProviderProductIdToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/marketing_subscription';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
@@ -25,9 +27,8 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/marketing_subscription';
-import { IEmail } from '../../models/user/types';
+import { IEmail, IUrlParam } from '../../models/user/types';
 import { isUserDocument } from '../user/utils';
-import { getStateFromZipcode } from '../utilities';
 
 export interface UserSubscriptions {
   userId: string;
@@ -44,8 +45,7 @@ export interface IActiveCampaignSubscribeData {
   tags?: string[];
   debitCardholder?: boolean;
   groupName?: string;
-  employerBeta?: boolean;
-  beta?: boolean;
+  unpaidMembership?: boolean;
 }
 
 const shareableUnsubscribeError = 'Error processing unsubscribe request.';
@@ -98,167 +98,150 @@ export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
   });
 };
 
-export const updateNewUserSubscriptions = async (user: IUserDocument, additionalData?: IActiveCampaignSubscribeData) => {
-  const { email } = user.emails.find((e) => e.primary);
-  const visitor = await VisitorModel.findOneAndUpdate({ email }, { user: user._id }, { new: true });
-  const { tags, debitCardholder, groupName, employerBeta, beta } = additionalData || {};
+const _isExistingWebAppUser = (user: IUserDocument) => !!user?.integrations?.marqeta && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined));
 
-  let subscribe: ActiveCampaignListId[] = [];
-  let unsubscribe: ActiveCampaignListId[] = [];
+const _isFreeMembershipUser = (user: IUserDocument) => !!user?.integrations?.marqeta?.created_time && dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree);
 
-  const ac = new ActiveCampaignClient();
-  const customFields = await ac.getCustomFieldIDs();
-  let existingWebAppUser = 'false';
-  if (
-    !!user?.integrations?.marqeta
-    && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined))
-  ) {
-    existingWebAppUser = 'true';
-  }
-
-  const isFreeMembershipUserCustomField = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser,
-  );
-  const isFreeMembershipUser = !!user?.integrations?.marqeta?.created_time
-    ? dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree)
-    : false;
-
-  const fields = [{ id: isFreeMembershipUserCustomField.id, value: isFreeMembershipUser.toString() }];
-
-  const existingWebAppUserField = customFields.find(
-    (field) => field.name === ActiveCampaignCustomFields.existingWebAppUser,
-  );
-
-  if (!!existingWebAppUserField?.id) {
-    fields.push({ id: existingWebAppUserField?.id, value: existingWebAppUser });
-  }
-
-  const zipCodeField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userZipcode);
-  const zipCode = user?.integrations?.marqeta?.postal_code;
-  if (!!zipCode && !!zipCodeField?.id) {
-    fields.push({ id: zipCodeField.id, value: zipCode });
-  }
-
-  const stateField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userState);
-  const state = getStateFromZipcode(zipCode);
-  if (!!state && !!stateField?.id) {
-    fields.push({ id: stateField.id, value: state });
-  }
-
-  const sourceField = customFields.find((field) => field.name === ActiveCampaignCustomFields.source);
-  const params = user?.integrations?.referrals?.params;
-  let source = null;
-  if (!!user?.integrations?.shareasale) {
-    source = 'sharesale';
-  } else if (!!params) {
+const _userSource = (user: IUserDocument, params?: IUrlParam[]) => {
+  if (!!user?.integrations?.shareasale) return 'sharesale';
+  if (!!user?.integrations?.referrals?.params) {
     const sourceParam = params?.find((p) => p.key === 'utm_source');
-    if (!!sourceParam) {
-      source = sourceParam.value;
-    }
+    if (!!sourceParam) return sourceParam.value;
   }
-  if (!!source && !!sourceField?.id) {
-    fields.push({ id: sourceField.id, value: source });
+  return null;
+};
+
+export const _buildUserFieldsArray = async (
+  user: IUserDocument,
+  customFields: Array<{ name: string; id: number }>,
+): Promise<FieldValues> => {
+  const fields = [];
+  const freeMembershipCustomField = customFields.find((field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser);
+  const existingMembershipCustomField = customFields.find((field) => field.name === ActiveCampaignCustomFields.existingWebAppUser);
+  const zipCodeField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userZipcode);
+  const sourceField = customFields.find((field) => field.name === ActiveCampaignCustomFields.source);
+  const zipCode = user?.integrations?.marqeta?.postal_code || user?.zipcode;
+  const source = _userSource(user);
+  if (freeMembershipCustomField?.id) {
+    fields.push({ id: freeMembershipCustomField.id, value: !!_isExistingWebAppUser(user) ? 'true' : 'false' });
+  }
+  if (existingMembershipCustomField?.id) {
+    fields.push({ id: existingMembershipCustomField.id, value: !!_isFreeMembershipUser(user) ? 'true' : 'false' });
+  }
+  if (!!zipCode && !!zipCodeField?.id) fields.push({ id: zipCodeField.id, value: zipCode });
+  if (!!source && !!sourceField?.id) fields.push({ id: sourceField.id, value: source });
+  return fields;
+};
+
+export const _buildUnsubscribeArray = async (visitorDocument: IVisitorDocument, debitCardholder?: boolean) => {
+  const unsubscribe = [];
+
+  const monthlyNewslettersSubscription = await MarketingSubscriptionModel.findOne({
+    visitor: visitorDocument._id,
+    code: MarketingSubscriptionCode.monthlyNewsletters,
+  });
+
+  if (!!monthlyNewslettersSubscription && monthlyNewslettersSubscription.status === MarketingSubscriptionStatus.Active) {
+    unsubscribe.push(ActiveCampaignListId.MonthyNewsletters);
+    monthlyNewslettersSubscription.status = MarketingSubscriptionStatus.Cancelled;
   }
 
-  if (!!visitor) {
-    unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
+  if (!!debitCardholder) {
+    unsubscribe.push(ActiveCampaignListId.AccountUpdates);
+  }
+  return unsubscribe;
+};
 
-    // check if they are receiving the general updates newsletter and add it if not
-    const sub = await MarketingSubscriptionModel.findOne({
-      visitor: visitor._id,
+export const _buildSubscribeArray = async (
+  subscribeArray: ActiveCampaignListId[],
+  additionalData: IActiveCampaignSubscribeData,
+  visitorDocument?: IVisitorDocument,
+): Promise<ActiveCampaignListId[]> => {
+  subscribeArray.push(ActiveCampaignListId.AccountUpdates);
+  // General Updates List
+  if (!visitorDocument) {
+    subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
+  } else {
+    const generalUpdatesSubscription = await MarketingSubscriptionModel.findOne({
+      visitor: visitorDocument._id,
       code: MarketingSubscriptionCode.generalUpdates,
     });
 
-    // add them to general update if they are not receiving yet
-    if (!(sub?.status === MarketingSubscriptionStatus.Active)) {
-      subscribe.push(ActiveCampaignListId.GeneralUpdates);
-    }
-
-    // Joined Web App flow
-    if (!debitCardholder) {
-      // add to web account updates
-      subscribe.push(ActiveCampaignListId.AccountUpdates);
-
-      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fields || []);
-    } else {
-      // Debit Card Holder flow
-      subscribe.push(ActiveCampaignListId.DebitCardHolders);
-      if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
-      if (!!employerBeta) {
-        subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
-      }
-      if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
-      try {
-        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fields || []);
-      } catch (err) {
-        console.error('Error subscribing user to lists', err);
-      }
-    }
-
-    await MarketingSubscriptionModel.findOneAndUpdate(
-      { visitor: visitor._id, code: MarketingSubscriptionCode.monthlyNewsletters },
-      { status: MarketingSubscriptionStatus.Cancelled },
-    );
-
-    // associate subscriptions with new user
-    await MarketingSubscriptionModel.updateMany({ visitor: visitor._id }, { $set: { user: user._id, lastModified: getUtcDate() } });
-    await MarketingSubscriptionModel.create({
-      code: MarketingSubscriptionCode.accountUpdates,
-      user: user._id,
-      visitor: visitor?._id,
-      status: MarketingSubscriptionStatus.Active,
-    });
-
-    // findOne with upsert instead of create because they may have already subscribed to the newsletter
-    await MarketingSubscriptionModel.findOne(
-      {
-        code: MarketingSubscriptionCode.generalUpdates,
-        user: user._id,
-        visitor: visitor?._id,
-        status: MarketingSubscriptionStatus.Active,
-      },
-      {},
-      { upsert: true },
-    );
-  } else {
-    // if no visitor then we do not need to update any subscriptions, we just need to subscribe the user
-    if (!debitCardholder) {
-      subscribe = [ActiveCampaignListId.AccountUpdates, ActiveCampaignListId.GeneralUpdates];
-      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, [], fields);
-
-      await MarketingSubscriptionModel.create({
-        code: MarketingSubscriptionCode.accountUpdates,
-        user: user._id,
-        visitor: visitor?._id,
-        status: MarketingSubscriptionStatus.Active,
-      });
-      // findOne with upsert instead of create because they may have already subscribed to the newsletter
-      await MarketingSubscriptionModel.findOne(
-        {
-          code: MarketingSubscriptionCode.generalUpdates,
-          user: user._id,
-          visitor: visitor?._id,
-          status: MarketingSubscriptionStatus.Active,
-        },
-        {},
-        { upsert: true },
-      );
-    } else {
-      unsubscribe = [ActiveCampaignListId.MonthyNewsletters];
-      subscribe.push(ActiveCampaignListId.GeneralUpdates);
-      subscribe.push(ActiveCampaignListId.DebitCardHolders);
-      if (!!groupName) subscribe.push(ActiveCampaignListId.GroupMembers);
-      if (!!employerBeta) {
-        subscribe.push(ActiveCampaignListId.EmployerProgramBeta);
-      }
-      if (!!beta) subscribe.push(ActiveCampaignListId.BetaTesters);
-      try {
-        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || []);
-      } catch (err) {
-        console.error('Error subscribing user to lists', err);
-      }
+    if (generalUpdatesSubscription?.status !== MarketingSubscriptionStatus.Active || !generalUpdatesSubscription) {
+      subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
     }
   }
+
+  if (!!additionalData?.debitCardholder) {
+    subscribeArray.push(ActiveCampaignListId.DebitCardHolders);
+    if (!!additionalData?.groupName) subscribeArray.push(ActiveCampaignListId.GroupMembers);
+  }
+
+  return subscribeArray;
+};
+
+export const _updateVisitorSubscriptionsForNewUser = async (user: IUserDocument, visitor: IVisitorDocument) => {
+  // associate subscriptions with new user
+  await MarketingSubscriptionModel.updateMany({ visitor: visitor._id }, { $set: { user: user._id, lastModified: getUtcDate() } });
+};
+
+export const addMarketingSubscriptionsForNewUser = async (user: IUserDocument) => {
+  // create subscription for acccount updates
+  await MarketingSubscriptionModel.create({
+    code: MarketingSubscriptionCode.accountUpdates,
+    user: user._id,
+    status: MarketingSubscriptionStatus.Active,
+  });
+
+  // create subscription for general updates
+  await MarketingSubscriptionModel.findOne(
+    {
+      code: MarketingSubscriptionCode.generalUpdates,
+      user: user._id,
+      status: MarketingSubscriptionStatus.Active,
+    },
+    {},
+    { upsert: true },
+  );
+};
+
+export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscribeData?: IActiveCampaignSubscribeData) => {
+  const { email } = user.emails.find((e) => e.primary);
+  const visitor = await VisitorModel.findOneAndUpdate({ email }, { user: user._id }, { new: true });
+  const { tags, debitCardholder, unpaidMembership } = userSubscribeData || {};
+  const ac = new ActiveCampaignClient();
+  const customFields = await ac.getCustomFieldIDs();
+  const fieldsArray = await _buildUserFieldsArray(user, customFields);
+  let subscribe: ActiveCampaignListId[] = [];
+  let unsubscribe: ActiveCampaignListId[] = [];
+  // EXISTING VISITOR
+  if (!!visitor) {
+    unsubscribe = await _buildUnsubscribeArray(visitor, debitCardholder);
+    subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {}, visitor);
+    // need try/catch for the debit cardholder route
+    if (!!debitCardholder || !!unpaidMembership) {
+      try {
+        await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+        await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
+      } catch (err) {
+        console.error('Error subscribing user to lists', err);
+      }
+    } else {
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags, fieldsArray);
+    }
+  // NOT AN EXISTING VISITOR
+  } else {
+    subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {});
+    if (!debitCardholder) {
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, [], fieldsArray);
+      await addMarketingSubscriptionsForNewUser(user);
+    } else {
+      unsubscribe = [ActiveCampaignListId.MonthyNewsletters, ActiveCampaignListId.AccountUpdates];
+      await removeTagFromUser(user, ActiveCampaignCustomTags.MembershipUnpaid);
+      await updateActiveCampaignContactData({ email, name: user?.name }, subscribe, unsubscribe, tags || [], fieldsArray);
+    }
+  }
+
   try {
     return await activateSubscriptions(
       user._id,

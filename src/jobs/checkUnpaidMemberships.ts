@@ -3,14 +3,26 @@ import { UserModel } from '../models/user';
 import { KarmaMembershipStatusEnum } from '../models/user/types';
 import { sendPayMembershipReminderEmail } from '../services/email';
 
+const _sendEmail = async (user: any) => {
+  const userEmail = user.emails.find((email: any) => email.primary)?.email;
+  await sendPayMembershipReminderEmail({
+    link: 'https://karmawallet.io/account',
+    recipientEmail: userEmail,
+    name: user.integrations.marqeta.first_name,
+    user,
+  });
+  console.log(`[+] Pay Membership nudge email sent to visitor ${user._id}`);
+};
+
 export const exec = async () => {
-  let emailsSent = 0;
   try {
+    // 2 days
     const users = await UserModel.find({
       'karmaMembership.status': KarmaMembershipStatusEnum.unpaid,
-      'karmaMembership.createdOn': {
-        $eq: dayjs().subtract(2, 'days').endOf('day').toDate(),
-      },
+      $or: [
+        { 'karmaMembership.createdOn': { $eq: dayjs().subtract(2, 'days').endOf('day').toDate() } },
+        { 'karmaMembership.createdOn': { $eq: dayjs().subtract(7, 'days').endOf('day').toDate() } },
+      ],
     });
 
     if (!users || !users.length) {
@@ -18,17 +30,8 @@ export const exec = async () => {
     }
 
     for (const user of users) {
-      const userEmail = user.emails.find((email: any) => email.primary)?.email;
-      const reminderEmail = await sendPayMembershipReminderEmail({
-        link: 'https://karmawallet.io/account',
-        recipientEmail: userEmail,
-        name: user.integrations.marqeta.first_name,
-        user,
-      });
-      if (!!reminderEmail) emailsSent += 1;
-      console.log(`[+] Pay Membership nudge email sent to visitor ${user._id}`);
+      _sendEmail(user);
     }
-    console.log(`[+] Pay Membership nudge emails sent to ${emailsSent} visitors}`);
   } catch (err) {
     console.log('Error nudging visitors to finish account creation', err);
     throw err;

@@ -26,6 +26,14 @@ export const UpdateContactListStatusEnum = {
   unsubscribe: 2,
 } as const;
 
+export interface IActiveCampaignListTagsResponse {
+  tags: Array<{ tagType: string; tag: string; id: string }>;
+}
+
+export interface IActiveCampaignContactTagsReponse {
+  contactTags: Array<{ contact: string; tag: string; id: string }>;
+}
+
 export interface IGetContactsData {
   ids?: string; // could be repeated for multiple ids (e.g. ids[]=1&ids[]=2&ids[]=3)
   email?: string;
@@ -310,8 +318,10 @@ export class ActiveCampaignClient extends SdkClient {
     try {
       return await sendRequestFunction();
     } catch (err) {
+      console.log('////// ', (err as AxiosError).response.data.failureReasons);
       // Would we want to retry in cases other than 429?
       if (axios.isAxiosError(err) && (err as AxiosError).response?.status === 429) {
+        console.log('//// ERROR SHOULD RETRY');
         if (retries <= 0) throw err;
         console.error(`Error sending Active Campaign request: ${(err as AxiosError).toJSON()}`);
         console.error(`Retrying request. Retries left: ${retries}`);
@@ -386,6 +396,7 @@ export class ActiveCampaignClient extends SdkClient {
   /* Note: The API specifies a max of 250 contacts at a time */
   public async importContacts(contactImportData: IContactsImportData) {
     try {
+      console.log('///// IMPORT CONTACTS');
       const { data } = await this.sendHttpRequestWithRetry(() => this._client.post('/import/bulk_import', contactImportData));
       return data;
     } catch (err) {
@@ -516,6 +527,44 @@ export class ActiveCampaignClient extends SdkClient {
       } else {
         console.log(err);
       }
+      throw asCustomError(err);
+    }
+  }
+
+  public async removeTagFromUser(tagId: string): Promise<AxiosResponse<undefined, undefined>> {
+    try {
+      const data = await this.sendHttpRequestWithRetry(() => this._client.delete(`/contactTags/${tagId}`));
+      return data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
+      throw asCustomError(err);
+    }
+  }
+
+  public async listAllTags(tagName?: string): Promise<IActiveCampaignListTagsResponse> {
+    try {
+      const query = tagName ? `?search=${tagName}` : '';
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get(`/tags${query}`));
+      return data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
+      throw asCustomError(err);
+    }
+  }
+
+  public async getContactsTagIds(contactId: number): Promise<IActiveCampaignContactTagsReponse> {
+    try {
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get(`/contacts/${contactId}/contactTags`));
+      return data;
+    } catch (err) {
       throw asCustomError(err);
     }
   }

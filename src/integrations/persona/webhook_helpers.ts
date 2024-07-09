@@ -35,7 +35,7 @@ import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { VisitorActionEnum } from '../../models/visitor/types';
 import { applyForKarmaCard, getApplicationData, continueKarmaCardApplication, handleApprovedState } from '../../services/karmaCard';
 import { IKarmaCardRequestBody } from '../../services/karmaCard/types';
-import { getShareableMarqetaUser } from '../../services/karmaCard/utils';
+import { getApplicationDecisionData } from '../../services/karmaCard/utils';
 import { IApplicationDecision, ReasonCode } from '../../services/karmaCard/utils/types';
 import { removeUserFromDebitCardHoldersList } from '../../services/marketingSubscription/utils';
 import { getEmailFromUserOrVisitor, isUserDocument } from '../../services/user/utils';
@@ -102,7 +102,7 @@ export const startApplicationFromInquiry = async (req: PersonaWebhookBody): Prom
 
 const emitDecisionToSocket = (email: string, inquiryId: string, result: IApplicationDecision) => {
   console.log(`Emitting application decision to room: ${SocketRooms.CardApplication}/${email} for inquiryId or caseId: ${inquiryId}`);
-  const data = getShareableMarqetaUser(result);
+  const data = getApplicationDecisionData(result);
   SocketClient.socket.emit({
     rooms: [`${SocketRooms.CardApplication}/${email}`],
     eventName: SocketEvents.Update,
@@ -191,7 +191,6 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
   try {
     const applicationData = req?.data?.attributes?.payload?.data?.attributes.fields?.applicationData?.value;
     const accountId = req?.data?.attributes?.payload?.data?.relationships?.account?.data?.id;
-    console.log('///// this is the accountId', accountId);
     const entity = await getUserOrVisitorFromAccountId(accountId);
     const email = getEmailFromUserOrVisitor(entity) || applicationData?.email;
     if (!email) throw new Error('No email found');
@@ -398,7 +397,6 @@ export const sendPendingEmail = async (req: PersonaWebhookBody) => {
   if (inquiryTemplateId === PersonaInquiryTemplateIdEnum.KW5
   && (inquiryStatus === PersonaInquiryStatusEnum.Failed || inquiryStatus === PersonaInquiryStatusEnum.Completed)) {
     await createPendingReviewKarmaWalletCardUserNotification(dataObj);
-    console.log('///// should send the pending review email');
   }
 };
 
@@ -444,8 +442,6 @@ export const sendDeclinedNotification = async (entity: IUserDocument | IVisitorD
     resubmitDocumentsLink: composePersonaContinueUrl(PersonaInquiryTemplateIdEnum.KW5, entity.integrations.persona.accountId),
     applicationExpirationDate: application.expirationDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
   };
-
-  console.log('///// send decline email');
 
   await createDeclinedKarmaWalletCardUserNotification(notificationData);
 };
@@ -504,26 +500,23 @@ export const handleInquiryTransitionedWebhook = async (req: PersonaWebhookBody) 
 
   switch (inquiryStatus) {
     case PersonaInquiryStatusEnum.Completed:
-      console.log('Inquiry completed transitioned inquiry status');
-      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      console.log('Inquiry completed transitioned inquiry status', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendPendingEmail(req);
       break;
     case PersonaInquiryStatusEnum.Approved:
-      console.log('Inquiry approved transitioned inquiry status');
-      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      console.log('Inquiry approved transitioned inquiry status', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendPendingEmail(req);
       break;
     case PersonaInquiryStatusEnum.Pending:
-      console.log('Inquiry pending transitioned inquiry status');
+      console.log('Inquiry pending transitioned inquiry status', inquiryId);
       // check if a visitor or user exists for this inquiry
       // update the integration if so, otherwise create a new visitor with a persona integration
       await createVisitorOrUpdatePersonaIntegration(email, req);
       break;
     case PersonaInquiryStatusEnum.Failed:
-      console.log('Inquiry failed transitioned inquiry status');
-      console.log('going into start or continue apply process for transitioned inquiry with id: ', inquiryId);
+      console.log('Inquiry failed transitioned inquiry status', inquiryId);
       await startOrContinueApplyProcessForTransitionedInquiry(req);
       await sendContinueApplicationEmail(req);
       await sendPendingEmail(req);

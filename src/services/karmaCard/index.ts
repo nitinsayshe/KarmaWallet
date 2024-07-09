@@ -37,10 +37,9 @@ import { userHasActiveOrSuspendedDepositAccount } from '../depositAccount';
 import * as UserService from '../user';
 import { updateUserUrlParams } from '../user';
 import { IUrlParam } from '../user/types';
-import { addKarmaMembershipToUser, createShareasaleTrackingId, isUserDocument } from '../user/utils';
+import { addKarmaMembershipToUser, isUserDocument } from '../user/utils';
 import * as VisitorService from '../visitor';
 import { IApplicationDecision, ReasonCode } from './utils/types';
-import { openBrowserAndAddShareASaleCode } from './utils';
 import { MARQETA_VIRTUAL_CARD_PRODUCT_TOKEN, MARQETA_PHYSICAL_CARD_PRODUCT_TOKEN, IKarmaCardRequestBody, INewLegalTextRequestBody, IUpdateLegalTextRequestParams } from './types';
 
 export const getShareableKarmaCardApplication = ({
@@ -243,7 +242,6 @@ export const updateVisitorOrUserOnApproved = async (
   const visitorId = entityIsUser ? '' : entity?._id;
   const postalCode = entity?.integrations?.marqeta?.postal_code;
   const urlParams = entityIsUser ? entity.integrations?.referrals?.params : entity.integrations?.urlParams;
-  // find the user again since there is a potential race condition
   let userObject = await UserModel.findOne({ 'emails.email': email });
 
   if (!!userObject) {
@@ -254,8 +252,8 @@ export const updateVisitorOrUserOnApproved = async (
     userObject.name = `${firstName} ${lastName}`;
     userObject.zipcode = postalCode;
   } else {
+    console.log('//// user is approved, create a new user!');
     // NEW USER
-    console.log('///// CREATE A NEW USER AND SEND THEM A PASSWORD RESET EMAIL!!!!');
     const { user } = await UserService.register({
       name: `${firstName} ${lastName}`,
       password: generateRandomPasswordString(14),
@@ -266,13 +264,11 @@ export const updateVisitorOrUserOnApproved = async (
     userObject = user;
   }
 
-  // TRANSITION USER TO SUSPENDED IN MARQETA
+  // TRANSITION USER TO SUSPENDED (THEY STILL NEED TO PAY TO BE IN ACTIVE STATE)
   await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou);
   userObject.integrations.marqeta.status = IMarqetaUserStatus.SUSPENDED;
-
   userObject = await userObject.save();
   const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
-  console.log('///// found this subscription', standardSubscription);
   const userWithMembership = await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
   return userWithMembership;
 };
@@ -309,6 +305,7 @@ export const sendManualApproveEmail = async (user: IUserDocument) => {
   });
 };
 
+// User is approved for KW Card, still need to pay membership fee to complete the process
 export const handleApprovedState = async (
   karmaCardApplication: IKarmaCardApplication,
   entity: IUserDocument | IVisitorDocument,
@@ -324,7 +321,6 @@ export const handleApprovedState = async (
       userObject.integrations.stripe = stripeCustomer;
     }
     await sendManualApproveEmail(userObject);
-    // send an email to the user letting them know they were approved and they need to pay membership
   }
 
   return userObject;

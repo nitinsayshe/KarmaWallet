@@ -297,7 +297,7 @@ export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObjec
         if (!!userGroup) {
           const group = await GroupModel.findById(userGroup.group);
           subscribeData.groupName = group.name;
-          subscribeData.tags = [group.name];
+          subscribeData.tags.push(group.name);
         }
       } else {
         console.log('Group not found');

@@ -100,7 +100,7 @@ export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
 
 const _isExistingWebAppUser = (user: IUserDocument) => !!user?.integrations?.marqeta && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined));
 
-const _isFreeMembershipUser = (user: IUserDocument) => !!user?.integrations?.marqeta?.created_time && dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree);
+const _isFreeMembershipUser = (user: IUserDocument) => !!user?.integrations?.marqeta?.created_time && dayjs(user?.integrations?.marqeta?.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree);
 
 const _userSource = (user: IUserDocument, params?: IUrlParam[]) => {
   if (!!user?.integrations?.shareasale) return 'sharesale';
@@ -123,13 +123,17 @@ export const _buildUserFieldsArray = async (
   const zipCode = user?.integrations?.marqeta?.postal_code || user?.zipcode;
   const source = _userSource(user);
   if (freeMembershipCustomField?.id) {
+    console.log('///// free');
     fields.push({ id: freeMembershipCustomField.id, value: !!_isExistingWebAppUser(user) ? 'true' : 'false' });
   }
   if (existingMembershipCustomField?.id) {
+    console.log('///// existing');
     fields.push({ id: existingMembershipCustomField.id, value: !!_isFreeMembershipUser(user) ? 'true' : 'false' });
   }
   if (!!zipCode && !!zipCodeField?.id) fields.push({ id: zipCodeField.id, value: zipCode });
+  console.log('///// afrte zip');
   if (!!source && !!sourceField?.id) fields.push({ id: sourceField.id, value: source });
+  console.log('///// afrte source');
   return fields;
 };
 
@@ -144,7 +148,7 @@ export const _buildSubscribeArray = async (
     subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
   } else {
     const generalUpdatesSubscription = await MarketingSubscriptionModel.findOne({
-      visitor: visitorDocument._id,
+      visitor: visitorDocument?._id,
       code: MarketingSubscriptionCode.generalUpdates,
     });
 

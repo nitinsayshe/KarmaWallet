@@ -1,3 +1,4 @@
+import { sendHttpRequestWithRetry } from '.';
 import { IListPricesParams } from '../../integrations/stripe/types';
 import { asCustomError } from '../../lib/customError';
 import { StripeClient } from './stripeClient';
@@ -11,7 +12,7 @@ export class Price {
 
   async listPrices(params: IListPricesParams) {
     try {
-      return this._stripeClient._client.prices.list(params);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.prices.list(params));
     } catch (e) {
       throw asCustomError(e);
     }

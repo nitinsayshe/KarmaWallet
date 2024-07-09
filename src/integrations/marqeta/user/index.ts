@@ -2,7 +2,7 @@ import { GetPaginiatedResourceParams } from '..';
 import { MarqetaClient } from '../../../clients/marqeta/marqetaClient';
 import { MarqetaChannelEnum, MarqetaReasonCodeEnumValues } from '../../../clients/marqeta/types';
 import { User } from '../../../clients/marqeta/user';
-import { IUserDocument } from '../../../models/user';
+import { IUserDocument, UserModel } from '../../../models/user';
 import { IVisitorDocument } from '../../../models/visitor';
 import { IEntityData } from '../../../services/user/types';
 import { IRequest } from '../../../types/request';
@@ -168,6 +168,14 @@ export const getUsers = async (queryParams: GetPaginiatedResourceParams): Promis
   const user = new User(marqetaClient);
   const users = await user.listMarqetaUsers(queryParams);
   return users;
+};
+
+export const checkIfUserActiveInMarqeta = async (userId: string) => {
+  const user = await UserModel.findById(userId);
+  if (!user) console.log(`[+] No User found with this id ${userId}`);
+  const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
+  if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
+  return false;
 };
 
 // Will occur when someone manually marks an inquiry/user as declined

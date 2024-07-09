@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { sendHttpRequestWithRetry } from '.';
 import { asCustomError } from '../../lib/customError';
 import { StripeClient } from './stripeClient';
 
@@ -11,7 +12,7 @@ export class Checkout {
 
   async createCheckoutSession(checkoutData: Stripe.Checkout.SessionCreateParams) {
     try {
-      return this._stripeClient._client.checkout.sessions.create(checkoutData);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.checkout.sessions.create(checkoutData));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -19,7 +20,7 @@ export class Checkout {
 
   async retrieveCheckoutSession(checkoutSessionId: string) {
     try {
-      return this._stripeClient._client.checkout.sessions.retrieve(checkoutSessionId);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.checkout.sessions.retrieve(checkoutSessionId));
     } catch (e) {
       throw asCustomError(e);
     }

@@ -1,3 +1,4 @@
+import { sendHttpRequestWithRetry } from '.';
 import { asCustomError } from '../../lib/customError';
 import { StripeClient } from './stripeClient';
 
@@ -10,9 +11,7 @@ export class Promo {
 
   async listPromos(numberToList: number) {
     try {
-      return this._stripeClient._client.promotionCodes.list({
-        limit: numberToList || 100,
-      });
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.promotionCodes.list({ limit: numberToList || 100 }));
     } catch (e) {
       throw asCustomError(e);
     }

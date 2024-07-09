@@ -6,14 +6,6 @@ import { register, checkIfUserPassedInternalKycAndUpdateMarqetaStatus, formatMar
 import { isUserDocument } from '../../../services/user/utils';
 import { IMarqetaUserStatus, MarqetaUserModel, IMarqetaUserTransitionsEvent, IMarqetaKycState } from './types';
 
-export const checkIfUserActiveInMarqeta = async (userId: string) => {
-  const user = await UserModel.findById(userId);
-  if (!user) console.log(`[+] No User found with this id ${userId}`);
-  const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
-  if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
-  return false;
-};
-
 export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument) => {
   const { user } = await register({
     name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,
@@ -62,8 +54,9 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
     if (entity?.integrations?.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
-      closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
+      await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
     }
+
     // remove the marqeta itegration from the user object
     entity.integrations.marqeta = undefined;
 

@@ -77,7 +77,7 @@ import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
 import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 import { ICompanyProtocol } from '../company/types';
-import { checkIfUserActiveInMarqeta } from '../../integrations/marqeta/user/utils';
+import { checkIfUserActiveInMarqeta } from '../../integrations/marqeta/user';
 
 export const getMarqetaMerchantName = (marqetaData: IMarqetaTransactionIntegration) => {
   const isDirectDeposit = !!marqetaData?.direct_deposit;

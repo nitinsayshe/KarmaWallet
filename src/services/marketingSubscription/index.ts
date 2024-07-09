@@ -123,45 +123,27 @@ export const _buildUserFieldsArray = async (
   const zipCode = user?.integrations?.marqeta?.postal_code || user?.zipcode;
   const source = _userSource(user);
   if (freeMembershipCustomField?.id) {
-    console.log('///// free');
     fields.push({ id: freeMembershipCustomField.id, value: !!_isExistingWebAppUser(user) ? 'true' : 'false' });
   }
   if (existingMembershipCustomField?.id) {
-    console.log('///// existing');
     fields.push({ id: existingMembershipCustomField.id, value: !!_isFreeMembershipUser(user) ? 'true' : 'false' });
   }
   if (!!zipCode && !!zipCodeField?.id) fields.push({ id: zipCodeField.id, value: zipCode });
-  console.log('///// afrte zip');
   if (!!source && !!sourceField?.id) fields.push({ id: sourceField.id, value: source });
-  console.log('///// afrte source');
   return fields;
 };
 
 export const _buildSubscribeArray = async (
   subscribeArray: ActiveCampaignListId[],
   additionalData: IActiveCampaignSubscribeData,
-  visitorDocument?: IVisitorDocument,
 ): Promise<ActiveCampaignListId[]> => {
+  console.log('///// build subscribe array');
   subscribeArray.push(ActiveCampaignListId.AccountUpdates);
-  // General Updates List
-  if (!visitorDocument) {
-    subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
-  } else {
-    const generalUpdatesSubscription = await MarketingSubscriptionModel.findOne({
-      visitor: visitorDocument?._id,
-      code: MarketingSubscriptionCode.generalUpdates,
-    });
-
-    if (generalUpdatesSubscription?.status !== MarketingSubscriptionStatus.Active || !generalUpdatesSubscription) {
-      subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
-    }
-  }
-
+  subscribeArray.push(ActiveCampaignListId.GeneralUpdates);
   if (!!additionalData?.debitCardholder) {
     subscribeArray.push(ActiveCampaignListId.DebitCardHolders);
     if (!!additionalData?.groupName) subscribeArray.push(ActiveCampaignListId.GroupMembers);
   }
-
   return subscribeArray;
 };
 
@@ -206,7 +188,7 @@ export const updateNewUserSubscriptions = async (user: IUserDocument, userSubscr
   // EXISTING VISITOR
   if (!!visitor) {
     console.log('////// this is a visitor in updateNewUserSubscriptions');
-    subscribe = await _buildSubscribeArray(subscribe, userSubscribeData || {}, visitor);
+    subscribe = await _buildSubscribeArray(subscribe, userSubscribeData);
     // need try/catch for the debit cardholder route
     if (!!debitCardholder || !!unpaidMembership) {
       try {

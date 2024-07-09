@@ -20,8 +20,32 @@ export const handleCheckoutEvent = async (event: Stripe.Event) => {
   }
 };
 
+export const handleSubscriptionEvent = async (event: Stripe.Event) => {
+  const { type } = event;
+
+  switch (type) {
+    case 'customer.subscription.created':
+      await createUserProductSubscriptionFromStripeSubscription(event.data);
+      // create a subscription for the user
+      break;
+    case 'customer.subscription.updated':
+      await updateUserProductSubscriptionFromStripeSubscription(event.data);
+      // update the subscription for the user
+      break;
+    case 'customer.subscription.deleted':
+      // delete the subscription for the user
+      break;
+    default:
+      break;
+  }
+};
+
 export const handleCustomerEvent = async (event: Stripe.Event) => {
   const { type } = event;
+
+  if (type.includes('customer.subscription')) {
+    await handleSubscriptionEvent(event);
+  }
 
   switch (type) {
     case 'customer.created':
@@ -29,9 +53,6 @@ export const handleCustomerEvent = async (event: Stripe.Event) => {
       break;
     case 'customer.updated':
       await updateStripeIntegrationForUser(event.data.object);
-      break;
-    case 'customer.subscription.created':
-      // create a subscription for the user
       break;
     default:
       break;
@@ -43,31 +64,31 @@ export const handleInvoiceEvent = async (event: Stripe.Event) => {
 
   switch (type) {
     case 'invoice.created':
-      createInvoiceFromStripeInvoice(event.data.object);
+      await createInvoiceFromStripeInvoice(event.data.object);
       // create an invoice for the user
       break;
     case 'invoice.finalized':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      await updateInvoiceFromStripeInvoice(event.data.object);
       // finalize the invoice
       break;
     case 'invoice.updated':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      await updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice
       break;
     case 'invoice.payment_failed':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      await updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice to failed
       break;
     case 'invoice.payment_succeeded':
-      handleStripeInvoicePaid(event.data.object);
+      await handleStripeInvoicePaid(event.data.object);
       // update the invoice to paid
       break;
     case 'invoice.marked_uncollectible':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      await updateInvoiceFromStripeInvoice(event.data.object);
       // update the invoice to uncollectible
       break;
     case 'invoice.deleted':
-      updateInvoiceFromStripeInvoice(event.data.object);
+      await updateInvoiceFromStripeInvoice(event.data.object);
       // delete the invoice in our database
       break;
     default:
@@ -85,14 +106,14 @@ export const handleProductEvent = async (event: Stripe.Event) => {
   switch (type) {
     case 'product.created':
       // cannot figure out how to programatically link a payment_link to a product
-      updateOrCreateProductSubscriptionFromStripeProduct(event.data.object);
+      await updateOrCreateProductSubscriptionFromStripeProduct(event.data.object);
       break;
     case 'product.updated':
-      updateOrCreateProductSubscriptionFromStripeProduct(event.data.object);
+      await updateOrCreateProductSubscriptionFromStripeProduct(event.data.object);
       // update the subscription in our database
       break;
     case 'product.deleted':
-      deleteProductSubscriptionFromStripeProduct(event.data.object);
+      await deleteProductSubscriptionFromStripeProduct(event.data.object);
       // delete the subscription in our database?
       break;
     default:
@@ -105,36 +126,15 @@ export const handlePriceEvent = async (event: Stripe.Event) => {
 
   switch (type) {
     case 'price.created':
-      updateOrCreateProductSubscriptionPriceFromStripePrice(event.data.object);
+      await updateOrCreateProductSubscriptionPriceFromStripePrice(event.data.object);
       // cannot figure out how to programatically link a payment_link to a product
       break;
     case 'price.updated':
-      updateOrCreateProductSubscriptionPriceFromStripePrice(event.data.object);
+      await updateOrCreateProductSubscriptionPriceFromStripePrice(event.data.object);
       // update the subscription in our database
       break;
     case 'price.deleted':
       // delete the subscription in our database?
-      break;
-    default:
-      break;
-  }
-};
-
-export const handleSubscriptionEvent = async (event: Stripe.Event) => {
-  const { type } = event;
-
-  switch (type) {
-    case 'customer.subscription.created':
-      await createUserProductSubscriptionFromStripeSubscription(event.data);
-      // create a subscription for the user
-      break;
-    case 'customer.subscription.updated':
-      console.log('///// should update the subscription');
-      await updateUserProductSubscriptionFromStripeSubscription(event.data);
-      // update the subscription for the user
-      break;
-    case 'customer.subscription.deleted':
-      // delete the subscription for the user
       break;
     default:
       break;
@@ -161,15 +161,14 @@ export const handlerPromotionCodeEvent = async (event: Stripe.Event) => {
 export const processStripeWebhookEvent = async (event: Stripe.Event) => {
   const { type } = event;
 
-  if (!type) throw new Error('Event type not found');
-  if (type.includes('checkout')) handleCheckoutEvent(event);
-  if (type.includes('customer')) handleCustomerEvent(event);
-  if (type.includes('invoice')) handleInvoiceEvent(event);
-  if (type.includes('payment_intent')) handlePaymentIntentEvent(event);
-  if (type.includes('product')) handleProductEvent(event);
-  if (type.includes('customer.subscription')) handleSubscriptionEvent(event);
-  if (type.includes('price')) handlePriceEvent(event);
-  if (type.includes('promotion_code')) handlerPromotionCodeEvent(event);
+  if (!type) return;
+  if (type.includes('checkout')) await handleCheckoutEvent(event);
+  if (type.includes('customer')) await handleCustomerEvent(event);
+  if (type.includes('invoice')) await handleInvoiceEvent(event);
+  if (type.includes('payment_intent')) await handlePaymentIntentEvent(event);
+  if (type.includes('product')) await handleProductEvent(event);
+  if (type.includes('price')) await handlePriceEvent(event);
+  if (type.includes('promotion_code')) await handlerPromotionCodeEvent(event);
 };
 
 // EVENTS SENT WHEN SUCCESSFULLY PAYING THE STRIPE PAYMENT LINK

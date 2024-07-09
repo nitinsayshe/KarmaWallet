@@ -484,13 +484,12 @@ export const updateProfile = async (req: IRequest<{}, {}, IUserData>) => {
           user.integrations.marqeta = Object.assign(user.integrations.marqeta, marqeta);
         }
         break;
+      case 'referralParams':
+        user = await updateReferralParams(user, updates.referralParams);
+        break;
       default:
         break;
     }
-  }
-
-  if (!!updates?.referralParams) {
-    user = await updateReferralParams(user, updates.referralParams);
   }
 
   if (legacyUser) await legacyUser.save();

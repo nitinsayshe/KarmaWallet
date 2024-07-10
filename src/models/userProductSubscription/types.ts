@@ -31,6 +31,7 @@ export interface IShareableUserProductSubscription {
   nextBillingDate: Date;
   lastBilledDate: Date;
   lastModified: Date;
+  expirationDate: Date;
   latestInvoice: IRef<ObjectId, IShareableInvoice>;
   status: UserProductSubscriptionStatus;
   productSubscription: IRef<ObjectId, IShareableProductSubscription>;

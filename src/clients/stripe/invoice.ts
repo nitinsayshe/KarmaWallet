@@ -1,3 +1,4 @@
+import { sendHttpRequestWithRetry } from '.';
 import { asCustomError } from '../../lib/customError';
 import { StripeClient } from './stripeClient';
 
@@ -10,7 +11,7 @@ export class Invoice {
 
   async retrieveInvoice(invoiceId: string) {
     try {
-      return this._stripeClient._client.invoices.retrieve(invoiceId);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.invoices.retrieve(invoiceId));
     } catch (e) {
       throw asCustomError(e);
     }

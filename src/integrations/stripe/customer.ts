@@ -45,3 +45,21 @@ export const createStripeCustomerAndAddToUser = async (user: IUserDocument) => {
   await addStripeIntegrationToUser(customer);
   return customer;
 };
+
+export const getStripeCustomerForUser = async (user: IUserDocument) => {
+  try {
+    const { id } = user.integrations.stripe;
+    if (!id) {
+      throw new Error('User does not have a Stripe integration');
+    }
+
+    const stripeClient = new StripeClient();
+    const customerClient = new Customer(stripeClient);
+
+    const response = await customerClient.retrieveCustomer(user?.integrations?.stripe?.id);
+    return response;
+  } catch (err) {
+    console.error(`Could not get Stripe customer for user: ${err}`);
+    return null;
+  }
+};

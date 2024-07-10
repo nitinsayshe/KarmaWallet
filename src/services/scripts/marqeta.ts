@@ -5,21 +5,23 @@ import { parse } from 'json2csv';
 import { PaginateResult } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, ListUsersResponse, MarqetaUserModel } from '../../integrations/marqeta/types';
+import { ListUsersResponse } from '../../integrations/marqeta/user';
+import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, MarqetaUserModel } from '../../integrations/marqeta/user/types';
 import { User } from '../../clients/marqeta/user';
 import { sleep } from '../../lib/misc';
 import { IUserDocument, UserModel } from '../../models/user';
-import { IMarqetaVisitorData, IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { mapMarqetaCardtoCard } from '../card';
-import { setClosedMarqetaAccountState } from '../user';
 import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../user/utils';
 import { createDepositAccount, listDepositAccountsForUser, mapMarqetaDepositAccountToKarmaDB } from '../../integrations/marqeta/depositAccount';
 import { DepositAccountModel } from '../../models/depositAccount';
 import { CardModel } from '../../models/card';
 import { listUserKyc, processUserKyc } from '../../integrations/marqeta/kyc';
 import { isUserKYCVerified } from '../karmaCard';
-import { ReasonCode } from '../karmaCard/utils';
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
+import { IMarqetaVisitorData } from '../../models/visitor/types';
+import { ReasonCode } from '../karmaCard/utils/types';
+import { setClosedMarqetaAccountState } from '../user';
 
 const backoffMs = 1000;
 

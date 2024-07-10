@@ -34,6 +34,7 @@ import * as SyncActiveCampaign from '../../../jobs/syncActiveCampaign';
 import * as GenerateKarmaCardStatements from '../../../jobs/generateKarmaCardStatements';
 import * as OrderKarmaWalletCards from '../../../jobs/orderKarmaWalletCards';
 import * as WordpressArticleSync from '../../../jobs/wordpresArticleSync';
+import * as CheckUnpaidMemberships from '../../../jobs/checkUnpaidMemberships';
 import { INextJob } from '../base';
 import { globalPlaidTransactionMapping } from '../../../services/scripts/global_plaid_transaction_mapping';
 
@@ -72,7 +73,6 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.CalculateCompanyScores:
       await CalculateCompanyScores.exec(data);
-
       result = {
         nextJobs: [
           { name: JobNames.CalculateAverageSectorScores },
@@ -198,6 +198,9 @@ export default async (job: SandboxedJob) => {
       break;
     case JobNames.WordpressArticleSync:
       result = await WordpressArticleSync.exec();
+      break;
+    case JobNames.CheckUnpaidMemberships:
+      result = await CheckUnpaidMemberships.exec();
       break;
     default:
       console.log('>>>>> invalid job name found: ', name);

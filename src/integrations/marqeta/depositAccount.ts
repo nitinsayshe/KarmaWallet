@@ -58,11 +58,12 @@ export const createDepositAccount = async (user: IUserDocument) => {
   if (!userToken) {
     throw new Error(`[+] createDepositAccount: Marqeta usertoken not found on user ${user._id}'s integration`);
   }
-  // prepare payload for create Deposit Accounr
+  // prepare payload for create Deposit Account
   const params: IMarqetaDepositAccount = {
     userToken,
     type: DepositAccountTypes.DEPOSIT_ACCOUNT,
   };
+
   const data = await depositAccountClient.createDepositAccount(params);
   // map the newly created deposit account to karma DB
   await mapMarqetaDepositAccountToKarmaDB(user._id, data);

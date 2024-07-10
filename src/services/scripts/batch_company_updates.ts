@@ -912,21 +912,21 @@ export const __ARCHIVED__batchCompanyUpdates = async (): Promise<void> => {
   for (const update of updates) {
     const {
       companyName,
-      updateExisting,
-      existingCompanyIdToUpdate,
-      url,
+      _updateExisting,
+      _existingCompanyIdToUpdate,
+      _url,
       logo,
-      hiddenStatus,
-      hiddenReason,
-      notes,
-      primary,
+      _hiddenStatus,
+      _hiddenReason,
+      _notes,
+      _primary,
       secondary,
       tertiary,
       quaternary,
       quinary,
       senary,
     } = update;
-    const additionalSectors = [secondary, tertiary, quaternary, quinary, senary].filter(v => !!v);
+    const _additionalSectors = [secondary, tertiary, quaternary, quinary, senary].filter(v => !!v);
     if (logo) {
       const company = await CompanyModel.findOne({ companyName });
       try {
@@ -956,7 +956,7 @@ export const __ARCHIVED__updateCompanyDataSources = async (): Promise<void> => {
   const updatePath = path.resolve(__dirname, '.tmp', 'companyDataSources.csv');
   const updates = await csvtojson().fromFile(updatePath);
   for (const update of updates) {
-    const { companyId, companyName, dataSourceId, dataSourceName, action, expiration, value, isPrimary: _isPrimary, primaryReplacementDataSourceId } = update;
+    const { companyId, companyName, dataSourceId, dataSourceName, action, expiration, value, isPrimary: _isPrimary, primaryReplacementDataSourceId: _primaryReplacementDataSourceId } = update;
     const isPrimary = !!_isPrimary && _isPrimary?.toLowerCase() === 'true';
     const company = await CompanyModel.findOne({ _id: companyId });
     if (!company) {

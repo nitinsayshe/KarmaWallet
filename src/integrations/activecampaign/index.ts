@@ -32,7 +32,6 @@ import {
   getCollectiveCommunityImpact,
   getCollectiveReforestationDonationCount,
   getCollectiveMealsDonationCount,
-  getKarmaMembershipPlanType,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -423,10 +422,10 @@ export const prepareDailyUpdatedFields = async (
   }
 
   customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.membershipType);
-  if (!!customField) {
-    const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
-    fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
-  }
+  // if (!!customField) {
+  //   const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
+  //   fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
+  // }
 
   return fieldValues;
 };
@@ -737,10 +736,8 @@ export const prepareBackfillSyncFields = async (
   fieldValues = await prepareQuarterlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareYearlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareBiweeklyUpdatedFields(user, customFields, fieldValues);
-
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);
-
   return fieldValues;
 };
 
@@ -789,7 +786,6 @@ export const updateActiveCampaignContactData = async (
   } else {
     firstName = userData?.name;
   }
-
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
@@ -1116,4 +1112,37 @@ export const syncUserAddressFields = async (
   } catch (err) {
     console.log(err);
   }
+};
+
+export const listAllTags = async () => {
+  const ac = new ActiveCampaignClient();
+  const tags = await ac.listAllTags();
+  return tags;
+};
+
+export const getTagByName = async (tagName: string) => {
+  const ac = new ActiveCampaignClient();
+  const tags = await ac.listAllTags(tagName);
+  return tags;
+};
+
+export const getContactsTagIds = async (contactId: number) => {
+  const ac = new ActiveCampaignClient();
+  const contactIds = await ac.getContactsTagIds(contactId);
+  return contactIds;
+};
+
+export const removeTagFromUser = async (userDocument: IUserDocument, tag: string) => {
+  const acContact = await getActiveCampaignContactByEmail(userDocument.emails.find((e) => e.primary).email);
+  const acTags = await getTagByName(tag);
+  const acTag = acTags.tags.find((t) => t.tag === tag);
+  const contactIds = await getContactsTagIds(parseInt(acContact.contact.id));
+  const contactTag = contactIds.contactTags.find((t) => t.tag === acTag?.id);
+  if (!contactTag?.id) {
+    console.log('////// this contact does not have the tag, skipping removal');
+    return;
+  }
+  const ac = new ActiveCampaignClient();
+  const updatedTags = await ac.removeTagFromUser(contactTag.id);
+  return updatedTags;
 };

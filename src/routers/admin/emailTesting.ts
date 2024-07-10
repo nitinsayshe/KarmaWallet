@@ -145,4 +145,11 @@ router.route('/resume-karma-card-application-email')
     protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
     AdminEmailTestingController.testResumeKarmaCardApplicationEmail,
   );
+
+router.route('/pay-membership-reminder-email')
+  .post(
+    authenticate,
+    protectedRequirements({ roles: [UserRoles.Admin, UserRoles.SuperAdmin] }),
+    AdminEmailTestingController.testPayMembershipReminderEmail,
+  );
 export default router;

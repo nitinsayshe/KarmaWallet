@@ -19,3 +19,15 @@ export const getActiveDepositAccount = async (userId: string) => {
     throw asCustomError(error);
   }
 };
+
+export const userHasActiveOrSuspendedDepositAccount = async (userId: string) => {
+  try {
+    const depositAccount = await DepositAccountModel.findOne({
+      userId,
+      state: { $in: [IMarqetaDepositAccountTransitionState.ACTIVE, IMarqetaDepositAccountTransitionState.SUSPENDED] },
+    });
+    return !!depositAccount;
+  } catch (error) {
+    throw asCustomError(error);
+  }
+};

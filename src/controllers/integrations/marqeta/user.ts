@@ -1,10 +1,11 @@
-import { IMarqetaClientAccessToken, IMarqetaCreateUser, IMarqetaUpdateUser, IMarqetaUserToken, IMarqetaUserTransition } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as UserService from '../../../integrations/marqeta/user';
 import { ErrorTypes } from '../../../lib/constants';
+import { IMarqetaClientAccessToken } from '../../../integrations/marqeta/types';
+import { IMarqetaCreateUser, IMarqetaUpdateUser, IMarqetaUserTransition, IMarqetaUserToken } from '../../../integrations/marqeta/user/types';
 
 export const createMarqetaUser: IRequestHandler<{}, {}, IMarqetaCreateUser> = async (req, res) => {
   try {

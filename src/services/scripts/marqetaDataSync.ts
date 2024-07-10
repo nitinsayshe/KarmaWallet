@@ -5,7 +5,7 @@ import { TransactionModel as MarqetaTransactionModel } from '../../clients/marqe
 import { getMarqetaResources } from '../../integrations/marqeta';
 import { getCardsForUser } from '../../integrations/marqeta/card';
 import { getPaginatedTransactionsForUser, getTransactions, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../../integrations/marqeta/transactions';
-import { MarqetaCardModel, MarqetaCardState, MarqetaUserModel } from '../../integrations/marqeta/types';
+import { MarqetaCardModel, MarqetaCardState } from '../../integrations/marqeta/types';
 import { getUsers } from '../../integrations/marqeta/user';
 import { CardStatus } from '../../lib/constants';
 import { extractYearAndMonth } from '../../lib/date';
@@ -14,8 +14,9 @@ import { sleep } from '../../lib/misc';
 import { CardModel, ICardDocument } from '../../models/card';
 import { IUserDocument, UserModel } from '../../models/user';
 import { getCardStatusFromMarqetaCardState, mapMarqetaCardtoCard } from '../card';
-import { setClosedMarqetaAccountState } from '../user';
 import { IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { MarqetaUserModel } from '../../integrations/marqeta/user/types';
+import { setClosedMarqetaAccountState } from '../../integrations/marqeta/user/utils';
 
 dayjs.extend(utc);
 

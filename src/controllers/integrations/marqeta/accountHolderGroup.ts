@@ -1,10 +1,10 @@
-import { IMarqetaACHGroup } from '../../../integrations/marqeta/types';
 import { verifyRequiredFields } from '../../../lib/requestData';
 import { IRequestHandler } from '../../../types/request';
 import * as output from '../../../services/output';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import * as ACHGroupService from '../../../integrations/marqeta/accountHolderGroup';
 import { ErrorTypes } from '../../../lib/constants';
+import { IMarqetaACHGroup } from '../../../integrations/marqeta/user/types';
 
 export const createACHGroup: IRequestHandler<{}, {}, IMarqetaACHGroup> = async (req, res) => {
   try {

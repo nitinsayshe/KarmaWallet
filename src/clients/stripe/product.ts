@@ -1,4 +1,5 @@
 import Stripe from 'stripe';
+import { sendHttpRequestWithRetry } from '.';
 import { asCustomError } from '../../lib/customError';
 import { StripeClient } from './stripeClient';
 
@@ -11,7 +12,7 @@ export class Product {
 
   async createProduct(productData: Stripe.ProductCreateParams) {
     try {
-      return this._stripeClient._client.products.create(productData);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.products.create(productData));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -19,7 +20,7 @@ export class Product {
 
   async updateProduct(productId: string, productData: Stripe.ProductUpdateParams) {
     try {
-      return this._stripeClient._client.products.update(productId, productData);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.products.update(productId, productData));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -27,9 +28,7 @@ export class Product {
 
   async listProducts(numberToList: number) {
     try {
-      return this._stripeClient._client.products.list({
-        limit: numberToList || 100,
-      });
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.products.list({ limit: numberToList || 100 }));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -37,7 +36,7 @@ export class Product {
 
   async getPrice(priceId: string) {
     try {
-      return this._stripeClient._client.prices.retrieve(priceId);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.prices.retrieve(priceId));
     } catch (e) {
       throw asCustomError(e);
     }

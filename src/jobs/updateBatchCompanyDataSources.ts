@@ -8,7 +8,7 @@ import csvtojson from 'csvtojson';
 import { IJobReportDocument, JobReportModel, JobReportStatus } from '../models/jobReport';
 import { IUpdateJobReportData, updateJobReport } from '../services/jobReport/utils';
 import { DataSourceModel, IDataSourceDocument } from '../models/dataSource';
-import { CompanyCreationStatus, CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
+import { CompanyHideReasons, CompanyModel, ICompanyDocument } from '../models/company';
 import { CompanyDataSourceModel, ICompanyDataSourceDocument } from '../models/companyDataSource';
 
 dayjs.extend(utc);

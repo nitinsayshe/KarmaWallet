@@ -20,6 +20,7 @@ import {
   sendKarmaCardPendingReviewEmail,
   sendResumeKarmaCardApplicationEmail,
   sendKarmaCardDeclinedEmail,
+  sendPayMembershipReminderEmail,
 } from '.';
 import { PersonaInquiryTemplateIdEnum } from '../../integrations/persona/types';
 import { composePersonaContinueUrl } from '../../integrations/persona/webhook_helpers';
@@ -56,9 +57,9 @@ export const testKarmaCardWelcomeEmail = async (req: IRequest<{}, {}, {}>) => {
   try {
     const { _id } = req.requestor;
     if (!_id) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
-    const user = await UserModel.findById(_id);
+    const user: any = await UserModel.findById(_id);
     if (!user) throw new CustomError(`No user with id ${_id} was found.`, ErrorTypes.NOT_FOUND);
-    const { email } = user.emails.find((e) => !!e.primary);
+    const { email } = user.emails.find((e: any) => !!e.primary);
     if (!email) throw new CustomError(`No primary email found for user ${_id}.`, ErrorTypes.NOT_FOUND);
 
     const emailResponse = await sendKarmaCardWelcomeEmail({
@@ -475,6 +476,27 @@ export const testResumeKarmaCardApplicationEmail = async (req: IRequest<{}, {}, 
       link: 'https://karmawallet.io',
       applicationExpirationDate,
       name: user.name,
+    });
+
+    if (!!emailResponse) {
+      return 'Email sent successfully';
+    }
+  } catch (err) {
+    throw asCustomError(err);
+  }
+};
+
+export const testPayMembershipReminderEmail = async (req: IRequest<{}, {}, {}>) => {
+  try {
+    const user = req.requestor;
+    if (!user) throw new CustomError('A user id is required.', ErrorTypes.INVALID_ARG);
+    const { email } = user.emails.find(e => !!e.primary);
+    if (!email) throw new CustomError(`No primary email found for user ${user}.`, ErrorTypes.NOT_FOUND);
+    const emailResponse = await sendPayMembershipReminderEmail({
+      user: req.requestor,
+      recipientEmail: email,
+      name: user.name,
+      link: 'https://www.karmawallet.io/account',
     });
 
     if (!!emailResponse) {

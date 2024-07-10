@@ -8,7 +8,7 @@ import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { IMarketingSubscription, MarketingSubscriptionModel } from '../../models/marketingSubscription';
 import { IUserDocument, UserModel } from '../../models/user';
-import { IMarqetaVisitorData, IVisitorAction, IVisitorDocument, VisitorModel } from '../../models/visitor';
+import { IVisitorDocument, VisitorModel } from '../../models/visitor';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, MarketingSubscriptionStatus, MarketingSubscriptionCode } from '../../types/marketing_subscription';
 import { sendAccountCreationVerificationEmail } from '../email';
@@ -16,6 +16,7 @@ import * as TokenService from '../token';
 import { IUrlParam, IVerifyTokenBody } from '../user/types';
 import { updateVisitorUrlParams } from '../user';
 import { IPersonaIntegration } from '../../integrations/persona/types';
+import { IMarqetaVisitorData, IVisitorAction } from '../../models/visitor/types';
 
 const shareableSignupError = 'Error subscribing to the provided subscription code. Could be due to existing subscriptions that would conflict with this request.';
 const shareableInterestFormSubmitError = 'Error submitting the provided form data.';
@@ -140,14 +141,14 @@ export const updateCreateAccountVisitor = async (
   info: ICreateAccountRequest,
 ): Promise<IVisitorDocument> => {
   try {
-    if (!visitor.integrations) visitor.integrations = {};
-    if (!!info.groupCode) visitor.integrations.groupCode = info.groupCode;
-    if (!!info.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
-    if (!!info.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
-    if (!!info.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
+    if (!visitor?.integrations) visitor.integrations = {};
+    if (!!info?.groupCode) visitor.integrations.groupCode = info.groupCode;
+    if (!!info?.sscid) visitor.integrations.shareASale = { sscid: info.sscid };
+    if (!!info?.sscidCreatedOn) visitor.integrations.shareASale.sscidCreatedOn = info.sscidCreatedOn;
+    if (!!info?.xTypeParam) visitor.integrations.shareASale.xTypeParam = info.xTypeParam;
     if (!!info.marqeta) visitor.integrations.marqeta = info.marqeta;
-    if (!!info.persona) visitor.integrations.persona = info.persona;
-    if (!!info.params) {
+    if (!!info?.persona) visitor.integrations.persona = info.persona;
+    if (!!info?.params) {
       await updateVisitorUrlParams(visitor, info.params);
       if (info.params.find((p) => p.key === 'groupCode')) {
         visitor.integrations.groupCode = info.params.find((p) => p.key === 'groupCode')?.value;

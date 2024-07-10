@@ -3,15 +3,16 @@ import { FilterQuery, ObjectId, PaginateResult, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
 import { ErrorTypes } from '../../../lib/constants';
 import CustomError, { asCustomError } from '../../../lib/customError';
+import { getUtcDate } from '../../../lib/date';
 import { sleep } from '../../../lib/misc';
 import { KWRateLimiterKeyPrefixes, unblockEmailFromLimiter } from '../../../middleware/rateLimiter';
+import { IProductSubscription } from '../../../models/productSubscription/types';
 import { IUserDocument, UserModel } from '../../../models/user';
+import { VisitorModel, IVisitorDocument } from '../../../models/visitor';
+import { UserLogModel } from '../../../models/userLog';
+import { IUser, IUserIntegrations, KarmaMembershipStatusEnumValues, IKarmaMembershipData } from '../../../models/user/types';
 import { IRef } from '../../../types/model';
 import { IRequest } from '../../../types/request';
-import { IUser, IUserIntegrations, KarmaMembershipStatusEnum } from '../../../models/user/types';
-import { getMarqetaUser } from '../../../integrations/marqeta/user';
-import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
-import { VisitorModel } from '../../../models/visitor';
 import { IEntityData } from '../types';
 
 export type UserIterationRequest<T> = {
@@ -61,7 +62,7 @@ export const getShareableUser = ({
   zipcode,
   role,
   legacyId,
-  karmaMemberships,
+  karmaMembership,
   integrations,
 }: IUserDocument) => {
   const _integrations: Partial<IUserIntegrations> = {};
@@ -86,10 +87,7 @@ export const getShareableUser = ({
     };
   }
   if (integrations?.fcm) _integrations.fcm = integrations.fcm;
-  let activeMembership;
-  if (!!karmaMemberships) {
-    activeMembership = karmaMemberships.find((membership) => membership.status === KarmaMembershipStatusEnum.active);
-  }
+
   return {
     _id,
     email,
@@ -99,10 +97,11 @@ export const getShareableUser = ({
     zipcode,
     role,
     legacyId,
-    karmaMembership: activeMembership,
+    karmaMembership,
     integrations: _integrations,
   };
 };
+
 export const iterateOverUsersAndExecWithDelay = async <Req, Res>(
   request: UserIterationRequest<Req>,
   exec: (req: UserIterationRequest<Req>, userBatch: PaginateResult<IUserDocument>) => Promise<UserIterationResponse<Res>[]>,
@@ -182,10 +181,43 @@ export const createShareasaleTrackingId = async () => {
   return uniqueId;
 };
 
-export const checkIfUserActiveInMarqeta = async (userId: string) => {
-  const user = await UserModel.findById(userId);
-  if (!user) console.log(`[+] No User found with this id ${userId}`);
-  const { status } = await getMarqetaUser(user.integrations.marqeta.userToken);
-  if (status === IMarqetaUserStatus.ACTIVE || status === IMarqetaUserStatus.LIMITED) return true;
-  return false;
+export const addKarmaMembershipToUser = async (
+  user: IUserDocument,
+  membershipType: IProductSubscription,
+  status: KarmaMembershipStatusEnumValues,
+) => {
+  try {
+    const newMembership: IKarmaMembershipData = {
+      productSubscription: membershipType._id,
+      status,
+      lastModified: getUtcDate().toDate(),
+      startDate: getUtcDate().toDate(),
+    };
+
+    user.karmaMembership = newMembership;
+    const savedUser = await user.save();
+    return savedUser;
+  } catch (err) {
+    console.error(
+      `Error adding karma membership data ${membershipType} to user  ${user._id} : ${err}`,
+    );
+    if ((err as CustomError)?.isCustomError) {
+      throw err;
+    }
+    throw new CustomError('Error subscribing user to karma membership', ErrorTypes.SERVER);
+  }
+};
+
+export const storeNewLogin = async (userId: string, loginDate: Date, authKey: string) => {
+  await UserLogModel.findOneAndUpdate({ userId, date: loginDate }, { date: loginDate, authKey }, { upsert: true }).sort({
+    date: -1,
+  });
+};
+
+export const getEmailFromUserOrVisitor = (entity: IUserDocument | IVisitorDocument): string => {
+  if (!entity) return null;
+  if (isUserDocument(entity)) {
+    return entity.emails.find((email) => email.primary)?.email;
+  }
+  return entity.email;
 };

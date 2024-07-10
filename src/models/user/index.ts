@@ -4,7 +4,7 @@ import { UserRoles } from '../../lib/constants';
 import { getUtcDate } from '../../lib/date';
 import { IModel } from '../../types/model';
 import { PersonaIntegrationSchema } from '../schemas';
-import { IUser, UserEmailStatus, KarmaMembershipPaymentPlanEnum, KarmaMembershipStatusEnum, KarmaMembershipTypeEnum } from './types';
+import { IUser, UserEmailStatus, KarmaMembershipStatusEnum } from './types';
 
 export interface IUserDocument extends IUser, Document { }
 export type IUserModel = IModel<IUser>;
@@ -49,16 +49,15 @@ const userSchema = new Schema({
       ],
     },
   },
-  karmaMemberships: [
-    {
-      type: { type: String, required: true, enum: Object.values(KarmaMembershipTypeEnum) },
-      status: { type: String, required: true, enum: Object.values(KarmaMembershipStatusEnum) },
-      paymentPlan: { type: String, required: true, enum: Object.values(KarmaMembershipPaymentPlanEnum) },
-      startDate: { type: Date, default: () => getUtcDate().toDate() },
-      cancelledOn: { type: Date },
-      lastModified: { type: Date, default: () => getUtcDate().toDate() },
+  karmaMembership: {
+    productSubscription: {
+      type: Schema.Types.ObjectId,
+      ref: 'product_subscription',
     },
-  ],
+    status: { type: String, enum: Object.values(KarmaMembershipStatusEnum) },
+    createdOn: { type: Date, default: () => getUtcDate().toDate() },
+    lastModified: { type: Date, default: () => getUtcDate().toDate() },
+  },
   integrations: {
     marqeta: {
       type: {

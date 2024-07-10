@@ -5,7 +5,7 @@ import { sectorsToExcludeFromTransactions, transactionStatusesToExcludeFromImpac
 import { CompanyModel } from '../models/company';
 import { SectorModel } from '../models/sector';
 import { ITransactionDocument, TransactionModel } from '../models/transaction';
-import { IUserDocument, UserModel } from '../models/user';
+import { IUserDocument } from '../models/user';
 import { IUserImpactMonthData } from '../models/userImpactTotals';
 import { UserMontlyImpactReportModel } from '../models/userMonthlyImpactReport';
 import { getMonthlyImpactBreakdown, getMonthStartDate, getUserImpactRatings } from '../services/impact/utils';
@@ -219,40 +219,41 @@ interface IJobData {
 }
 
 export const exec = async (jobData: IJobData = {}) => {
-  const generateFullHistory = !!jobData.generateFullHistory;
-  const { uid } = jobData;
-  const userQuery: FilterQuery<IUserDocument> = !!uid ? { _id: uid } : {};
+  console.log(jobData);
+  // const generateFullHistory = !!jobData.generateFullHistory;
+  // const { uid } = jobData;
+  // const userQuery: FilterQuery<IUserDocument> = !!uid ? { _id: uid } : {};
 
-  if (!!generateFullHistory) {
-    // clearing any existing history
-    // ...needed for when user links/relinks a card. have
-    // to delete existing histories (if any exist), and
-    // then recalc all with new card data.
-    await UserMontlyImpactReportModel.deleteMany(userQuery);
-  }
+  // if (!!generateFullHistory) {
+  //   // clearing any existing history
+  //   // ...needed for when user links/relinks a card. have
+  //   // to delete existing histories (if any exist), and
+  //   // then recalc all with new card data.
+  //   await UserMontlyImpactReportModel.deleteMany(userQuery);
+  // }
 
-  const lastMonthStart = getMonthStartDate(dayjs().utc().subtract(1, 'month'));
+  // const lastMonthStart = getMonthStartDate(dayjs().utc().subtract(1, 'month'));
 
-  console.log(
-    `\ngenerating user monthly impact reports ${generateFullHistory ? 'for entire history' : `for ${lastMonthStart.format('MMM, YYYY')}`
-    }${!!uid ? ` for user: ${uid}` : ''}...\n`,
-  );
-  const users = await UserModel.find(userQuery).lean();
+  // console.log(
+  //   `\ngenerating user monthly impact reports ${generateFullHistory ? 'for entire history' : `for ${lastMonthStart.format('MMM, YYYY')}`
+  //   }${!!uid ? ` for user: ${uid}` : ''}...\n`,
+  // );
+  // const users = await UserModel.find(userQuery).lean();
 
-  let count = 0;
-  let errorCount = 0;
+  // let count = 0;
+  // let errorCount = 0;
 
-  for (const user of users) {
-    console.log(`[+] generating monthly impact reports for user: ${user._id}`);
-    ({ count, errorCount } = await generateMonthlyImpactReportForUser(
-      user as IUserDocument,
-      generateFullHistory,
-      lastMonthStart,
-      count,
-      errorCount,
-    ));
-  }
+  // for (const user of users) {
+  //   console.log(`[+] generating monthly impact reports for user: ${user._id}`);
+  //   ({ count, errorCount } = await generateMonthlyImpactReportForUser(
+  //     user as IUserDocument,
+  //     generateFullHistory,
+  //     lastMonthStart,
+  //     count,
+  //     errorCount,
+  //   ));
+  // }
 
-  console.log(`\n[+] ${count} monthly impact reports generated for ${users.length} users\n`);
-  if (errorCount > 0) console.log(`...but ${errorCount} errors occurred\n`);
+  // console.log(`\n[+] ${count} monthly impact reports generated for ${users.length} users\n`);
+  // if (errorCount > 0) console.log(`...but ${errorCount} errors occurred\n`);
 };

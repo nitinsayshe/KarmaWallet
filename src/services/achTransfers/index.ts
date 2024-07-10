@@ -16,6 +16,7 @@ import { createACHInitiationUserNotification, createACHTransferCancelledUserNoti
 import { BankConnectionModel } from '../../models/bankConnection';
 import { UserModel } from '../../models/user';
 import { PushNotificationTypes } from '../../lib/constants/notification';
+import { sendSlackACHTransferAlert } from './alerts';
 
 dayjs.extend(utc);
 
@@ -217,6 +218,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         body: 'Your funds are now available on your Karma Wallet Card!',
         title: 'Deposit Alert',
       });
+      await sendSlackACHTransferAlert(user, achTransfer.amount);
       break;
     case MarqetaBankTransitionStatus.CANCELLED:
       console.log('////// ACH Transfer was cancelled', banktransfertransition.bank_transfer_token);

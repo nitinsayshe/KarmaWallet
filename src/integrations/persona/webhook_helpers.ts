@@ -482,7 +482,7 @@ export const handleCaseStatusUpdatedWebhook = async (req: PersonaWebhookBody) =>
   switch (status) {
     case PersonaCaseStatusEnum.Approved:
       console.log('Case approved status');
-      await handleCaseApprovedStatus(req);
+      // await handleCaseApprovedStatus(req);
       break;
     case PersonaCaseStatusEnum.Declined:
       await handleCaseDeclinedStatus(req);

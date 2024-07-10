@@ -204,7 +204,7 @@ export const openBrowserAndAddShareASaleCode = async (shareASaleInfo: PuppateerS
 
   if (!sscid || !trackingid || !xtype || !sscidCreatedOn) return;
 
-  if (xtype !== ShareASaleXType.FREE) return;
+  if (xtype !== ShareASaleXType.MEMBERSHIP) return;
 
   const sscidCreatedOnDate = new Date(sscidCreatedOn);
 

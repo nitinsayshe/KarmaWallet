@@ -148,6 +148,7 @@ export const continueApplyProcessForApprovedCase = async (req: PersonaWebhookBod
     if (!email) {
       throw new Error('No email found');
     }
+
     const application = await KarmaCardApplicationModel.findOne({ email });
     const caseId = req?.data?.attributes?.payload?.data?.id;
     const caseStatus = req?.data?.attributes?.payload?.data?.attributes?.status;

@@ -157,10 +157,15 @@ const performMarqetaCreateAndKYC = async (userData: IMarqetaCreateUser) => {
 
 const storeKarmaCardApplication = async (cardApplicationData: IKarmaCardApplication) => {
   // find and update the user application for karma card ,aka Marqeta card
-  await KarmaCardApplicationModel.findOneAndUpdate({ visitorId: cardApplicationData.visitorId }, cardApplicationData, {
-    upsert: true,
-    new: true,
-  });
+  const existingApplication = await KarmaCardApplicationModel.findOne({ email: cardApplicationData.email });
+  if (existingApplication) {
+    existingApplication.status = cardApplicationData.status;
+    existingApplication.kycResult = cardApplicationData.kycResult;
+    existingApplication.lastModified = getUtcDate().toDate();
+    return existingApplication.save();
+  }
+  const newApplication = await KarmaCardApplicationModel.create(cardApplicationData);
+  return newApplication.save();
 };
 
 export const createKarmaCardMembershipCheckoutSession = async (params: ICheckoutSessionParams): Promise<Stripe.Checkout.Session> => {

@@ -253,8 +253,6 @@ export const startOrContinueApplyProcessForTransitionedInquiry = async (req: Per
       throw new Error('No result found');
     }
 
-    console.log('//// should emit to the frontend', email, inquiryId, existingApplicationData);
-
     emitDecisionToSocket(email, inquiryId, existingApplicationData);
   } catch (e) {
     console.log(`Error in application process: ${e}`);

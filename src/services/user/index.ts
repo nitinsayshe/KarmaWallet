@@ -94,7 +94,6 @@ export const initiateChangePasswordEmail = async (user: IUserDocument, email: st
   email = email?.toLowerCase();
   const token = await TokenService.createToken({ user, days, type: TokenTypes.Password, resource: { email } });
   await sendChangePasswordEmail({ user: user._id, token: token.value, name: user.name, recipientEmail: email });
-  console.log('//// should have sent email');
   return `Verfication instructions have been sent to your provided email address. This token will expire in ${days} days.`;
 };
 
@@ -773,10 +772,8 @@ export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument)
 
 // Existing Visitor with Marqeta integration (no existing user with the Marqeta integration although there could be an existing user)
 export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument, currentMarqetaUserData: MarqetaUserModel) => {
-  console.log('//// updatedVisitorFromMarqetaWebhook');
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
     if (!visitor.user) {
-      console.log('/////// update visitor from active!');
       // Visitor only created
       const user = await createNewUserFromMarqetaWebhook(visitor);
       await handleMarqetaUserActiveTransition(user, true);
@@ -784,7 +781,6 @@ export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument
       // Visitor created a KW account after being declined for a KW card
       // Marqeta integration only saved on visitor not on user yet
       // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
-      console.log('/////// update user from active!');
       const user = await UserModel.findById(visitor.user);
       if (!user) throw new CustomError('[+] User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
       await handleMarqetaUserActiveTransition(user, false);

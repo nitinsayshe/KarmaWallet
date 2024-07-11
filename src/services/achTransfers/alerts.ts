@@ -1,21 +1,6 @@
 import dayjs from 'dayjs';
-import { sendTransactionAlertMessage } from '../../integrations/slack';
+import { sendTransactionAlertMessage, SlackTransactionAlertTypeEnum, SlackAlertMesageBody } from '../../integrations/slack';
 import { IUserDocument } from '../../models/user';
-
-export const SlackTransactionAlertTypeEnum = {
-  depositedFiveHundredOrMoreWithinTheFirstWeek: 'depositedMoreThanFiveHundredWithinTheFirstWeek',
-  withdrewFiveHundredOrMoreWithinTheFirstWeek: 'withdrewMoreThanFiveHundredWithinTheFirstWeek',
-  depositedTwentyFiveHundredOrMoreWithinTheFirstMonth: 'depositedMoreThanTwentyFiveHundredWithinTheFirstMonth',
-  withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth: 'withdrewMoreThanTwentyFiveHundredWithinTheFirstMonth',
-} as const;
-export type SlackTransactionAlertTypeEnumValues = typeof SlackTransactionAlertTypeEnum[keyof typeof SlackTransactionAlertTypeEnum];
-
-export const SlackAlertMesageBody = {
-  [SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek]: (user: IUserDocument, amount: number, daysSinceUserJoined: number) => `:warning: user with id: ${user._id} and email: ${user?.integrations?.marqeta?.email} just completed an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining Karma Wallet. :warning:`,
-  [SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek]: (user: IUserDocument, amount: number, daysSinceUserJoined: number) => `:warning: user with id: ${user._id} and email: ${user?.integrations?.marqeta?.email} just completed an ACH transfer withrawing $${amount} within ${daysSinceUserJoined} days of joining Karma Wallet. :warning:`,
-  [SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth]: (user: IUserDocument, amount: number, daysSinceUserJoined: number) => `:warning: user with id: ${user._id} and email: ${user?.integrations?.marqeta?.email} just completed an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining Karma Wallet. :warning:`,
-  [SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth]: (user: IUserDocument, amount: number, daysSinceUserJoined: number) => `:warning: user with id: ${user._id} and email: ${user?.integrations?.marqeta?.email} just completed an ACH transfer withrawing $${amount} within ${daysSinceUserJoined} days of joining Karma Wallet. :warning:`,
-} as const;
 
 export const depositedAmountWithinTimeFrame = (transferAmount: number, daysSinceUserJoined: number, amount: number, days: number) => {
   if (transferAmount < amount) return false;

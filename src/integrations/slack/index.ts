@@ -21,7 +21,7 @@ export const SlackTransactionAlertTypeEnum = {
 } as const;
 export type SlackTransactionAlertTypeEnumValues = typeof SlackTransactionAlertTypeEnum[keyof typeof SlackTransactionAlertTypeEnum];
 
-const getSlackWarningMessage = (message: string) => `:warning: ${message} :warning:`;
+const getSlackWarningMessage = (message: string) => `:warning: ${message}`;
 
 export const SlackAlertMesageBody = {
   [SlackTransactionAlertTypeEnum.depositedOneHundredOrMoreWithinTheFirstWeek]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getSlackWarningMessage(`${SlackTransactionAlertTypeEnum.depositedOneHundredOrMoreWithinTheFirstWeek} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just completed an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining.`),

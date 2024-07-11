@@ -218,8 +218,8 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         body: 'Your funds are now available on your Karma Wallet Card!',
         title: 'Deposit Alert',
       });
-      await sendSlackACHTransferAlert(user, achTransfer.amount);
       break;
+
     case MarqetaBankTransitionStatus.CANCELLED:
       console.log('////// ACH Transfer was cancelled', banktransfertransition.bank_transfer_token);
       // To do: add email
@@ -237,6 +237,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         date: dayjs(achTransfer.created_time).utc().format('MMMM DD, YYYY'),
       });
       break;
+
     case MarqetaBankTransitionStatus.RETURNED:
       console.log('////// ACH Transfer was returned', banktransfertransition.bank_transfer_token);
       // To do: add email
@@ -245,7 +246,6 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         body: `Your deposit was returned because: ${return_reason}.`,
         title: 'ACH Transfer Alert',
       });
-
       await createACHTransferReturnedUserNotification({
         user,
         amount: achTransfer.amount.toFixed(2),
@@ -255,6 +255,11 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         reason: return_reason,
       });
       break;
+
+    case MarqetaBankTransitionStatus.PENDING:
+      await sendSlackACHTransferAlert(user, achTransfer.amount);
+      break;
+
     default:
       break;
   }

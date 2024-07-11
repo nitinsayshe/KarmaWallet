@@ -10,6 +10,7 @@ import { verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 import { handleTransactionDisputeMacros, handleTransactionNotifications, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import {
   DirectDepositStateEnum,
+  DirectDepositTypeEnum,
   IMarqetaWebhookBody,
   IMarqetaWebhookHeader,
   MarqetaWebhookConstants,
@@ -239,7 +240,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       }
     }
 
-    // ACH Origination transition events include activities such as bank transfer being transitioned to a pending, processing, submitted, completed, returned, or cancelled state
+    // direct deposits made through ACHO
     if (!!directdeposittransitions) {
       console.log('////////// PROCESSING MARQETA DIRECTDEPOSITTRANSTION WEBHOOK ////////// ');
       for (const directdeposittransition of directdeposittransitions) {
@@ -250,7 +251,8 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
         console.log('////// RECEIVED DIRECT DEPOSIT WEBHOOK', directdeposittransition);
         const { state } = directdeposittransition;
         if (state === DirectDepositStateEnum.Pending) {
-          await sendFundsTransferAlert(SlackAlertSourceEnum.DirectDeposit, user, directdeposittransition.amount);
+          const type = directdeposittransition.type === DirectDepositTypeEnum.Debit ? 'withdrawal' : 'deposit';
+          await sendFundsTransferAlert(SlackAlertSourceEnum.DirectDeposit, type, user, directdeposittransition.amount);
         }
       }
     }

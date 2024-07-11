@@ -16,7 +16,7 @@ import { createACHInitiationUserNotification, createACHTransferCancelledUserNoti
 import { BankConnectionModel } from '../../models/bankConnection';
 import { UserModel } from '../../models/user';
 import { PushNotificationTypes } from '../../lib/constants/notification';
-import { sendSlackACHTransferAlert } from './alerts';
+import { sendSlackTransferAlert, SlackAlertSourceEnum } from '../../integrations/slack';
 
 dayjs.extend(utc);
 
@@ -257,7 +257,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
       break;
 
     case MarqetaBankTransitionStatus.PENDING:
-      await sendSlackACHTransferAlert(user, achTransfer.amount);
+      await sendSlackTransferAlert(SlackAlertSourceEnum.ACHTransfer, user, achTransfer.amount);
       break;
 
     default:

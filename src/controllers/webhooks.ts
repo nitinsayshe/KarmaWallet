@@ -9,6 +9,7 @@ import { PlaidClient } from '../clients/plaid';
 import { verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 import { handleTransactionDisputeMacros, handleTransactionNotifications, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import {
+  DirectDepositStateEnum,
   IMarqetaWebhookBody,
   IMarqetaWebhookHeader,
   MarqetaWebhookConstants,
@@ -44,6 +45,7 @@ import { handlePersonaWebhookByEventName } from '../integrations/persona/webhook
 import { StripeClient } from '../clients/stripe/stripeClient';
 import { handleMarqetaUserTransitionWebhook } from '../integrations/marqeta/user/utils';
 import { processStripeWebhookEvent } from '../integrations/stripe/webhook';
+import { sendSlackTransferAlert as sendFundsTransferAlert, SlackAlertSourceEnum } from '../integrations/slack';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
 
@@ -180,6 +182,7 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       banktransfertransitions,
       transactions,
       directdepositaccounttransitions,
+      directdeposittransitions,
     } = req.body;
 
     // saving all webhooks for debugging purposes
@@ -233,6 +236,22 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
       for (const banktransfertransition of banktransfertransitions) {
         console.log('////// in bank transfer');
         await handleMarqetaACHTransitionWebhook(banktransfertransition);
+      }
+    }
+
+    // ACH Origination transition events include activities such as bank transfer being transitioned to a pending, processing, submitted, completed, returned, or cancelled state
+    if (!!directdeposittransitions) {
+      console.log('////////// PROCESSING MARQETA DIRECTDEPOSITTRANSTION WEBHOOK ////////// ');
+      for (const directdeposittransition of directdeposittransitions) {
+        console.log('////// in direct deposit');
+        const user = await UserModel.findOne({ 'integrations.marqeta.userToken': directdeposittransition.user_token });
+        if (!user) throw new CustomError('User not found', ErrorTypes.SERVER);
+
+        console.log('////// RECEIVED DIRECT DEPOSIT WEBHOOK', directdeposittransition);
+        const { state } = directdeposittransition;
+        if (state === DirectDepositStateEnum.Pending) {
+          await sendFundsTransferAlert(SlackAlertSourceEnum.DirectDeposit, user, directdeposittransition.amount);
+        }
       }
     }
 

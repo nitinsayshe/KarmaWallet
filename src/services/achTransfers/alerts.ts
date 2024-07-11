@@ -1,6 +1,9 @@
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import { sendTransactionAlertMessage, SlackTransactionAlertTypeEnum, SlackAlertMesageBody } from '../../integrations/slack';
 import { IUserDocument } from '../../models/user';
+
+dayjs.extend(utc);
 
 export const depositedAmountWithinTimeFrame = (transferAmount: number, daysSinceUserJoined: number, amount: number, days: number) => {
   if (transferAmount < amount) return false;

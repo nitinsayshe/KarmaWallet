@@ -36,12 +36,15 @@ import {
   sendResumeKarmaCardApplicationEmail,
   sendKarmaCardDeclinedEmail,
   sendLowBalanceEmail,
+  sendKarmaCardManualApproveEmail,
+  sendPayMembershipReminderEmail,
 } from '../email';
 import {
   IACHTransferEmailData,
   IDisputeEmailData,
   IKarmaCardDeclinedEmailData,
   IKarmaCardUpdateEmailData as IKarmaCardPendingReviewEmailData,
+  IPayMembershipReminderEmailData,
 } from '../email/types';
 import { isUserDocument } from '../user/utils';
 import { IEffectFunctionParams, IResumeKarmaCardEmailData } from './types';
@@ -406,6 +409,8 @@ export const handleResumeKarmaCardApplication = async ({ user, visitor, data }: 
   try {
     const recipientEmail = !!user ? user?.emails?.find((email: any) => email?.primary)?.email : visitor?.email;
     const sendEmailData: IResumeKarmaCardEmailData = {
+      applicationExpirationDate: data.applicationExpirationDate,
+      name: data.name,
       link: data.link,
       recipientEmail,
     };
@@ -433,6 +438,44 @@ export const handleLowBalanceEventEmailEffect = async ({ user } : IEffectFunctio
   }
 };
 
+
+export const handleSendPayMembershipReminderEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
+  if (!user) throw new Error('Invalid pay membership reminder data');
+
+  try {
+    const sendEmailData: IPayMembershipReminderEmailData = {
+      name: data.name,
+      link: data.link,
+      recipientEmail: data.email,
+      user: user._id,
+    };
+
+    await sendPayMembershipReminderEmail(sendEmailData);
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending resume karma card application email', ErrorTypes.SERVER);
+  }
+};
+
+export const handleSendKarmaCardManualApproveEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
+  if (!user) throw new Error('Invalid karma card manual approve data');
+
+  try {
+    const sendEmailData: IPayMembershipReminderEmailData = {
+      name: data.name,
+      link: data.link,
+      recipientEmail: data.email,
+      user: user._id,
+    };
+
+    await sendKarmaCardManualApproveEmail(sendEmailData);
+  } catch (err) {
+    console.log(err);
+    throw new CustomError('Error sending resume karma card application email', ErrorTypes.SERVER);
+  }
+};
+
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: ({ user, visitor, data }: IEffectFunctionParams) => Promise<void>;
 } = {
@@ -445,7 +488,7 @@ export const NotificationEffectsFunctions: {
   SendACHReturnedEmail: handleSendACHReturnedEmailEffect,
   SendNoChargebackRightsEmail: handleSendNoChargebackRightsEmailEffect,
   SendKarmaCardWelcomeEmail: handleSendKarmaCardWelcomeEmailEffect,
-  SendKarmaKardPendingReviewEmail: handleKarmaCardPendingReviewEmailEffect,
+  SendKarmaCardPendingReviewEmail: handleKarmaCardPendingReviewEmailEffect,
   SendKarmaCardDeclinedEmail: handleKarmaCardDeclinedEmailEffect,
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: handleSendCaseWonProvisionalCreditAlreadyIssuedEmailEffect,
   SendProvisionalCreditIssuedEmail: handleSendProvisionalCreditIssuedEmailEffect,
@@ -457,6 +500,8 @@ export const NotificationEffectsFunctions: {
   SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
   SendResumeKarmaCardApplicationEmail: handleResumeKarmaCardApplication,
   SendLowBalanceEventEmail: handleLowBalanceEventEmailEffect,
+  SendPayMembershipReminderEmail: handleSendPayMembershipReminderEmailEffect,
+  SendKarmaCardManualApproveEmail: handleSendKarmaCardManualApproveEmailEffect,
 } as const;
 
 export const NotificationChannelEffects = {

@@ -1,42 +1,7 @@
-import { Schema, model, Document, ObjectId, PaginateModel } from 'mongoose';
+import { Schema, model, PaginateModel } from 'mongoose';
 import mongoosePaginate from 'mongoose-paginate-v2';
-import { getUtcDate } from '../lib/date';
-import { IModel, IRef } from '../types/model';
-import { IShareableVisitor } from './visitor';
-import { IMarqetaKycResult } from '../integrations/marqeta/types';
-
-export enum ApplicationStatus {
-  SUCCESS = 'success',
-  FAILED = 'failed',
-  DECLINED = 'declined',
-  CLOSED_DECLINED = 'closed_declined'
-}
-
-export interface IShareableCardApplication {
-  userId?: string;
-  visitorId?: IRef<ObjectId, IShareableVisitor>;
-  userToken: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  address1: string;
-  address2: string;
-  birthDate: string;
-  phone: string;
-  city: string;
-  postalCode: string;
-  state: string;
-  kycResult: IMarqetaKycResult;
-  status: ApplicationStatus;
-  lastModified: Date;
-  expirationDate?: Date;
-}
-
-export interface IKarmaCardApplication extends IShareableCardApplication {
-}
-
-export interface IKarmaCardApplicationDocument extends IKarmaCardApplication, Document { }
-export type IKarmaCardApplicationModel = IModel<IKarmaCardApplication>;
+import { getUtcDate } from '../../lib/date';
+import { ApplicationStatus, IKarmaCardApplicationDocument, IKarmaCardApplicationModel } from './types';
 
 const karmaCardApplication = new Schema({
   userId: { type: String },

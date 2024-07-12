@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import { v4 as uuid } from 'uuid';
 import { MongoClient } from '../../clients/mongo';
 import { ApiKeyStatus } from '../../lib/constants';

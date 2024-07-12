@@ -1,3 +1,4 @@
+import { sendHttpRequestWithRetry } from '.';
 import { asCustomError } from '../../lib/customError';
 import { StripeClient } from './stripeClient';
 
@@ -10,7 +11,7 @@ export class Customer {
 
   async createCustomer(email: string, name: string) {
     try {
-      return this._stripeClient._client.customers.create({ email, name });
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.customers.create({ email, name }));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -18,7 +19,7 @@ export class Customer {
 
   async updateCustomer(customerId: string, email: string, name: string) {
     try {
-      return this._stripeClient._client.customers.update(customerId, { email, name });
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.customers.update(customerId, { email, name }));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -26,7 +27,7 @@ export class Customer {
 
   async retrieveCustomer(customerId: string) {
     try {
-      return this._stripeClient._client.customers.retrieve(customerId);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.customers.retrieve(customerId));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -34,9 +35,7 @@ export class Customer {
 
   async listCustomers(numberToList: number) {
     try {
-      return this._stripeClient._client.customers.list({
-        limit: numberToList || 100,
-      });
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.customers.list({ limit: numberToList || 100 }));
     } catch (e) {
       throw asCustomError(e);
     }
@@ -44,7 +43,7 @@ export class Customer {
 
   async deleteCustomer(customerId: string) {
     try {
-      return this._stripeClient._client.customers.del(customerId);
+      return sendHttpRequestWithRetry(() => this._stripeClient._client.customers.del(customerId));
     } catch (e) {
       throw asCustomError(e);
     }

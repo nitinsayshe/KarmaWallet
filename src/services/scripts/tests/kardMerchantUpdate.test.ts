@@ -22,7 +22,7 @@ import {
 } from '../kardMerchantUpdate';
 import { IMerchantRateDocument, MerchantRateModel } from '../../../models/merchantRate';
 import { cleanUpDocuments } from '../../../lib/model';
-import { MerchantSource, OfferType, CommissionType, KardEnvironmentEnum } from '../../../clients/kard/types';
+import { MerchantSource, OfferType, CommissionType } from '../../../clients/kard/types';
 import { CardNetwork } from '../../../lib/constants';
 import { KardClient } from '../../../clients/kard';
 
@@ -346,7 +346,7 @@ describe.skip('tests kardMerchantUpdate logic', () => {
   // TODO: Modify to work even if the testMerchantToBeUpdated is already in the db
   it.skip('updateKardMerchants pulls data from Kard and updates websiteUrl, maxOffer, and lastModified', async () => {
     try {
-      const kc = new KardClient(KardEnvironmentEnum.Issuer);
+      const kc = new KardClient();
       const merchants = await kc.getRewardsMerchants();
       await updateKardMerchants(merchants);
       // check that the merchant to be updated has new websiteUrl, maxOffer, and lastModified
@@ -362,7 +362,7 @@ describe.skip('tests kardMerchantUpdate logic', () => {
   // check the kard offers get updated
   it('updateKardMerchantRates pulls data from Kard and updates all merchant rates associated with the merchant', async () => {
     try {
-      const kc = new KardClient(KardEnvironmentEnum.Issuer);
+      const kc = new KardClient();
       const merchants = await kc.getRewardsMerchants();
       await updateKardMerchantRates(merchants);
       // test that old merchant rates are removed and new ones are added

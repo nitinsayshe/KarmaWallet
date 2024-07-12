@@ -80,13 +80,7 @@ jobs:
     - run: echo 'ENCRYPTION_SECRET_INITIALIZATION_VECTOR=${{secrets.PRODUCTION_ENCRYPTION_INITIALIZATION_VECTOR}}' >> .env
     - run: echo 'ENCRYPTION_METHOD=${{secrets.PRODUCTION_ENCRYPTION_METHOD}}' >> .env
     - run: echo 'KARD_COGNITO_URL=${{secrets.PRODUCTION_KARD_COGNITO_URL}}' >> .env
-    - run: echo 'KARD_CLIENT_HASH=${{secrets.PRODUCTION_KARD_CLIENT_HASH}}' >> .env
     - run: echo 'KARD_API_URL=${{secrets.PRODUCTION_KARD_API_URL}}' >> .env
-    - run: echo 'KARD_WEBHOOK_KEY=${{secrets.PRODUCTION_KARD_WEBHOOK_KEY}}' >> .env
-    - run: echo 'KARD_INSTORE_REWARD_ID=${{secrets.PRODUCTION_KARD_INSTORE_REWARD_ID}}' >> .env
-    - run: echo 'KARD_ONLINE_REWARD_ID=${{secrets.PRODUCTION_KARD_ONLINE_REWARD_ID}}' >> .env
-    - run: echo 'KARD_ISSUER_NAME=${{secrets.PRODUCTION_KARD_ISSUER_NAME}}' >> .env
-    - run: echo 'KARD_TRANSACTION_ID_ROOT=${{secrets.PRODUCTION_KARD_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'KARD_ISSUER_CLIENT_HASH=${{secrets.PRODUCTION_KARD_ISSUER_CLIENT_HASH}}' >> .env
     - run: echo 'KARD_ISSUER_WEBHOOK_KEY=${{secrets.PRODUCTION_KARD_ISSUER_WEBHOOK_KEY}}' >> .env
     - run: echo 'KARD_ISSUER_INSTORE_REWARD_ID=${{secrets.PRODUCTION_KARD_ISSUER_INSTORE_REWARD_ID}}' >> .env
@@ -94,7 +88,6 @@ jobs:
     - run: echo 'KARD_ISSUER_ISSUER_NAME=${{secrets.PRODUCTION_KARD_ISSUER_ISSUER_NAME}}' >> .env
     - run: echo 'KARD_ISSUER_TRANSACTION_ID_ROOT=${{secrets.PRODUCTION_KARD_ISSUER_TRANSACTION_ID_ROOT}}' >> .env
     - run: echo 'KARD_KARMAWALLET_AWS_ROLE=${{secrets.PRODUCTION_KARD_KARMAWALLET_AWS_ROLE}}' >> .env
-    - run: echo 'KARD_AWS_ROLE=${{secrets.PRODUCTION_KARD_AWS_ROLE}}' >> .env
     - run: echo 'KARD_ISSUER_AWS_ROLE=${{secrets.PRODUCTION_KARD_ISSUER_AWS_ROLE}}' >> .env
     - run: echo 'KARD_AWS_ENV=prod' >> .env
     - run: echo 'MARQETA_APPLICATION_TOKEN=${{secrets.PRODUCTION_MARQETA_APPLICATION_TOKEN}}' >> .env
@@ -115,5 +108,7 @@ jobs:
     - run: echo 'PERSONA_WEBHOOK_KEY=${{secrets.PERSONA_PRODUCTION_WEBHOOK_KEY}}' >> .env
     - run: echo 'PERSONA_ENVIRONMENT_ID=env_ZmnA9H4U4Uq3iw7w9FeesRMwv5x7' >> .env
     - run: echo 'STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY}}' >> .env
+    - run: echo 'STRIPE_WEBHOOK_ID=${{secrets.PRODUCTION_STRIPE_WEBHOOK_ID}}' >> .env
+    - run: echo 'STRIPE_WEBHOOK_SECRET=${{secrets.PRODUCTION_STRIPE_WEBHOOK_SECRET}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env

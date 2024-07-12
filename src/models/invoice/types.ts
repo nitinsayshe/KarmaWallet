@@ -1,4 +1,5 @@
 import { ObjectId, Document } from 'mongoose';
+import Stripe from 'stripe';
 import { IRef } from '../../types/model';
 import { IShareableUser } from '../user/types';
 
@@ -19,14 +20,12 @@ export interface IShareableInvoice {
   amount: number;
   dueDate: Date;
   status: InvoiceStatus;
-  paymentLink: string;
+  invoiceLink: string;
   user?: IRef<ObjectId, IShareableUser>;
   createdOn: Date;
   lastModified: Date;
   integrations?: {
-    stripe?: {
-      productId: string;
-    }
+    stripe?: Stripe.Invoice;
   }
 }
 

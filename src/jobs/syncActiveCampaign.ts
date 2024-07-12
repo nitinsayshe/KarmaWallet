@@ -54,6 +54,7 @@ import {
 import { ActiveCampaignListId, MarketingSubscriptionCode } from '../types/marketing_subscription';
 import { IUser } from '../models/user/types';
 import { DateKarmaMembershipStoppedbBeingFree } from '../lib/constants';
+import { getStateFromZipcode } from '../services/utilities';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes;
@@ -670,6 +671,56 @@ const prepareArticleRecommendationSyncRequest = async (
   return { contacts };
 };
 
+const prepareLocationSyncRequest = async (
+  _: UserIterationRequest<{}>,
+  userBatch: PaginateResult<IUser>,
+  customFields: { name: string; id: number }[],
+): Promise<IContactsImportData> => {
+  let locationData: { email: string; zip: string, stateCode: string }[] = await Promise.all(
+    userBatch?.docs?.map(async (user) => {
+      const email = user?.emails?.find((e) => e.primary)?.email;
+      const zip = user?.integrations?.marqeta?.postal_code;
+      const stateCode = getStateFromZipcode(zip);
+      return { email, zip, stateCode };
+    }),
+  );
+
+  const emailSchema = z.string().email();
+  locationData = locationData?.filter((data) => {
+    const validationResult = emailSchema.safeParse(data?.email);
+    return !!data.email && !(validationResult as SafeParseError<string>)?.error;
+  });
+
+  // set the custom fields and update in active campaign
+  const zipCodeField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userZipcode);
+  const stateField = customFields.find((field) => field.name === ActiveCampaignCustomFields.userState);
+
+  if (!zipCodeField || !stateField) {
+    return { contacts: [] };
+  }
+
+  const contacts = locationData.map((d) => {
+    const contact: IContactsData = {
+      email: d.email,
+      fields: [
+        {
+          id: zipCodeField?.id,
+          value: d.zip,
+        },
+        {
+          id: stateField?.id,
+          value: d.stateCode,
+        },
+      ],
+    };
+
+    return contact;
+  });
+
+  console.log(JSON.stringify(contacts, null, 2));
+  return { contacts };
+};
+
 const prepareKarmaCardMembershipTypeSyncRequest = async (
   req: UserIterationRequest<ArticleRecommedationsCustomFields>,
   userBatch: PaginateResult<IUser>,
@@ -807,6 +858,17 @@ const syncKarmaCardMembershipTypeFields = async (httpClient?: AxiosInstance) => 
   await iterateOverUsersAndExecImportReqWithDelay(req, prepareKarmaCardMembershipTypeSyncRequest, msDelayBetweenBatches);
 };
 
+const syncLocationFields = async (httpClient?: AxiosInstance) => {
+  const msDelayBetweenBatches = 2000;
+
+  const req: UserIterationRequest<undefined> = {
+    httpClient,
+    batchQuery: { 'integrations.marqeta.postal_code': { $exists: true } },
+    batchLimit: 100,
+  };
+
+  await iterateOverUsersAndExecImportReqWithDelay(req, prepareLocationSyncRequest, msDelayBetweenBatches);
+};
 export const removeDuplicateAutomationEnrollmentsFromAllUsers = async (httpClient?: AxiosInstance) => {
   const msDelayBetweenBatches = 2000;
   const batchLimit = 10;
@@ -898,6 +960,9 @@ export const exec = async ({ syncType, userSubscriptions, cardSignupUserId, http
         break;
       case ActiveCampaignSyncTypes.ARTICLE_RECOMMENDATION:
         await syncArticleRecommendationFields(httpClient);
+        break;
+      case ActiveCampaignSyncTypes.LOCATION_DATA_BACKFILL:
+        await syncLocationFields(httpClient);
         break;
       case ActiveCampaignSyncTypes.KARMA_CARD_MEMBERSHIP_TYPE:
         await syncKarmaCardMembershipTypeFields(httpClient);

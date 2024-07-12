@@ -13,7 +13,7 @@ import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperato
 import { verifyRequiredFields } from '../../lib/requestData';
 import { SentEmailModel } from '../../models/sentEmail';
 import { IRequest } from '../../types/request';
-import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmaCardUpdateEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ILowBalanceTemplateParams } from './types';
+import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmaCardUpdateEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ILowBalanceTemplateParams, IPayMembershipReminderEmailData } from './types';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -167,10 +167,8 @@ export const sendChangeEmailRequestAffirmationEmail = async ({
   const affirmationLink = `${domain}?affirmEmailChange=${token}`;
 
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { affirmationLink, name } });
-  console.log(template);
   const subject = 'Complete your Email Address Change Request';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
-  console.log(jobData);
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
@@ -222,7 +220,12 @@ export const sendAccountCreationVerificationEmail = async ({
     recipientEmail,
   });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const urlParamsString = visitor.integrations.urlParams.map((param) => `${param.key}=${param.value}`).join('&');
+  const visitorParams = visitor?.integrations?.urlParams;
+  let urlParamsString = '';
+  if (visitorParams) {
+    const signInParamRemoved = visitor?.integrations?.urlParams.filter((p) => p.key !== 'signin');
+    if (signInParamRemoved.length > 0) urlParamsString = signInParamRemoved.map((param) => `${param.key}=${param.value}`).join('&');
+  }
   // TODO: verify param FE/UI will be using to verify
   const verificationLink = `${domain}?verifyaccount=${token}${!!urlParamsString ? `&${urlParamsString}` : ''}`;
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { verificationLink, name, token } });
@@ -536,7 +539,7 @@ export const sendKarmaCardWelcomeEmail = async ({
   const { isValid, missingFields } = verifyRequiredFields(['domain', 'recipientEmail', 'name', 'newUser'], { domain, recipientEmail, name, newUser });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
   const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { name, domain, newUser } });
-  const subject = 'Welcome to Karma Wallet!';
+  const subject = 'Welcome to Your Karma Wallet Membership!';
   const jobData: IEmailJobData = { template, subject, senderEmail, recipientEmail, replyToAddresses, emailTemplateConfig, user };
   if (sendEmail) EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
@@ -1073,11 +1076,13 @@ export const sendResumeKarmaCardApplicationEmail = async ({
   senderEmail = EmailAddresses.NoReply,
   replyToAddresses = [EmailAddresses.ReplyTo],
   link,
+  name,
+  applicationExpirationDate,
 }: IResumeKarmaCardApplicationEmail) => {
   const emailTemplateConfig = EmailTemplateConfigs.ResumeKarmaCardApplication;
-  const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail'], { link, recipientEmail });
+  const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail', 'name', 'applicationExpirationDate'], { link, recipientEmail, name, applicationExpirationDate });
   if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
-  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link } });
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link, name, applicationExpirationDate } });
   const subject = 'Complete Your Karma Wallet Card Application';
   const jobData: IEmailJobData = {
     template,
@@ -1136,5 +1141,59 @@ export const sendLowBalanceEmail = async ({
       defaultEmailJobOptions,
     );
   }
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendPayMembershipReminderEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  link,
+  name,
+}: IPayMembershipReminderEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.PayMembershipReminder;
+  const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail', 'name'], { link, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link, name } });
+  const subject = 'Redeem Your Karma Wallet Membership';
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    link,
+    user: user._id,
+  };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendKarmaCardManualApproveEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  link,
+  name,
+}: IPayMembershipReminderEmailData) => {
+  const emailTemplateConfig = EmailTemplateConfigs.KarmaCardManualApprove;
+  const { isValid, missingFields } = verifyRequiredFields(['link', 'recipientEmail', 'name'], { link, recipientEmail, name });
+  if (!isValid) throw new CustomError(`Fields ${missingFields.join(', ')} are required`, ErrorTypes.INVALID_ARG);
+  const template = buildTemplate({ templateName: emailTemplateConfig.name, data: { link, name } });
+  const subject = 'Your Karma Wallet Card Application Has Been Approved';
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    link,
+    user: user._id,
+  };
+  EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
   return { jobData, jobOptions: defaultEmailJobOptions };
 };

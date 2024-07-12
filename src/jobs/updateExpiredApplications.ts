@@ -1,10 +1,11 @@
 import { SandboxedJob } from 'bullmq';
 import { PaginateResult } from 'mongoose';
 import { JobNames } from '../lib/constants/jobScheduler';
-import { ApplicationStatus, IKarmaCardApplicationDocument } from '../models/karmaCardApplication';
-import { iterateOverKarmaCardApplicationsAndExecWithDelay, KarmaCardApplicationIterationRequest, KarmaCardApplicationIterationResponse } from '../services/karmaCard/utils';
-import { setClosedEmailAndStatusAndRemoveMarqetaIntegration } from '../services/user';
 import { isUserDocument, returnUserOrVisitorFromEmail } from '../services/user/utils';
+import { setClosedEmailAndStatusAndRemoveMarqetaIntegration } from '../integrations/marqeta/user/utils';
+import { IKarmaCardApplicationDocument, ApplicationStatus } from '../models/karmaCardApplication/types';
+import { iterateOverKarmaCardApplicationsAndExecWithDelay } from '../services/karmaCard/utils';
+import { KarmaCardApplicationIterationRequest, KarmaCardApplicationIterationResponse } from '../services/karmaCard/utils/types';
 
 export const backoffMs = 500;
 

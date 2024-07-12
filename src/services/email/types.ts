@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import { EmailTemplateKeys, EmailTemplateTypes, IEmailTemplateConfig } from '../../lib/constants/email';
 import { IUserDocument } from '../../models/user';
 import { IVisitorDocument } from '../../models/visitor';
-import { IMarqetaKycState } from '../../integrations/marqeta/types';
+import { IMarqetaKycState } from '../../integrations/marqeta/user/types';
 
 interface IBaseEmailParams {
   domain?: string;
@@ -198,6 +198,8 @@ export interface IResumeKarmaCardApplicationEmail extends IBaseEmailParams {
   visitor?: IVisitorDocument;
   user?: IUserDocument;
   link: string;
+  name: string;
+  applicationExpirationDate: string;
 }
 
 export interface IChangeEmailConfirmationParams {
@@ -220,4 +222,11 @@ export interface IChangeEmailAffirmationParams {
   sendEmail?: boolean;
   replyToAddresses?: string[];
   senderEmail?: string;
+}
+
+export interface IPayMembershipReminderEmailData extends IBaseEmailParams {
+  link: string;
+  recipientEmail: string;
+  name: string;
+  user?: IUserDocument;
 }

@@ -5,7 +5,7 @@ import { IRequestHandler } from '../types/request';
 import { Logger } from '../services/logger';
 import { UserGroupModel } from '../models/userGroup';
 import { IGroup } from '../models/group';
-import { IMarqetaUserStatus } from '../integrations/marqeta/types';
+import { IMarqetaUserStatus } from '../integrations/marqeta/user/types';
 
 export interface IProtectRouteRequirements {
   roles?: string[]; // role names

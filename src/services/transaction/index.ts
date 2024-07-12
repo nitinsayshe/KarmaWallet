@@ -1,3 +1,4 @@
+/* eslint-disable camelcase */
 import { FilterQuery, ObjectId, Types } from 'mongoose';
 import { Transaction } from 'plaid';
 import { SafeParseError, z, ZodError } from 'zod';
@@ -69,13 +70,14 @@ import { TransactionModelStateEnum } from '../../clients/marqeta/types';
 import { CombinedPartialTransaction } from '../../types/transaction';
 import { checkIfUserInGroup } from '../groups/utils';
 import { CommissionModel } from '../../models/commissions';
-import { checkIfUserActiveInMarqeta, getShareableUser } from '../user/utils';
+import { getShareableUser } from '../user/utils';
 import { IExternalMappedShareableACHTransfer, IShareableACHTransfer } from '../../models/achTransfer/types';
 import { IShareableUser } from '../../models/user/types';
 import { IValue, ValueModel } from '../../models/value';
 import { IAggregatePaginateResult } from '../../sockets/types/aggregations';
 import { ValueCompanyMappingModel } from '../../models/valueCompanyMapping';
 import { ICompanyProtocol } from '../company/types';
+import { checkIfUserActiveInMarqeta } from '../../integrations/marqeta/user';
 
 export const getMarqetaMerchantName = (marqetaData: IMarqetaTransactionIntegration) => {
   const isDirectDeposit = !!marqetaData?.direct_deposit;
@@ -234,12 +236,17 @@ const getTransactionIntegrationFilter = (integrationType: TransactionIntegration
   }
 };
 
-export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>) => {
-  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate } = req.query;
+const asRegex = (value: string) => ({ $regex: `/${value}/`, $options: 'i' });
+
+export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuery>, query: FilterQuery<ITransaction>, isAdmin = false) => {
+  const { userId, includeOffsets, includeNullCompanies, onlyOffsets, integrationType, startDate, endDate, includeDeclined, name, merchant_name, company } = req.query;
   if (!req.requestor) throw new CustomError('You are not authorized to make this request.', ErrorTypes.UNAUTHORIZED);
 
   let startDateQuery = {};
   let endDateQuery = {};
+
+  if (merchant_name) delete query.filter.merchant_name;
+  if (name) delete query.filter.name;
 
   if (!!startDate) {
     if (isNaN(new Date(startDate).getTime())) throw new CustomError('Invalid start date found. Must be a valid date.');
@@ -318,7 +325,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
     filter.$and.push({
       $or: [{ user: userId }, { 'onBehalfOf.user': userId }],
     });
-  } else {
+  } else if (!isAdmin) {
     filter.$and.push({
       $or: [{ user: req.requestor }, { 'onBehalfOf.user': req.requestor }],
     });
@@ -330,8 +337,89 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
   if (!!startDate) filter.$and.push(startDateQuery);
   if (!!endDate) filter.$and.push(endDateQuery);
+  if (!includeDeclined) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
+  if (!!company && Types.ObjectId.isValid(company)) filter.$and.push({ company: new Types.ObjectId(company) });
 
-  const transactions = await TransactionModel.paginate(filter, paginationOptions);
+  let transactions;
+
+  // eslint-disable-next-line camelcase
+  if (name || merchant_name) {
+    const nameMatch: any = { $or: [] };
+
+    switch (integrationType) {
+      case TransactionIntegrationTypesEnum.Plaid:
+        if (name) nameMatch.$or.push({ 'integrations.plaid.name': asRegex(name) });
+        if (merchant_name) nameMatch.$or.push({ 'integrations.plaid.merchant_name': merchant_name });
+        break;
+      case TransactionIntegrationTypesEnum.Marqeta:
+        if (name) nameMatch.$or.push({ 'integrations.marqeta.card_acceptor.name': asRegex(name) });
+        break;
+      default:
+        if (name) nameMatch.$or.push({ 'integrations.plaid.name': asRegex(name) });
+        if (merchant_name) nameMatch.$or.push({ 'integrations.plaid.merchant_name': merchant_name });
+        break;
+    }
+
+    console.log(JSON.stringify(nameMatch));
+
+    console.log(JSON.stringify(filter));
+
+    const transactionAggregate = TransactionModel.aggregate([
+      {
+        $match: filter,
+      }, {
+        $lookup: {
+          from: 'companies',
+          localField: 'company',
+          foreignField: '_id',
+          as: 'company',
+        },
+      },
+      {
+        $unwind: {
+          path: '$company',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      // sort is memory intensive, so trying to save a bit of memory by only projecting the fields we need
+      {
+        $project: {
+          'company._id': 1,
+          'company.companyName': 1,
+          integrations: 1,
+          amount: 1,
+          date: 1,
+          status: 1,
+          user: 1,
+          onBehalfOf: 1,
+          sector: 1,
+          matchType: 1,
+          createdOn: 1,
+          lastModified: 1,
+          settledDate: 1,
+          sortableDate: 1,
+          type: 1,
+          subType: 1,
+          group: 1,
+        },
+      },
+      {
+        $match: nameMatch,
+      },
+    ]);
+
+    const options = {
+      page: query?.skip || 1,
+      sort: query?.sort ? { ...query.sort, _id: -1 } : { date: -1, _id: -1 },
+      limit: query?.limit || 10,
+    };
+
+    console.log(options);
+
+    transactions = await TransactionModel.aggregatePaginate(transactionAggregate, options);
+  } else {
+    transactions = await TransactionModel.paginate(filter, paginationOptions);
+  }
 
   if (includeOffsets || onlyOffsets) {
     const pageIncludesOffsets = transactions.docs.filter((transaction) => !!transaction.integrations?.rare).length;

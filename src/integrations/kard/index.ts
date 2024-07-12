@@ -2,25 +2,23 @@ import { AxiosResponse } from 'axios';
 import { Types } from 'mongoose';
 import { v4 as uuid } from 'uuid';
 import { SafeParseError, z } from 'zod';
-import { KardIssuerName, KardClient } from '../../clients/kard';
+import { KardClient, KardIssuerIssuerName } from '../../clients/kard';
 import {
   CardInfo,
   AddCardToUserResponse,
   QueueTransactionsRequest,
   EarnedRewardWebhookBody,
-  KardEnvironmentEnum,
   CreateUserRequest,
   Transaction,
   KardMerchantLocation,
   GetLocationsByMerchantIdRequest,
   KardMerchantLocations,
   GetLocationsRequest,
-  KardEnvironmentEnumValues,
   GetRewardsMerchantsResponse,
   Merchant,
   GetEligibleLocationsRequest,
 } from '../../clients/kard/types';
-import { CardStatus, CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
+import { CentsInUSD, ErrorTypes, KardEnrollmentStatus } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { getUtcDate } from '../../lib/date';
 import { decrypt } from '../../lib/encryption';
@@ -55,7 +53,7 @@ export const getCardInfo = (card: ICardDocument): CardInfo => {
   if (!last4 || !bin) {
     throw new Error('Missing card info');
   }
-  const issuer = KardIssuerName;
+  const issuer = KardIssuerIssuerName;
   const network = getNetworkFromBin(bin) || '';
   if (!issuer || !network) {
     throw new Error('Missing card issuer or network info');
@@ -321,7 +319,7 @@ export const queueSettledTransactions = async (
 
 export const verifyIssuerEnvWebhookSignature = async (req: IRequest<{}, {}, EarnedRewardWebhookBody>, signature: string): Promise<Error | null> => {
   try {
-    const client = new KardClient(KardEnvironmentEnum.Issuer);
+    const client = new KardClient();
     return await client.verifyWebhookSignature(req.rawBody.toString(), signature);
   } catch (err) {
     const errorText = 'Error verifying issuer environment webhook signature';
@@ -332,7 +330,7 @@ export const verifyIssuerEnvWebhookSignature = async (req: IRequest<{}, {}, Earn
 
 export const verifyAggregatorEnvWebhookSignature = async (req: IRequest<{}, {}, EarnedRewardWebhookBody>, signature: string): Promise<Error | null> => {
   try {
-    const client = new KardClient(KardEnvironmentEnum.Aggregator);
+    const client = new KardClient();
     return await client.verifyWebhookSignature(req.rawBody.toString(), signature);
   } catch (err) {
     const errorText = 'Error verifying aggregator environment webhook signature';
@@ -394,24 +392,10 @@ export const getLocations = async (req: GetLocationsRequest = {}): Promise<KardM
   }
 };
 
-export const getRefferingPartnerUserIdFromKardEnv = async (env: KardEnvironmentEnumValues, user: IUserDocument): Promise<string> => {
-  if (env === KardEnvironmentEnum.Issuer) {
-    return user?.integrations?.marqeta?.userToken;
-  }
-  if (env === KardEnvironmentEnum.Aggregator) {
-    const cards = await CardModel.find({ userId: user._id, 'integrations.kard': { $exists: true }, status: CardStatus.Linked });
-    if (!cards || !cards.length) {
-      throw new Error('No linked cards with kard integration found');
-    }
-    return cards[0]?.integrations?.kard?.userId;
-  }
-  return null;
-};
-
 export const getEligibleLocations = async (user: IUserDocument, req: GetEligibleLocationsRequest): Promise<KardMerchantLocations> => {
   try {
     const client = new KardClient();
-    const referringPartnerUserId = await getRefferingPartnerUserIdFromKardEnv(client.getEnv(), user);
+    const referringPartnerUserId = user?.integrations?.marqeta?.userToken;
     if (!referringPartnerUserId) {
       throw new Error('Error getting referring partner user id');
     }

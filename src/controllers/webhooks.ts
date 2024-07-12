@@ -3,10 +3,10 @@ import crypto from 'crypto';
 import console from 'console';
 import dayjs from 'dayjs';
 import { MainBullClient } from '../clients/bull/main';
-import { EarnedRewardWebhookBody, KardEnvironmentEnum, KardEnvironmentEnumValues, KardInvalidSignatureError } from '../clients/kard/types';
+import { EarnedRewardWebhookBody } from '../clients/kard/types';
 import { PaypalClient } from '../clients/paypal';
 import { PlaidClient } from '../clients/plaid';
-import { verifyAggregatorEnvWebhookSignature, verifyIssuerEnvWebhookSignature } from '../integrations/kard';
+import { verifyIssuerEnvWebhookSignature } from '../integrations/kard';
 import { handleTransactionDisputeMacros, handleTransactionNotifications, mapAndSaveMarqetaTransactionsToKarmaTransactions } from '../integrations/marqeta/transactions';
 import {
   IMarqetaWebhookBody,
@@ -34,7 +34,6 @@ import { Logger } from '../services/logger';
 import * as output from '../services/output';
 import { api, error } from '../services/output';
 import { validateStatementList } from '../services/statements';
-import { handleMarqetaUserTransitionWebhook } from '../services/user';
 import { IRequestHandler } from '../types/request';
 import { WebhookModel, WebhookProviders } from '../models/webhook';
 import { handleMarqetaDirectDepositAccountTransitionWebhook } from '../integrations/marqeta/depositAccount';
@@ -43,6 +42,7 @@ import { verifyPersonaWebhook } from '../integrations/persona';
 import { encrypt } from '../lib/encryption';
 import { handlePersonaWebhookByEventName } from '../integrations/persona/webhook_helpers';
 import { StripeClient } from '../clients/stripe/stripeClient';
+import { handleMarqetaUserTransitionWebhook } from '../integrations/marqeta/user/utils';
 import { processStripeWebhookEvent } from '../integrations/stripe/webhook';
 
 const { KW_API_SERVICE_HEADER, KW_API_SERVICE_VALUE, WILDFIRE_CALLBACK_KEY, MARQETA_WEBHOOK_ID, MARQETA_WEBHOOK_PASSWORD } = process.env;
@@ -122,185 +122,7 @@ interface IPaypalWebhookBody {
 
 type IKardWebhookBody = EarnedRewardWebhookBody;
 
-export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
-  if (
-    process.env.KW_ENV !== 'staging'
-    && req.headers?.['rare-webhook-key'] !== 'KFVKe5584dBb6y22SSwePMPG8MaskwvSxr86tWYPT4R8WkG6JDbUcMGMBE838jQu'
-  ) {
-    return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
-  }
-
-  try {
-    console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
-    console.log({ rareTransaction: JSON.stringify(req?.body) });
-
-    const rareTransaction = req?.body?.transaction;
-    const uid = rareTransaction?.user?.external_id;
-    const { groupId, statementIds } = req.body.forwarded_query_params || {};
-
-    let group;
-    if (groupId) {
-      try {
-        const mockRequest = { ...req };
-        mockRequest.params = {
-          ...mockRequest.params,
-          groupId,
-        };
-        group = await getGroup(mockRequest);
-      } catch (e) {
-        Logger.error(asCustomError(e));
-      }
-    }
-
-    let statements: IStatementDocument[] = [];
-    if (statementIds) {
-      try {
-        const { APP_USER_ID } = process.env;
-        if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
-        const appUser = await UserModel.findOne({ _id: APP_USER_ID });
-        req.requestor = appUser;
-        const statementIdsArray = statementIds?.split(',');
-        statements = await validateStatementList(req, statementIdsArray, group);
-      } catch (e) {
-        Logger.error(asCustomError(e));
-      }
-    }
-    const isMatch = statements.length > 0;
-    await mapTransactions([rareTransaction], isMatch, group);
-
-    if (!!statementIds) {
-      const matchStatementData: IGroupOffsetMatchData = {
-        group,
-        statements,
-        totalAmountMatched: rareTransaction.amt,
-        transactor: { user: uid, group },
-      };
-      await matchMemberOffsets(req, matchStatementData);
-      // TODO: send socket event notifying user of matches being successfully applied.
-    }
-
-    api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });
-  } catch (e) {
-    console.log('\n\n/////////////// RARE WEBHOOK ERROR ///////////////////////\n\n');
-    error(req, res, asCustomError(e));
-  }
-};
-
-export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransactionsMapBody> = async (req, res) => {
-  if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) {
-    return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
-  }
-  try {
-    const { userId, accessToken } = req.body;
-    MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, {
-      onComplete: UserPlaidTransactionMapJob.onComplete,
-    });
-    api(req, res, { message: `${JobNames.UserPlaidTransactionMapper} added to queue` });
-  } catch (e) {
-    error(req, res, asCustomError(e));
-  }
-};
-
-export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
-  try {
-    const signedJwt = req.headers?.['plaid-verification'];
-    const client = new PlaidClient();
-    await client.verifyWebhook({ signedJwt, requestBody: req.body });
-
-    try {
-      await WebhookModel.create({ provider: WebhookProviders.Plaid, body: req.body });
-    } catch (e) {
-      console.log(`-- error saving Plaid webhook. processing will continue. error: ${e}---`);
-    }
-
-    const { webhook_type, webhook_code, item_id } = req.body;
-    // Historical Transactions Ready
-    if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
-      const card = await _getCard({ 'integrations.plaid.items': item_id });
-      if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
-      MainBullClient.createJob(
-        JobNames.UserPlaidTransactionMapper,
-        { userId: card.userId, accessToken: card.integrations.plaid.accessToken },
-        null,
-        { onComplete: UserPlaidTransactionMapJob.onComplete },
-      );
-    }
-    api(req, res, { message: 'Plaid webhook processed successfully.' });
-  } catch (e) {
-    error(req, res, asCustomError(e));
-  }
-};
-
-export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
-  try {
-    const { body } = req;
-    const wildfireSignature = req?.headers['x-wf-signature']?.replace('sha256=', '');
-    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(req.rawBody.toString()).digest('hex');
-    try {
-      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) {
-        throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
-      }
-      // do work here
-
-      try {
-        await WebhookModel.create({ provider: WebhookProviders.Wildfire, body: req.body });
-      } catch (e) {
-        console.log(`-- error saving Wildfire webhook. processing will continue. error: ${e}---`);
-      }
-
-      console.log('Wildfire webhook processed successfully.');
-      console.log('------- BEG WF Transaction -------\n');
-      console.log(JSON.stringify(body, null, 2));
-      console.log('\n------- END WF Transaction -------');
-      try {
-        await mapWildfireCommissionToKarmaCommission(body.Payload);
-      } catch (e) {
-        console.log('Error mapping wildfire commission to karma commission');
-        console.log(e);
-        return error(req, res, new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE));
-      }
-      api(req, res, { message: 'Wildfire comission processed successfully.' });
-    } catch (e) {
-      throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
-    }
-  } catch (e) {
-    error(req, res, asCustomError(e));
-  }
-};
-
-export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {
-  try {
-    const { headers } = <{ headers: IPaypalRequestHeaders }>req;
-    const client = new PaypalClient();
-    const verification = await client.verifyWebhookSignature({
-      auth_algo: headers['paypal-auth-algo'],
-      cert_url: headers['paypal-cert-url'],
-      transmission_id: headers['paypal-transmission-id'],
-      transmission_sig: headers['paypal-transmission-sig'],
-      transmission_time: headers['paypal-transmission-time'],
-      webhook_id: process.env.PAYPAL_WEBHOOK_ID,
-      webhook_event: req.body,
-    });
-    const eventId = (req.body as any).id;
-    if (!verification) {
-      console.log('\n PAYPAL WEBHOOK VERIFICATION FAILED \n');
-      console.log(`Event ID: ${eventId}`);
-      return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
-    }
-
-    try {
-      await WebhookModel.create({ provider: WebhookProviders.Paypal, body: req.body });
-    } catch (e) {
-      console.log(`-- error saving Paypal webhook. processing will continue. error: ${e}---`);
-    }
-
-    processPaypalWebhook(req.body);
-    api(req, res, { message: 'Paypal webhook processed successfully.' });
-  } catch (e) {
-    error(req, res, asCustomError(e));
-  }
-};
-
+// KARD WEBHOOK
 export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = async (req, res) => {
   try {
     const { headers } = <{ headers: KardRequestHeaders }>req;
@@ -311,25 +133,13 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('A token is required for authentication', ErrorTypes.FORBIDDEN));
     }
-    let kardEnv: KardEnvironmentEnumValues = '';
 
-    const errorVerifyingAggregatorEnvSignature = await verifyAggregatorEnvWebhookSignature(req, headers['notify-signature']);
     const errorVerifyingIssuerEnvSignature = await verifyIssuerEnvWebhookSignature(req, headers['notify-signature']);
-
-    if (errorVerifyingIssuerEnvSignature && errorVerifyingAggregatorEnvSignature) {
-      if (
-        errorVerifyingIssuerEnvSignature === KardInvalidSignatureError
-        || errorVerifyingAggregatorEnvSignature === KardInvalidSignatureError
-      ) {
-        console.log('\n KARD WEBHOOK: Invalid Token Provided \n');
-        console.log(`Event ID: ${eventId}`);
-        return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.AUTHENTICATION));
-      }
+    if (errorVerifyingIssuerEnvSignature) {
       console.log('\n KARD WEBHOOK: Bad Request \n');
       console.log(`Event ID: ${eventId}`);
       return error(req, res, new CustomError('Kard webhook verification failed.', ErrorTypes.GEN));
     }
-    kardEnv = !!errorVerifyingAggregatorEnvSignature ? KardEnvironmentEnum.Issuer : KardEnvironmentEnum.Aggregator;
 
     try {
       const webhookBodyToSave = { ...req.body, card: { ...req.body.card } };
@@ -340,7 +150,7 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
       console.log(`-- error saving Kard webhook. processing will continue. error: ${e}---`);
     }
 
-    const processingError = await processKardWebhook(kardEnv, req.body);
+    const processingError = await processKardWebhook(req.body);
     if (!!processingError) {
       return error(req, res, processingError);
     }
@@ -351,6 +161,7 @@ export const handleKardWebhook: IRequestHandler<{}, {}, IKardWebhookBody> = asyn
   }
 };
 
+// MARQETA WEBHOOK
 export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> = async (req, res) => {
   try {
     console.log('////////// RECEIVED MARQETA WEBHOOK ////////// ');
@@ -449,6 +260,41 @@ export const handleMarqetaWebhook: IRequestHandler<{}, {}, IMarqetaWebhookBody> 
   }
 };
 
+// PAYPAL WEBHOOK (Should we remove this stuff?)
+export const handlePaypalWebhook: IRequestHandler<{}, {}, IPaypalWebhookBody> = async (req, res) => {
+  try {
+    const { headers } = <{ headers: IPaypalRequestHeaders }>req;
+    const client = new PaypalClient();
+    const verification = await client.verifyWebhookSignature({
+      auth_algo: headers['paypal-auth-algo'],
+      cert_url: headers['paypal-cert-url'],
+      transmission_id: headers['paypal-transmission-id'],
+      transmission_sig: headers['paypal-transmission-sig'],
+      transmission_time: headers['paypal-transmission-time'],
+      webhook_id: process.env.PAYPAL_WEBHOOK_ID,
+      webhook_event: req.body,
+    });
+    const eventId = (req.body as any).id;
+    if (!verification) {
+      console.log('\n PAYPAL WEBHOOK VERIFICATION FAILED \n');
+      console.log(`Event ID: ${eventId}`);
+      return error(req, res, new CustomError('Paypal webhook verification failed.', ErrorTypes.NOT_ALLOWED));
+    }
+
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Paypal, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Paypal webhook. processing will continue. error: ${e}---`);
+    }
+
+    processPaypalWebhook(req.body);
+    api(req, res, { message: 'Paypal webhook processed successfully.' });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+// PERSONA WEBHOOK
 export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> = async (req, res) => {
   try {
     console.log('Persona Webhook Received');
@@ -496,15 +342,166 @@ export const handlePersonaWebhook: IRequestHandler<{}, {}, PersonaWebhookBody> =
   }
 };
 
+// PLAID WEBHOOK
+export const userPlaidTransactionsMap: IRequestHandler<{}, {}, IUserPlaidTransactionsMapBody> = async (req, res) => {
+  if (req.headers?.[KW_API_SERVICE_HEADER] !== KW_API_SERVICE_VALUE) {
+    return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+  }
+  try {
+    const { userId, accessToken } = req.body;
+    MainBullClient.createJob(JobNames.UserPlaidTransactionMapper, { userId, accessToken }, null, {
+      onComplete: UserPlaidTransactionMapJob.onComplete,
+    });
+    api(req, res, { message: `${JobNames.UserPlaidTransactionMapper} added to queue` });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+export const handlePlaidWebhook: IRequestHandler<{}, {}, IPlaidWebhookBody> = async (req, res) => {
+  try {
+    const signedJwt = req.headers?.['plaid-verification'];
+    const client = new PlaidClient();
+    await client.verifyWebhook({ signedJwt, requestBody: req.body });
+
+    try {
+      await WebhookModel.create({ provider: WebhookProviders.Plaid, body: req.body });
+    } catch (e) {
+      console.log(`-- error saving Plaid webhook. processing will continue. error: ${e}---`);
+    }
+
+    const { webhook_type, webhook_code, item_id } = req.body;
+    // Historical Transactions Ready
+    if (webhook_code === 'HISTORICAL_UPDATE' && webhook_type === 'TRANSACTIONS') {
+      const card = await _getCard({ 'integrations.plaid.items': item_id });
+      if (!card) throw new CustomError(`Card with item_id of ${item_id} not found`, ErrorTypes.NOT_FOUND);
+      MainBullClient.createJob(
+        JobNames.UserPlaidTransactionMapper,
+        { userId: card.userId, accessToken: card.integrations.plaid.accessToken },
+        null,
+        { onComplete: UserPlaidTransactionMapJob.onComplete },
+      );
+    }
+    api(req, res, { message: 'Plaid webhook processed successfully.' });
+  } catch (e) {
+    error(req, res, asCustomError(e));
+  }
+};
+
+// STRIPE WEBHOOK
 export const handleStripeWebhook: IRequestHandler<{}, {}, string | Buffer> = async (req, res) => {
   try {
     const stripeClient = new StripeClient();
-    console.log('///// Stripe Webhook Received /////');
+    console.log('///// STRIPE WEBHOOK RECEIVED /////');
     const event = await stripeClient.createEventAndVerifyWebhook(req.rawBody, req.headers['stripe-signature']);
     await processStripeWebhookEvent(event);
     await WebhookModel.create({ provider: WebhookProviders.Stripe, body: req.body, event: event.data });
+    output.api(req, res, { message: 'Stripe webhook processed successfully.' });
   } catch (e) {
     console.log('///// Unable to process Stripe webhook /////');
+    error(req, res, asCustomError(e));
+  }
+};
+
+// RARE WEBHOOK
+export const mapRareTransaction: IRequestHandler<{}, {}, IRareTransactionBody> = async (req, res) => {
+  if (
+    process.env.KW_ENV !== 'staging'
+    && req.headers?.['rare-webhook-key'] !== 'KFVKe5584dBb6y22SSwePMPG8MaskwvSxr86tWYPT4R8WkG6JDbUcMGMBE838jQu'
+  ) {
+    return error(req, res, new CustomError('Access Denied', ErrorTypes.NOT_ALLOWED));
+  }
+
+  try {
+    console.log('\n\n/////////////// RARE TRANSACTION ///////////////////////\n\n');
+    console.log({ rareTransaction: JSON.stringify(req?.body) });
+
+    const rareTransaction = req?.body?.transaction;
+    const uid = rareTransaction?.user?.external_id;
+    const { groupId, statementIds } = req.body.forwarded_query_params || {};
+
+    let group;
+    if (groupId) {
+      try {
+        const mockRequest = { ...req };
+        mockRequest.params = {
+          ...mockRequest.params,
+          groupId,
+        };
+        group = await getGroup(mockRequest);
+      } catch (e) {
+        Logger.error(asCustomError(e));
+      }
+    }
+
+    let statements: IStatementDocument[] = [];
+    if (statementIds) {
+      try {
+        const { APP_USER_ID } = process.env;
+        if (!APP_USER_ID) throw new CustomError('AppUserId not found', ErrorTypes.SERVICE);
+        const appUser = await UserModel.findOne({ _id: APP_USER_ID });
+        req.requestor = appUser;
+        const statementIdsArray = statementIds?.split(',');
+        statements = await validateStatementList(req, statementIdsArray, group);
+      } catch (e) {
+        Logger.error(asCustomError(e));
+      }
+    }
+    const isMatch = statements.length > 0;
+    await mapTransactions([rareTransaction], isMatch, group);
+
+    if (!!statementIds) {
+      const matchStatementData: IGroupOffsetMatchData = {
+        group,
+        statements,
+        totalAmountMatched: rareTransaction.amt,
+        transactor: { user: uid, group },
+      };
+      await matchMemberOffsets(req, matchStatementData);
+      // TODO: send socket event notifying user of matches being successfully applied.
+    }
+
+    api(req, res, { message: 'KarmaWallet/Rare transaction processed successfully.' });
+  } catch (e) {
+    console.log('\n\n/////////////// RARE WEBHOOK ERROR ///////////////////////\n\n');
+    error(req, res, asCustomError(e));
+  }
+};
+
+// WILDFIRE WEBHOOK
+export const handleWildfireWebhook: IRequestHandler<{}, {}, IWildfireWebhookBody> = async (req, res) => {
+  try {
+    const { body } = req;
+    const wildfireSignature = req?.headers['x-wf-signature']?.replace('sha256=', '');
+    const bodyHash = crypto.createHmac('SHA256', WILDFIRE_CALLBACK_KEY).update(req.rawBody.toString()).digest('hex');
+    try {
+      if (!crypto.timingSafeEqual(Buffer.from(bodyHash), Buffer.from(wildfireSignature))) {
+        throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+      }
+      // do work here
+
+      try {
+        await WebhookModel.create({ provider: WebhookProviders.Wildfire, body: req.body });
+      } catch (e) {
+        console.log(`-- error saving Wildfire webhook. processing will continue. error: ${e}---`);
+      }
+
+      console.log('Wildfire webhook processed successfully.');
+      console.log('------- BEG WF Transaction -------\n');
+      console.log(JSON.stringify(body, null, 2));
+      console.log('\n------- END WF Transaction -------');
+      try {
+        await mapWildfireCommissionToKarmaCommission(body.Payload);
+      } catch (e) {
+        console.log('Error mapping wildfire commission to karma commission');
+        console.log(e);
+        return error(req, res, new CustomError('Error mapping wildfire commission to karma commission', ErrorTypes.SERVICE));
+      }
+      api(req, res, { message: 'Wildfire comission processed successfully.' });
+    } catch (e) {
+      throw new CustomError('Access denied', ErrorTypes.NOT_ALLOWED);
+    }
+  } catch (e) {
     error(req, res, asCustomError(e));
   }
 };

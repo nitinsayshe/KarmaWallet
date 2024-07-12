@@ -8,6 +8,7 @@ export enum ActiveCampaignSyncTypes {
   DAILY = 'daily',
   GROUP = 'group',
   INITIAL = 'initial',
+  LOCATION_DATA_BACKFILL = 'locationDataBackfill',
   KARMA_CARD_MEMBERSHIP_TYPE = 'karmaCardMembershipType',
   LINKED_ACCOUNTS= 'linkedAccounts',
   MONTHLY = 'monthly',
@@ -19,6 +20,11 @@ export enum ActiveCampaignSyncTypes {
   WEEKLY = 'weekly',
   YEARLY = 'yearly',
   BIWEEKLY = 'biweekly',
+}
+
+export enum ActiveCampaignCustomTags {
+  MembershipUnpaid = 'MembershipUnpaid',
+  MembershipPaid = 'MembershipPaid',
 }
 
 export enum ActiveCampaignCustomFields {
@@ -73,6 +79,7 @@ export enum ActiveCampaignCustomFields {
   collectiveNegativeImpact = 'collectiveNegativeImpact',
   collectiveNeutralImpact = 'collectiveNeutralImpact',
   membershipType = 'membershipType',
+  source = 'source',
   userZipcode = 'userZipcode',
   userState = 'userState',
 }

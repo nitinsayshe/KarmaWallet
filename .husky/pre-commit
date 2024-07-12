@@ -14,7 +14,7 @@ NORMAL='\033[0m'
 npm run build
 
 if [ $? = 0 ]; then
-  echo "${GREENBOLD} Code passed TypeScript  compilation. ✔️\nReady to commit! ${NORMAL}"
+  echo "${GREENBOLD} Code passed TypeScript  compilation. ✔️\nReady to commit!${NORMAL}"
 else
   echo "${REDBOLD} TypeScript  compilation failed. ❌ ${NORMAL}"
   exit 1

@@ -2,7 +2,7 @@ import validator from 'html-validator';
 import { IRequest } from '../../types/request';
 import CustomError from '../../lib/customError';
 import { ErrorTypes } from '../../lib/constants';
-import { ZipCodeRangesForStates } from '../../lib/constants/states';
+import { StateAbbreviationEnumValues, ZipCodeRangesForStates } from '../../lib/constants/states';
 
 export interface IValidateHtmlBody {
   html: string;
@@ -60,9 +60,9 @@ export const camelToSnakeCase: any = (data: any) => {
   return data;
 };
 
-export const getStateFromZipcode = (zipCode: string) => {
+export const getStateFromZipcode = (zipCode: string): StateAbbreviationEnumValues | '' => {
   const zipcode = parseInt(zipCode, 10);
 
   const state = ZipCodeRangesForStates.find((s) => s.zipStart <= zipcode && s.zipEnd >= zipcode);
-  return state ? state.code : false;
+  return state ? state?.code : '';
 };

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import * as ACHFundingSourceController from '../../../controllers/integrations/marqeta/accountFundingSource';
 import authenticate from '../../../middleware/authenticate';
 import protectedRequirements from '../../../middleware/protected';
-import { IMarqetaUserStatus } from '../../../integrations/marqeta/types';
+import { IMarqetaUserStatus } from '../../../integrations/marqeta/user/types';
 
 const router = Router();
 

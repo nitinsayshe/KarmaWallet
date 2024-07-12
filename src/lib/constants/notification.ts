@@ -36,6 +36,8 @@ export const NotificationTypeEnum = {
   CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
   ResumeKarmaCardApplication: 'resumeKarmaCardApplication',
   LowBalance: 'lowBalance',
+  PayMembershipReminder: 'payMembershipReminder',
+  KarmaCardManualApprove: 'karmaCardManualApprove',
 } as const;
 export type NotificationTypeEnumValue = (typeof NotificationTypeEnum)[keyof typeof NotificationTypeEnum];
 
@@ -51,7 +53,7 @@ export const NotificationEffectsEnum = {
   SendNoChargebackRightsEmail: 'SendNoChargebackRightsEmail',
   SendKarmaCardWelcomeEmail: 'SendKarmaCardWelcomeEmail',
   SendKarmaCardDeclinedEmail: 'SendKarmaCardDeclinedEmail',
-  SendKarmaCardPendingReviewEmail: 'SendKarmaKardPendingReviewEmail',
+  SendKarmaCardPendingReviewEmail: 'SendKarmaCardPendingReviewEmail',
   SendCaseLostProvisionalCreditAlreadyIssuedEmail: 'SendCaseLostProvisionalCreditAlreadyIssuedEmail',
   SendProvisionalCreditIssuedEmail: 'SendProvisionalCreditIssuedEmail',
   SendBankLinkedConfirmationEmail: 'SendBankLinkedConfirmationEmail',
@@ -61,6 +63,8 @@ export const NotificationEffectsEnum = {
   SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
   SendResumeKarmaCardApplicationEmail: 'SendResumeKarmaCardApplicationEmail',
   SendLowBalanceEventEmail: 'SendLowBalanceEventEmail',
+  SendPayMembershipReminderEmail: 'SendPayMembershipReminderEmail',
+  SendKarmaCardManualApproveEmail: 'SendKarmaCardManualApproveEmail',
 } as const;
 export type NotificationEffectsEnumValue = (typeof NotificationEffectsEnum)[keyof typeof NotificationEffectsEnum];
 

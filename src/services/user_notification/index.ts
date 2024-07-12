@@ -42,7 +42,7 @@ import {
 } from '../../models/user_notification';
 import { IRequest } from '../../types/request';
 import { executeUserNotificationEffects } from '../notification';
-import { IACHTransferEmailData, IKarmaCardDeclinedData, IKarmaCardUpdateData } from '../email/types';
+import { IACHTransferEmailData, IKarmaCardDeclinedData, IKarmaCardUpdateData, IPayMembershipReminderEmailData } from '../email/types';
 import { IMarqetaWebhookCardsEvent } from '../../integrations/marqeta/types';
 import { VisitorModel } from '../../models/visitor';
 import { IResumeKarmaCardEmailData } from '../notification/types';
@@ -1093,5 +1093,45 @@ export const createLowBalanceEmailNotification = async (
     return createUserNotification(mockRequest);
   } catch (e) {
     console.log(`Error creating notification: ${e}`);
+  }
+};
+
+export const createPayMembershipReminderUserNotification = async (
+  data: IPayMembershipReminderEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.PayMembershipReminder,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: data?.user?._id?.toString?.() || undefined,
+        data,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating pay membership user notification: ${err}`);
+  }
+};
+
+export const createKarmaCardManualApproveNotification = async (
+  data: IPayMembershipReminderEmailData,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.KarmaCardManualApprove,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: data?.user?._id?.toString?.() || undefined,
+        data,
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+
+    return createUserNotification(mockRequest);
+  } catch (err) {
+    console.log(`Error creating pay membership user notification: ${err}`);
   }
 };

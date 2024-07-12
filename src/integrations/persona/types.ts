@@ -117,9 +117,9 @@ export type PersonaGetCaseResponse = {
 };
 
 export const PersonaInquiryTemplateIdEnum = {
-  GovIdAndSelfieAndDocs: 'itmpl_eW827Fd6N9cvucWoDBpPB37rnWcm', // KW - 4 Gov ID and Selfie and Document
-  GovIdAndSelfieOrDocs: 'itmpl_2Wequ3YSD2K2i31tPxHixDdbDkAj', // KW - 2 Gov ID and Selfie and Document -- only gov id and selfie if it passes, otherwise gov id and docs
-  DataCollection: 'itmpl_AFqvVNPPTmMy752PwyeopspV8mSe', // KW - 1 Data Collection
+  // TODO: change this back to itmpl_AFqvVNPPTmMy752PwyeopspV8mSe
+  DataCollection: 'itmpl_vgVhpStQRDohjxx9ZxvQ3eSCbsUD', // KW - 1 Data Collection
+  KW5: 'itmpl_bbGdQaESkPsAfysa1mypvXtP7vcM',
 } as const;
 export type PersonaInquiryTemplateIdEnumValues = (typeof PersonaInquiryTemplateIdEnum)[keyof typeof PersonaInquiryTemplateIdEnum];
 

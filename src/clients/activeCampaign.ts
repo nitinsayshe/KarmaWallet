@@ -26,6 +26,14 @@ export const UpdateContactListStatusEnum = {
   unsubscribe: 2,
 } as const;
 
+export interface IActiveCampaignListTagsResponse {
+  tags: Array<{ tagType: string; tag: string; id: string }>;
+}
+
+export interface IActiveCampaignContactTagsReponse {
+  contactTags: Array<{ contact: string; tag: string; id: string }>;
+}
+
 export interface IGetContactsData {
   ids?: string; // could be repeated for multiple ids (e.g. ids[]=1&ids[]=2&ids[]=3)
   email?: string;
@@ -324,6 +332,8 @@ export class ActiveCampaignClient extends SdkClient {
         await sleep(backoffTime);
         return this.sendHttpRequestWithRetry(sendRequestFunction, initialRetries, retries - 1);
       }
+
+      console.log('////// error in sendHttpRequestWithRetry', err);
     }
   }
 
@@ -516,6 +526,44 @@ export class ActiveCampaignClient extends SdkClient {
       } else {
         console.log(err);
       }
+      throw asCustomError(err);
+    }
+  }
+
+  public async removeTagFromUser(tagId: string): Promise<AxiosResponse<undefined, undefined>> {
+    try {
+      const data = await this.sendHttpRequestWithRetry(() => this._client.delete(`/contactTags/${tagId}`));
+      return data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
+      throw asCustomError(err);
+    }
+  }
+
+  public async listAllTags(tagName?: string): Promise<IActiveCampaignListTagsResponse> {
+    try {
+      const query = tagName ? `?search=${tagName}` : '';
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get(`/tags${query}`));
+      return data;
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        console.error((err as AxiosError).toJSON());
+      } else {
+        console.log(err);
+      }
+      throw asCustomError(err);
+    }
+  }
+
+  public async getContactsTagIds(contactId: number): Promise<IActiveCampaignContactTagsReponse> {
+    try {
+      const { data } = await this.sendHttpRequestWithRetry(() => this._client.get(`/contacts/${contactId}/contactTags`));
+      return data;
+    } catch (err) {
       throw asCustomError(err);
     }
   }

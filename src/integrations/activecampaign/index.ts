@@ -1,6 +1,6 @@
 import { AxiosInstance } from 'axios';
 import dayjs from 'dayjs';
-import { Schema, Types } from 'mongoose';
+import { Schema } from 'mongoose';
 import {
   ActiveCampaignClient,
   IContactAutomation,
@@ -32,7 +32,6 @@ import {
   getCollectiveCommunityImpact,
   getCollectiveReforestationDonationCount,
   getCollectiveMealsDonationCount,
-  getKarmaMembershipPlanType,
 } from '../../services/user/utils/metrics';
 import { CardModel } from '../../models/card';
 import { CommissionModel } from '../../models/commissions';
@@ -45,6 +44,8 @@ import { UserMontlyImpactReportModel } from '../../models/userMonthlyImpactRepor
 import { UserGroupStatus } from '../../types/groups';
 import { IRef } from '../../types/model';
 import { ActiveCampaignListId, MarketingSubscriptionCode } from '../../types/marketing_subscription';
+import { IVisitorDocument } from '../../models/visitor';
+import { isUserDocument } from '../../services/user/utils';
 
 export type FieldIds = Array<{ name: string; id: number }>;
 export type FieldValues = Array<{ id: number; value: string }>;
@@ -421,10 +422,10 @@ export const prepareDailyUpdatedFields = async (
   }
 
   customField = customFields.find((field) => field.name === ActiveCampaignCustomFields.membershipType);
-  if (!!customField) {
-    const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
-    fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
-  }
+  // if (!!customField) {
+  //   const membershipType = await getKarmaMembershipPlanType(user.karmaMemberships);
+  //   fieldValues.push({ id: customField.id, value: membershipType ?? 'none' });
+  // }
 
   return fieldValues;
 };
@@ -588,7 +589,7 @@ const getSubscriptionLists = async (
 
 /* Usage of this funcion is deprecated in favor of the more general: updateActiveCampaignData() */
 export const updateActiveCampaignGroupListsAndTags = async (
-  user: IUserDocument,
+  entity: IUserDocument | IVisitorDocument,
   subscriptions: {
     userId: string;
     subscribe: MarketingSubscriptionCode[];
@@ -601,7 +602,7 @@ export const updateActiveCampaignGroupListsAndTags = async (
 }> => {
   try {
     const ac = new ActiveCampaignClient();
-    const userData = await UserModel.findById(user);
+    const isUser = isUserDocument(entity);
 
     ac.withHttpClient(client);
     if (!subscriptions) {
@@ -614,9 +615,10 @@ export const updateActiveCampaignGroupListsAndTags = async (
       unsubscribeCodes.map((code: MarketingSubscriptionCode) => MarketingSubscriptionCodeToProviderProductId[code] as ActiveCampaignListId),
     );
 
+    const email = isUser ? entity?.emails?.find((e) => e?.primary)?.email : entity?.email;
     const contacts = [
       {
-        email: userData.emails?.find((e) => e.primary).email,
+        email,
         subscribe,
         unsubscribe,
         tags: (await getActiveCampaignTags(!!subscriptions.userId ? subscriptions.userId : '')) || [],
@@ -630,13 +632,12 @@ export const updateActiveCampaignGroupListsAndTags = async (
 };
 
 export type UpdateActiveCampaignDataRequest = {
-  userId: Types.ObjectId;
   email: string;
   firstName?: string;
   lastName?: string;
   subscriptions?: {
-    subscribe: MarketingSubscriptionCode[];
-    unsubscribe: MarketingSubscriptionCode[];
+    subscribe?: MarketingSubscriptionCode[];
+    unsubscribe?: MarketingSubscriptionCode[];
   };
   tags?: {
     add: string[];
@@ -649,7 +650,6 @@ export const updateActiveCampaignData = async (
   req: UpdateActiveCampaignDataRequest,
   client?: AxiosInstance,
 ): Promise<{
-  userId: string;
   lists: { subscribe: MarketingSubscriptionCode[]; unsubscribe: MarketingSubscriptionCode[] };
 }> => {
   try {
@@ -664,19 +664,18 @@ export const updateActiveCampaignData = async (
     const contacts = [
       {
         email: req.email,
-        first_name: req.firstName,
-        last_name: req.lastName,
-        subscribe: subscribe.length > 0 ? subscribe : undefined,
-        unsubscribe: unsubscribe.length > 0 ? unsubscribe : undefined,
-        tags: req.tags?.add?.length > 0 ? req.tags.add : undefined,
-        fields: req.customFields?.length > 0 ? req.customFields : undefined,
+        first_name: req?.firstName,
+        last_name: req?.lastName,
+        subscribe: subscribe?.length > 0 ? subscribe : undefined,
+        unsubscribe: unsubscribe?.length > 0 ? unsubscribe : undefined,
+        tags: req?.tags?.add?.length > 0 ? req.tags.add : undefined,
+        fields: req?.customFields?.length > 0 ? req.customFields : undefined,
       },
     ];
 
     await ac.importContacts({ contacts });
 
     return {
-      userId: req.userId.toString(),
       lists: {
         subscribe: subscribeCodes,
         unsubscribe: unsubscribeCodes,
@@ -737,10 +736,8 @@ export const prepareBackfillSyncFields = async (
   fieldValues = await prepareQuarterlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareYearlyUpdatedFields(user, customFields, fieldValues);
   fieldValues = await prepareBiweeklyUpdatedFields(user, customFields, fieldValues);
-
   // items that are usually event-driven
   fieldValues = await setBackfillCashBackEligiblePurchase(user, customFields, fieldValues);
-
   return fieldValues;
 };
 
@@ -789,7 +786,6 @@ export const updateActiveCampaignContactData = async (
   } else {
     firstName = userData?.name;
   }
-
   const subscriptionLists = await getSubscriptionLists(subscribe, unsubscribe);
   const { subscribe: sub, unsubscribe: unsub } = subscriptionLists;
 
@@ -979,6 +975,35 @@ export const subscribeContactToList = async (email: string, listId: ActiveCampai
   }
 };
 
+export const unsubscribeContactFromLists = async (email: string, listIds: ActiveCampaignListId[], client?: AxiosInstance): Promise<void> => {
+  try {
+    const ac = new ActiveCampaignClient();
+    ac.withHttpClient(client);
+
+    const contactData = await ac.getContacts({ email });
+    if (!contactData || !contactData.contacts || contactData.contacts.length <= 0) {
+      throw new Error('No contact found');
+    }
+
+    const subscribedLists = await getSubscribedLists(email, client);
+    const { id } = contactData.contacts[0];
+
+    for (const listId of listIds) {
+      if (!subscribedLists.includes(listId)) {
+        console.log('Contact not subscribed to list with id: ', listId);
+        continue;
+      }
+
+      console.log(`Unsubscribing contact with email: ${email} from list id: ${listId}`);
+      await ac.updateContactListStatus({
+        contactList: { contact: parseInt(id), list: parseInt(listId), status: UpdateContactListStatusEnum.unsubscribe },
+      });
+    }
+  } catch (err) {
+    console.error('Error unsubscribing contact from lists', err);
+  }
+};
+
 export const subscribeContactToLists = async (email: string, listIds: ActiveCampaignListId[], client?: AxiosInstance): Promise<void> => {
   try {
     const ac = new ActiveCampaignClient();
@@ -1087,4 +1112,37 @@ export const syncUserAddressFields = async (
   } catch (err) {
     console.log(err);
   }
+};
+
+export const listAllTags = async () => {
+  const ac = new ActiveCampaignClient();
+  const tags = await ac.listAllTags();
+  return tags;
+};
+
+export const getTagByName = async (tagName: string) => {
+  const ac = new ActiveCampaignClient();
+  const tags = await ac.listAllTags(tagName);
+  return tags;
+};
+
+export const getContactsTagIds = async (contactId: number) => {
+  const ac = new ActiveCampaignClient();
+  const contactIds = await ac.getContactsTagIds(contactId);
+  return contactIds;
+};
+
+export const removeTagFromUser = async (userDocument: IUserDocument, tag: string) => {
+  const acContact = await getActiveCampaignContactByEmail(userDocument.emails.find((e) => e.primary).email);
+  const acTags = await getTagByName(tag);
+  const acTag = acTags.tags.find((t) => t.tag === tag);
+  const contactIds = await getContactsTagIds(parseInt(acContact.contact.id));
+  const contactTag = contactIds.contactTags.find((t) => t.tag === acTag?.id);
+  if (!contactTag?.id) {
+    console.log('////// this contact does not have the tag, skipping removal');
+    return;
+  }
+  const ac = new ActiveCampaignClient();
+  const updatedTags = await ac.removeTagFromUser(contactTag.id);
+  return updatedTags;
 };

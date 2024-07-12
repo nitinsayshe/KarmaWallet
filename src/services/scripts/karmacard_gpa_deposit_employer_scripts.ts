@@ -43,7 +43,6 @@ export const fixMissedAddToEmployerBetaAndGroup = async (data: IEmployerBetaUser
         subscribeData.employerBeta = true;
         await updateNewUserSubscriptions(user, subscribeData);
       }
-      console.log('///// successfully updated for', item.email);
     }
   } catch (error) {
     console.log('////// error', error);
@@ -70,7 +69,6 @@ export const updateActiveCampaign = async (data: IActiveCampaignUpdateData[]) =>
       subscribeData.tags = [item.groupName];
       subscribeData.employerBeta = true;
       await updateNewUserSubscriptions(user, subscribeData);
-      console.log('/////// successfully updated for', item.name);
     }
   } catch (err) {
     console.log('////// error', err);

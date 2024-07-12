@@ -1,7 +1,7 @@
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { ACHGroup } from '../../clients/marqeta/accountHolderGroup';
 import { IRequest } from '../../types/request';
-import { IMarqetaACHGroup } from './types';
+import { IMarqetaACHGroup } from './user/types';
 
 // Instantiate the MarqetaClient
 const marqetaClient = new MarqetaClient();

@@ -12,6 +12,7 @@ import * as SupportTicketService from '../services/supportTicket';
 import { KWRateLimiterKeyPrefixes, setRateLimiterHeaders, unblockFromEmailLimiterOnSuccess } from '../middleware/rateLimiter';
 import { formatZodFieldErrors, getShareableFieldErrors, getZodEnumSchemaFromTypescriptEnum, nameValidation, nanoIdValidation, optionalNameValidation, optionalObjectReferenceValidation, optionalUuidValidation, optionalZipCodeValidation } from '../lib/validation';
 import { DeleteRequestReason } from '../models/deleteAccountRequest';
+import { updateNewUserSubscriptions } from '../services/marketingSubscription';
 
 export const register: IRequestHandler<{}, {}, UserServiceTypes.IUserData> = async (req, res) => {
   try {
@@ -245,6 +246,7 @@ export const resetPasswordFromToken: IRequestHandler<{}, {}, UserServiceTypes.IL
     }
     const user = await UserService.resetPasswordFromToken(req);
     output.api(req, res, UserUtils.getShareableUser(user));
+    await updateNewUserSubscriptions(user);
     await unblockFromEmailLimiterOnSuccess(req, res, KWRateLimiterKeyPrefixes.Login);
   } catch (err) {
     output.error(req, res, asCustomError(err));

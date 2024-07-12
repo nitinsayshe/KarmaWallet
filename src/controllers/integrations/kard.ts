@@ -22,9 +22,18 @@ import {
 } from '../../clients/kard/types';
 import { StateAbbreviationEnum } from '../../lib/constants/states';
 
+export const MinimumLatitude = -90;
+export const MaximumLatitude = 90;
+export const MinimumLongitude = -180;
+export const MaximumLongitude = 180;
+export const MaximumSearchRadius = 50;
+export const MinimumSearchRadius = 1;
+
+export const zodNegativeOneOrOneCoercedNumberSchema = z.union([z.coerce.number().pipe(z.literal(1)), z.coerce.number().pipe(z.literal(-1))]);
+
 export const zodGetLocationsValidationSchema = z.object({
-  page: z.number().int().gte(0).optional(),
-  limit: z.number().int().gte(1).optional(),
+  page: z.coerce.number().int().gte(0).optional(),
+  limit: z.coerce.number().int().gte(1).optional(),
   locationName: z.string().optional(),
   googleId: z.string().optional(),
   city: z.string().optional(),
@@ -32,12 +41,12 @@ export const zodGetLocationsValidationSchema = z.object({
   zipCode: optionalZipCodeValidation,
   createdDateStart: z.string().optional(),
   createdDateEnd: z.string().optional(),
-  locationNameSort: z.union([z.literal(1), z.literal(-1)]).optional(),
-  citySort: z.union([z.literal(1), z.literal(-1)]).optional(),
-  stateSort: z.union([z.literal(1), z.literal(-1)]).optional(),
-  longitude: z.number().gte(-180).lte(180).optional(),
-  latitude: z.number().gte(-90).lte(90).optional(),
-  radius: z.number().gte(1).lte(50).optional(),
+  locationNameSort: zodNegativeOneOrOneCoercedNumberSchema.optional(),
+  citySort: zodNegativeOneOrOneCoercedNumberSchema.optional(),
+  stateSort: zodNegativeOneOrOneCoercedNumberSchema.optional(),
+  longitude: z.coerce.number().gte(MinimumLongitude).lte(MaximumLongitude).optional(),
+  latitude: z.coerce.number().gte(MinimumLatitude).lte(MaximumLatitude).optional(),
+  radius: z.coerce.number().gte(MinimumSearchRadius).lte(MaximumSearchRadius).optional(),
   category: getZodEnumSchemaFromTypescriptEnum(KardMerchantCategoryEnum).optional(),
   source: getZodEnumSchemaFromTypescriptEnum(OfferSource).optional(),
 });
@@ -102,8 +111,8 @@ export const getMerchantLocations: IRequestHandler<{ merchantId: string }, Pagin
   try {
     const validationSchema = z.object({
       id: objectReferenceValidation,
-      page: z.number().int().gte(0).optional(),
-      limit: z.number().int().gte(1).optional(),
+      page: z.coerce.number().int().gte(0).optional(),
+      limit: z.coerce.number().int().gte(1).optional(),
     });
 
     const kardRequest: GetLocationsByMerchantIdRequest = { id: req.params.merchantId, ...req.query };
@@ -114,7 +123,7 @@ export const getMerchantLocations: IRequestHandler<{ merchantId: string }, Pagin
       throw new CustomError(`${getShareableFieldErrors(fieldErrors) || 'Error parsing request'}`, ErrorTypes.INVALID_ARG);
     }
 
-    const data = await KardService.getLocationsByMerchantId(kardRequest);
+    const data = await KardService.getLocationsByMerchantId(parsed.data as GetLocationsByMerchantIdRequest);
     output.api(req, res, data);
   } catch (err) {
     output.error(req, res, asCustomError(err));

@@ -13,7 +13,7 @@ const InvoiceSchema = new Schema({
   amount: { type: Number, required: true },
   dueDate: { type: Date, required: true, default: getUtcDate().toDate() },
   status: { type: String, enum: Object.values(InvoiceStatus) },
-  paymentLink: { type: String },
+  invoiceLink: { type: String },
   user: {
     type: Schema.Types.ObjectId,
     ref: 'user',
@@ -24,7 +24,7 @@ const InvoiceSchema = new Schema({
   // not sure what all we will have here just yet
   integrations: {
     stripe: {
-      productId: { type: String },
+      type: Object,
     },
   },
 });

@@ -5,7 +5,7 @@ import mongoosePaginate from 'mongoose-paginate-v2';
 import { getUtcDate } from '../lib/date';
 import { IModel, IRef } from '../types/model';
 import { MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../types/marketing_subscription';
-import { IShareableVisitor, IVisitor } from './visitor';
+import { IShareableVisitor, IVisitor } from './visitor/types';
 import { IShareableUser, IUser } from './user/types';
 
 export interface IShareableMarketingSubscription {

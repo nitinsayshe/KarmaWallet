@@ -36,6 +36,8 @@ export enum EmailTemplateKeys {
   ChangeEmailRequestAffirmation = 'changeEmailRequestAffirmation',
   ResumeKarmaCardApplication = 'resumeKarmaCardApplication',
   LowBalance = 'lowBalance',
+  PayMembershipReminder = 'payMembershipReminder',
+  KarmaCardManualApprove = 'karmaCardManualApprove',
 }
 
 export enum EmailTemplateTypes {
@@ -210,6 +212,14 @@ export const EmailTemplateConfigs: { [key: string]: IEmailTemplateConfig } = {
   LowBalance: {
     name: EmailTemplateKeys.LowBalance,
     type: EmailTemplateTypes.LowBalance,
+  },
+  PayMembershipReminder: {
+    name: EmailTemplateKeys.PayMembershipReminder,
+    type: EmailTemplateTypes.Support,
+  },
+  KarmaCardManualApprove: {
+    name: EmailTemplateKeys.KarmaCardManualApprove,
+    type: EmailTemplateTypes.Support,
   },
 };
 

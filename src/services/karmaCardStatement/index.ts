@@ -142,8 +142,6 @@ export const generateKarmaCardStatement = async (userId: string, startDate: stri
       return true;
     }));
 
-    // console.log('transactionsWithACHData', transactionsWithACHData);
-
     const transactionTotals = await getStatementData(filteredTransactions, user._id.toString());
 
     statement = await KarmaCardStatementModel.create({

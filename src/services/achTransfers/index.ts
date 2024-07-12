@@ -4,7 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import { ACHSource } from '../../clients/marqeta/accountFundingSource';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
 import { createACHBankTransfer, validateCreateACHBankTransferRequest } from '../../integrations/marqeta/accountFundingSource';
-import { ACHTransferTransitionStatusEnum, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaBankTransferTransitionEvent, MarqetaBankTransitionStatus } from '../../integrations/marqeta/types';
+import { ACHTransferTransitionStatusEnum, IACHTransferTypes, IMarqetaACHBankTransfer, IMarqetaACHBankTransferTransition, IMarqetaBankTransferTransitionEvent, MarqetaBankTransitionStatus } from '../../integrations/marqeta/types';
 import { ErrorTypes } from '../../lib/constants';
 import CustomError from '../../lib/customError';
 import { verifyRequiredFields } from '../../lib/requestData';
@@ -16,6 +16,7 @@ import { createACHInitiationUserNotification, createACHTransferCancelledUserNoti
 import { BankConnectionModel } from '../../models/bankConnection';
 import { UserModel } from '../../models/user';
 import { PushNotificationTypes } from '../../lib/constants/notification';
+import { sendSlackTransferAlert, SlackAlertSourceEnum } from '../../integrations/slack';
 
 dayjs.extend(utc);
 
@@ -208,6 +209,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
   const bankName = await getACHSourceBankName(transferBankData.accessToken);
   if (!bankName) throw new CustomError(`Bank name not found for accessToken: ${transferBankData.accessToken}`, ErrorTypes.GEN);
 
+  const transferType = achTransfer.type === IACHTransferTypes.PULL ? 'deposit' : 'withdrawal';
   console.log('////// RECEIVED ACH TRANSFER WEBHOOK', banktransfertransition);
 
   switch (status) {
@@ -218,6 +220,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         title: 'Deposit Alert',
       });
       break;
+
     case MarqetaBankTransitionStatus.CANCELLED:
       console.log('////// ACH Transfer was cancelled', banktransfertransition.bank_transfer_token);
       // To do: add email
@@ -235,6 +238,7 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         date: dayjs(achTransfer.created_time).utc().format('MMMM DD, YYYY'),
       });
       break;
+
     case MarqetaBankTransitionStatus.RETURNED:
       console.log('////// ACH Transfer was returned', banktransfertransition.bank_transfer_token);
       // To do: add email
@@ -243,7 +247,6 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         body: `Your deposit was returned because: ${return_reason}.`,
         title: 'ACH Transfer Alert',
       });
-
       await createACHTransferReturnedUserNotification({
         user,
         amount: achTransfer.amount.toFixed(2),
@@ -253,6 +256,11 @@ export const handleMarqetaACHTransitionWebhook = async (banktransfertransition: 
         reason: return_reason,
       });
       break;
+
+    case MarqetaBankTransitionStatus.PENDING:
+      await sendSlackTransferAlert(SlackAlertSourceEnum.ACHTransfer, transferType, user, achTransfer.amount);
+      break;
+
     default:
       break;
   }

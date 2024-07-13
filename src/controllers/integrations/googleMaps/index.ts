@@ -5,9 +5,7 @@ import * as output from '../../../services/output';
 import { IGetCoordinatesParams } from '../../../integrations/googleMaps/types';
 
 export const getCoordinates: IRequestHandler<IGetCoordinatesParams, {}, {}> = async (req, res) => {
-  console.log('req.body');
   try {
-    console.log('req.body', req.params);
     if (!req.params.zipCode) {
       throw new Error('Zip code is required');
     }

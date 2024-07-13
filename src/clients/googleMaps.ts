@@ -13,10 +13,6 @@ export class GoogleMapsClient extends SdkClient {
   }
 
   protected _init() {
-    console.log('Initializing Google Maps client', {
-      GOOGLE_BASE_URL,
-      GOOGLE_MAPS_API_KEY,
-    });
     if (!GOOGLE_BASE_URL || !GOOGLE_MAPS_API_KEY) {
       throw new Error('Google Maps credentials not found');
     }

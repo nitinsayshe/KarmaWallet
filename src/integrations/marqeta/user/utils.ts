@@ -55,13 +55,9 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
-    await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
     await removeUserFromDebitCardHoldersList(entity);
+    await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
     // add in code to update the user in the database
-
-    // remove the marqeta itegration from the user object
-    entity.integrations.marqeta = undefined;
-    return await entity.save();
   } catch (error) {
     console.log('Error updating Marqeta user email', error);
   }
@@ -85,7 +81,12 @@ export const updateExistingUserFromMarqetaWebhook = async (
   webhookData: IMarqetaUserTransitionsEvent,
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
-  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
+  if (webhookData.status === IMarqetaUserStatus.CLOSED) {
+    user.karmaMembership.status = 'cancelled';
+    await user.save();
+    await setClosedMarqetaAccountState(user, currentMarqetaUserData);
+  }
+
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
     const { reason, reason_code: reasonCode } = webhookData;

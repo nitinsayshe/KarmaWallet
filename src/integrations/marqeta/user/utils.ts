@@ -85,7 +85,12 @@ export const updateExistingUserFromMarqetaWebhook = async (
   webhookData: IMarqetaUserTransitionsEvent,
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
-  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
+  if (webhookData.status === IMarqetaUserStatus.CLOSED) {
+    user.karmaMembership.status = 'cancelled';
+    await user.save();
+    await setClosedMarqetaAccountState(user, currentMarqetaUserData);
+  }
+
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
     const { reason, reason_code: reasonCode } = webhookData;

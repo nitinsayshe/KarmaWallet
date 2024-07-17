@@ -128,11 +128,17 @@ export const globalPlaidTransactionMapping = async ({
       continue;
     }
 
-    remainingTransactions = await plaidClient.getPlaidTransactions({
-      start_date: startDate,
-      end_date: endDate,
-      access_token: card._id,
-    });
+    try {
+      remainingTransactions = await plaidClient.getPlaidTransactions({
+        start_date: startDate,
+        end_date: endDate,
+        access_token: card._id,
+      });
+    } catch (e: any) {
+      log(`error fetching transactions for user ${card.user.toString()}`);
+      log(e);
+      continue;
+    }
 
     console.log('\n');
     log(`fetching latest transactions for user ${card.user.toString()}`);

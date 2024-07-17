@@ -332,3 +332,8 @@ export const PostalCodeLength = 5;
 export const daysUntilKarmaCardApplicationExpiration = 10;
 
 export const MIN_BALANCE = 50;
+export const SlackChannelNameEnum = {
+  StagingTransactionAlerts: 'staging-transaction-alerts',
+  ProdTransactionAlerts: 'prod-transaction-alerts',
+};
+export type SlackChannelNameEnumValues = typeof SlackChannelNameEnum[keyof typeof SlackChannelNameEnum];

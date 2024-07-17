@@ -634,6 +634,7 @@ export interface IMarqetaWebhookBody {
   transactions: TransactionModel[];
   cardtransitions: IMarqetaWebhookCardsEvent[];
   directdepositaccounttransitions: IMarqetaDirectDepositWebhookEvent[];
+  directdeposittransitions: DirectDepositModel[];
 }
 
 export interface IGPABalanceResponseData {

@@ -1,6 +1,7 @@
 import { closeMarqetaAccount, getMarqetaUser, updateMarqetaUser } from '.';
 import { generateRandomPasswordString } from '../../../lib/misc';
 import { IUserDocument, UserModel } from '../../../models/user';
+import { KarmaMembershipStatusEnum } from '../../../models/user/types';
 import { IVisitorDocument, VisitorModel } from '../../../models/visitor';
 import { removeUserFromDebitCardHoldersList } from '../../../services/marketingSubscription/utils';
 import { register, checkIfUserPassedInternalKycAndUpdateMarqetaStatus, formatMarqetaClosedEmail } from '../../../services/user';
@@ -55,9 +56,13 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
-    await removeUserFromDebitCardHoldersList(entity);
     await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
+    // remove the marqeta itegration from the user object
+    entity.integrations.marqeta = undefined;
+    await entity.save();
+    await removeUserFromDebitCardHoldersList(entity);
     // add in code to update the user in the database
+    return entity;
   } catch (error) {
     console.log('Error updating Marqeta user email', error);
   }
@@ -82,7 +87,7 @@ export const updateExistingUserFromMarqetaWebhook = async (
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
   if (webhookData.status === IMarqetaUserStatus.CLOSED) {
-    user.karmaMembership.status = 'cancelled';
+    user.karmaMembership.status = KarmaMembershipStatusEnum.cancelled;
     await user.save();
     await setClosedMarqetaAccountState(user, currentMarqetaUserData);
   }

@@ -467,7 +467,7 @@ export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
     await updateApplicationStatusToDeclined(application);
     await updateEntityKycStatusToFailed(entity);
     await removeUserFromDebitCardHoldersList(entity);
-    await updateMarqetaUserStatusToSuspended(entity);
+    await updateMarqetaUserStatus(entity, IMarqetaUserStatus.CLOSED, MarqetaReasonCodeEnum.FailedKYC);
     await sendDeclinedNotification(entity, application);
   } catch (e) {
     console.log(`Error processing case declined webhook with eventId: ${eventId}`);

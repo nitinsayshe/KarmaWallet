@@ -8,6 +8,7 @@ import {
 import mongoosePaginate from 'mongoose-paginate-v2';
 import { IModel, IRef } from '../types/model';
 import { IUnsdgCategory } from './unsdgCategory';
+import { IValueSubcategory, IValueSubcategoryDocument } from './valueSubcategory';
 
 export interface IValue {
   category: IRef<ObjectId, IUnsdgCategory>;
@@ -15,6 +16,7 @@ export interface IValue {
   name: string;
   icon?: string;
   company?: string;
+  valueSubcategory?: IRef<ObjectId, (IValueSubcategory | IValueSubcategoryDocument)>;
 }
 
 export interface IValueDocument extends IValue, Document {}
@@ -33,6 +35,10 @@ const valueSchema = new Schema({
   },
   icon: {
     type: String,
+  },
+  valueSubcategory: {
+    type: Schema.Types.ObjectId,
+    ref: 'value_subcategory',
   },
   /**
    * The weight of the value to be used for sorting

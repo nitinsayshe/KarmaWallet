@@ -1,7 +1,9 @@
 import { closeMarqetaAccount, getMarqetaUser, updateMarqetaUser } from '.';
 import { generateRandomPasswordString } from '../../../lib/misc';
 import { IUserDocument, UserModel } from '../../../models/user';
+import { KarmaMembershipStatusEnum } from '../../../models/user/types';
 import { IVisitorDocument, VisitorModel } from '../../../models/visitor';
+import { removeUserFromDebitCardHoldersList } from '../../../services/marketingSubscription/utils';
 import { register, checkIfUserPassedInternalKycAndUpdateMarqetaStatus, formatMarqetaClosedEmail } from '../../../services/user';
 import { isUserDocument } from '../../../services/user/utils';
 import { IMarqetaUserStatus, MarqetaUserModel, IMarqetaUserTransitionsEvent, IMarqetaKycState } from './types';
@@ -45,6 +47,7 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IUserDocument | IVisitorDocument> => {
   try {
+    console.log('///// Closing Marqeta Account ///// for user with email:', entity?.integrations?.marqeta?.email);
     if (entity?.integrations?.marqeta?.email.includes('+closed')) {
       console.log('Marqeta email already closed, skipping');
       return entity;
@@ -53,14 +56,14 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
-    if (entity?.integrations?.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
-      await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
-    }
-
+    await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
     // remove the marqeta itegration from the user object
     entity.integrations.marqeta = undefined;
-
-    return await entity.save();
+    entity.integrations.persona = undefined;
+    await entity.save();
+    await removeUserFromDebitCardHoldersList(entity);
+    // add in code to update the user in the database
+    return entity;
   } catch (error) {
     console.log('Error updating Marqeta user email', error);
   }
@@ -84,7 +87,13 @@ export const updateExistingUserFromMarqetaWebhook = async (
   webhookData: IMarqetaUserTransitionsEvent,
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
-  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
+  if (webhookData.status === IMarqetaUserStatus.CLOSED) {
+    user.karmaMembership.status = KarmaMembershipStatusEnum.cancelled;
+    user.karmaMembership.lastModified = new Date();
+    await user.save();
+    await setClosedMarqetaAccountState(user, currentMarqetaUserData);
+  }
+
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
     const { reason, reason_code: reasonCode } = webhookData;
@@ -108,18 +117,20 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     return;
   }
 
-  const userPassedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
-
-  if (!userPassedInternalKyc) {
-    console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
-    return;
-  }
-
   // grab the user data from Marqeta directly since webhooks can come in out of order
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);
 
   if (!currentMarqetaUserData) {
     console.log('[+] Error getting most up to date user information from Marqeta');
+  }
+
+  if (currentMarqetaUserData?.status !== IMarqetaUserStatus.CLOSED) {
+    const userPassedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
+
+    if (!userPassedInternalKyc) {
+      console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
+      return;
+    }
   }
 
   if (!!existingUser?._id && (existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status || currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE)) {

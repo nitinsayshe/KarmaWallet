@@ -183,7 +183,7 @@ export const closeMarqetaAccount = async (entityData: IEntityData) => {
   try {
     const marqetaUserToken = entityData?.data?.integrations?.marqeta?.userToken;
     if (marqetaUserToken) {
-      throw new Error('User does not have a Marqeta user token');
+      console.log('/////// User does not have a Marqeta token anymore, skipping closing API call to Marqeta ///////');
     }
 
     const userInMarqeta = await getMarqetaUser(marqetaUserToken);

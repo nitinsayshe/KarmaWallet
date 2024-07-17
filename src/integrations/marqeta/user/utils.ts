@@ -59,6 +59,7 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
     // remove the marqeta itegration from the user object
     entity.integrations.marqeta = undefined;
+    entity.integrations.persona = undefined;
     await entity.save();
     await removeUserFromDebitCardHoldersList(entity);
     // add in code to update the user in the database

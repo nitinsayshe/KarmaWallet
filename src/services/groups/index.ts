@@ -307,6 +307,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
       code,
       settings,
       domains,
+      logo,
     } = req.body;
 
     if (!name) throw new CustomError('A group name is required.', ErrorTypes.INVALID_ARG);
@@ -319,6 +320,7 @@ export const createGroup = async (req: IRequest<{}, {}, IGroupRequestBody>) => {
     const group = new GroupModel({
       name,
       code,
+      logo,
       settings: defaultGroupSettings,
       createdOn: dayjs().utc().toDate(),
     });
@@ -1248,10 +1250,6 @@ export const updateGroup = async (req: IRequest<IGroupRequestParams, {}, IGroupR
     }
 
     if (!!logo) {
-      if (!logo.includes(`group/${group._id}`)) {
-        throw new CustomError('Invalid logo url found. Please upload image first, then use returned url.', ErrorTypes.INVALID_ARG);
-      }
-
       group.logo = logo;
     }
 

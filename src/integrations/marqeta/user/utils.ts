@@ -53,9 +53,7 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
-    if (entity?.integrations?.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
-      await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
-    }
+    await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
 
     // remove the marqeta itegration from the user object
     entity.integrations.marqeta = undefined;
@@ -108,18 +106,20 @@ export const handleMarqetaUserTransitionWebhook = async (userTransition: IMarqet
     return;
   }
 
-  const userPassedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
-
-  if (!userPassedInternalKyc) {
-    console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
-    return;
-  }
-
   // grab the user data from Marqeta directly since webhooks can come in out of order
   const currentMarqetaUserData = await getMarqetaUser(userTransition?.user_token);
 
   if (!currentMarqetaUserData) {
     console.log('[+] Error getting most up to date user information from Marqeta');
+  }
+
+  if (currentMarqetaUserData?.status !== IMarqetaUserStatus.CLOSED) {
+    const userPassedInternalKyc = await checkIfUserPassedInternalKycAndUpdateMarqetaStatus(foundEntity);
+
+    if (!userPassedInternalKyc) {
+      console.log('[+] User or Visitor did not pass internal KYC, do not do anything else');
+      return;
+    }
   }
 
   if (!!existingUser?._id && (existingUser?.integrations?.marqeta?.status !== currentMarqetaUserData?.status || currentMarqetaUserData?.status === IMarqetaUserStatus.ACTIVE)) {

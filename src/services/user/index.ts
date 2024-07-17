@@ -4,7 +4,7 @@ import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';
 import { FilterQuery, Types } from 'mongoose';
 import { PlaidClient } from '../../clients/plaid';
-import { deleteContact, updateContactEmail, updateCustomFields, syncUserAddressFields } from '../../integrations/activecampaign';
+import { deleteContact, updateContactEmail, syncUserAddressFields } from '../../integrations/activecampaign';
 import { deleteKardUsersForUser } from '../../integrations/kard';
 import { CardStatus, ErrorTypes, passwordResetTokenMinutes, TokenTypes, UserRoles } from '../../lib/constants';
 import CustomError, { asCustomError } from '../../lib/customError';
@@ -47,21 +47,16 @@ import { IEmail, resendEmailVerification, verifyBiometric } from './verification
 import { DeleteAccountRequestModel } from '../../models/deleteAccountRequest';
 import { removeFromGroup } from '../groups';
 import { IUserIntegrations, UserEmailStatus, IDeviceInfo, IUser } from '../../models/user/types';
-import { ActiveCampaignCustomFields } from '../../lib/constants/activecampaign';
 import { getStateFromZipcode } from '../utilities';
 import { ChangeEmailRequestModel } from '../../models/changeEmailRequest';
 import * as UserServiceTypes from './types';
 import { MarqetaReasonCodeEnum } from '../../clients/marqeta/types';
 import { IChangeEmailProcessStatus, IChangeEmailVerificationStatus } from '../../models/changeEmailRequest/types';
-import { checkIfUserWithEmailExists, createShareasaleTrackingId, isUserDocument, storeNewLogin } from './utils';
+import { checkIfUserWithEmailExists, createShareasaleTrackingId, storeNewLogin } from './utils';
 import { passedInternalKyc } from '../../integrations/persona';
-import { closeMarqetaAccount, updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
-import { IMarqetaUserStatus, IMarqetaUserTransitionsEvent, IMarqetaKycState, MarqetaUserModel } from '../../integrations/marqeta/user/types';
-import { generateRandomPasswordString } from '../../lib/misc';
-import { executeOrderKarmaWalletCardsJob } from '../card/utils';
-import { closeKarmaCard, openBrowserAndAddShareASaleCode } from '../karmaCard/utils';
-import { removeUserFromDebitCardHoldersList } from '../marketingSubscription/utils';
-import { createKarmaCardWelcomeUserNotification } from '../user_notification';
+import { updateMarqetaUser, updateMarqetaUserStatus } from '../../integrations/marqeta/user';
+import { IMarqetaUserStatus } from '../../integrations/marqeta/user/types';
+import { closeKarmaCard } from '../karmaCard/utils';
 
 dayjs.extend(utc);
 
@@ -673,127 +668,6 @@ export const formatMarqetaClosedEmail = (email: string) => {
 
   const emailParts = email.split('@');
   return `${emailParts[0]}+closed@${emailParts[1]}`;
-};
-
-const updateMarqetaUserEmail = async (userToken: string, email: string) => {
-  try {
-    await updateMarqetaUser(userToken, { email });
-  } catch (error) {
-    console.log('Error updating Marqeta user email', error);
-  }
-};
-
-export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
-  entity: IUserDocument | IVisitorDocument,
-): Promise<IUserDocument | IVisitorDocument> => {
-  try {
-    console.log('///// Closing Marqeta Account ///// for user with email:', entity?.integrations?.marqeta?.email);
-    if (entity?.integrations?.marqeta?.email.includes('+closed')) {
-      console.log('Marqeta email already closed, skipping');
-      return entity;
-    }
-
-    const closedEmail = formatMarqetaClosedEmail(entity?.integrations?.marqeta?.email);
-    if (!closedEmail) throw new Error('No email found in marqeta integration');
-    await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
-    if (entity?.integrations?.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
-      await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
-      await removeUserFromDebitCardHoldersList(entity);
-      // add in code to update the user in the database
-    }
-    // remove the marqeta itegration from the user object
-    entity.integrations.marqeta = undefined;
-    return await entity.save();
-  } catch (error) {
-    console.log('Error updating Marqeta user email', error);
-  }
-};
-
-// if the status is closed, add '+closed' to this email in marqeta
-export const setClosedMarqetaAccountState = async (
-  user: IVisitorDocument | IUserDocument,
-  userTransition: Partial<IMarqetaUserTransitionsEvent>,
-): Promise<void> => {
-  if (!user || !userTransition?.status || userTransition?.status !== IMarqetaUserStatus.CLOSED) {
-    return;
-  }
-  await setClosedEmailAndStatusAndRemoveMarqetaIntegration(user);
-};
-
-export const handleMarqetaUserActiveTransition = async (user: IUserDocument, newUser: boolean) => {
-  user.integrations.marqeta.kycResult = { status: IMarqetaKycState.success, codes: [] };
-  user.integrations.marqeta.status = IMarqetaUserStatus.ACTIVE;
-  executeOrderKarmaWalletCardsJob(user);
-  await createKarmaCardWelcomeUserNotification(user, newUser);
-  const savedUser = await user.save();
-  return savedUser;
-};
-
-// Existing User withe the Marqeta Integration Already Saved
-export const updateExistingUserFromMarqetaWebhook = async (
-  user: IUserDocument,
-  currentMarqetaUserData: MarqetaUserModel,
-  webhookData: IMarqetaUserTransitionsEvent,
-) => {
-  user.integrations.marqeta.status = currentMarqetaUserData.status;
-  // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
-  if (webhookData.status === currentMarqetaUserData.status) {
-    if (webhookData?.reason || webhookData?.reason_code) {
-      if (!webhookData?.reason) {
-        user.integrations.marqeta.reason = webhookData.reason;
-      }
-
-      if (!webhookData?.reason_code) {
-        user.integrations.marqeta.reason_code = webhookData.reason;
-      }
-    }
-    await user.save();
-  }
-
-  if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
-    console.log('[+] User Webhook: Existing User transitioned to ACTIVE status. Order new cards');
-    if (!!user.integrations?.shareasale) {
-      const { sscid, xTypeParam, sscidCreatedOn, trackingId } = user.integrations.shareasale;
-      await openBrowserAndAddShareASaleCode({ sscid, trackingid: trackingId, xtype: xTypeParam, sscidCreatedOn });
-    }
-    await handleMarqetaUserActiveTransition(user, false);
-    await updateCustomFields(user.emails.find((e) => e.primary).email, [
-      { field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' },
-    ]);
-  }
-
-  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
-};
-
-export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument) => {
-  const { user } = await register({
-    name: `${visitor.integrations.marqeta.first_name} ${visitor.integrations.marqeta.last_name}`,
-    password: generateRandomPasswordString(14),
-    visitorId: visitor._id.toString(),
-    isAutoGenerated: true,
-  });
-
-  user.integrations.marqeta = visitor.integrations.marqeta;
-  await user.save();
-  return user;
-};
-
-// Existing Visitor with Marqeta integration (no existing user with the Marqeta integration although there could be an existing user)
-export const updatedVisitorFromMarqetaWebhook = async (visitor: IVisitorDocument, currentMarqetaUserData: MarqetaUserModel) => {
-  if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {
-    if (!visitor.user) {
-      // Visitor only created
-      const user = await createNewUserFromMarqetaWebhook(visitor);
-      await handleMarqetaUserActiveTransition(user, true);
-    } else {
-      // Visitor created a KW account after being declined for a KW card
-      // Marqeta integration only saved on visitor not on user yet
-      // If they are now in an active state, we need to add integration to the user and send out welcome email and order cards
-      const user = await UserModel.findById(visitor.user);
-      if (!user) throw new CustomError('[+] User Id associated with visitor not found in database', ErrorTypes.NOT_FOUND);
-      await handleMarqetaUserActiveTransition(user, false);
-    }
-  }
 };
 
 export const checkIfUserPassedInternalKycAndUpdateMarqetaStatus = async (

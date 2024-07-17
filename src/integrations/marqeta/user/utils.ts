@@ -2,6 +2,7 @@ import { closeMarqetaAccount, getMarqetaUser, updateMarqetaUser } from '.';
 import { generateRandomPasswordString } from '../../../lib/misc';
 import { IUserDocument, UserModel } from '../../../models/user';
 import { IVisitorDocument, VisitorModel } from '../../../models/visitor';
+import { removeUserFromDebitCardHoldersList } from '../../../services/marketingSubscription/utils';
 import { register, checkIfUserPassedInternalKycAndUpdateMarqetaStatus, formatMarqetaClosedEmail } from '../../../services/user';
 import { isUserDocument } from '../../../services/user/utils';
 import { IMarqetaUserStatus, MarqetaUserModel, IMarqetaUserTransitionsEvent, IMarqetaKycState } from './types';
@@ -45,6 +46,7 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IUserDocument | IVisitorDocument> => {
   try {
+    console.log('///// Closing Marqeta Account ///// for user with email:', entity?.integrations?.marqeta?.email);
     if (entity?.integrations?.marqeta?.email.includes('+closed')) {
       console.log('Marqeta email already closed, skipping');
       return entity;
@@ -54,10 +56,11 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     if (!closedEmail) throw new Error('No email found in marqeta integration');
     await updateMarqetaUserEmail(entity?.integrations?.marqeta?.userToken, closedEmail);
     await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
+    await removeUserFromDebitCardHoldersList(entity);
+    // add in code to update the user in the database
 
     // remove the marqeta itegration from the user object
     entity.integrations.marqeta = undefined;
-
     return await entity.save();
   } catch (error) {
     console.log('Error updating Marqeta user email', error);

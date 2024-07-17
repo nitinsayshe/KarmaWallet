@@ -89,6 +89,7 @@ export const updateExistingUserFromMarqetaWebhook = async (
   user.integrations.marqeta.status = currentMarqetaUserData.status;
   if (webhookData.status === IMarqetaUserStatus.CLOSED) {
     user.karmaMembership.status = KarmaMembershipStatusEnum.cancelled;
+    user.karmaMembership.lastModified = new Date();
     await user.save();
     await setClosedMarqetaAccountState(user, currentMarqetaUserData);
   }

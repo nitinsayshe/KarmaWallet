@@ -687,6 +687,7 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
   entity: IUserDocument | IVisitorDocument,
 ): Promise<IUserDocument | IVisitorDocument> => {
   try {
+    console.log('///// Closing Marqeta Account ///// for user with email:', entity?.integrations?.marqeta?.email);
     if (entity?.integrations?.marqeta?.email.includes('+closed')) {
       console.log('Marqeta email already closed, skipping');
       return entity;
@@ -698,10 +699,10 @@ export const setClosedEmailAndStatusAndRemoveMarqetaIntegration = async (
     if (entity?.integrations?.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
       await closeMarqetaAccount({ data: entity, type: isUserDocument(entity) ? 'user' : 'visitor' });
       await removeUserFromDebitCardHoldersList(entity);
+      // add in code to update the user in the database
     }
     // remove the marqeta itegration from the user object
     entity.integrations.marqeta = undefined;
-
     return await entity.save();
   } catch (error) {
     console.log('Error updating Marqeta user email', error);
@@ -735,12 +736,17 @@ export const updateExistingUserFromMarqetaWebhook = async (
   webhookData: IMarqetaUserTransitionsEvent,
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
-  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
-    const { reason, reason_code: reasonCode } = webhookData;
-    user.integrations.marqeta.reason = !!reason ? reason : '';
-    user.integrations.marqeta.reason_code = !!reasonCode ? reasonCode : '';
+    if (webhookData?.reason || webhookData?.reason_code) {
+      if (!webhookData?.reason) {
+        user.integrations.marqeta.reason = webhookData.reason;
+      }
+
+      if (!webhookData?.reason_code) {
+        user.integrations.marqeta.reason_code = webhookData.reason;
+      }
+    }
     await user.save();
   }
 
@@ -755,6 +761,8 @@ export const updateExistingUserFromMarqetaWebhook = async (
       { field: ActiveCampaignCustomFields.existingWebAppUser, update: 'true' },
     ]);
   }
+
+  await setClosedMarqetaAccountState(user, currentMarqetaUserData);
 };
 
 export const createNewUserFromMarqetaWebhook = async (visitor: IVisitorDocument) => {

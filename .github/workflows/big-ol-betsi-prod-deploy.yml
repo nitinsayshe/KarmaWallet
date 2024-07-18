@@ -111,5 +111,6 @@ jobs:
     - run: echo 'STRIPE_WEBHOOK_ID=${{secrets.PRODUCTION_STRIPE_WEBHOOK_ID}}' >> .env
     - run: echo 'STRIPE_WEBHOOK_SECRET=${{secrets.PRODUCTION_STRIPE_WEBHOOK_SECRET}}' >> .env
     - run: echo 'SLACK_TOKEN=${{secrets.PRODUCTION_SLACK_TOKEN}}' >> .env
+    - run: echo 'GOOGLE_MAPS_API_KEY=${{secrets.GOOGLE_MAPS_API_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env

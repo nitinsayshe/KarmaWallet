@@ -300,6 +300,8 @@ const getNotificationTypeFromPushNotificationType = (pushNotificationType: PushN
       return NotificationTypeEnum.GasTransaction;
     case PushNotificationTypes.ACH_TRANSFER_CANCELLED:
       return NotificationTypeEnum.ACHTransferCancelled;
+    case PushNotificationTypes.LOW_BALANCE:
+      return NotificationTypeEnum.LowBalance;
     default:
       return '';
   }
@@ -1058,6 +1060,39 @@ export const createResumeKarmaCardApplicationUserNotification = async (
     return createUserNotification(mockRequest);
   } catch (err) {
     console.log(`Error creating resume karma card application user notification: ${err}`);
+  }
+};
+
+export const createLowBalancePushNotification = async (user: IUserDocument) => {
+  try {
+    await createPushUserNotificationFromUserAndPushData(user, {
+      pushNotificationType: PushNotificationTypes.LOW_BALANCE,
+      body: 'Reload your Karma Wallet Card in-app to continue using it!',
+      title: 'Your account balance has dipped below $50.',
+    });
+  } catch (e) {
+    console.log(`Error creating low balance push notification: ${e}`);
+  }
+};
+
+export const createLowBalanceEmailNotification = async (
+  user: IUserDocument,
+): Promise<IUserNotificationDocument | void> => {
+  try {
+    const mockRequest = {
+      body: {
+        type: NotificationTypeEnum.LowBalance,
+        status: UserNotificationStatusEnum.Unread,
+        channel: NotificationChannelEnum.Email,
+        user: user?._id?.toString(),
+        data: {
+          name: user.name,
+        },
+      } as CreateNotificationRequest,
+    } as unknown as IRequest<{}, {}, CreateNotificationRequest>;
+    return createUserNotification(mockRequest);
+  } catch (e) {
+    console.log(`Error creating notification: ${e}`);
   }
 };
 

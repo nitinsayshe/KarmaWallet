@@ -1,4 +1,4 @@
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import { ApiKeyStatus, ErrorTypes } from '../lib/constants';
 import { UUID_REGEX } from '../lib/constants/regex';
 import CustomError from '../lib/customError';

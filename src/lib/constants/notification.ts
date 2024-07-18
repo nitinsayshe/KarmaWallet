@@ -35,6 +35,7 @@ export const NotificationTypeEnum = {
   CardShipped: 'cardShipped',
   CaseLostProvisionalCreditNotAlreadyIssued: 'caseLostProvisionalCreditNotAlreadyIssued',
   ResumeKarmaCardApplication: 'resumeKarmaCardApplication',
+  LowBalance: 'lowBalance',
   PayMembershipReminder: 'payMembershipReminder',
   KarmaCardManualApprove: 'karmaCardManualApprove',
 } as const;
@@ -61,6 +62,7 @@ export const NotificationEffectsEnum = {
   SendCardShippedEmail: 'SendCardShippedEmail',
   SendCaseLostProvisionalCreditNotAlreadyIssued: 'SendCaseLostProvisionalCreditNotAlreadyIssued',
   SendResumeKarmaCardApplicationEmail: 'SendResumeKarmaCardApplicationEmail',
+  SendLowBalanceEventEmail: 'SendLowBalanceEventEmail',
   SendPayMembershipReminderEmail: 'SendPayMembershipReminderEmail',
   SendKarmaCardManualApproveEmail: 'SendKarmaCardManualApproveEmail',
 } as const;
@@ -80,4 +82,5 @@ export enum PushNotificationTypes {
   TRANSACTION_COMPLETE = 'TRANSACTION_COMPLETE',
   TRANSACTION_OF_DINING = 'TRANSACTION_OF_DINING',
   TRANSACTION_OF_GAS = 'TRANSACTION_OF_GAS',
+  LOW_BALANCE = 'LOW_BALANCE',
 }

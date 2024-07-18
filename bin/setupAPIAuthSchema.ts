@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import { MongoClient } from '../src/clients/mongo';
 import { asCustomError } from '../src/lib/customError';
 import { ApiKeyModel } from '../src/models/apiKey';

@@ -118,6 +118,7 @@ jobs:
     - run: echo 'PERSONA_ENVIRONMENT_ID=env_ZmnA9H4U4Uq3iw7w9FeesRMwv5x7' >> .env
     - run: echo 'STRIPE_SECRET_KEY=${{secrets.STRIPE_SECRET_KEY}}' >> .env
     - run: echo 'SLACK_TOKEN=${{secrets.PRODUCTION_SLACK_TOKEN}}' >> .env
+    - run: echo 'GOOGLE_MAPS_API_KEY=${{secrets.GOOGLE_MAPS_API_KEY}}' >> .env
     - run: npm i
     - run: pm2 restart all --update-env
 

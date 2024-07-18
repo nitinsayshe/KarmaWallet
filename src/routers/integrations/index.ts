@@ -7,6 +7,7 @@ import biometricRouter from './biometric';
 import personaRouter from './persona';
 import kardRouter from './kard';
 import stripeRouter from './stripe';
+import googleMapsRouter from './googleMaps';
 
 /**
  * this file is used for direct communication with the integration APIs
@@ -25,5 +26,6 @@ integrationsRouter.use('/biometric', biometricRouter);
 integrationsRouter.use('/persona', personaRouter);
 integrationsRouter.use('/kard', kardRouter);
 integrationsRouter.use('/stripe', stripeRouter);
+integrationsRouter.use('/google-maps', googleMapsRouter);
 
 export default (app: Express) => app.use('/integrations', integrationsRouter);

@@ -1,4 +1,4 @@
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import dayjs from 'dayjs';
 import { Types } from 'mongoose';

@@ -1,4 +1,4 @@
-import argon2 from 'argon2';
+import * as argon2 from 'argon2';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import isemail from 'isemail';

@@ -42,7 +42,7 @@ export interface IMarqetaUserToken {
   userToken: string;
 }
 
-interface Identification {
+export interface Identification {
   type: string;
   value: string;
 }

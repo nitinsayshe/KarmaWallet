@@ -5,7 +5,6 @@ import { parse } from 'json2csv';
 import { PaginateResult } from 'mongoose';
 import { Card } from '../../clients/marqeta/card';
 import { MarqetaClient } from '../../clients/marqeta/marqetaClient';
-import { ListUsersResponse } from '../../integrations/marqeta/user';
 import { IMarqetaKycState, IMarqetaUserStatus, IMarqetaUserTransitionsEvent, MarqetaUserModel } from '../../integrations/marqeta/user/types';
 import { User } from '../../clients/marqeta/user';
 import { sleep } from '../../lib/misc';
@@ -21,6 +20,7 @@ import { isUserKYCVerified } from '../karmaCard';
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
 import { IMarqetaVisitorData } from '../../models/visitor/types';
 import { ReasonCode } from '../karmaCard/utils/types';
+import { ListUsersResponse } from '../../integrations/marqeta/types';
 import { setClosedMarqetaAccountState } from '../../integrations/marqeta/user/utils';
 
 const backoffMs = 1000;
@@ -194,7 +194,7 @@ export const getUsersMissingPhoneNumber = async () => {
       startIndex = userBatch.end_index + 1;
 
       // find any users that don't have a phone number
-      usersMissingPhoneNumber = [...usersMissingPhoneNumber, ...userBatch.data.filter((user) => !user.phone)];
+      usersMissingPhoneNumber = [...usersMissingPhoneNumber, ...userBatch.data.filter((user: any) => !user.phone)];
 
       console.log(`fetched ${userBatch.data.length} users`);
     } catch (err) {

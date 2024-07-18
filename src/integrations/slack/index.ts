@@ -46,7 +46,7 @@ export const withdrewFiveHundredOrMoreWithinTheFirstWeek = (transferAmount: numb
 
 export const getSlackChannelId = async (channelName: string) => {
   const channels = await SlackClient.conversations.list();
-  return channels.channels.find((channel) => channel.name === channelName)?.id;
+  return channels.channels.find((channel: any) => channel.name === channelName)?.id;
 };
 
 export const getTransactionAlertChannelIdFromEnvironment = async () => {

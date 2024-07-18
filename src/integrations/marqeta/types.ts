@@ -6,7 +6,7 @@ import {
   TransactionModel,
 } from '../../clients/marqeta/types';
 import { ChargebackTypeEnumValues } from '../../lib/constants';
-import { IMarqetaUserTransitionsEvent } from './user/types';
+import { IMarqetaUserTransitionsEvent, MarqetaUserModel } from './user/types';
 
 export enum MarqetaCardState {
   UNACTIVATED = 'UNACTIVATED',
@@ -16,9 +16,19 @@ export enum MarqetaCardState {
   TERMINATED = 'TERMINATED',
 }
 
+export interface IMarqetaLookUp {
+  email: string;
+}
+
+export interface IShareableTokenizedCard {
+  pan: string;
+  cvvNumber: string;
+  expiration: string;
+}
+
 export interface IMarqetaCreateCard {
-  userToken: string;
   cardProductToken: string;
+  userToken: string;
 }
 
 export interface IMarqetaUnloadGPAOrder {
@@ -90,12 +100,6 @@ export interface IVGSToken {
   cvvNumber?: string;
   cvv_number?: string;
   expiration?: string;
-}
-
-export interface IShareableTokenizedCard {
-  pan: string;
-  cvvNumber: string;
-  expiration: string;
 }
 
 export enum CardholderVerificationMethod {
@@ -698,6 +702,28 @@ export interface IDigitalWalletTokenTransition {
   reasonCode?: string;
 }
 
+export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
+export type GetUserByEmailResponse = PaginatedMarqetaResponse<
+MarqetaUserModel[]
+>;
+export type ListCardsResponse = {
+  cards: PaginatedMarqetaResponse<MarqetaCardModel[]>;
+};
+export type ListTransactionsResponse = {
+  data: PaginatedMarqetaResponse<TransactionModel[]>;
+};
+export type ListACHFundingSourcesForUserResponse = {
+  data: PaginatedMarqetaResponse<IACHFundingSource[]>;
+};
+export type ListACHBankTransfersResponse = {
+  data: PaginatedMarqetaResponse<ACHTransferModel[]>;
+};
+export type ListWebhooksResponse = {
+  data: PaginatedMarqetaResponse<WebhookWithModifiedAndCreatedDates[]>;
+};
+export type EnrichedMarqetaTransaction = Transaction & {
+  marqeta_transaction: TransactionModel;
+};
 export const IMarqetaTransitionReasonCodesEnum: { [key: string]: string } = {
   '00': 'Object activated for the first time.',
   '01': 'Requested by you.',
@@ -732,10 +758,3 @@ export const IMarqetaTransitionReasonCodesEnum: { [key: string]: string } = {
   30: 'Account/fulfillment mismatch.',
   31: 'Other reason.',
 };
-
-export type ListCardsResponse = { cards: PaginatedMarqetaResponse<MarqetaCardModel[]> };
-export type ListTransactionsResponse = { data: PaginatedMarqetaResponse<TransactionModel[]> };
-export type ListACHFundingSourcesForUserResponse = { data: PaginatedMarqetaResponse<IACHFundingSource[]> };
-export type ListACHBankTransfersResponse = { data: PaginatedMarqetaResponse<ACHTransferModel[]> };
-export type ListWebhooksResponse = { data: PaginatedMarqetaResponse<WebhookWithModifiedAndCreatedDates[]> };
-export type EnrichedMarqetaTransaction = Transaction & { marqeta_transaction: TransactionModel };

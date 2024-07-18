@@ -6,7 +6,7 @@ import { IUserDocument, UserModel } from '../../../models/user';
 import { IVisitorDocument } from '../../../models/visitor';
 import { IEntityData } from '../../../services/user/types';
 import { IRequest } from '../../../types/request';
-import { IMarqetaClientAccessToken, PaginatedMarqetaResponse } from '../types';
+import { GetUserByEmailResponse, IMarqetaClientAccessToken, ListUsersResponse, PaginatedMarqetaResponse } from '../types';
 import {
   IMarqetaCreateUser,
   IMarqetaUserTransition,
@@ -17,9 +17,6 @@ import {
   NonClosedMarqetaUserStatus,
   IMarqetaLookUp,
 } from './types';
-
-export type ListUsersResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
-export type GetUserByEmailResponse = PaginatedMarqetaResponse<MarqetaUserModel[]>;
 
 export const createMarqetaUser = async (params: IMarqetaCreateUser) => {
   const marqetaClient = new MarqetaClient();

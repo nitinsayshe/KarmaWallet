@@ -35,8 +35,9 @@ import {
   sendKarmaCardPendingReviewEmail,
   sendResumeKarmaCardApplicationEmail,
   sendKarmaCardDeclinedEmail,
-  sendPayMembershipReminderEmail,
+  sendLowBalanceEmail,
   sendKarmaCardManualApproveEmail,
+  sendPayMembershipReminderEmail,
 } from '../email';
 import {
   IACHTransferEmailData,
@@ -424,6 +425,20 @@ export const handleResumeKarmaCardApplication = async ({ user, visitor, data }: 
   }
 };
 
+export const handleLowBalanceEventEmailEffect = async ({ user } : IEffectFunctionParams): Promise<void> => {
+  try {
+    await sendLowBalanceEmail({
+      user: user._id,
+      name: user?.integrations?.marqeta?.first_name,
+      recipientEmail: user?.emails?.find((email) => email?.primary)?.email,
+    });
+  } catch (err) {
+    console.error(err);
+    throw new CustomError('Error sending low balance email', ErrorTypes.SERVER);
+  }
+};
+
+
 export const handleSendPayMembershipReminderEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   if (!user) throw new Error('Invalid pay membership reminder data');
 
@@ -460,6 +475,7 @@ export const handleSendKarmaCardManualApproveEmailEffect = async ({ user, data }
   }
 };
 
+
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: ({ user, visitor, data }: IEffectFunctionParams) => Promise<void>;
 } = {
@@ -483,6 +499,7 @@ export const NotificationEffectsFunctions: {
   SendCaseLostProvisionalCreditNotAlreadyIssued: handleSendCaseLostProvisionalCreditNotAlreadyIssuedEmailEffect,
   SendEmployerGiftEmail: handleSendEmployerGiftEmailEffect,
   SendResumeKarmaCardApplicationEmail: handleResumeKarmaCardApplication,
+  SendLowBalanceEventEmail: handleLowBalanceEventEmailEffect,
   SendPayMembershipReminderEmail: handleSendPayMembershipReminderEmailEffect,
   SendKarmaCardManualApproveEmail: handleSendKarmaCardManualApproveEmailEffect,
 } as const;
@@ -508,6 +525,7 @@ export const NotificationChannelEffects = {
     NotificationEffectsEnum.SendCaseLostProvisionalCreditNotAlreadyIssued,
     NotificationEffectsEnum.SendEmployerGiftEmail,
     NotificationEffectsEnum.SendResumeKarmaCardApplicationEmail,
+    NotificationEffectsEnum.SendLowBalanceEventEmail,
   ],
   [NotificationChannelEnum.Push]: [NotificationEffectsEnum.SendPushNotification],
   [NotificationChannelEnum.InApp]: [],

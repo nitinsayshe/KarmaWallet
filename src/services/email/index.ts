@@ -13,7 +13,7 @@ import { registerHandlebarsOperators } from '../../lib/registerHandlebarsOperato
 import { verifyRequiredFields } from '../../lib/requestData';
 import { SentEmailModel } from '../../models/sentEmail';
 import { IRequest } from '../../types/request';
-import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmaCardUpdateEmailData, IKarmacardWelcomeTemplateParams, IPayMembershipReminderEmailData, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams } from './types';
+import { IACHTransferEmailData, IBankLinkedConfirmationEmailTemplate, IBuildTemplateParams, IChangeEmailAffirmationParams, IChangeEmailConfirmationParams, IContactUsEmail, ICreateSentEmailParams, IDeleteAccountRequestVerificationTemplateParams, IDisputeEmailData, IEmailJobData, IEmailVerificationTemplateParams, IEmployerGiftEmailData, IGroupVerificationTemplateParams, IKarmaCardDeclinedEmailData, IKarmaCardUpdateEmailData, IKarmacardWelcomeTemplateParams, IPopulateEmailTemplateRequest, IResumeKarmaCardApplicationEmail, ISendTransactionsProcessedEmailParams, ISupportEmailVerificationTemplateParams, IWelcomeGroupTemplateParams, ILowBalanceTemplateParams, IPayMembershipReminderEmailData } from './types';
 
 registerHandlebarsOperators(Handlebars);
 
@@ -1095,6 +1095,52 @@ export const sendResumeKarmaCardApplicationEmail = async ({
   if (visitor) jobData.visitor = visitor._id;
   if (user) jobData.user = user._id;
   EmailBullClient.createJob(JobNames.SendEmail, jobData, defaultEmailJobOptions);
+  return { jobData, jobOptions: defaultEmailJobOptions };
+};
+
+export const sendLowBalanceEmail = async ({
+  user,
+  recipientEmail,
+  senderEmail = EmailAddresses.NoReply,
+  replyToAddresses = [EmailAddresses.ReplyTo],
+  domain = process.env.FRONTEND_DOMAIN,
+  name,
+  sendEmail = true,
+}: ILowBalanceTemplateParams) => {
+  const subject = 'It\'s Time to Reload your Karma Wallet Card';
+  const emailTemplateConfig = EmailTemplateConfigs.LowBalance;
+
+  const { isValid, missingFields } = verifyRequiredFields(
+    ['domain', 'recipientEmail', 'name'],
+    { domain, recipientEmail, name },
+  );
+  if (!isValid) {
+    throw new CustomError(
+      `Fields ${missingFields.join(', ')} are required`,
+      ErrorTypes.INVALID_ARG,
+    );
+  }
+  const template = buildTemplate({
+    templateName: emailTemplateConfig.name,
+    data: { name, domain },
+  });
+  const jobData: IEmailJobData = {
+    template,
+    subject,
+    senderEmail,
+    recipientEmail,
+    replyToAddresses,
+    emailTemplateConfig,
+    user,
+  };
+
+  if (sendEmail) {
+    EmailBullClient.createJob(
+      JobNames.SendEmail,
+      jobData,
+      defaultEmailJobOptions,
+    );
+  }
   return { jobData, jobOptions: defaultEmailJobOptions };
 };
 

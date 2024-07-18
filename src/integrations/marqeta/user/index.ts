@@ -102,6 +102,7 @@ export const updateMarqetaUserStatus = async (
   entity: IUserDocument | IVisitorDocument,
   status: NonClosedMarqetaUserStatus,
   reasonCode: MarqetaReasonCodeEnumValues,
+  reason?: string,
 ) => {
   try {
     if (!entity?.integrations?.marqeta?.userToken) {
@@ -127,6 +128,8 @@ export const updateMarqetaUserStatus = async (
       requestor: {},
       authKey: '',
     } as IRequest<{ userToken: string }, {}, IMarqetaUserTransition>;
+
+    if (!reason) mockRequest.body.reason = reason;
     await userMarqetaTransition(mockRequest);
   } catch (error) {
     console.log(`[X] Error updating user status to ${status}`, error);

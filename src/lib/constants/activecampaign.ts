@@ -25,6 +25,7 @@ export enum ActiveCampaignSyncTypes {
 export enum ActiveCampaignCustomTags {
   MembershipUnpaid = 'MembershipUnpaid',
   MembershipPaid = 'MembershipPaid',
+  KWWebApp = 'kw-web-app'
 }
 
 export enum ActiveCampaignCustomFields {

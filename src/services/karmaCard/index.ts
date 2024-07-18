@@ -279,12 +279,12 @@ export const updateVisitorOrUserOnApproved = async (
   }
 
   // TRANSITION USER TO SUSPENDED (THEY STILL NEED TO PAY TO BE IN ACTIVE STATE)
-  await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou);
+  await updateMarqetaUserStatus(userObject, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.RequestedByYou, 'User has not paid subscription fee');
   userObject.integrations.marqeta.status = IMarqetaUserStatus.SUSPENDED;
   userObject = await userObject.save();
   const standardSubscription = await ProductSubscriptionModel.findOne({ _id: StandardKarmaWalletSubscriptionId });
   const userWithMembership = await addKarmaMembershipToUser(userObject, standardSubscription, KarmaMembershipStatusEnum.unpaid);
-  await updateNewUserSubscriptions(userObject, { tags: [ActiveCampaignCustomTags.MembershipUnpaid] });
+  await updateNewUserSubscriptions(userObject, { tags: [ActiveCampaignCustomTags.MembershipUnpaid], unpaidMembership: true });
   return userWithMembership;
 };
 
@@ -672,7 +672,7 @@ export const applyForKarmaCard = async (
 
     if (kycStatus === IMarqetaKycState.success) {
       // only mark to suspended if they had been approved in Marqeta, otherwise they will already be in unverified state (cannot transtiion to suspended from unfverified)
-      await updateMarqetaUserStatus(!!existingUser ? existingUser : _visitor, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview);
+      await updateMarqetaUserStatus(!!existingUser ? existingUser : _visitor, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.AccountUnderReview, 'Under review in Persona');
     }
     await storeKarmaCardApplication(karmaCardApplication);
     return applicationDecision;

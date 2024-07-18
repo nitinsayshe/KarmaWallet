@@ -3,6 +3,8 @@ import { roundToPercision } from '../../../lib/misc';
 import { AutomatedFuelDispensersMccCode, FastFoodMccCode, RestaurantMccCode } from '../../../lib/constants';
 import { sectorsToExcludeFromTransactions } from '../../../lib/constants/transaction';
 import { ITransaction, ITransactionDocument, TransactionModel } from '../../../models/transaction';
+import { MerchantRateModel } from '../../../models/merchantRate';
+import { CompanyModel } from '../../../models/company';
 
 const plaidIntegrationPath = 'integrations.plaid.category';
 const taxRefundExclusion = { [plaidIntegrationPath]: { $not: { $all: ['Tax', 'Refund'] } } };
@@ -80,7 +82,7 @@ export const getTransactionCount = async (query = {}) => await TransactionModel.
 }).count();
 
 // calculate total spent on gas and meals between two dates
-export const getGasAndMealSpendingTotals = async (startDate: Date, endDate: Date): Promise<{ gasTotal: number; mealsTotal: number }> => {
+export const getSpendingTotals = async (startDate: Date, endDate: Date): Promise<{ cashbackMerchantTotal: number, gasTotal: number; mealsTotal: number, total: number }> => {
   const gasTotal = (await TransactionModel.aggregate()
     .match({
       amount: { $gt: 0 },
@@ -124,5 +126,39 @@ export const getGasAndMealSpendingTotals = async (startDate: Date, endDate: Date
     })
     .group({ _id: '$_id', amount: { $first: '$amount' } })
     .group({ _id: null, total: { $sum: '$amount' } })) as unknown as { _id: null; total: number }[];
-  return { gasTotal: roundToPercision(gasTotal[0].total, 2), mealsTotal: roundToPercision(mealsTotal[0].total, 2) };
+
+  const total = (await TransactionModel.aggregate()
+    .match({
+      'integrations.marqeta': { $exists: true },
+      amount: { $gt: 0 },
+      date: { $gte: startDate, $lte: endDate },
+    })
+    .group({ _id: '$_id', amount: { $first: '$amount' } })
+    .group({ _id: null, total: { $sum: '$amount' } })) as unknown as { _id: null; total: number }[];
+
+  const cashbackMerchantTransactions = await TransactionModel.find({
+    'integrations.marqeta': { $exists: true },
+    amount: { $gt: 0 },
+    date: { $gte: startDate, $lte: endDate },
+  });
+
+  // filter out any that were with a company that doens't have a merchant
+  const cashbackMerchantTotal = (await Promise.all(cashbackMerchantTransactions.map(async (transaction) => {
+    const company = await CompanyModel.findById(transaction.company);
+    if (!company) {
+      return null;
+    }
+    const merchant = await MerchantRateModel.findOne({ merchant: company.merchant });
+    if (!merchant) {
+      return null;
+    }
+
+    const rates = await MerchantRateModel.find({ merchant: company.merchant });
+    if (!rates?.length) {
+      return null;
+    }
+    return transaction.amount;
+  }))).filter((transaction) => transaction !== null).reduce((acc, val) => acc + val, 0);
+
+  return { cashbackMerchantTotal: roundToPercision(cashbackMerchantTotal, 2), total: roundToPercision(total?.[0]?.total, 2), gasTotal: roundToPercision(gasTotal?.[0]?.total, 2), mealsTotal: roundToPercision(mealsTotal?.[0]?.total, 2) };
 };

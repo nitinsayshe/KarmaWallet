@@ -99,6 +99,7 @@ export const updateMarqetaUserStatus = async (
   entity: IUserDocument | IVisitorDocument,
   status: NonClosedMarqetaUserStatus,
   reasonCode: MarqetaReasonCodeEnumValues,
+  reason?: string,
 ) => {
   try {
     if (!entity?.integrations?.marqeta?.userToken) {
@@ -124,6 +125,8 @@ export const updateMarqetaUserStatus = async (
       requestor: {},
       authKey: '',
     } as IRequest<{ userToken: string }, {}, IMarqetaUserTransition>;
+
+    if (!reason) mockRequest.body.reason = reason;
     await userMarqetaTransition(mockRequest);
   } catch (error) {
     console.log(`[X] Error updating user status to ${status}`, error);
@@ -175,12 +178,13 @@ export const checkIfUserActiveInMarqeta = async (userId: string) => {
   return false;
 };
 
-// Will occur when someone manually marks an inquiry/user as declined
+// If the closing of account is coming from somewhere outside of Marqeta we want to make sure that we update their status in Marqeta accordingly
 export const closeMarqetaAccount = async (entityData: IEntityData) => {
   try {
     const marqetaUserToken = entityData?.data?.integrations?.marqeta?.userToken;
     if (marqetaUserToken) {
-      throw new Error('User does not have a Marqeta user token');
+      console.log('/////// User does not have a Marqeta token anymore, skipping closing API call to Marqeta ///////');
+      return;
     }
 
     const userInMarqeta = await getMarqetaUser(marqetaUserToken);

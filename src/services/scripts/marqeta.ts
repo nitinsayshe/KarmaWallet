@@ -20,8 +20,8 @@ import { isUserKYCVerified } from '../karmaCard';
 import { iterateOverVisitorsAndExecWithDelay, VisitorIterationRequest, VisitorIterationResponse } from '../visitor/utils';
 import { IMarqetaVisitorData } from '../../models/visitor/types';
 import { ReasonCode } from '../karmaCard/utils/types';
-import { setClosedMarqetaAccountState } from '../user';
 import { ListUsersResponse } from '../../integrations/marqeta/types';
+import { setClosedMarqetaAccountState } from '../../integrations/marqeta/user/utils';
 
 const backoffMs = 1000;
 

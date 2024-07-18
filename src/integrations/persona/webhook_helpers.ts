@@ -403,12 +403,6 @@ export const handleCaseApprovedStatus = async (req: PersonaWebhookBody) => {
   await continueApplyProcessForApprovedCase(req);
 };
 
-export const updateMarqetaUserStatusToSuspended = async (entity: IUserDocument | IVisitorDocument) => {
-  if (entity.integrations?.marqeta?.status !== IMarqetaUserStatus.SUSPENDED && entity.integrations.marqeta?.status !== IMarqetaUserStatus.CLOSED) {
-    await updateMarqetaUserStatus(entity, IMarqetaUserStatus.SUSPENDED, MarqetaReasonCodeEnum.FailedKYC);
-  }
-};
-
 export const updateEntityKycStatusToFailed = async (entity: IUserDocument | IVisitorDocument) => {
   // update user or visitor's kycStatus in their marqeta integration
   if (!!entity?.integrations?.marqeta?.kycResult) {
@@ -467,7 +461,7 @@ export const handleCaseDeclinedStatus = async (req: PersonaWebhookBody) => {
     await updateApplicationStatusToDeclined(application);
     await updateEntityKycStatusToFailed(entity);
     await removeUserFromDebitCardHoldersList(entity);
-    await updateMarqetaUserStatusToSuspended(entity);
+    await updateMarqetaUserStatus(entity, IMarqetaUserStatus.CLOSED, MarqetaReasonCodeEnum.FailedKYC, 'User was manually declined by the KYC team');
     await sendDeclinedNotification(entity, application);
   } catch (e) {
     console.log(`Error processing case declined webhook with eventId: ${eventId}`);

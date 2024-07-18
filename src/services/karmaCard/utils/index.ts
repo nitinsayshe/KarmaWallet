@@ -269,6 +269,7 @@ export const addShareASaleTrackingToUser = async (user: IUserDocument) => {
   }
 };
 
+// User This When a User Has Paid Their Membership the First Time
 export const updateActiveCampaignDataAndJoinGroupForApplicant = async (userObject: IUserDocument, urlParams?: IUrlParam[]) => {
   const subscribeData: IActiveCampaignSubscribeData = {
     debitCardholder: true,

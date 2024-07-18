@@ -766,14 +766,14 @@ export const handleTransactionNotifications = async (transactions: ITransactionD
       try {
         switch (t.type) {
           case TransactionTypeEnum.Credit:
-            handleCreditNotification(t);
-            handleCreditAndDepositEvent(t);
+            await handleCreditNotification(t);
+            await handleCreditAndDepositEvent(t);
             break;
           case TransactionTypeEnum.Debit:
-            handleDebitNotification(t);
+            await handleDebitNotification(t);
             break;
           case TransactionTypeEnum.Deposit:
-            handleCreditAndDepositEvent(t);
+            await handleCreditAndDepositEvent(t);
             break;
           case TransactionTypeEnum.Adjustment:
             // add code as needed

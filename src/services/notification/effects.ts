@@ -438,7 +438,6 @@ export const handleLowBalanceEventEmailEffect = async ({ user } : IEffectFunctio
   }
 };
 
-
 export const handleSendPayMembershipReminderEmailEffect = async ({ user, data }: IEffectFunctionParams): Promise<void> => {
   if (!user) throw new Error('Invalid pay membership reminder data');
 
@@ -474,7 +473,6 @@ export const handleSendKarmaCardManualApproveEmailEffect = async ({ user, data }
     throw new CustomError('Error sending resume karma card application email', ErrorTypes.SERVER);
   }
 };
-
 
 export const NotificationEffectsFunctions: {
   [key in NotificationEffectsEnumValue]: ({ user, visitor, data }: IEffectFunctionParams) => Promise<void>;

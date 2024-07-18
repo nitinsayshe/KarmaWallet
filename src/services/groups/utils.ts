@@ -8,9 +8,10 @@ import { IUserDocument, UserModel } from '../../models/user';
 import { IUserGroupDocument, UserGroupModel } from '../../models/userGroup';
 import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
-import { getUserGroupSubscriptionsToUpdate, updateUserSubscriptions } from '../marketingSubscription';
 import { getUser } from '../user/utils';
 import { UserEmailStatus } from '../../models/user/types';
+import { getUserGroupSubscriptionsToUpdate } from '../marketingSubscription';
+import { updateUserSubscriptions } from '../marketingSubscription/utils';
 
 export const checkIfUserInGroup = async (userId: string, groupId: string) => {
   const userGroup = await UserGroupModel.findOne({ user: userId, group: groupId });

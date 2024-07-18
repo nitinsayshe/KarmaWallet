@@ -12,7 +12,7 @@ import {
   updateActiveCampaignContactData,
   updateCustomFields,
 } from '../../integrations/activecampaign';
-import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum, DateKarmaMembershipStoppedbBeingFree } from '../../lib/constants';
+import { ErrorTypes, UserGroupRole, MiscAppVersionKey, AppVersionEnum, GroupTagsEnum } from '../../lib/constants';
 import { ActiveCampaignCustomFields, ActiveCampaignCustomTags } from '../../lib/constants/activecampaign';
 import { ProviderProductIdToMarketingSubscriptionCode, MarketingSubscriptionCodeToProviderProductId } from '../../lib/constants/marketing_subscription';
 import CustomError from '../../lib/customError';
@@ -28,7 +28,8 @@ import { UserGroupStatus } from '../../types/groups';
 import { IRequest } from '../../types/request';
 import { ActiveCampaignListId, MarketingSubscriptionCode, MarketingSubscriptionStatus } from '../../types/marketing_subscription';
 import { IEmail, IUrlParam } from '../../models/user/types';
-import { isUserDocument } from '../user/utils';
+import { isExistingWebAppUser, isUserDocument } from '../user/utils';
+import { isFreeMembershipUser, updateUserSubscriptions } from './utils';
 
 export interface UserSubscriptions {
   userId: string;
@@ -100,10 +101,6 @@ export const subscribeToDebitCardholderList = async (user: IUserDocument) => {
   });
 };
 
-const _isExistingWebAppUser = (user: IUserDocument) => !!user?.integrations?.marqeta && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined));
-
-const _isFreeMembershipUser = (user: IUserDocument) => !!user?.integrations?.marqeta?.created_time && dayjs(user?.integrations?.marqeta?.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree);
-
 const _userSource = (user: IUserDocument, params?: IUrlParam[]) => {
   if (!!user?.integrations?.shareasale) return 'sharesale';
   if (!!user?.integrations?.referrals?.params) {
@@ -125,10 +122,10 @@ export const _buildUserFieldsArray = async (
   const zipCode = user?.integrations?.marqeta?.postal_code || user?.zipcode;
   const source = _userSource(user);
   if (freeMembershipCustomField?.id) {
-    fields.push({ id: freeMembershipCustomField.id, value: !!_isExistingWebAppUser(user) ? 'true' : 'false' });
+    fields.push({ id: freeMembershipCustomField.id, value: !!(await isFreeMembershipUser(user)) ? 'true' : 'false' });
   }
   if (existingMembershipCustomField?.id) {
-    fields.push({ id: existingMembershipCustomField.id, value: !!_isFreeMembershipUser(user) ? 'true' : 'false' });
+    fields.push({ id: existingMembershipCustomField.id, value: !!isExistingWebAppUser(user) ? 'true' : 'false' });
   }
   if (!!zipCode && !!zipCodeField?.id) fields.push({ id: zipCodeField.id, value: zipCode });
   if (!!source && !!sourceField?.id) fields.push({ id: sourceField.id, value: source });
@@ -251,58 +248,6 @@ export const subscribeToList = async (userId: Types.ObjectId, code: MarketingSub
   } catch (err) {
     console.error('Error subscribing to list', err);
     throw new CustomError(shareableUnsubscribeError, ErrorTypes.SERVER);
-  }
-};
-
-export const updateUserSubscriptions = async (user: string, subscribe: Array<MarketingSubscriptionCode>, unsubscribe: Array<MarketingSubscriptionCode>) => {
-  if (subscribe?.length > 0) {
-    await Promise.all(
-      subscribe.map(async (code) => {
-        await MarketingSubscriptionModel.findOneAndUpdate(
-          { user, code },
-          {
-            user,
-            code,
-            lastModified: getUtcDate(),
-            status: MarketingSubscriptionStatus.Active,
-          },
-          { upsert: true },
-        );
-      }),
-    );
-  }
-
-  if (unsubscribe?.length > 0) {
-    await MarketingSubscriptionModel.updateMany(
-      { user, code: { $in: unsubscribe } },
-      { lastModified: getUtcDate(), status: MarketingSubscriptionStatus.Cancelled },
-    );
-  }
-};
-
-export const updateVisitorSubscriptions = async (visitor: string, subscribe: Array<MarketingSubscriptionCode>, unsubscribe: Array<MarketingSubscriptionCode>) => {
-  if (subscribe?.length > 0) {
-    await Promise.all(
-      subscribe.map(async (code) => {
-        await MarketingSubscriptionModel.findOneAndUpdate(
-          { visitor, code },
-          {
-            visitor,
-            code,
-            lastModified: getUtcDate(),
-            status: MarketingSubscriptionStatus.Active,
-          },
-          { upsert: true },
-        );
-      }),
-    );
-  }
-
-  if (unsubscribe?.length > 0) {
-    await MarketingSubscriptionModel.updateMany(
-      { visitor, code: { $in: unsubscribe } },
-      { lastModified: getUtcDate(), status: MarketingSubscriptionStatus.Cancelled },
-    );
   }
 };
 

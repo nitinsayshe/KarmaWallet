@@ -1,6 +1,7 @@
 import { AxiosInstance } from 'axios';
 import { FilterQuery, ObjectId, PaginateResult, Types } from 'mongoose';
 import { nanoid } from 'nanoid';
+import dayjs from 'dayjs';
 import { ErrorTypes } from '../../../lib/constants';
 import CustomError, { asCustomError } from '../../../lib/customError';
 import { getUtcDate } from '../../../lib/date';
@@ -33,6 +34,8 @@ export const isUserDocument = (entity: any): entity is IUserDocument => (
     && (<IUserDocument>entity).name !== undefined
     && (<IUserDocument>entity).role !== undefined
 );
+
+export const isExistingWebAppUser = (user: IUserDocument) => !!user?.integrations?.marqeta && dayjs(user?.integrations?.marqeta?.created_time).subtract(12, 'hour').isAfter(dayjs(user.dateJoined));
 
 export const returnUserOrVisitorFromEmail = async (email: string): Promise<IEntityData> => {
   const user = await UserModel.findOne({ 'emails.email': email });

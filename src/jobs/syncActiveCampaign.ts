@@ -40,9 +40,8 @@ import {
   getUserGroupSubscriptionsToUpdate,
   reconcileActiveCampaignListSubscriptions,
   updateNewKWCardUserSubscriptions,
-  updateUserSubscriptions,
 } from '../services/marketingSubscription';
-import { iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
+import { isExistingWebAppUser, iterateOverUsersAndExecWithDelay, UserIterationRequest, UserIterationResponse } from '../services/user/utils';
 import {
   countUnlinkedAndRemovedAccounts,
   getMonthlyMissedCashBack,
@@ -53,8 +52,8 @@ import {
 } from '../services/user/utils/metrics';
 import { ActiveCampaignListId, MarketingSubscriptionCode } from '../types/marketing_subscription';
 import { IUser } from '../models/user/types';
-import { DateKarmaMembershipStoppedbBeingFree } from '../lib/constants';
 import { getStateFromZipcode } from '../services/utilities';
+import { isFreeMembershipUser, updateUserSubscriptions } from '../services/marketingSubscription/utils';
 
 interface IJobData {
   syncType: ActiveCampaignSyncTypes;
@@ -722,18 +721,16 @@ const prepareLocationSyncRequest = async (
 };
 
 const prepareKarmaCardMembershipTypeSyncRequest = async (
-  req: UserIterationRequest<ArticleRecommedationsCustomFields>,
+  _req: UserIterationRequest<ArticleRecommedationsCustomFields>,
   userBatch: PaginateResult<IUser>,
   customFields: { name: string; id: number }[],
 ): Promise<IContactsImportData> => {
-  let membershipTypeData: { email: string; isFreeMembershipUser: boolean }[] = await Promise.all(
+  let membershipTypeData: { email: string; isFreeMembershipUser: boolean, isExistingUser: boolean }[] = await Promise.all(
     userBatch?.docs?.map(async (user) => {
       const email = user?.emails?.find((e) => e.primary)?.email;
-      const isFreeMembershipUser = !!user?.integrations?.marqeta?.created_time
-        ? dayjs(user.integrations.marqeta.created_time).isBefore(DateKarmaMembershipStoppedbBeingFree)
-        : false;
-
-      return { email, isFreeMembershipUser };
+      const hasFreeMembership = await isFreeMembershipUser(user as unknown as IUserDocument);
+      const isExistingUser = isExistingWebAppUser(user as unknown as IUserDocument);
+      return { email, isFreeMembershipUser: hasFreeMembership, isExistingUser };
     }),
   );
 
@@ -744,9 +741,10 @@ const prepareKarmaCardMembershipTypeSyncRequest = async (
   });
 
   // set the custom fields and update in active campaign
-  const isFreeMembershipUser = customFields.find((field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser);
+  const hasFreeMembership = customFields.find((field) => field.name === ActiveCampaignCustomFields.isFreeMembershipUser);
+  const isExistingUser = customFields.find((field) => field.name === ActiveCampaignCustomFields.existingWebAppUser);
 
-  if (!isFreeMembershipUser) {
+  if (!hasFreeMembership) {
     return { contacts: [] };
   }
 
@@ -755,8 +753,12 @@ const prepareKarmaCardMembershipTypeSyncRequest = async (
       email: d.email,
       fields: [
         {
-          id: isFreeMembershipUser?.id,
+          id: hasFreeMembership?.id,
           value: d.isFreeMembershipUser.toString(),
+        },
+        {
+          id: isExistingUser?.id,
+          value: d.isExistingUser.toString(),
         },
       ],
     };

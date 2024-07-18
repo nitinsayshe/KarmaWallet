@@ -87,12 +87,6 @@ export const updateExistingUserFromMarqetaWebhook = async (
   webhookData: IMarqetaUserTransitionsEvent,
 ) => {
   user.integrations.marqeta.status = currentMarqetaUserData.status;
-  if (webhookData.status === IMarqetaUserStatus.CLOSED) {
-    user.karmaMembership.status = KarmaMembershipStatusEnum.cancelled;
-    user.karmaMembership.lastModified = new Date();
-    await user.save();
-    await setClosedMarqetaAccountState(user, currentMarqetaUserData);
-  }
 
   // If reason attribute is missing in userTransition(webhook data) then populate the reson based on reson_code
   if (webhookData.status === currentMarqetaUserData.status) {
@@ -100,6 +94,13 @@ export const updateExistingUserFromMarqetaWebhook = async (
     user.integrations.marqeta.reason = !!reason ? reason : '';
     user.integrations.marqeta.reason_code = !!reasonCode ? reasonCode : '';
     await user.save();
+  }
+
+  if (webhookData.status === IMarqetaUserStatus.CLOSED) {
+    user.karmaMembership.status = KarmaMembershipStatusEnum.cancelled;
+    user.karmaMembership.lastModified = new Date();
+    await user.save();
+    await setClosedMarqetaAccountState(user, currentMarqetaUserData);
   }
 
   if (currentMarqetaUserData.status === IMarqetaUserStatus.ACTIVE) {

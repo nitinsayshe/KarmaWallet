@@ -17,16 +17,22 @@ export const SlackTransactionAlertTypeEnum = {
   withdrewFiveHundredOrMoreWithinTheFirstWeek: 'withdrewMoreThanFiveHundredWithinTheFirstWeek',
   depositedTwentyFiveHundredOrMoreWithinTheFirstMonth: 'depositedMoreThanTwentyFiveHundredWithinTheFirstMonth',
   withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth: 'withdrewMoreThanTwentyFiveHundredWithinTheFirstMonth',
+  initiatedWithdrawal: 'initiatedWithdrawal',
+  initiatedDeposit: 'initiatedDeposit',
 } as const;
 export type SlackTransactionAlertTypeEnumValues = typeof SlackTransactionAlertTypeEnum[keyof typeof SlackTransactionAlertTypeEnum];
 
-const getSlackWarningMessage = (message: string) => `:warning: ${message}`;
+const getWarningMessage = (message: string) => `:warning: ${message}`;
+const getInitiatedDepositMessage = (message: string) => `:chart_with_upwards_trend: ${message}`;
+const getInitiatedWithdrawalMessage = (message: string) => `:chart_with_downwards_trend: ${message}`;
 
 export const SlackAlertMesageBody = {
-  [SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getSlackWarningMessage(`${SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just completed an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining.`),
-  [SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getSlackWarningMessage(`${SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just completed an ACH transfer withrawing $${amount} within ${daysSinceUserJoined} days of joining.`),
-  [SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getSlackWarningMessage(`${SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just completed an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining.`),
-  [SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getSlackWarningMessage(`${SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just completed an ACH transfer withrawing $${amount} within ${daysSinceUserJoined} days of joining.`),
+  [SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getWarningMessage(`${SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just initiated an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining.`),
+  [SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getWarningMessage(`${SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just initiated an ACH transfer withdrawing $${amount} within ${daysSinceUserJoined} days of joining.`),
+  [SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getWarningMessage(`${SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just initiated an ACH transfer depositing $${amount} within ${daysSinceUserJoined} days of joining.`),
+  [SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number, daysSinceUserJoined: number) => getWarningMessage(`${SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just initiated an ACH transfer withdrawing $${amount} within ${daysSinceUserJoined} days of joining.`),
+  [SlackTransactionAlertTypeEnum.initiatedDeposit]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number) => getInitiatedDepositMessage(`${SlackTransactionAlertTypeEnum.initiatedDeposit} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just initiated an ACH transfer depositing $${amount}.`),
+  [SlackTransactionAlertTypeEnum.initiatedWithdrawal]: (source: SlackAlertSourceEnumValues, user: IUserDocument, amount: number) => getInitiatedWithdrawalMessage(`${SlackTransactionAlertTypeEnum.initiatedWithdrawal} :: ${source} :: user with id: ${user._id} and marqeta user token: ${user?.integrations?.marqeta?.userToken} just initiated an ACH transfer withdrawing $${amount}.`),
 } as const;
 
 export const depositedAmountWithinTimeFrame = (transferAmount: number, daysSinceUserJoined: number, amount: number, days: number) => {
@@ -76,20 +82,26 @@ export const sendSlackTransferAlert = async (type: SlackAlertSourceEnumValues, t
   const currentDate = dayjs().utc();
   const daysSinceUserJoined = currentDate.diff(dateJoined, 'days');
 
+  let messageType: SlackTransactionAlertTypeEnumValues = SlackTransactionAlertTypeEnum.initiatedDeposit;
+  const absAmount = amount;
   if (transactionType === 'withdrawal') {
+    messageType = SlackTransactionAlertTypeEnum.initiatedWithdrawal;
     amount = -Math.abs(amount);
   }
 
+  // logging all pending transfers
+  await sendTransactionAlertMessage(SlackAlertMesageBody[messageType](type, user, amount));
+
   if (depositedFiveHundredOrMoreWithinTheFirstWeek(amount, daysSinceUserJoined)) {
-    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek](type, user, amount, daysSinceUserJoined));
+    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.depositedFiveHundredOrMoreWithinTheFirstWeek](type, user, absAmount, daysSinceUserJoined));
   }
   if (withdrewFiveHundredOrMoreWithinTheFirstWeek(amount, daysSinceUserJoined)) {
-    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek](type, user, amount, daysSinceUserJoined));
+    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.withdrewFiveHundredOrMoreWithinTheFirstWeek](type, user, absAmount, daysSinceUserJoined));
   }
   if (depositedTwentyFiveHundredOrMoreWithinTheFirstMonth(amount, daysSinceUserJoined)) {
-    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth](type, user, amount, daysSinceUserJoined));
+    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.depositedTwentyFiveHundredOrMoreWithinTheFirstMonth](type, user, absAmount, daysSinceUserJoined));
   }
   if (withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth(amount, daysSinceUserJoined)) {
-    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth](type, user, amount, daysSinceUserJoined));
+    await sendTransactionAlertMessage(SlackAlertMesageBody[SlackTransactionAlertTypeEnum.withdrewTwentyFiveHundredOrMoreWithinTheFirstMonth](type, user, absAmount, daysSinceUserJoined));
   }
 };

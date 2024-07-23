@@ -312,7 +312,6 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
         )
         .map(([key, value]) => ({ [key]: value })),
       { sector: { $nin: sectorsToExcludeFromTransactions } },
-      { status: { $ne: TransactionModelStateEnum.Declined } },
       { amount: { $gt: 0 } },
     ],
   };
@@ -337,7 +336,7 @@ export const getTransactions = async (req: IRequest<{}, ITransactionsRequestQuer
   if (!!integrationType) filter.$and.push(getTransactionIntegrationFilter(integrationType));
   if (!!startDate) filter.$and.push(startDateQuery);
   if (!!endDate) filter.$and.push(endDateQuery);
-  if (!includeDeclined) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
+  if (!includeDeclined && integrationType !== TransactionIntegrationTypesEnum.Marqeta) filter.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
   if (!!company && Types.ObjectId.isValid(company)) filter.$and.push({ company: new Types.ObjectId(company) });
 
   let transactions;
@@ -452,7 +451,7 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
     if (isNaN(_limit)) throw new CustomError('Invalid limit found. Must be a number.');
 
     const query: FilterQuery<ITransactionDocument> = {
-      $and: [{ sector: { $nin: sectorsToExcludeFromTransactions } }, { status: { $ne: TransactionModelStateEnum.Declined } }],
+      $and: [{ sector: { $nin: sectorsToExcludeFromTransactions } }],
     };
 
     if (!!userId) {
@@ -473,6 +472,10 @@ export const getMostRecentTransactions = async (req: IRequest<{}, IGetRecentTran
 
     if (!!integrationType) {
       query.$and.push(getTransactionIntegrationFilter(integrationType));
+
+      if (integrationType !== TransactionIntegrationTypesEnum.Marqeta) {
+        query.$and.push({ status: { $ne: TransactionModelStateEnum.Declined } });
+      }
     } else {
       query.$and.push({ company: { $ne: null } });
     }
